@@ -15,7 +15,7 @@ O mesmo keystore deve ser usado em todas as versões. O Android exige a mesma as
 
 O APK publicado no GitHub Release recebe o nome KZDocuments-vX.Y.Z.W.apk.
 
-O aplicativo consulta a última release pública do repositório korczaktechnology-tech/kzdoc, compara a versão instalada, valida o SHA-256 do APK e inicia o fluxo nativo de instalação do Android.
+O aplicativo consulta a última release pública do repositório korczaktech/kzdoc, compara a versão instalada, valida o SHA-256 do APK e inicia o fluxo nativo de instalação do Android.
 
 ## BYOS
 
