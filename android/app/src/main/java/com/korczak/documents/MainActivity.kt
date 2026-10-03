@@ -47,7 +47,8 @@ class MainActivity : AppCompatActivity() {
         requestStartupPermissions()
         handleFeedbackIntent(intent)
         Updater(this).resumePending()
-        Updater(this).check { result ->
+        val prefs = getSharedPreferences("nexus_settings", MODE_PRIVATE)
+        if (prefs.getBoolean("autoUpdate", true)) Updater(this).check { result ->
             if (result.startsWith("update|")) {
                 val parts = result.split("|", limit = 4)
                 runOnUiThread {
@@ -198,6 +199,26 @@ class MainActivity : AppCompatActivity() {
                             respond(callback, result)
                         }
 
+                        "validateSession" -> {
+                            if (session.token == null) {
+                                respond(callback, JSONObject().put("ok", false).put("error", "Sessão ausente"))
+                            } else {
+                                val response = api.me()
+                                if (response.code in 200..299) {
+                                    try {
+                                        val user = JSONObject(response.body)
+                                        session.userJson = user.toString()
+                                        respond(callback, JSONObject().put("ok", true).put("user", user))
+                                    } catch (_: Exception) {
+                                        respond(callback, JSONObject().put("ok", false).put("error", "Resposta de sessão inválida"))
+                                    }
+                                } else {
+                                    if (response.code == 401) session.clear()
+                                    respond(callback, JSONObject().put("ok", false).put("status", response.code).put("error", api.errorMessage(response)))
+                                }
+                            }
+                        }
+
                         "appInfo" -> {
                             val info = packageManager.getPackageInfo(packageName, 0)
                             respond(
@@ -237,6 +258,18 @@ class MainActivity : AppCompatActivity() {
                         "logout" -> {
                             api.logout()
                             session.clear()
+                            respond(callback, JSONObject().put("ok", true))
+                        }
+
+                        "exitApp" -> runOnUiThread {
+                            finishAndRemoveTask()
+                            respondJs(callback, JSONObject().put("ok", true))
+                        }
+
+                        "setSetting" -> {
+                            val key = p.optString("key")
+                            val value = p.optBoolean("value")
+                            getSharedPreferences("nexus_settings", MODE_PRIVATE).edit().putBoolean(key, value).apply()
                             respond(callback, JSONObject().put("ok", true))
                         }
 
