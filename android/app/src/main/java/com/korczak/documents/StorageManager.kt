@@ -176,6 +176,59 @@ class StorageManager(private val context: Context) {
         return root.createDirectory(safe(name)) != null
     }
 
+    fun rename(uri: String, name: String): Boolean {
+        val file = DocumentFile.fromSingleUri(context, Uri.parse(uri)) ?: return false
+        return file.renameTo(safe(name))
+    }
+
+    fun delete(uri: String): Boolean {
+        val file = DocumentFile.fromSingleUri(context, Uri.parse(uri)) ?: return false
+        return file.delete()
+    }
+
+    fun copy(uri: String, folderUri: String, name: String): Pair<Boolean, String?> {
+        val source = DocumentFile.fromSingleUri(context, Uri.parse(uri)) ?: return false to null
+        val folder = DocumentFile.fromTreeUri(context, Uri.parse(folderUri)) ?: return false to null
+        if (!folder.isDirectory) return false to null
+        val target = folder.createFile(source.type ?: mimeFor(source.name), safe(name.ifBlank { source.name ?: "Arquivo" })) ?: return false to null
+        val input = context.contentResolver.openInputStream(source.uri) ?: return false to null
+        val output = context.contentResolver.openOutputStream(target.uri) ?: return false to null
+        input.use { i -> output.use { o -> i.copyTo(o) } }
+        return true to target.uri.toString()
+    }
+
+    fun fileInfo(uri: String): JSONObject {
+        val file = DocumentFile.fromSingleUri(context, Uri.parse(uri)) ?: throw IllegalStateException("Arquivo não encontrado")
+        return JSONObject()
+            .put("name", file.name ?: "Arquivo")
+            .put("uri", file.uri.toString())
+            .put("mime", file.type ?: mimeFor(file.name))
+            .put("size", file.length())
+            .put("modified", file.lastModified())
+            .put("directory", file.isDirectory)
+            .put("readable", file.canRead())
+            .put("writable", file.canWrite())
+            .put("exists", file.exists())
+    }
+
+    fun zipFiles(uris: JSONArray, folderUri: String, zipName: String): Pair<Boolean, String?> {
+        val folder = DocumentFile.fromTreeUri(context, Uri.parse(folderUri)) ?: return false to null
+        if (!folder.isDirectory) return false to null
+        val target = folder.createFile("application/zip", safe(if (zipName.endsWith(".zip", true)) zipName else "$zipName.zip")) ?: return false to null
+        val output = context.contentResolver.openOutputStream(target.uri) ?: return false to null
+        java.util.zip.ZipOutputStream(output.buffered()).use { zip ->
+            for (i in 0 until uris.length()) {
+                val uri = Uri.parse(uris.optString(i))
+                val source = DocumentFile.fromSingleUri(context, uri) ?: continue
+                val input = context.contentResolver.openInputStream(uri) ?: continue
+                zip.putNextEntry(java.util.zip.ZipEntry(source.name ?: "Arquivo-$i"))
+                input.use { it.copyTo(zip) }
+                zip.closeEntry()
+            }
+        }
+        return true to target.uri.toString()
+    }
+
     fun read(uri: String): String =
         context.contentResolver.openInputStream(Uri.parse(uri))
             ?.bufferedReader()
