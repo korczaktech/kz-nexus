@@ -33,8 +33,32 @@ class StorageManager(private val context: Context) {
     fun listFiles(): JSONArray {
         val a = JSONArray()
         val root = savedTree()?.let { DocumentFile.fromTreeUri(context, it) } ?: return a
-        collectCompatibleFiles(root, a)
+        collectFiles(root, "", a)
         return a
+    }
+
+    private fun collectFiles(folder: DocumentFile, relativePath: String, out: JSONArray) {
+        folder.listFiles()
+            .sortedWith(compareBy<DocumentFile> { !it.isDirectory }.thenBy { (it.name ?: "").lowercase() })
+            .forEach { f ->
+                val name = f.name ?: "Arquivo"
+                val path = if (relativePath.isBlank()) name else "$relativePath/$name"
+                if (f.isDirectory) {
+                    collectFiles(f, path, out)
+                } else {
+                    val mime = f.type ?: mimeFor(name)
+                    out.put(
+                        JSONObject()
+                            .put("name", name)
+                            .put("path", path)
+                            .put("uri", f.uri.toString())
+                            .put("mime", mime)
+                            .put("size", f.length())
+                            .put("modified", f.lastModified())
+                            .put("editable", isEditableDocument(name, mime))
+                    )
+                }
+            }
     }
 
     fun listFolders(uri: String? = null): JSONArray {
@@ -77,7 +101,7 @@ class StorageManager(private val context: Context) {
         folder.listFiles().forEach { f ->
             if (f.isDirectory) {
                 collectCompatibleFiles(f, out)
-            } else if (isCompatibleDocument(f.name, f.type)) {
+            } else if (isEditableDocument(f.name, f.type)) {
                 out.put(
                     JSONObject()
                         .put("name", f.name ?: "Arquivo")
@@ -90,7 +114,7 @@ class StorageManager(private val context: Context) {
         }
     }
 
-    private fun isCompatibleDocument(name: String?, mime: String?): Boolean {
+    private fun isEditableDocument(name: String?, mime: String?): Boolean {
         val ext = name?.substringAfterLast('.', "")?.lowercase() ?: ""
         return ext in setOf(
             "txt", "text", "md", "markdown", "rtf",
