@@ -73,37 +73,39 @@ class MainActivity : AppCompatActivity() {
         requestStartupPermissions()
         handleFeedbackIntent(intent)
         Updater(this).resumePending()
+        checkForUpdateIfEnabled()
+    }
+
+
+    private fun checkForUpdateIfEnabled() {
         val prefs = getSharedPreferences("nexus_settings", MODE_PRIVATE)
-        if (prefs.getBoolean("autoUpdate", true)) Updater(this).check { result ->
-            if (result.startsWith("update|")) {
-                val parts = result.split("|", limit = 4)
-                runOnUiThread {
-                    NexusFeedback.alert(
-                        this,
-                        "Atualização disponível",
-                        "Korczak Nexus " + parts.getOrElse(1) { "" } + " está disponível. Deseja instalar?",
-                        NexusFeedback.Type.INFO,
-                        "Instalar",
-                        "Depois",
-                        onPositive = {
-                            Updater(this).install(
-                                parts.getOrElse(2) { "" },
-                                parts.getOrElse(3) { "" }
-                            ) { status ->
-                                if (status.startsWith("failed|")) {
-                                    runOnUiThread {
-                                        NexusFeedback.alert(
-                                            this,
-                                            "Falha na atualização",
-                                            status.removePrefix("failed|"),
-                                            NexusFeedback.Type.ERROR
-                                        )
-                                    }
+        if (!prefs.getBoolean("autoUpdate", true)) return
+        Updater(this).check { result ->
+            if (!result.startsWith("update|")) return@check
+            val parts = result.split("|", limit = 4)
+            runOnUiThread {
+                NexusFeedback.alert(
+                    this,
+                    "Atualização disponível",
+                    "Korczak Nexus " + parts.getOrElse(1) { "" } + " está disponível. Deseja instalar?",
+                    NexusFeedback.Type.INFO,
+                    "Instalar",
+                    "Depois",
+                    onPositive = {
+                        Updater(this).install(parts.getOrElse(2) { "" }, parts.getOrElse(3) { "" }) { status ->
+                            if (status.startsWith("failed|")) {
+                                runOnUiThread {
+                                    NexusFeedback.alert(
+                                        this,
+                                        "Falha na atualização",
+                                        status.removePrefix("failed|"),
+                                        NexusFeedback.Type.ERROR
+                                    )
                                 }
                             }
                         }
-                    )
-                }
+                    }
+                )
             }
         }
     }
@@ -313,6 +315,9 @@ class MainActivity : AppCompatActivity() {
         super.onResume()
         if (!permissionFlowActive) requestStartupPermissions()
         Updater(this).resumePending()
+        if (::web.isInitialized) {
+            web.postDelayed({ checkForUpdateIfEnabled() }, 700)
+        }
         if (::web.isInitialized) {
             web.postDelayed({
                 web.evaluateJavascript("window.__nativeStorageRefresh && window.__nativeStorageRefresh()", null)
