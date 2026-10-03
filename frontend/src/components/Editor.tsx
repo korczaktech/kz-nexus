@@ -48,7 +48,7 @@ export function Editor({document,versions,onSave,onClose,onConflict}:{document:D
   useEffect(()=>()=>{if(timer.current)window.clearTimeout(timer.current)},[]);
   function change(next:string){setContent(next);setState('dirty');setMessage('Alterações não salvas');future.current=[];const h=history.current;if(h[h.length-1]!==next){h.push(next);if(h.length>80)h.shift()}}
   function selection(){const el=textarea.current;return{start:el?.selectionStart||0,end:el?.selectionEnd||0}}
-  function isEditableFile(file:File){return /^(text\/|application\/(json|javascript|xml|yaml|x-yaml|toml|sql)|image\/svg\\+xml)/.test(file.type)||/\.(txt|md|markdown|mdx|json|js|jsx|ts|tsx|css|html|htm|xml|svg|yaml|yml|toml|sql|csv|log)$/i.test(file.name)}
+  function isEditableFile(file:File){return /^(text\/|application\/(json|javascript|xml|yaml|x-yaml|toml|sql)|image\/svg\+xml)/.test(file.type)||/\.(txt|md|markdown|mdx|json|js|jsx|ts|tsx|css|html|htm|xml|svg|yaml|yml|toml|sql|csv|log)$/i.test(file.name)}
   function chooseFolder(){setFileError('');fileInputRef.current?.click()}
   function handleFolderFiles(list:FileList|null){
     if(!list||!list.length)return;
