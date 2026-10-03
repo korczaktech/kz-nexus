@@ -128,24 +128,37 @@ class MainActivity : AppCompatActivity() {
                     web.evaluateJavascript("window.saveEditor && window.saveEditor()", null)
                 } else {
                     val js = when (action) {
-                        "undo" -> "document.execCommand('undo')"
-                        "redo" -> "document.execCommand('redo')"
-                        "bold" -> "document.execCommand('bold')"
-                        "italic" -> "document.execCommand('italic')"
-                        "underline" -> "document.execCommand('underline')"
-                        "strike" -> "document.execCommand('strikeThrough')"
-                        "h1" -> "document.execCommand('formatBlock',false,'H1')"
-                        "h2" -> "document.execCommand('formatBlock',false,'H2')"
-                        "list" -> "document.execCommand('insertUnorderedList')"
-                        "numbers" -> "document.execCommand('insertOrderedList')"
-                        "left" -> "document.execCommand('justifyLeft')"
-                        "center" -> "document.execCommand('justifyCenter')"
-                        "right" -> "document.execCommand('justifyRight')"
-                        "justify" -> "document.execCommand('justifyFull')"
-                        "indent" -> "document.execCommand('indent')"
-                        "outdent" -> "document.execCommand('outdent')"
-                        "clear" -> "document.execCommand('removeFormat')"
-                        "focus" -> "document.getElementById('page')?.focus()"
+                        "undo" -> "undo()"
+                        "redo" -> "redo()"
+                        "bold" -> "editorCmd('bold')"
+                        "italic" -> "editorCmd('italic')"
+                        "underline" -> "editorCmd('underline')"
+                        "strike" -> "editorCmd('strikeThrough')"
+                        "h1" -> "editorCmd('formatBlock','H1')"
+                        "h2" -> "editorCmd('formatBlock','H2')"
+                        "list" -> "editorCmd('insertUnorderedList')"
+                        "numbers" -> "editorCmd('insertOrderedList')"
+                        "left" -> "editorCmd('justifyLeft')"
+                        "center" -> "editorCmd('justifyCenter')"
+                        "right" -> "editorCmd('justifyRight')"
+                        "justify" -> "editorCmd('justifyFull')"
+                        "indent" -> "editorCmd('indent')"
+                        "outdent" -> "editorCmd('outdent')"
+                        "clear" -> "editorCmd('removeFormat')"
+                        "link" -> "addLink()"
+                        "image" -> "insertImage()"
+                        "table" -> "insertTable()"
+                        "check" -> "insertCheck()"
+                        "quote" -> "insertQuote()"
+                        "layout" -> "layoutPanel()"
+                        "find" -> "findReplace()"
+                        "versions" -> "versionsPanel()"
+                        "stats" -> "stats()"
+                        "export" -> "exportDoc()"
+                        "zoomout" -> "setZoom(ES.zoom-10)"
+                        "zoomin" -> "setZoom(ES.zoom+10)"
+                        "focus" -> "document.body.classList.toggle('nx-focus')"
+                        "reading" -> "document.body.classList.toggle('nx-reading')"
                         else -> ""
                     }
                     if (js.isNotBlank()) web.evaluateJavascript(
@@ -168,12 +181,14 @@ class MainActivity : AppCompatActivity() {
             }
         }
         val buttons = listOf(
-            "↶" to "undo", "↷" to "redo", "B" to "bold", "I" to "italic",
-            "U" to "underline", "S̶" to "strike", "H1" to "h1", "H2" to "h2",
-            "Lista" to "list", "1." to "numbers", "Esq." to "left",
-            "Centro" to "center", "Dir." to "right", "Just." to "justify",
+            "↶" to "undo", "↷" to "redo", "B" to "bold", "I" to "italic", "U" to "underline",
+            "S̶" to "strike", "H1" to "h1", "H2" to "h2", "Lista" to "list", "1." to "numbers",
+            "Esq." to "left", "Centro" to "center", "Dir." to "right", "Just." to "justify",
             "Recuar" to "indent", "Voltar" to "outdent", "Limpar" to "clear",
-            "Foco" to "focus", "Salvar" to "save"
+            "Link" to "link", "Imagem" to "image", "Tabela" to "table", "Checklist" to "check",
+            "Citação" to "quote", "Layout" to "layout", "Buscar" to "find", "Versões" to "versions",
+            "Stats" to "stats", "− Zoom" to "zoomout", "+ Zoom" to "zoomin", "Foco" to "focus",
+            "Leitura" to "reading", "Salvar" to "save"
         )
         buttons.forEach { (label, action) ->
             val lp = LinearLayout.LayoutParams(-2, -1).apply { marginEnd = dp(6) }
