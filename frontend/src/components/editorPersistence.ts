@@ -1,7 +1,0 @@
-export interface DraftStorage{getItem:(key:string)=>string|null;setItem:(key:string,value:string)=>void;removeItem:(key:string)=>void}
-export const draftKey=(id:string)=>'kzdoc:draft:'+id;
-export function preserveDraft(storage:DraftStorage,id:string,content:string){storage.setItem(draftKey(id),content)}
-export function recoverDraft(storage:DraftStorage,id:string){return storage.getItem(draftKey(id))}
-export function clearDraft(storage:DraftStorage,id:string){storage.removeItem(draftKey(id))}
-
-export async function saveWithDraftFallback<T>(storage:DraftStorage,id:string,content:string,save:()=>Promise<T>,isSuccessful:(result:T)=>boolean=()=>true):Promise<T>{try{const result=await save();if(isSuccessful(result))clearDraft(storage,id);else preserveDraft(storage,id,content);return result}catch(error){preserveDraft(storage,id,content);throw error}}
