@@ -244,7 +244,7 @@ function switchEditorContext(ctx){
  const bar=$('editorTools');if(!bar)return;
  document.querySelectorAll('#editorMenuBar [data-editor-context]').forEach(b=>b.classList.toggle('active',b.dataset.editorContext===ctx));
  bar.dataset.context=ctx;
- bar.innerHTML=EDITOR_CONTEXTS[ctx].map((x,i)=>'<button class="nx-tool" onclick="'+x[1]+'" title="'+esc(x[0])+'"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="'+x[2]+'" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg><span>'+esc(x[0])+'</span></button>').join('');
+ bar.innerHTML=EDITOR_CONTEXTS[ctx].map((x,i)=>'<button class="nx-tool" onclick="'+x[1].replace(/"/g,'&quot;')+'" title="'+esc(x[0])+'"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="'+x[2]+'" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg><span>'+esc(x[0])+'</span></button>').join('');
 }
 const _openFeatureCenter=openFeatureCenter;
 function openFeatureCenter(){renderFeatureCenter();$('featureCenter').style.display='flex';setTimeout(()=>{$('featureSearch')?.focus()},80)}
