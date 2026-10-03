@@ -705,8 +705,8 @@ function unwrapFormatNodes(root,tag,decoration){
 function toggleSemanticDecoration(range,c,turnOn){
   const tag=c==='underline'?'u':'s';
   const decoration=c==='underline'?'underline':'line-through';
-  const fragment=range.extractContents();
   if(turnOn){
+    const fragment=range.extractContents();
     const wrapper=document.createElement(tag);
     wrapper.appendChild(fragment);
     range.insertNode(wrapper);
@@ -717,13 +717,59 @@ function toggleSemanticDecoration(range,c,turnOn){
     sel.removeAllRanges();sel.addRange(r);
     return;
   }
+  // Remoção determinística: extraímos exatamente a seleção, retiramos
+  // apenas os nós de decoração presentes no fragmento e guardamos os
+  // nós inseridos antes de restaurar a seleção.
+  const fragment=range.extractContents();
   unwrapFormatNodes(fragment,tag,decoration);
+  const inserted=Array.from(fragment.childNodes);
   range.insertNode(fragment);
   const sel=window.getSelection();
   const r=document.createRange();
-  r.setStartAfter(fragment.lastChild||range.startContainer);
-  r.collapse(true);
+  if(inserted.length){
+    r.setStartBefore(inserted[0]);
+    r.setEndAfter(inserted[inserted.length-1]);
+  }else{
+    r.setStart(range.startContainer,Math.min(range.startOffset,range.startContainer.length||0));
+    r.collapse(true);
+  }
   sel.removeAllRanges();sel.addRange(r);
+}
+function toggleDecorationAtCursor(range,c){
+  const tag=c==='underline'?'u':'s';
+  let el=range.startContainer&&range.startContainer.nodeType===3
+    ?range.startContainer.parentElement:range.startContainer;
+  while(el&&el!==$('page')&&String(el.tagName||'').toLowerCase()!==tag)el=el.parentElement;
+  if(!el||el===$('page'))return false;
+  // Insere um marcador no ponto do cursor e divide o elemento decorado em
+  // duas partes. O cursor fica fora do <u>/<s>, então a próxima digitação
+  // não herda a decoração.
+  const marker=document.createTextNode('\u200b');
+  range.insertNode(marker);
+  const parent=el.parentNode;
+  if(!parent)return false;
+  const before=document.createElement(el.tagName.toLowerCase());
+  const after=document.createElement(el.tagName.toLowerCase());
+  Array.from(el.attributes).forEach(a=>{before.setAttribute(a.name,a.value);after.setAttribute(a.name,a.value)});
+  const left=document.createDocumentFragment();
+  const right=document.createDocumentFragment();
+  let afterMarker=false;
+  Array.from(el.childNodes).forEach(node=>{
+    if(node===marker){afterMarker=true;return}
+    (afterMarker?right:left).appendChild(node);
+  });
+  if(left.childNodes.length)before.appendChild(left);
+  if(right.childNodes.length)after.appendChild(right);
+  const frag=document.createDocumentFragment();
+  if(before.childNodes.length)frag.appendChild(before);
+  frag.appendChild(marker);
+  if(after.childNodes.length)frag.appendChild(after);
+  parent.replaceChild(frag,el);
+  const sel=window.getSelection();
+  const r=document.createRange();
+  r.setStart(marker,1);r.collapse(true);
+  sel.removeAllRanges();sel.addRange(r);
+  return true;
 }
 function toggleIndependentFormat(c){
   const page=$('page');if(!page)return;
@@ -733,14 +779,10 @@ function toggleIndependentFormat(c){
   if(c==='underline'||c==='strikeThrough'){
     const nodes=selectedTextNodes(range);
     const active=nodes.length>0&&nodes.every(n=>hasFormat(n,c));
-    if(active){
-      // Não use execCommand aqui: no WebView ele pode remover a decoração
-      // do ancestral inteiro ou simplesmente não desligá-la. Extraímos
-      // exatamente a seleção e recolocamos o conteúdo sem <u>/<s>.
-      toggleSemanticDecoration(range,c,false);
-      saveSelection();updateToolbarState();dirty();return;
-    }
     if(range.collapsed){
+      if(active&&toggleDecorationAtCursor(range,c)){
+        saveSelection();updateToolbarState();dirty();return;
+      }
       const tag=c==='underline'?'u':'s';
       const wrapper=document.createElement(tag);
       const marker=document.createTextNode('\u200b');
@@ -748,6 +790,8 @@ function toggleIndependentFormat(c){
       range.insertNode(wrapper);
       range.setStart(marker,1);range.collapse(true);
       sel.removeAllRanges();sel.addRange(range);
+    }else if(active){
+      toggleSemanticDecoration(range,c,false);
     }else{
       toggleSemanticDecoration(range,c,true);
     }
