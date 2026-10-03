@@ -597,16 +597,96 @@ function restoreSelection(){
   s.addRange(savedSelection);
 }
 const INDEPENDENT_FORMATS=['bold','italic','underline','strikeThrough','superscript','subscript'];
+const FORMAT_STYLE={
+  bold:{prop:'fontWeight',on:'700',off:'400'},
+  italic:{prop:'fontStyle',on:'italic',off:'normal'},
+  underline:{prop:'textDecorationLine',on:'underline',off:'none'},
+  strikeThrough:{prop:'textDecorationLine',on:'line-through',off:'none'},
+  superscript:{prop:'verticalAlign',on:'super',off:'baseline'},
+  subscript:{prop:'verticalAlign',on:'sub',off:'baseline'}
+};
 function commandState(command){
   try{return !!document.queryCommandState(command)}catch(e){return false}
 }
+function selectedTextNodes(range){
+  const root=$('page');if(!root)return[];
+  const walker=document.createTreeWalker(root,NodeFilter.SHOW_TEXT);
+  const out=[];let n;
+  while(n=walker.nextNode()){
+    if(!n.nodeValue)continue;
+    try{if(range.intersectsNode(n)&&n.nodeValue.trim())out.push(n)}catch(e){}
+  }
+  return out;
+}
+function splitTextForRange(range,node){
+  let target=node;
+  if(node===range.startContainer && node.nodeType===3 && range.startOffset>0){
+    target=node.splitText(range.startOffset);
+  }
+  if(node===range.endContainer && node.nodeType===3 && range.endOffset<node.nodeValue.length){
+    target.splitText(range.endOffset-(node===range.startContainer?range.startOffset:0));
+  }
+  return target;
+}
+function hasFormat(node,c){
+  const cfg=FORMAT_STYLE[c];if(!cfg)return false;
+  let el=node.nodeType===3?node.parentElement:node;
+  while(el&&el!==$('page')){
+    const v=getComputedStyle(el)[cfg.prop];
+    if(c==='bold'&&Number(v)>=600)return true;
+    if(c==='italic'&&v==='italic')return true;
+    if((c==='underline'||c==='strikeThrough')&&String(v).includes(c==='underline'?'underline':'line-through'))return true;
+    if(c==='superscript'&&v==='super')return true;
+    if(c==='subscript'&&v==='sub')return true;
+    el=el.parentElement;
+  }
+  return false;
+}
+function wrapSelectedText(range,c,turnOn){
+  const cfg=FORMAT_STYLE[c];if(!cfg)return;
+  const nodes=selectedTextNodes(range);
+  if(!nodes.length)return;
+  nodes.forEach(node=>{
+    const r=range.cloneRange();
+    let start=0,end=node.nodeValue.length;
+    if(node===range.startContainer)start=range.startOffset;
+    if(node===range.endContainer)end=range.endOffset;
+    if(start===end)return;
+    const fragment=node.nodeValue.slice(start,end);
+    const span=document.createElement('span');
+    span.style[cfg.prop]=turnOn?cfg.on:cfg.off;
+    if(c==='superscript'||c==='subscript')span.style.fontSize='0.75em';
+    span.textContent=fragment;
+    const full=node.nodeValue;
+    const before=full.slice(0,start),after=full.slice(end);
+    const parent=node.parentNode;
+    if(!parent)return;
+    const marker=document.createDocumentFragment();
+    if(before)marker.appendChild(document.createTextNode(before));
+    marker.appendChild(span);
+    if(after)marker.appendChild(document.createTextNode(after));
+    parent.replaceChild(marker,node);
+  });
+}
+function toggleIndependentFormat(c){
+  const page=$('page');if(!page)return;
+  page.focus();restoreSelection();
+  const sel=window.getSelection();if(!sel||!sel.rangeCount)return;
+  const range=sel.getRangeAt(0).cloneRange();
+  if(range.collapsed){
+    document.execCommand(c,false,null);
+    saveSelection();updateToolbarState();dirty();return;
+  }
+  const nodes=selectedTextNodes(range);
+  const active=nodes.length>0&&nodes.every(n=>hasFormat(n,c));
+  wrapSelectedText(range,c,!active);
+  saveSelection();updateToolbarState();dirty();
+}
 function editorCommand(c,v=null){
+  if(INDEPENDENT_FORMATS.includes(c))return toggleIndependentFormat(c);
   const page=$('page');if(!page)return;
   page.focus();
   restoreSelection();
-  // Cada comando é executado isoladamente. Não tentamos ligar/desligar
-  // nenhum outro comando ao redor dele: Bold, Italic, Underline etc.
-  // possuem estados independentes, como em um editor de documentos.
   try{document.execCommand(c,false,v)}catch(e){console.warn('Comando do editor falhou:',c,e)}
   saveSelection();
   updateToolbarState();
