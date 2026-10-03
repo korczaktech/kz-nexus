@@ -179,6 +179,10 @@ class Updater(private val activity: Activity) {
         }
     }
 
+    private fun isVersion(value: String): Boolean {
+        return value.matches(Regex("^\\d+(\\.\\d+){1,3}$"))
+    }
+
     private fun compare(a: String, b: String): Int {
         val x = a.split(".").map { it.toIntOrNull() ?: 0 }
         val y = b.split(".").map { it.toIntOrNull() ?: 0 }
