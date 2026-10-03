@@ -250,7 +250,15 @@ function executeEditorAction(action){
     const fn=window[m[1]];
     if(typeof fn==='function')return fn();
   }
+  // Fallback explícito para ações do editor: evita que uma função válida
+  // deixe de executar por diferenças de serialização do atributo data-editor-action.
+  const direct=code.match(/^([A-Za-z_$][A-Za-z0-9_$]*)\(\)$/);
+  if(direct){
+    const fn=window[direct[1]];
+    if(typeof fn==='function')return fn();
+  }
   console.warn('Ação do editor não encontrada:',code);
+  toast('Não foi possível executar: '+code);
 }
 function originalEditorIcon(label,path){
   const svg=document.createElementNS('http://www.w3.org/2000/svg','svg');
