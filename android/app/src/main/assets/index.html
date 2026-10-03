@@ -174,7 +174,7 @@ body{overflow-x:hidden}.app{min-height:100vh;max-width:1180px;margin:auto;backgr
 <div id="toast" class="toast"></div>
 
 <script>
-let currentUri="",currentName="",templateKind="blank",toastTimer=null;
+let currentUri="",currentName="",templateKind="blank",toastTimer=null,editorToolsInitialized=false;
 const $=id=>document.getElementById(id);
 function toast(s){clearTimeout(toastTimer);$('toast').textContent=s;$('toast').classList.add('show');toastTimer=setTimeout(()=>$('toast').classList.remove('show'),2400)}
 function native(action,payload={}){return new Promise(resolve=>{const id='c'+Date.now()+Math.random().toString(16).slice(2);window.__pending=window.__pending||{};window.__pending[id]=resolve;if(window.Android)Android.call(action,JSON.stringify(payload),id);else{delete window.__pending[id];resolve({ok:false,error:'Recursos Android indisponíveis'})}})}
@@ -263,6 +263,8 @@ function updateToolbarState(){
   }
 }
 function initEditorTools(){
+  if(editorToolsInitialized)return;
+  editorToolsInitialized=true;
   const tools=$('editorTools');
   tools.querySelectorAll('[data-cmd]').forEach(b=>{
     b.addEventListener('mousedown',e=>e.preventDefault());
