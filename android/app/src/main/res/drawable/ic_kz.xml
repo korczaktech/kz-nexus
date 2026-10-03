@@ -1,5 +1,38 @@
-<vector xmlns:android="http://schemas.android.com/apk/res/android" android:width="108dp" android:height="108dp" android:viewportWidth="128" android:viewportHeight="128">
-    <path android:fillColor="#061A2B" android:strokeColor="#43BCFF" android:strokeWidth="3" android:pathData="M34,12L76,12L94,30L94,116L34,116Z"/>
-    <path android:fillColor="#10334F" android:strokeColor="#79DDFF" android:strokeWidth="3" android:pathData="M76,12L76,32L94,32"/>
-    <path android:fillColor="#219CFF" android:pathData="M47,40L57,40L81,77L81,40L91,40L91,96L81,96L57,59L57,96L47,96Z"/>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="128dp"
+    android:height="128dp"
+    android:viewportWidth="128"
+    android:viewportHeight="128">
+
+    <!-- Korczak Nexus app icon: same circular N mark used in the application header. -->
+    <path
+        android:fillColor="#061A2B"
+        android:strokeColor="#35B5FF"
+        android:strokeWidth="3"
+        android:pathData="M64,15 A49,49 0,1 0,64,113 A49,49 0,1 0,64,15" />
+
+    <!-- Subtle inner field keeps the header mark visually consistent at launcher size. -->
+    <path
+        android:fillColor="#071B2D"
+        android:pathData="M64,19 A45,45 0,1 0,64,109 A45,45 0,1 0,64,19" />
+
+    <!-- Nexus N, matching the header geometry. -->
+    <path
+        android:fillColor="#219CFF"
+        android:strokeColor="#B9EFFF"
+        android:strokeAlpha="0.30"
+        android:strokeWidth="1.1"
+        android:strokeLineJoin="round"
+        android:pathData="M39,37 L50,37 L78,70 L78,37 L89,37 L89,91 L78,91 L50,57 L50,91 L39,91 Z" />
+
+    <!-- Cool highlight / depth. -->
+    <path
+        android:fillColor="#8AE5FF"
+        android:fillAlpha="0.72"
+        android:pathData="M39,37 L43,37 L43,91 L39,91 Z" />
+
+    <path
+        android:fillColor="#07539C"
+        android:fillAlpha="0.55"
+        android:pathData="M78,37 L89,37 L89,42 L78,42 Z" />
 </vector>
