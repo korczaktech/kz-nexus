@@ -13,7 +13,7 @@ import java.security.MessageDigest
 
 class Updater(private val activity:Activity){
     private val repo="korczaktechnology-tech/kzdoc"
-    private val current=BuildConfig.VERSION_NAME
+    private val current:String by lazy { activity.packageManager.getPackageInfo(activity.packageName, 0).versionName ?: "0.0.0.1" }
 
     fun check(done:(String)->Unit){
         Thread{
