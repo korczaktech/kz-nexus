@@ -300,6 +300,15 @@ class MainActivity : AppCompatActivity() {
         intent.removeExtra("nexus_feedback_title")
     }
 
+    @Suppress("DEPRECATION")
+    override fun onBackPressed() {
+        if (::web.isInitialized) {
+            web.evaluateJavascript("(window.handleBack && window.handleBack())", null)
+        } else {
+            super.onBackPressed()
+        }
+    }
+
     override fun onResume() {
         super.onResume()
         if (!permissionFlowActive) requestStartupPermissions()
