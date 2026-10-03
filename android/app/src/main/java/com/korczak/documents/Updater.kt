@@ -31,42 +31,59 @@ class Updater(private val activity:Activity){
         }.start()
     }
 
-    fun install(url:String,expected:String,onDone:(String)->Unit){
-        Thread{
-            val dir=File(activity.cacheDir,"updates").apply{mkdirs()}
-            val apk=File(dir,"update.apk")
-            try{
-                val c=URL(url).openConnection() as HttpURLConnection
-                c.instanceFollowRedirects=true;c.connectTimeout=20000;c.readTimeout=180000;c.setRequestProperty("User-Agent","Korczak-Nexus-Updater")
-                if(c.responseCode !in 200..299)throw IllegalStateException("Download HTTP "+c.responseCode);c.inputStream.use{input->apk.outputStream().use{out->input.copyTo(out)}};c.disconnect();if(apk.length()<100000L)throw IllegalStateException("APK baixado está incompleto")
-                val md=MessageDigest.getInstance("SHA-256")
-                apk.inputStream().use{input->val b=ByteArray(8192);while(true){val n=input.read(b);if(n<0)break;md.update(b,0,n)}}
-                val actual=md.digest().joinToString(""){"%02x".format(it)}
-                if(expected.isNotBlank()&&!actual.equals(expected,true))throw IllegalStateException("Integridade do APK inválida")
-                val installer=activity.packageManager.packageInstaller
-                val params=PackageInstaller.SessionParams(PackageInstaller.SessionParams.MODE_FULL_INSTALL).apply{setAppPackageName(activity.packageName)}
-                val id=installer.createSession(params)
-                installer.openSession(id).use{session->
-                    apk.inputStream().use{input->session.openWrite("base.apk",0,apk.length()).use{out->input.copyTo(out);session.fsync(out)}}
-                    val intent=Intent(activity,UpdateReceiver::class.java)
-                    val pi=PendingIntent.getBroadcast(activity,id,intent,PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
-                    session.commit(pi.intentSender)
-                }
-                activity.runOnUiThread{onDone("installing")}
-            }catch(e:Exception){
-                try{
-                    val uri=androidx.core.content.FileProvider.getUriForFile(activity,activity.packageName+".fileprovider",apk)
-                    val intent=Intent(Intent.ACTION_VIEW).apply{
-                        setDataAndType(uri,"application/vnd.android.package-archive")
-                        addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_ACTIVITY_NEW_TASK)
+    fun install(url: String, expected: String, onDone: (String) -> Unit) {
+        Thread {
+            val dir = File(activity.cacheDir, "updates").apply { mkdirs() }
+            val apk = File(dir, "update.apk")
+            try {
+                if (android.os.Build.VERSION.SDK_INT >= 26 && !activity.packageManager.canRequestPackageInstalls()) {
+                    activity.getSharedPreferences("nexus_updater", Activity.MODE_PRIVATE).edit()
+                        .putString("pending_url", url).putString("pending_digest", expected).apply()
+                    activity.runOnUiThread {
+                        activity.startActivity(Intent(android.provider.Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES, Uri.parse("package:" + activity.packageName)))
+                        onDone("permission_install")
                     }
-                    activity.startActivity(intent)
-                    activity.runOnUiThread{onDone("installer")}
-                }catch(fallback:Exception){
-                    activity.runOnUiThread{onDone("failed|"+(fallback.message?:"Não foi possível instalar a atualização"))}
+                    return@Thread
                 }
+                val c = URL(url).openConnection() as HttpURLConnection
+                c.instanceFollowRedirects = true
+                c.connectTimeout = 20000
+                c.readTimeout = 180000
+                c.setRequestProperty("User-Agent", "Korczak-Nexus-Updater")
+                c.setRequestProperty("Accept", "application/octet-stream")
+                if (c.responseCode !in 200..299) throw IllegalStateException("Download HTTP " + c.responseCode)
+                c.inputStream.use { input -> apk.outputStream().use { output -> input.copyTo(output) } }
+                c.disconnect()
+                if (apk.length() < 100000L) throw IllegalStateException("APK baixado está incompleto")
+                val md = MessageDigest.getInstance("SHA-256")
+                apk.inputStream().use { input ->
+                    val buffer = ByteArray(8192)
+                    while (true) { val n = input.read(buffer); if (n < 0) break; md.update(buffer, 0, n) }
+                }
+                val actual = md.digest().joinToString("") { "%02x".format(it) }
+                if (expected.isNotBlank() && !actual.equals(expected, true)) throw IllegalStateException("Integridade do APK inválida")
+                val uri = androidx.core.content.FileProvider.getUriForFile(activity, activity.packageName + ".fileprovider", apk)
+                val intent = Intent(Intent.ACTION_VIEW).apply {
+                    setDataAndType(uri, "application/vnd.android.package-archive")
+                    addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_ACTIVITY_NEW_TASK)
+                }
+                activity.runOnUiThread {
+                    try { activity.startActivity(intent); onDone("installer") }
+                    catch (e: Exception) { onDone("failed|" + (e.message ?: "O Android não conseguiu abrir o instalador")) }
+                }
+            } catch (e: Exception) {
+                activity.runOnUiThread { onDone("failed|" + (e.message ?: "Não foi possível instalar a atualização")) }
             }
         }.start()
+    }
+
+    fun resumePending() {
+        val prefs = activity.getSharedPreferences("nexus_updater", Activity.MODE_PRIVATE)
+        val url = prefs.getString("pending_url", null) ?: return
+        val digest = prefs.getString("pending_digest", "") ?: ""
+        if (android.os.Build.VERSION.SDK_INT >= 26 && !activity.packageManager.canRequestPackageInstalls()) return
+        prefs.edit().clear().apply()
+        install(url, digest) {}
     }
 
     private fun compare(a:String,b:String):Int{
