@@ -75,6 +75,7 @@ class MainActivity : AppCompatActivity() {
 
         requestStartupPermissions()
         handleFeedbackIntent(intent)
+        handleDocumentIntent(intent)
         Updater(this).resumePending()
         checkForUpdateIfEnabled()
     }
@@ -288,6 +289,40 @@ class MainActivity : AppCompatActivity() {
         super.onNewIntent(intent)
         setIntent(intent)
         handleFeedbackIntent(intent)
+        handleDocumentIntent(intent)
+    }
+
+    /**
+     * Recebe arquivos enviados pelo seletor "Abrir com..." / "Editar com...".
+     * O Android entrega uma content:// URI com uma permissão temporária de leitura.
+     */
+    private fun handleDocumentIntent(intent: Intent?) {
+        val action = intent?.action ?: return
+        if (action != Intent.ACTION_VIEW && action != Intent.ACTION_EDIT) return
+        val uri = intent.data ?: return
+
+        try {
+            val document = DocumentFile.fromSingleUri(this, uri)
+            val name = document?.name ?: "Documento"
+            val flags = intent.flags and (Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION)
+            if (flags != 0) {
+                try {
+                    contentResolver.takePersistableUriPermission(uri, flags)
+                } catch (_: Exception) {
+                    // Nem todo provider oferece permissão persistente; a permissão temporária continua válida.
+                }
+            }
+
+            web.postDelayed({
+                val js = "window.openExisting && window.openExisting(" +
+                    JSONObject.quote(uri.toString()) + "," +
+                    JSONObject.quote(name) +
+                    ")"
+                web.evaluateJavascript(js, null)
+            }, 900)
+        } catch (e: Exception) {
+            NexusFeedback.snackbar(this, e.message ?: "Não foi possível abrir o documento.", NexusFeedback.Type.ERROR)
+        }
     }
 
     private fun handleFeedbackIntent(intent: Intent?) {
@@ -317,6 +352,7 @@ class MainActivity : AppCompatActivity() {
     override fun onResume() {
         super.onResume()
         if (!permissionFlowActive) requestStartupPermissions()
+        handleDocumentIntent(intent)
         Updater(this).resumePending()
         if (::web.isInitialized) {
             web.postDelayed({ checkForUpdateIfEnabled() }, 700)
@@ -443,16 +479,24 @@ class MainActivity : AppCompatActivity() {
                         }
 
                         "requestStorage" -> runOnUiThread {
-                            // O Nexus usa o Storage Access Framework (SAF), evitando acesso
-                            // amplo ao armazenamento. O usuário escolhe explicitamente a pasta.
-                            pendingCallback = callback
-                            val intent = Intent(Intent.ACTION_OPEN_DOCUMENT_TREE)
-                                .addFlags(
-                                    Intent.FLAG_GRANT_READ_URI_PERMISSION or
-                                    Intent.FLAG_GRANT_WRITE_URI_PERMISSION or
-                                    Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION
-                                )
-                            startActivityForResult(intent, treeRequest)
+                            // A opção "Acesso amplo" abre a tela oficial do Android.
+                            // O SAF continua disponível em "pickStorage" para acesso por pasta.
+                            if (android.os.Build.VERSION.SDK_INT >= 30) {
+                                try {
+                                    startActivity(
+                                        Intent(
+                                            Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION,
+                                            Uri.parse("package:$packageName")
+                                        )
+                                    )
+                                    respond(callback, JSONObject().put("ok", true).put("message", "Abra a opção de acesso a todos os arquivos e retorne ao Nexus."))
+                                } catch (_: Exception) {
+                                    startActivity(Intent(Settings.ACTION_MANAGE_ALL_FILES_ACCESS_PERMISSION))
+                                    respond(callback, JSONObject().put("ok", true).put("message", "Abra a opção de acesso a todos os arquivos e retorne ao Nexus."))
+                                }
+                            } else {
+                                respond(callback, JSONObject().put("ok", true).put("message", "Esta versão do Android não usa a tela de acesso amplo."))
+                            }
                         }
 
                         "readFile" -> {
