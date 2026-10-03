@@ -66,7 +66,22 @@ function readDropped(file){if(!file.type.startsWith('text/')&&!/markdown|json|ht
 function addPrintStyle(){const s=document.createElement('style');s.textContent='@media print{body>*:not(#editorModal){display:none!important}.editor-modal{display:block!important;position:static!important;background:white!important}.editor-sheet{background:white!important}.editor-top,.editor-tools,.editor-bottom{display:none!important}.page-wrap{height:auto!important;overflow:visible!important;padding:0!important}.page{box-shadow:none!important;margin:0!important;min-height:0!important;color:#111!important;width:auto!important}.nx-pagebreak{break-after:page!important}.nx-header,.nx-footer{display:block!important}}';document.head.appendChild(s)}
 function addStyles(){const s=document.createElement('style');s.textContent='.nx-enhanced-toolbar{display:flex;gap:4px;align-items:center;overflow-x:auto;padding:8px 0}.nx-select{height:36px;border:1px solid #153a57;border-radius:9px;background:#091a2b;color:#d5e6f5;padding:0 8px}.nx-panel{max-height:92vh}.nx-grid-fields{display:grid;grid-template-columns:1fr 1fr;gap:12px}.nx-colors{display:grid;grid-template-columns:repeat(5,1fr);gap:10px}.nx-colors button{height:42px;border:1px solid #5d7790;border-radius:10px}.nx-table{border-collapse:collapse;width:100%;margin:12px 0}.nx-table th,.nx-table td{border:1px solid #8294a8;padding:8px;min-width:50px}.nx-table th{background:#e8eef4}.nx-image{max-width:100%;height:auto}.nx-pagebreak{margin:24px 0;border-top:2px dashed #8aa0b5;text-align:center;color:#71859a;padding-top:5px}.nx-anchor{color:#0874d9}.nx-history-row{display:flex;justify-content:space-between;gap:10px;padding:12px;border:1px solid #193d5b;border-radius:11px;margin-bottom:8px;background:#071727}.nx-history-row small{display:block;color:#7f98b1;margin-top:4px}.nx-more-grid,.nx-export-grid{display:grid;grid-template-columns:1fr 1fr;gap:9px}.nx-focus .top,.nx-focus .bottom{display:none}.nx-focus .content{padding-bottom:20px}.nx-focus .app{max-width:none}.nx-reading .editor-tools{display:none}.nx-reading .page{box-shadow:none}.nx-high-contrast .page{background:#fff!important;color:#000!important;outline:3px solid #000}.nx-track ins{background:#c8ffd9;text-decoration:none}.nx-track del{background:#ffd0d8}.nx-check{accent-color:#0874d9}.nx-cover{text-align:center;padding-top:200px;min-height:700px}.nx-header{border-bottom:1px solid #aaa;padding-bottom:8px;margin-bottom:18px}.nx-footer{border-top:1px solid #aaa;padding-top:8px;margin-top:30px;text-align:center}.nx-stats{margin-left:auto}.page[data-orientation="landscape"]{min-height:650px}.page[data-paper="Carta"]{max-width:816px}.page[data-paper="Ofício"]{max-width:816px}.page[style*="column-count: 2"],.page[style*="column-count:2"]{column-fill:auto}.page[style*="column-count: 3"],.page[style*="column-count:3"]{column-fill:auto}@media(max-width:700px){.nx-grid-fields,.nx-more-grid,.nx-export-grid{grid-template-columns:1fr}.nx-stats{display:none}.page{padding:35px 24px;min-height:700px}.nx-enhanced-toolbar{padding-right:8px}}';document.head.appendChild(s)}
 function patchOpenEditor(){const old=window.openEditor;if(typeof old!=='function')return;window.openEditor=function(html,name,uri){old(html,name,uri);setTimeout(()=>{state.undo=[];state.redo=[];state.undo.push(page().innerHTML);loadHistory();count()},0)}}
-function init(){addStyles();addPrintStyle();addToolbar();selectionTools();contextMenu();keyboard();patchOpenEditor();loadHistory();count()}
-if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',()=>setTimeout(init,200));else setTimeout(init,200);
+let __nexusEditorInit=false;
+function init(){
+if(__nexusEditorInit)return;
+try{addStyles()}catch(e){}
+try{addPrintStyle()}catch(e){}
+try{addToolbar()}catch(e){}
+try{selectionTools()}catch(e){}
+try{contextMenu()}catch(e){}
+try{keyboard()}catch(e){}
+try{patchOpenEditor()}catch(e){}
+try{loadHistory()}catch(e){}
+try{count()}catch(e){}
+__nexusEditorInit=true;
+}
+if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',()=>{setTimeout(init,200);setTimeout(init,900);});
+else{setTimeout(init,200);setTimeout(init,900);}
+
 window.NexusEditor={undo,redo,recordVersion,feature,count,saveHistory};
 })();
