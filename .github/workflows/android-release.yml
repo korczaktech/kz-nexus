@@ -33,9 +33,9 @@ jobs:
 
       - name: Calculate version
         run: |
-          VERSION="0.0.0.${GITHUB_RUN_NUMBER}"
+          VERSION="0.0.0.111"
           echo "VERSION=$VERSION" >> "$GITHUB_ENV"
-          echo "VERSION_CODE=${GITHUB_RUN_NUMBER}" >> "$GITHUB_ENV"
+          echo "VERSION_CODE=111" >> "$GITHUB_ENV"
           echo "Release: $VERSION"
 
       - name: Set up Java
