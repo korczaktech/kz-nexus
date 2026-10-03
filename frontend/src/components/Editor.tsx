@@ -36,6 +36,9 @@ function applyWrap(text:string,start:number,end:number,left:string,right=left){c
 
 export function Editor({document,versions,onSave,onClose,onConflict}:{document:DocumentItem;versions:Version[];onSave:(data:{name:string;document_type:string;content:string;base_version_id:string|null})=>Promise<'saved'|'conflict'>;onClose:()=>void;onConflict:()=>Promise<DocumentItem>}){
   const initial=document.content||'';const[name,setName]=useState(document.name);const[type,setType]=useState(document.document_type);const[content,setContent]=useState(initial);const[state,setState]=useState<SaveState>('saved');const[message,setMessage]=useState('Salvo');const[readOnly,setReadOnly]=useState(false);
+  type LocalFile={file:File;path:string;editable:boolean};
+  const[fileInput,setFileInput]=useState<HTMLInputElement|null>(null);const[localFiles,setLocalFiles]=useState<LocalFile[]>([]);const[selectedLocalPath,setSelectedLocalPath]=useState('');const[folderName,setFolderName]=useState('');const[showFiles,setShowFiles]=useState(true);const[fileError,setFileError]=useState('');
+  const fileInputRef=useRef<HTMLInputElement>(null);
   const history=useRef<string[]>([initial]),future=useRef<string[]>([]),timer=useRef<number|undefined>(undefined);const textarea=useRef<HTMLTextAreaElement>(null);
   const draft=useMemo(()=>{try{return recoverDraft(localStorage,document.id)}catch{return null}},[document.id]);
   useEffect(()=>{setName(document.name);setType(document.document_type);setContent(document.content||'');history.current=[document.content||''];future.current=[];setState('saved');setMessage('Salvo')},[document.id]);
@@ -45,6 +48,22 @@ export function Editor({document,versions,onSave,onClose,onConflict}:{document:D
   useEffect(()=>()=>{if(timer.current)window.clearTimeout(timer.current)},[]);
   function change(next:string){setContent(next);setState('dirty');setMessage('Alterações não salvas');future.current=[];const h=history.current;if(h[h.length-1]!==next){h.push(next);if(h.length>80)h.shift()}}
   function selection(){const el=textarea.current;return{start:el?.selectionStart||0,end:el?.selectionEnd||0}}
+  function isEditableFile(file:File){return /^(text\\/|application\\/(json|javascript|xml|yaml|x-yaml|toml|sql)|image\\/svg\\+xml)/.test(file.type)||/\\.(txt|md|markdown|mdx|json|js|jsx|ts|tsx|css|html|htm|xml|svg|yaml|yml|toml|sql|csv|log)$/i.test(file.name)}
+  function chooseFolder(){setFileError('');fileInputRef.current?.click()}
+  function handleFolderFiles(list:FileList|null){
+    if(!list||!list.length)return;
+    const files=Array.from(list).map(file=>({file,path:(file as File & {webkitRelativePath?:string}).webkitRelativePath||file.name,editable:isEditableFile(file)})).sort((a,b)=>a.path.localeCompare(b.path,'pt-BR'));
+    setLocalFiles(files);setSelectedLocalPath('');setFolderName(files[0]?.path.split('/')[0]||'Pasta selecionada');setShowFiles(true);
+  }
+  async function openLocalFile(item:LocalFile){
+    setFileError('');setSelectedLocalPath(item.path);
+    if(!item.editable){setFileError('Este arquivo foi listado, mas o formato não é editável no navegador.');return}
+    try{
+      const text=await item.file.text();setContent(text);setName(item.file.name);setType(item.file.name.split('.').pop()?.toLowerCase()||'txt');history.current=[text];future.current=[];setState('dirty');setMessage('Arquivo local aberto — salve para aplicar ao documento');textarea.current?.focus();
+    }catch{setFileError('Não foi possível ler este arquivo.')}
+  }
+  function downloadCurrent(){const ext=(type||'txt').replace(/[^a-z0-9]/gi,'')||'txt';const blob=new Blob([content],{type:'text/plain;charset=utf-8'});const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download=(name.replace(/\\.[^.]+$/,'')||'documento')+'.'+ext;a.click();URL.revokeObjectURL(url)}
+  function clearLocalFolder(){setLocalFiles([]);setFolderName('');setSelectedLocalPath('');setFileError('')}
   function insert(value:string){const{start,end}=selection();const r=toolbarInsert(value,start,end,content);change(r.text);requestAnimationFrame(()=>{textarea.current?.focus();textarea.current?.setSelectionRange(r.start,r.end)})}
   function wrap(left:string,right=left){const{start,end}=selection();const r=applyWrap(content,start,end,left,right);change(r.text);requestAnimationFrame(()=>{textarea.current?.focus();textarea.current?.setSelectionRange(r.start,r.end)})}
   function command(cmd:string){if(cmd==='bold')wrap('**');else if(cmd==='italic')wrap('*');else if(cmd==='strike')wrap('~~');else if(cmd==='h1')insert('# $\n');else if(cmd==='h2')insert('## $\n');else if(cmd==='h3')insert('### $\n');else if(cmd==='ul')insert('- $\n');else if(cmd==='ol')insert('1. $\n');else if(cmd==='quote')insert('> $\n');else if(cmd==='code')wrap(String.fromCharCode(96));else if(cmd==='link'){const url=window.prompt('URL do link:','https://');if(url)insert('[$]('+url+')')}else if(cmd==='table')insert('| Coluna 1 | Coluna 2 |\n| --- | --- |\n| $ | Valor |\n');}
@@ -58,7 +77,21 @@ export function Editor({document,versions,onSave,onClose,onConflict}:{document:D
     <header className="editor-head"><div><div className="editor-breadcrumb">DOCUMENTO / EDIÇÃO</div><input className="editor-title" value={name} onChange={e=>{setName(e.target.value);setState('dirty');setMessage('Alterações não salvas')}}/><div className={'save-state '+state}><span className="save-dot"/>{message}{versions.length?' · v'+versions[0].version_number:''}</div></div><div className="editor-actions"><button className="editor-secondary" onClick={()=>setReadOnly(!readOnly)}>{readOnly?'Editar':'Somente leitura'}</button>{state==='conflict'&&<button className="editor-secondary" onClick={async()=>{const fresh=await onConflict();try{clearDraft(localStorage,document.id)}catch{}setContent(fresh.content||'');setName(fresh.name);setType(fresh.document_type);history.current=[fresh.content||''];future.current=[];setState('saved');setMessage('Versão atual recarregada')}}>Recarregar versão atual</button>}<button className="editor-secondary" onClick={requestClose}>Sair</button><button className="editor-save" disabled={state==='saving'||readOnly} onClick={()=>void save()}>Salvar</button></div></header>
     {!readOnly&&<div className="editor-toolbar">{toolbar.map(([cmd,label,title])=><button type="button" key={cmd} title={title} onMouseDown={e=>e.preventDefault()} onClick={()=>command(cmd)}>{label}</button>)}<span className="toolbar-separator"/><button type="button" onClick={undo} disabled={history.current.length<2} title="Desfazer">↶</button><button type="button" onClick={redo} disabled={!future.current.length} title="Refazer">↷</button></div>}
     <div className="editor-info"><span>{type.toUpperCase()}</span><span>{content.length.toLocaleString('pt-BR')} caracteres</span><span>{state==='saved'?'Sincronizado':state==='saving'?'Sincronizando':state==='conflict'?'Conflito detectado':'Alterações locais'}</span></div>
-    <div className={'editor-body '+(readOnly?'readonly':'')}><textarea ref={textarea} value={content} readOnly={readOnly} onChange={e=>change(e.target.value)} spellCheck aria-label="Conteúdo do documento"/><aside className="editor-side"><strong>Documento</strong><label>Tipo<select value={type} onChange={e=>{setType(e.target.value);setState('dirty')}} disabled={readOnly}><option value="txt">Texto</option><option value="md">Markdown</option><option value="doc">Documento</option></select></label><div><span>Versão atual</span><strong>{versions[0]?.version_number||'1'}</strong></div><div><span>Última alteração</span><strong>{new Date(document.updated_at).toLocaleString('pt-BR')}</strong></div><div><span>Proteção</span><strong>Rascunho local ativo</strong></div></aside></div>
-    <footer className="editor-foot"><span>Desfazer/refazer pelo editor · alterações locais preservadas em caso de interrupção.</span><span>{readOnly?'MODO SOMENTE LEITURA':'MODO EDIÇÃO'}</span></footer>
+    <div className={'editor-body '+(readOnly?'readonly':'')}>
+      <input ref={fileInputRef} type="file" multiple style={{display:'none'}} onChange={e=>handleFolderFiles(e.target.files)} {...({webkitdirectory:'',directory:''} as React.InputHTMLAttributes<HTMLInputElement>)}/>
+      <textarea ref={textarea} value={content} readOnly={readOnly} onChange={e=>change(e.target.value)} spellCheck aria-label="Conteúdo do documento"/>
+      <aside className="editor-side">
+        <div className="editor-files-head"><strong>Arquivos</strong><button type="button" className="editor-file-action" onClick={chooseFolder}>Selecionar pasta</button></div>
+        {folderName&&<div className="editor-folder-name" title={folderName}>📁 {folderName}<button type="button" onClick={clearLocalFolder} aria-label="Limpar pasta">×</button></div>}
+        {fileError&&<div className="editor-file-error">{fileError}</div>}
+        {showFiles&&localFiles.length>0&&<div className="editor-file-list" aria-label="Arquivos da pasta">
+          {localFiles.map(item=><button type="button" key={item.path} className={'editor-file-item '+(selectedLocalPath===item.path?'active':'')} onClick={()=>void openLocalFile(item)} title={item.path}>
+            <span>{item.editable?'▤':'◉'}</span><span>{item.path}</span>
+          </button>)}
+        </div>}
+        {!localFiles.length&&<div className="editor-files-empty">Nenhuma pasta selecionada. Selecione uma pasta para carregar seus arquivos aqui.</div>}
+        <div className="editor-side-divider"/>
+        <strong>Documento</strong><label>Tipo<select value={type} onChange={e=>{setType(e.target.value);setState('dirty')}} disabled={readOnly}><option value="txt">Texto</option><option value="md">Markdown</option><option value="doc">Documento</option></select></label><div><span>Versão atual</span><strong>{versions[0]?.version_number||'1'}</strong></div><div><span>Última alteração</span><strong>{new Date(document.updated_at).toLocaleString('pt-BR')}</strong></div><div><span>Proteção</span><strong>Rascunho local ativo</strong></div></aside></div>
+    <footer className="editor-foot"><span>Desfazer/refazer pelo editor · alterações locais preservadas em caso de interrupção.</span><div className="editor-foot-actions"><button type="button" className="editor-secondary" onClick={downloadCurrent}>Exportar arquivo</button><span>{readOnly?'MODO SOMENTE LEITURA':'MODO EDIÇÃO'}</span></div></footer>
   </section>
 }
