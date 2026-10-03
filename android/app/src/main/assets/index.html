@@ -593,11 +593,29 @@ function restoreSelection(){
   s.removeAllRanges();
   s.addRange(savedSelection);
 }
+const INDEPENDENT_FORMATS=['bold','italic','underline','strikeThrough','superscript','subscript'];
+function commandState(command){
+  try{return !!document.queryCommandState(command)}catch(e){return false}
+}
 function editorCommand(c,v=null){
   const page=$('page');if(!page)return;
   page.focus();
   restoreSelection();
+  const before={};
+  INDEPENDENT_FORMATS.forEach(x=>{if(x!==c)before[x]=commandState(x)});
   try{document.execCommand(c,false,v)}catch(e){console.warn('Comando do editor falhou:',c,e)}
+  // Cada formatação de caracteres é independente. Se o WebView alterar outra
+  // formatação ao executar o comando, restaura somente aquela que mudou.
+  if(INDEPENDENT_FORMATS.includes(c)){
+    restoreSelection();
+    INDEPENDENT_FORMATS.forEach(x=>{
+      if(x===c)return;
+      const now=commandState(x);
+      if(now!==before[x]){
+        try{document.execCommand(x,false,null)}catch(e){}
+      }
+    });
+  }
   saveSelection();
   updateToolbarState();
   dirty();
