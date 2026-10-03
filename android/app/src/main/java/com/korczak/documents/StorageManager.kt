@@ -166,16 +166,41 @@ class StorageManager(private val context: Context) {
     }
 
     fun deviceStorage(): JSONObject {
-        val path = Environment.getDataDirectory()
-        val stat = StatFs(path.path)
+        val stat = StatFs(Environment.getDataDirectory().path)
         val total = stat.totalBytes
         val available = stat.availableBytes
         return JSONObject()
             .put("total", total)
             .put("available", available)
-            .put("used", (total - available).coerceAtLeast(0L))
-            .put("label", label())
-            .put("allFiles", BuildConfigHelper.hasAllFilesAccess())
+            .put("used", total - available)
+            .put("allFiles", if (android.os.Build.VERSION.SDK_INT >= 30) Environment.isExternalStorageManager() else true)
+            .put("documentStats", documentStats())
+    }
+
+    private fun documentStats(): JSONObject {
+        val extensions = setOf("txt","text","md","markdown","rtf","doc","docx","docm","dot","dotx","dotm","odt","ott","fodt","wps","pages","pdf","xml","html","htm","kzdoc")
+        val counts = JSONObject()
+        extensions.forEach { counts.put(it, 0) }
+        val root = Environment.getExternalStorageDirectory()
+        val result = longArrayOf(0, 0)
+        scanDocumentFiles(root, extensions, counts, result)
+        return JSONObject().put("total", result[0]).put("bytes", result[1]).put("byExtension", counts).put("scope", "armazenamento externo acessível ao Nexus")
+    }
+
+    private fun scanDocumentFiles(file: java.io.File, extensions: Set<String>, counts: JSONObject, result: LongArray) {
+        val children = try { file.listFiles() } catch (_: SecurityException) { null } ?: return
+        for (child in children) {
+            if (child.isDirectory) {
+                scanDocumentFiles(child, extensions, counts, result)
+            } else {
+                val ext = child.name.substringAfterLast('.', "").lowercase()
+                if (ext in extensions) {
+                    result[0]++
+                    result[1] += child.length()
+                    counts.put(ext, counts.optInt(ext) + 1)
+                }
+            }
+        }
     }
 
     private fun safe(n: String) =
