@@ -6,6 +6,11 @@ import secrets
 from uuid import uuid4
 
 from .database.connection import get_database
+
+try:
+    import bcrypt
+except ImportError:  # pragma: no cover - dependência instalada em produção
+    bcrypt = None
 from .errors import AppError, NotFoundError, ValidationError
 
 SESSION_HOURS = 24
@@ -42,6 +47,11 @@ def verify_password(password: str, encoded: str) -> bool:
     if not isinstance(encoded, str) or not encoded:
         return False
     try:
+        encoded = encoded.strip()
+        if encoded.startswith(("$2a$", "$2b$", "$2y$")):
+            if bcrypt is None:
+                return False
+            return bool(bcrypt.checkpw(password.encode("utf-8"), encoded.encode("utf-8")))
         parts = encoded.split("$")
         if parts[0] == "pbkdf2_sha256" and len(parts) == 4:
             _, iterations, salt_text, digest_text = parts
@@ -68,7 +78,12 @@ def verify_password(password: str, encoded: str) -> bool:
 
 
 def needs_password_rehash(encoded: str) -> bool:
-    return isinstance(encoded, str) and not encoded.startswith(
+    if not isinstance(encoded, str):
+        return False
+    encoded = encoded.strip()
+    if encoded.startswith(("$2a$", "$2b$", "$2y$")):
+        return True
+    return not encoded.startswith(
         "pbkdf2_sha256$" + str(_PASSWORD_ITERATIONS) + "$"
     )
 
