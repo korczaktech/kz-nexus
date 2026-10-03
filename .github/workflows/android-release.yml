@@ -31,24 +31,20 @@ jobs:
           test -n "$KEY_ALIAS" || { echo "::error::Configure ANDROID_KEY_ALIAS."; exit 1; }
           test -n "$KEY_PASSWORD" || { echo "::error::Configure ANDROID_KEY_PASSWORD."; exit 1; }
 
-      - name: Calculate next version
+      - name: Calculate monotonic Android version
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
-
-          latest_tag="$(gh release list --repo "$GITHUB_REPOSITORY" --limit 1 --json tagName --jq '.[0].tagName // empty')"
-
-          if [ -z "$latest_tag" ]; then
-            next_code=1
-          else
-            latest_version="${latest_tag#v}"
-            IFS='.' read -r major minor patch code <<< "$latest_version"
-            next_code=$((code + 1))
-          fi
-
+          commit_count="$(git rev-list --count HEAD)"
+          release_max="$(gh release list --repo "$GITHUB_REPOSITORY" --limit 100 --json tagName --jq '[.[].tagName | sub("^v"; "") | select(test("^[0-9]+(\\.[0-9]+){0,3}$")) | split(".")[-1] | tonumber] | max // 0')"
+          tag_max="$(git tag --list 'v0.0.0.*' | sed 's/^v0.0.0.//' | grep -E '^[0-9]+$' | sort -n | tail -1 || true)"
+          tag_max="${tag_max:-0}"
+          next_code=$((commit_count + 1))
+          if [ "$next_code" -le "$release_max" ]; then next_code=$((release_max + 1)); fi
+          if [ "$next_code" -le "$tag_max" ]; then next_code=$((tag_max + 1)); fi
+          if [ "$next_code" -le 159 ]; then next_code=160; fi
           VERSION="0.0.0.${next_code}"
-
           echo "VERSION=$VERSION" >> "$GITHUB_ENV"
           echo "VERSION_CODE=$next_code" >> "$GITHUB_ENV"
           echo "Release: $VERSION"
