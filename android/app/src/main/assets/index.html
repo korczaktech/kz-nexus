@@ -358,7 +358,7 @@ let saveFolderStack=[];async function openSaveFolder(){const root=await native('
   if(currentUri){
     const title=($('editorTitle').value.trim()||currentName||'Documento.kzdoc').replace(/[\\/:*?"<>|]/g,'_');
     const fileName=title.includes('.')?title:title+'.kzdoc';
-    const payload=JSON.stringify({korczak_document:1,title:fileName.replace(/\\.kzdoc$/i,''),content:$('page').innerHTML,updatedAt:new Date().toISOString()});
+    const payload=JSON.stringify({korczak_document:1,title:fileName.replace(/\.kzdoc$/i,''),content:$('page').innerHTML,updatedAt:new Date().toISOString()});
     $('saveState').innerHTML='<i style="background:#5d89ff"></i>Salvando…';
     const r=await native('writeFile',{uri:currentUri,name:fileName,content:payload});
     if(!r.ok){
