@@ -62,6 +62,8 @@ class Updater(private val activity: Activity) {
                     throw IllegalStateException("O arquivo da atualização não é um APK")
                 }
 
+                val url = asset.getString("browser_download_url")
+                val digest = asset.optString("digest").removePrefix("sha256:")
                 activity.runOnUiThread { done("update|" + selectedTag + "|" + url + "|" + digest) }
             } catch (e: Exception) {
                 activity.runOnUiThread { done("failed|" + (e.message ?: "erro ao verificar atualização")) }
