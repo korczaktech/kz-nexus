@@ -178,6 +178,70 @@ body{overflow-x:hidden}.app{min-height:100vh;max-width:1180px;margin:auto;backgr
 <script>
 let currentUri="",currentName="",templateKind="blank",toastTimer=null;
 const $=id=>document.getElementById(id);
+let saveFolderStack = [];
+
+function showView(v){document.querySelectorAll('.view').forEach(x=>x.classList.remove('active'));const el=$(v+'View');if(el)el.classList.add('active');document.querySelectorAll('.bottom button').forEach(x=>x.classList.remove('active'));if(v==='home')$('navHome').classList.add('active');if(v==='files')$('navFiles').classList.add('active');if(v==='more'||v==='profile'||v==='plan'||v==='about'||v==='storage'||v==='settings')$('navMore').classList.add('active');if(v==='files')refresh();if(v==='storage')refreshStorage();if(v==='profile')loadProfile();if(v==='about')loadAbout();if(v==='settings'){loadProfile();applySettings();}window.scrollTo(0,0)}
+
+function humanSize(n){if(!n)return'0 B';let i=0,u=['B','KB','MB','GB','TB'];while(n>=1024&&i<u.length-1){n/=1024;i++}return n.toFixed(i?1:0)+' '+u[i]}
+
+function icon(n){const e=(String(n).split('.').pop()||'').toLowerCase();if(e==='pdf')return'▤';if(['doc','docx','docm','dot','dotx','dotm','odt','ott','fodt','wps','pages'].includes(e))return'▱';if(['txt','text','md','markdown','rtf','html','htm','xml','kzdoc'].includes(e))return'▤';if(['xls','xlsx','csv'].includes(e))return'▦';return'□'}
+
+async function refresh(){const r=await native('listFiles');if(!r.ok)return;renderFiles(r.files||[]);refreshStorage();checkStorageStatus()}
+
+function renderFiles(fs){const recent=fs.slice(0,6);$('recentFiles').innerHTML=recent.length?recent.map(fileRow).join(''):'<div class="empty"><b>Nenhum arquivo encontrado</b><small>Escolha uma pasta ou importe um arquivo.</small></div>';$('allFiles').innerHTML=fs.length?fs.map(fileCard).join(''):'<div class="empty" style="grid-column:1/-1"><b>Nenhum arquivo encontrado</b><small>Adicione ou crie seu primeiro documento.</small></div>';renderPicker(fs)}
+
+function fileRow(f){return '<div class="file"><span class="fileicon">'+icon(f.name)+'</span><div class="filetext"><b>'+esc(cleanName(f.name))+'</b><small>'+humanSize(f.size)+' · armazenamento local</small></div><button onclick="openExisting('+JSON.stringify(f.uri)+','+JSON.stringify(f.name)+')">›</button></div>'}
+
+function fileCard(f){return '<div class="file-card"><span class="fileicon">'+icon(f.name)+'</span><div class="filetext"><b>'+esc(cleanName(f.name))+'</b><small>'+humanSize(f.size)+' · '+esc(f.mime||'arquivo')+'</small></div><button class="btn" onclick="openExisting('+JSON.stringify(f.uri)+','+JSON.stringify(f.name)+')">Abrir</button></div>'}
+
+function renderPicker(fs){$('pickerFiles').innerHTML=fs.length?fs.map(f=>'<button class="pick-item" onclick="openExisting('+JSON.stringify(f.uri)+','+JSON.stringify(f.name)+');closePicker()"><span class="fileicon">'+icon(f.name)+'</span><span><b>'+esc(cleanName(f.name))+'</b><small>'+humanSize(f.size)+'</small></span></button>').join(''):'<div class="empty"><b>Nenhum documento disponível</b><small>Adicione um arquivo ou conecte uma pasta primeiro.</small></div>'}
+
+async function refreshStorage(){const r=await native('storageInfo');if(!r.ok)return;const t=Number(r.total||0),a=Number(r.available||0),u=Math.max(0,t-a),p=t?Math.min(100,u/t*100):0;$('ring').style.setProperty('--used',p.toFixed(1)+'%');$('ring').setAttribute('data-label',Math.round(p)+'%');$('deviceStorage').textContent=humanSize(u)+' usados de '+humanSize(t);$('storagePath').textContent=r.allFiles?'Acesso amplo ao armazenamento Android':'Acesso à pasta selecionada pelo usuário';$('storageBar').style.width=p+'%';$('usedText').textContent=humanSize(u)+' usados';$('freeText').textContent=humanSize(a)+' livres';const ds=r.documentStats||{},counts=ds.byExtension||{};const supported=['txt','text','md','markdown','rtf','doc','docx','docm','dot','dotx','dotm','odt','ott','fodt','wps','pages','pdf','xml','html','htm','kzdoc'];const rows=supported.map(ext=>'<div><span>.'+ext+'</span><b>'+Number(counts[ext]||0)+'</b></div>').join('');$('storageDetail').innerHTML='<div class="card storage-card"><div class="storage-top"><div class="ring" style="--used:'+p.toFixed(1)+'%" data-label="'+Math.round(p)+'%"></div><div class="storage-copy"><b>'+humanSize(u)+' usados</b><small>'+humanSize(a)+' disponíveis · total de '+humanSize(t)+'</small></div></div><div class="meter"><i style="width:'+p+'%"></i></div><div class="storage-meta"><span>Medido pelo Android</span><span>'+esc(r.label||'Armazenamento interno')+'</span></div></div><div class="card technical-storage"><div class="card-head"><strong>Documentos compatíveis no celular</strong><span>'+Number(ds.total||0)+' arquivos</span></div><div class="tech-summary"><div><small>Total de arquivos Nexus</small><b>'+Number(ds.total||0)+'</b></div><div><small>Espaço ocupado</small><b>'+humanSize(Number(ds.bytes||0))+'</b></div><div><small>Escopo</small><b>'+esc(ds.scope||'Armazenamento acessível')+'</b></div></div><div class="extension-grid">'+rows+'</div><p class="tech-note">A contagem percorre o armazenamento externo acessível ao Nexus e separa os arquivos por extensão.</p></div>'}
+
+async function checkStorageStatus(){const r=await native('storageInfo');if(!r.ok)return;const n=$('storageNotice');if(r.allFiles)n.innerHTML='<div class="notice ok"><strong>Acesso ao armazenamento ativo.</strong> O Android autorizou o Nexus a consultar o armazenamento amplo do dispositivo.</div>';else n.innerHTML='<div class="notice warn"><strong>Acesso amplo ainda não concedido.</strong> Você pode permitir nas configurações do Android ou escolher uma pasta específica para o Nexus.</div>'}
+
+async function chooseStorage(){const r=await native('pickStorage');if(r.ok){toast('Pasta do Nexus definida');refresh()}else if(r.error)toast(r.error)}
+
+async function requestStorage(){const r=await native('requestStorage');if(r.ok)toast(r.message||'Abra a permissão solicitada pelo Android');else toast(r.error||'Permissão indisponível')}
+
+async function pickFile(){const r=await native('pickFile');if(r.ok){toast('Arquivo importado para o armazenamento do Nexus');refresh()}else if(r.error)toast(r.error)}
+
+function openEditorPicker(){renderPickerFromNative();$('pickerModal').style.display='flex'}
+
+async function renderPickerFromNative(){const r=await native('listFiles');if(r.ok)renderPicker(r.files||[])}
+
+function closePicker(){$('pickerModal').style.display='none'}
+
+function openCreate(){templateKind='blank';$('docName').value='';document.querySelectorAll('.template').forEach((x,i)=>x.classList.toggle('active',i===0));$('createModal').style.display='flex'}
+
+function closeCreate(){$('createModal').style.display='none'}
+
+function template(el,k){templateKind=k;document.querySelectorAll('.template').forEach(x=>x.classList.remove('active'));el.classList.add('active')}
+
+function templateHtml(k){if(k==='meeting')return '<h1>Ata de reunião</h1><p><b>Data:</b> </p><p><b>Participantes:</b> </p><h2>Pauta</h2><ul><li>Primeiro ponto</li><li>Segundo ponto</li></ul><h2>Decisões</h2><p>Registre aqui as decisões tomadas.</p><h2>Próximos passos</h2><ol><li>Responsável — tarefa</li></ol>';if(k==='notes')return '<h1>Anotações</h1><p>Comece a escrever suas ideias aqui.</p><h2>Pontos principais</h2><ul><li></li></ul>';return ''}
+
+async function createDocument(){const name=$('docName').value.trim()||'Documento sem título';closeCreate();openEditor(templateHtml(templateKind),name,'')}
+
+async function openExisting(uri,name){const ext=(String(name).split('.').pop()||'').toLowerCase();const external=['doc','docx','docm','dot','dotx','dotm','odt','ott','fodt','wps','pages','pdf'];if(external.includes(ext)){const r=await native('openFile',{uri});if(!r.ok)toast(r.error||'Nenhum aplicativo pode abrir este arquivo.');return}const r=await native('readFile',{uri});if(!r.ok){toast('Este arquivo não pode ser editado pelo editor do Nexus.');return}let html=r.content||'';try{const obj=JSON.parse(html);if(obj.korczak_document)html=obj.content}catch(e){}if(!/<[a-z][\s\S]*>/i.test(html))html='<p>'+esc(html).replace(/\n/g,'<br>')+'</p>';openEditor(html,name,uri)}
+
+function cmd(c){document.execCommand(c,false,null);dirty()}
+
+function format(c,v){document.execCommand(c,false,v);dirty()}
+
+function dirty(){$('saveState').innerHTML='<i style="background:#f1bd5a"></i>Não salvo';countWords()}
+
+async function openSaveFolder(){const root=await native('rootFolder');if(!root.ok){toast(root.error||'Escolha uma pasta de armazenamento primeiro');return}saveFolderStack=[{uri:root.uri,name:root.name||'Armazenamento'}];$('saveFolderModal').style.display='flex';await renderSaveFolder()}
+
+function closeSaveFolder(){$('saveFolderModal').style.display='none'}
+
+async function renderSaveFolder(){const current=saveFolderStack[saveFolderStack.length-1];$('saveFolderPath').innerHTML='Pasta atual: <b>'+esc(current.name)+'</b>';const r=await native('listFolders',{uri:current.uri});if(!r.ok){$('saveFolderItems').innerHTML='<div class="empty"><b>Não foi possível listar as pastas</b><small>'+esc(r.error||'Erro')+'</small></div>';return}const folders=r.folders||[];$('saveFolderItems').innerHTML=folders.length?folders.map(f=>'<button class="folder-item" onclick="enterSaveFolder('+JSON.stringify(f.uri)+','+JSON.stringify(f.name)+')"><span class="folder-icon">▰</span><span><b>'+esc(f.name)+'</b><small>Abrir pasta</small></span></button>').join(''):'<div class="empty"><b>Nenhuma subpasta</b><small>Você pode salvar diretamente nesta pasta.</small></div>'}
+
+async function enterSaveFolder(uri,name){saveFolderStack.push({uri,name});await renderSaveFolder()}
+
+async function saveFolderBack(){if(saveFolderStack.length<=1){closeSaveFolder();return}saveFolderStack.pop();await renderSaveFolder()}
+
+async function saveEditor(){await openSaveFolder()}
+
 function toast(s){clearTimeout(toastTimer);$('toast').textContent=s;$('toast').classList.add('show');toastTimer=setTimeout(()=>$('toast').classList.remove('show'),2600)}
 function native(action,payload={}){return new Promise(resolve=>{const id='c'+Date.now()+Math.random().toString(16).slice(2);window.__pending=window.__pending||{};window.__pending[id]=resolve;if(window.Android)Android.call(action,JSON.stringify(payload),id);else{delete window.__pending[id];resolve({ok:false,error:'Recursos Android indisponíveis'})}})}
 function countWords(){const t=$('page')?.innerText.trim()||'';const n=t?t.split(/\s+/).length:0;$('wordCount').textContent=n+' palavra'+(n===1?'':'s');return n}
