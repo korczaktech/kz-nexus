@@ -294,11 +294,20 @@ function runNexusFeature(id){const f=NEXUS_FEATURES.find(x=>x.id===id);if(!f)ret
 const ES=window.ES||{zoom:100};window.ES=ES;
 function editorCmd(c,v=null){editorCommand(c,v)}
 async function insertImage(){
+  saveSelection();
+  let source=null;
+  if(window.Android){
+    const picked=await native('pickMedia',{mime:'image/*'});
+    if(picked.ok && picked.uri) source=picked.uri;
+    else if(picked.error && picked.error!=='Seleção cancelada') { toast(picked.error); return; }
+  }
+  if(!source){
+    source=await nexusInput('Inserir imagem','Escolha uma imagem do dispositivo ou informe uma URL direta.','https://exemplo.com/imagem.png','');
+  }
+  if(!source)return;
   restoreSelection();
-  const u=await nexusInput('Inserir imagem','Informe a URL direta da imagem.','https://exemplo.com/imagem.png','https://');
-  if(!u)return;
-  const safe=u.replace(/"/g,'&quot;');
-  editorCommand('insertHTML','<img src="'+safe+'" alt="Imagem inserida" style="max-width:100%;height:auto;display:block;margin:8px 0">');
+  const safe=esc(source);
+  editorCommand('insertHTML','<img src="'+safe+'" alt="Imagem inserida" class="nx-editor-image" style="max-width:100%;height:auto;display:block;margin:12px 0">');
   toast('Imagem inserida');
 }
 async function insertTable(){
@@ -320,23 +329,104 @@ async function insertTable(){
 function insertCheck(){restoreSelection();editorCommand('insertHTML','<label class="nx-editor-check" style="display:block;margin:6px 0"><input type="checkbox"> Tarefa</label>');toast('Checklist inserido')}
 function insertQuote(){editorCommand('formatBlock','BLOCKQUOTE')}
 function layoutPanel(){nexusInput('Largura da página','Informe a largura em pixels (ex.: 900).','900','900').then(v=>{if(v){$('page').style.maxWidth=Math.max(320,parseInt(v,10)||900)+'px';$('page').style.margin='0 auto'}})}
-function findReplace(){nexusInput('Pesquisar no documento','Informe o texto que deseja localizar.','Pesquisar','').then(q=>{if(!q)return;const s=window.getSelection();const r=document.createRange();const walker=document.createTreeWalker($('page'),NodeFilter.SHOW_TEXT);let n;while(n=walker.nextNode()){const at=n.nodeValue.indexOf(q);if(at>=0){r.setStart(n,at);r.setEnd(n,at+q.length);s.removeAllRanges();s.addRange(r);$('page').focus();toast('Resultado encontrado');return}}toast('Texto não encontrado')})}
-function versionsPanel(){nexusInput('Histórico','O histórico de versões é preservado pelo salvamento do documento.','Fechar','').then(()=>{})}
-function stats(){countWords();const textContent=$('page').innerText||'';const words=textContent.trim()?textContent.trim().split(/\s+/).length:0;const chars=textContent.length;const paragraphs=$('page').querySelectorAll('p,h1,h2,h3,blockquote,li').length;toast(words+' palavras · '+chars+' caracteres · '+paragraphs+' blocos')}
-function setZoom(value){ES.zoom=Math.max(60,Math.min(180,Number(value)||100));$('page').style.fontSize=(ES.zoom/100)+'em';if($('nxZoom'))$('nxZoom').textContent=ES.zoom+'%';toast('Zoom '+ES.zoom+'%')}
-function exportDoc(){const html='<!doctype html><html><head><meta charset="utf-8"><title>'+esc(currentName||'Documento')+'</title></head><body>'+($('page')?.innerHTML||'')+'<scr'+'ipt src="nexus-features-201-500.js"></scr'+'ipt>\n</body></html>';const blob=new Blob([html],{type:'text/html;charset=utf-8'});const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download=(cleanName(currentName||'documento').replace(/\.[^.]+$/,'')||'documento')+'.html';a.click();URL.revokeObjectURL(url);toast('Documento exportado')}
-function printEditor(){saveSelection();window.print();toast('Visualização de impressão aberta') }
-function toggleEditorFullscreen(){
-  const modal=$('editorModal');
-  if(!modal)return;
-  if(document.fullscreenElement){document.exitFullscreen?.();return}
-  modal.requestFullscreen?.().catch(()=>document.body.classList.toggle('nx-editor-fullscreen'));
+async function findReplace(){
+  saveSelection();
+  const q=await nexusInput('Pesquisar no documento','Informe o texto que deseja localizar.','Pesquisar','');
+  if(!q)return;
+  const replacement=await nexusInput('Substituir','Informe o novo texto. Deixe vazio para apenas localizar.','Substituir por','');
+  const root=$('page');
+  const walker=document.createTreeWalker(root,NodeFilter.SHOW_TEXT);
+  const nodes=[];let n;
+  while(n=walker.nextNode())nodes.push(n);
+  let found=0;
+  nodes.forEach(node=>{
+    if(!node.nodeValue||!node.nodeValue.includes(q))return;
+    const count=node.nodeValue.split(q).length-1;
+    found+=count;
+    if(replacement!==null && replacement!==undefined)node.nodeValue=node.nodeValue.split(q).join(replacement);
+  });
+  if(found){dirty();toast(replacement?found+' ocorrência(s) substituída(s)':found+' ocorrência(s) encontrada(s)');}
+  else toast('Texto não encontrado');
+}
+function versionsKey(){
+  return 'nexus_editor_versions_v1';
+}
+function readEditorVersions(){
+  try{return JSON.parse(localStorage.getItem(versionsKey())||'[]')}catch(e){return[]}
+}
+function rememberEditorVersion(reason='Salvamento'){
+  const content=$('page')?.innerHTML||'';
+  if(!content && !currentName)return;
+  const versions=readEditorVersions();
+  const snapshot={id:Date.now(),name:currentName||'Documento sem título',uri:currentUri||'',content,reason,createdAt:new Date().toISOString()};
+  versions.unshift(snapshot);
+  localStorage.setItem(versionsKey(),JSON.stringify(versions.slice(0,20)));
+}
+function versionsPanel(){
+  const versions=readEditorVersions().filter(v=>v.name===currentName||(!currentName&&!v.name));
+  if(!versions.length){toast('Ainda não há versões salvas deste documento');return;}
+  const host=$('nexusDialogHost');
+  host.innerHTML='<div class="nexus-dialog" id="versionsDialog"><div class="nexus-dialog-card"><div class="nexus-dialog-head"><b>Histórico de versões</b><button id="versionsClose">×</button></div><div class="nexus-dialog-body"><div id="versionsList"></div></div></div></div>';
+  const list=$('versionsList');
+  list.innerHTML=versions.map(v=>'<div class="version-row" style="display:flex;gap:8px;align-items:center;padding:10px 0;border-bottom:1px solid rgba(120,148,173,.18)"><div style="flex:1"><b>'+esc(new Date(v.createdAt).toLocaleString('pt-BR'))+'</b><small style="display:block;color:#7894ad">'+esc(v.reason||'Salvamento')+'</small></div><button class="btn" data-version-id="'+v.id+'">Restaurar</button></div>').join('');
+  list.querySelectorAll('[data-version-id]').forEach(b=>b.onclick=()=>{
+    const v=versions.find(x=>String(x.id)===b.dataset.versionId);if(!v)return;
+    if(!confirm('Restaurar esta versão? O conteúdo atual será substituído.'))return;
+    $('page').innerHTML=v.content||'';dirty();closeVersions();toast('Versão restaurada');
+  });
+  $('versionsClose').onclick=closeVersions;
+}
+function closeVersions(){$('nexusDialogHost').innerHTML=''}
+function stats(){
+  const textContent=$('page').innerText||'';
+  const words=textContent.trim()?textContent.trim().split(/\\s+/).length:0;
+  const chars=textContent.length;
+  const paragraphs=$('page').querySelectorAll('p,h1,h2,h3,h4,h5,h6,blockquote,li').length;
+  const tables=$('page').querySelectorAll('table').length;
+  const images=$('page').querySelectorAll('img').length;
+  const links=$('page').querySelectorAll('a').length;
+  toast(words+' palavras · '+chars+' caracteres · '+paragraphs+' blocos · '+tables+' tabelas · '+images+' imagens · '+links+' links');
+}
+function setZoom(value){
+  ES.zoom=Math.max(60,Math.min(180,Number(value)||100));
+  const paper=document.querySelector('.nexus-paper');
+  if(paper)paper.style.transform='scale('+ES.zoom/100+')';
+  if(paper)paper.style.transformOrigin='top center';
+  if($('nxZoom'))$('nxZoom').textContent=ES.zoom+'%';
+  toast('Zoom '+ES.zoom+'%');
+}
+function exportDoc(){
+  const html='<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>'+esc(currentName||'Documento')+'</title><style>body{font-family:Arial,sans-serif;max-width:900px;margin:40px auto;line-height:1.6}table{border-collapse:collapse;width:100%}td,th{border:1px solid #777;padding:8px}img{max-width:100%}</style></head><body>'+($('page')?.innerHTML||'')+'</body></html>';
+  const blob=new Blob([html],{type:'text/html;charset=utf-8'});const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download=(cleanName(currentName||'documento').replace(/\\.[^.]+$/,'')||'documento')+'.html';document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);toast('Documento exportado');
+}
+function printEditor(){saveSelection();window.print()}
+async function toggleEditorFullscreen(){
+  const modal=$('editorModal');if(!modal)return;
+  try{
+    if(document.fullscreenElement){await document.exitFullscreen();toast('Tela cheia desativada');return}
+    if(modal.requestFullscreen){await modal.requestFullscreen();toast('Tela cheia ativada');}
+    else{document.body.classList.toggle('nx-editor-fullscreen');toast('Tela cheia alternada');}
+  }catch(e){document.body.classList.toggle('nx-editor-fullscreen');toast('Tela cheia alternada')}
 }
 function toggleEditorRuler(){
-  const ruler=document.querySelector('.nexus-editor-ruler');
-  if(ruler)ruler.classList.toggle('hidden');
+  const ruler=document.querySelector('.nexus-page-ruler');
+  if(!ruler){toast('Régua indisponível');return}
+  ruler.classList.toggle('hidden');
+  toast(ruler.classList.contains('hidden')?'Régua ocultada':'Régua exibida');
 }
-function pageLayoutInfo(){stats();toast('Layout da página ativo')}
+async function pageLayoutInfo(){
+  const orientation=await nexusInput('Orientação da página','Digite retrato ou paisagem.','retrato','retrato');
+  if(!orientation)return;
+  const landscape=orientation.toLowerCase().startsWith('paisa');
+  const margin=await nexusInput('Margens','Informe a margem em pixels.','48','48');
+  if(!margin)return;
+  const m=Math.max(12,Math.min(160,parseInt(margin,10)||48));
+  const paper=document.querySelector('.nexus-paper');
+  const page=$('page');
+  if(paper){paper.style.width=landscape?'1123px':'794px';paper.style.minHeight=landscape?'794px':'1123px';}
+  if(page){page.style.padding=m+'px';page.dataset.orientation=landscape?'landscape':'portrait';}
+  toast('Página configurada: '+(landscape?'paisagem':'retrato')+' · margem '+m+'px');
+}
 
 function saveAs(){openSaveFolder()}
 window.saveEditor=saveEditor;
@@ -485,7 +575,7 @@ function initEditorTools(){
 }
 function dirty(){$('saveState').innerHTML='<i style="background:#f1bd5a"></i>Não salvo';countWords()}
 function countWords(){const t=$('page').innerText.trim();const n=t?t.split(/\s+/).length:0;$('wordCount').textContent=n+' palavra'+(n===1?'':'s')}
-let saveFolderStack=[];async function openSaveFolder(){const root=await native('rootFolder');if(!root.ok){toast(root.error||'Escolha uma pasta de armazenamento primeiro');return}saveFolderStack=[{uri:root.uri,name:root.name||'Armazenamento'}];$('saveFolderModal').style.display='flex';await renderSaveFolder()}function closeSaveFolder(){$('saveFolderModal').style.display='none'}async function renderSaveFolder(){const current=saveFolderStack[saveFolderStack.length-1];$('saveFolderPath').innerHTML='Pasta atual: <b>'+esc(current.name)+'</b>';const r=await native('listFolders',{uri:current.uri});if(!r.ok){$('saveFolderItems').innerHTML='<div class="empty"><b>Não foi possível listar as pastas</b><small>'+esc(r.error||'Erro')+'</small></div>';return}const folders=r.folders||[];$('saveFolderItems').innerHTML=folders.length?folders.map(f=>'<button class="folder-item" onclick="enterSaveFolder('+JSON.stringify(f.uri)+','+JSON.stringify(f.name)+')"><span class="folder-icon">▰</span><span><b>'+esc(f.name)+'</b><small>Abrir pasta</small></span></button>').join(''):'<div class="empty"><b>Nenhuma subpasta</b><small>Você pode salvar diretamente nesta pasta.</small></div>'}async function enterSaveFolder(uri,name){saveFolderStack.push({uri,name});await renderSaveFolder()}async function saveFolderBack(){if(saveFolderStack.length<=1){closeSaveFolder();return}saveFolderStack.pop();await renderSaveFolder()}async function chooseSaveFolder(){const current=saveFolderStack[saveFolderStack.length-1];const name=($('editorTitle').value.trim()||'Documento sem título').replace(/[\\/:*?"<>|]/g,'_');const fileName=name.endsWith('.kzdoc')?name:name+'.kzdoc';const payload=JSON.stringify({korczak_document:1,title:name,content:$('page').innerHTML,updatedAt:new Date().toISOString()});$('saveState').innerHTML='<i style="background:#5d89ff"></i>Salvando…';const r=await native('writeFile',{folderUri:current.uri,name:fileName,content:payload});if(!r.ok){$('saveState').innerHTML='<i style="background:#ff6678"></i>Erro';toast(r.error||'Não foi possível salvar');return}currentUri=r.uri||currentUri;currentName=fileName;$('saveState').innerHTML='<i></i>Salvo';$('editorPath').textContent='Salvo em '+current.name;closeSaveFolder();toast('Documento salvo em '+current.name);refresh()}async function saveEditor(){
+let saveFolderStack=[];async function openSaveFolder(){const root=await native('rootFolder');if(!root.ok){toast(root.error||'Escolha uma pasta de armazenamento primeiro');return}saveFolderStack=[{uri:root.uri,name:root.name||'Armazenamento'}];$('saveFolderModal').style.display='flex';await renderSaveFolder()}function closeSaveFolder(){$('saveFolderModal').style.display='none'}async function renderSaveFolder(){const current=saveFolderStack[saveFolderStack.length-1];$('saveFolderPath').innerHTML='Pasta atual: <b>'+esc(current.name)+'</b>';const r=await native('listFolders',{uri:current.uri});if(!r.ok){$('saveFolderItems').innerHTML='<div class="empty"><b>Não foi possível listar as pastas</b><small>'+esc(r.error||'Erro')+'</small></div>';return}const folders=r.folders||[];$('saveFolderItems').innerHTML=folders.length?folders.map(f=>'<button class="folder-item" onclick="enterSaveFolder('+JSON.stringify(f.uri)+','+JSON.stringify(f.name)+')"><span class="folder-icon">▰</span><span><b>'+esc(f.name)+'</b><small>Abrir pasta</small></span></button>').join(''):'<div class="empty"><b>Nenhuma subpasta</b><small>Você pode salvar diretamente nesta pasta.</small></div>'}async function enterSaveFolder(uri,name){saveFolderStack.push({uri,name});await renderSaveFolder()}async function saveFolderBack(){if(saveFolderStack.length<=1){closeSaveFolder();return}saveFolderStack.pop();await renderSaveFolder()}async function chooseSaveFolder(){const current=saveFolderStack[saveFolderStack.length-1];const name=($('editorTitle').value.trim()||'Documento sem título').replace(/[\\/:*?"<>|]/g,'_');const fileName=name.endsWith('.kzdoc')?name:name+'.kzdoc';const payload=JSON.stringify({korczak_document:1,title:name,content:$('page').innerHTML,updatedAt:new Date().toISOString()});$('saveState').innerHTML='<i style="background:#5d89ff"></i>Salvando…';const r=await native('writeFile',{folderUri:current.uri,name:fileName,content:payload});if(!r.ok){$('saveState').innerHTML='<i style="background:#ff6678"></i>Erro';toast(r.error||'Não foi possível salvar');return}currentUri=r.uri||currentUri;currentName=fileName;rememberEditorVersion('Salvar como');$('saveState').innerHTML='<i></i>Salvo';$('editorPath').textContent='Salvo em '+current.name;closeSaveFolder();toast('Documento salvo em '+current.name);refresh()}async function saveEditor(){
   if(currentUri){
     const title=($('editorTitle').value.trim()||currentName||'Documento.kzdoc').replace(/[\\/:*?"<>|]/g,'_');
     const fileName=title.includes('.')?title:title+'.kzdoc';
@@ -498,6 +588,7 @@ let saveFolderStack=[];async function openSaveFolder(){const root=await native('
       return;
     }
     currentName=fileName;
+    rememberEditorVersion('Salvamento');
     $('saveState').innerHTML='<i></i>Salvo';
     $('editorPath').textContent='Arquivo salvo';
     toast('Arquivo salvo com sucesso');
