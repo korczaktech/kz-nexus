@@ -14,12 +14,19 @@ class StorageManager(private val context: Context) {
 
     fun savedTree(): Uri? = prefs.getString("tree", null)?.let(Uri::parse)
 
-    fun rememberTree(uri: Uri) {
-        context.contentResolver.takePersistableUriPermission(
-            uri,
-            Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION
-        )
-        prefs.edit().putString("tree", uri.toString()).apply()
+    fun rememberTree(uri: Uri): Boolean {
+        return try {
+            context.contentResolver.takePersistableUriPermission(
+                uri,
+                Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION
+            )
+            prefs.edit().putString("tree", uri.toString()).apply()
+            true
+        } catch (_: SecurityException) {
+            false
+        } catch (_: UnsupportedOperationException) {
+            false
+        }
     }
 
     fun clearTree() = prefs.edit().remove("tree").apply()
