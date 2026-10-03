@@ -37,7 +37,7 @@ function applyWrap(text:string,start:number,end:number,left:string,right=left){c
 export function Editor({document,versions,onSave,onClose,onConflict}:{document:DocumentItem;versions:Version[];onSave:(data:{name:string;document_type:string;content:string;base_version_id:string|null})=>Promise<'saved'|'conflict'>;onClose:()=>void;onConflict:()=>Promise<DocumentItem>}){
   const initial=document.content||'';const[name,setName]=useState(document.name);const[type,setType]=useState(document.document_type);const[content,setContent]=useState(initial);const[state,setState]=useState<SaveState>('saved');const[message,setMessage]=useState('Salvo');const[readOnly,setReadOnly]=useState(false);
   type LocalFile={file:File;path:string;editable:boolean};
-  const[fileInput,setFileInput]=useState<HTMLInputElement|null>(null);const[localFiles,setLocalFiles]=useState<LocalFile[]>([]);const[selectedLocalPath,setSelectedLocalPath]=useState('');const[folderName,setFolderName]=useState('');const[showFiles,setShowFiles]=useState(true);const[fileError,setFileError]=useState('');
+  const[localFiles,setLocalFiles]=useState<LocalFile[]>([]);const[selectedLocalPath,setSelectedLocalPath]=useState('');const[folderName,setFolderName]=useState('');const[showFiles,setShowFiles]=useState(true);const[fileError,setFileError]=useState('');
   const fileInputRef=useRef<HTMLInputElement>(null);
   const history=useRef<string[]>([initial]),future=useRef<string[]>([]),timer=useRef<number|undefined>(undefined);const textarea=useRef<HTMLTextAreaElement>(null);
   const draft=useMemo(()=>{try{return recoverDraft(localStorage,document.id)}catch{return null}},[document.id]);
