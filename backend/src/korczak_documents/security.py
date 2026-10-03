@@ -1,7 +1,5 @@
 from datetime import datetime, timedelta, timezone
-from hashlib import pbkdf2_hmac, sha256
-import base64
-import hmac
+from hashlib import sha256
 import secrets
 from uuid import uuid4
 
@@ -14,7 +12,6 @@ except ImportError:  # pragma: no cover - dependência instalada em produção
 from .errors import AppError, NotFoundError, ValidationError
 
 SESSION_HOURS = 24
-_PASSWORD_ITERATIONS = 310_000
 _PASSWORD_MIN_LENGTH = 12
 ROLE_LEVELS = {"user": 10, "manager": 20, "admin": 30}
 
@@ -37,42 +34,19 @@ def validate_password_policy(password: str, email: str | None = None, name: str 
 
 
 def hash_password(password: str) -> str:
-    salt = secrets.token_bytes(16)
-    digest = pbkdf2_hmac("sha256", password.encode("utf-8"), salt, _PASSWORD_ITERATIONS)
-    return "pbkdf2_sha256$" + str(_PASSWORD_ITERATIONS) + "$" + base64.urlsafe_b64encode(salt).decode("ascii") + "$" + base64.urlsafe_b64encode(digest).decode("ascii")
+    if bcrypt is None:
+        raise RuntimeError("bcrypt não está disponível")
+    return bcrypt.hashpw(password.encode("utf-8"), bcrypt.gensalt()).decode("utf-8")
 
 
 def verify_password(password: str, encoded: str) -> bool:
-    """Verifica o formato atual e formatos PBKDF2 legados comuns."""
     if not isinstance(encoded, str) or not encoded:
         return False
+    encoded = encoded.strip()
+    if not encoded.startswith(("$2a$", "$2b$", "$2y$")) or bcrypt is None:
+        return False
     try:
-        encoded = encoded.strip()
-        if encoded.startswith(("$2a$", "$2b$", "$2y$")):
-            if bcrypt is None:
-                return False
-            return bool(bcrypt.checkpw(password.encode("utf-8"), encoded.encode("utf-8")))
-        parts = encoded.split("$")
-        if parts[0] == "pbkdf2_sha256" and len(parts) == 4:
-            _, iterations, salt_text, digest_text = parts
-            # Formato nativo da aplicação: salt e digest em base64 URL-safe.
-            salt = base64.urlsafe_b64decode(salt_text + "=" * (-len(salt_text) % 4))
-            expected = base64.urlsafe_b64decode(digest_text + "=" * (-len(digest_text) % 4))
-        elif parts[0] == "pbkdf2_sha256" and len(parts) == 4:
-            return False
-        elif parts[0] == "pbkdf2-sha256" and len(parts) == 4:
-            _, iterations, salt_text, digest_text = parts
-            # Formato Passlib: o salt é textual; o checksum é base64.
-            salt = salt_text.encode("utf-8")
-            expected = base64.b64decode(digest_text + "=" * (-len(digest_text) % 4))
-        elif parts[0] == "" and len(parts) == 5 and parts[1] == "pbkdf2-sha256":
-            _, _, iterations, salt_text, digest_text = parts
-            salt = base64.urlsafe_b64decode(salt_text + "=" * (-len(salt_text) % 4))
-            expected = base64.urlsafe_b64decode(digest_text + "=" * (-len(digest_text) % 4))
-        else:
-            return False
-        actual = pbkdf2_hmac("sha256", password.encode("utf-8"), salt, int(iterations))
-        return hmac.compare_digest(actual, expected)
+        return bool(bcrypt.checkpw(password.encode("utf-8"), encoded.encode("utf-8")))
     except (ValueError, TypeError):
         return False
 
@@ -81,12 +55,12 @@ def needs_password_rehash(encoded: str) -> bool:
     if not isinstance(encoded, str):
         return False
     encoded = encoded.strip()
-    if encoded.startswith(("$2a$", "$2b$", "$2y$")):
+    if not encoded.startswith(("$2a$", "$2b$", "$2y$")):
         return True
-    return not encoded.startswith(
-        "pbkdf2_sha256$" + str(_PASSWORD_ITERATIONS) + "$"
-    )
-
+    try:
+        return bool(bcrypt and bcrypt.needs_rehash(encoded.encode("utf-8")))
+    except (ValueError, TypeError, AttributeError):
+        return False
 
 def create_token() -> str:
     return secrets.token_urlsafe(48)
