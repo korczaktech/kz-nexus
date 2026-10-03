@@ -21,6 +21,8 @@ class MainActivity : AppCompatActivity() {
     private lateinit var storage: StorageManager
     private val pool = Executors.newCachedThreadPool()
     private val treeRequest = 7001
+    private val fileRequest = 7002
+    private var pendingFileCallback: String? = null
     private var pendingCallback: String? = null
 
     override fun onCreate(state: Bundle?) {
@@ -93,6 +95,11 @@ class MainActivity : AppCompatActivity() {
                                 respond(callback, JSONObject().put("ok", false).put("error", "Nenhum aplicativo pode abrir este arquivo."))
                             }
                         }
+                        "pickFile" -> runOnUiThread {
+                            pendingFileCallback = callback
+                            val intent = Intent(Intent.ACTION_OPEN_DOCUMENT).setType("*/*").addCategory(Intent.CATEGORY_OPENABLE).addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                            startActivityForResult(intent, fileRequest)
+                        }
                         "pickStorage" -> runOnUiThread {
                             pendingCallback = callback
                             val intent = Intent(Intent.ACTION_OPEN_DOCUMENT_TREE).addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION or Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION)
@@ -120,6 +127,15 @@ class MainActivity : AppCompatActivity() {
     @Suppress("DEPRECATION")
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         super.onActivityResult(requestCode, resultCode, data)
+        if (requestCode == fileRequest) {
+            val callback = pendingFileCallback
+            pendingFileCallback = null
+            if (resultCode == Activity.RESULT_OK && data?.data != null) {
+                val ok = storage.importFile(data.data!!)
+                callback?.let { respondJs(it, JSONObject().put("ok", ok).put("error", if (ok) "" else "Não foi possível importar o arquivo")) }
+            } else callback?.let { respondJs(it, JSONObject().put("ok", false).put("error", "Seleção cancelada")) }
+            return
+        }
         if (requestCode != treeRequest) return
         val callback = pendingCallback
         pendingCallback = null
