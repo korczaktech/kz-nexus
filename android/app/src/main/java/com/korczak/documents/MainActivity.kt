@@ -39,6 +39,7 @@ class MainActivity : AppCompatActivity() {
     private var pendingFileCallback: String? = null
     private var pendingMediaCallback: String? = null
     private var pendingCallback: String? = null
+    private var lastHandledDocumentUri: String? = null
 
     override fun onCreate(state: Bundle?) {
         super.onCreate(state)
@@ -300,6 +301,8 @@ class MainActivity : AppCompatActivity() {
         val action = intent?.action ?: return
         if (action != Intent.ACTION_VIEW && action != Intent.ACTION_EDIT) return
         val uri = intent.data ?: return
+        if (lastHandledDocumentUri == uri.toString()) return
+        lastHandledDocumentUri = uri.toString()
 
         try {
             val document = DocumentFile.fromSingleUri(this, uri)
