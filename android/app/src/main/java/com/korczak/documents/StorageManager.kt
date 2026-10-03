@@ -5,6 +5,7 @@ import android.content.Intent
 import android.net.Uri
 import android.os.Environment
 import android.os.StatFs
+import android.provider.DocumentsContract
 import androidx.documentfile.provider.DocumentFile
 import org.json.JSONArray
 import org.json.JSONObject
@@ -83,10 +84,21 @@ class StorageManager(private val context: Context) {
                 a.put(
                     JSONObject()
                         .put("name", folder.name ?: "Pasta")
-                        .put("uri", folder.uri.toString())
+                        .put("uri", treeUriForDocument(folder.uri).toString())
                 )
             }
         return a
+    }
+
+    private fun treeUriForDocument(uri: Uri): Uri {
+        if (DocumentsContract.isTreeUri(uri)) return uri
+        val authority = uri.authority ?: return uri
+        val documentId = try {
+            DocumentsContract.getDocumentId(uri)
+        } catch (_: IllegalArgumentException) {
+            return uri
+        }
+        return DocumentsContract.buildTreeDocumentUri(authority, documentId)
     }
 
     fun saveInFolder(folderUri: String, name: String, content: String): Pair<Boolean, String?> {
