@@ -29,32 +29,40 @@ class Updater(private val activity: Activity) {
                 c.setRequestProperty("X-GitHub-Api-Version", "2022-11-28")
                 val code = c.responseCode
                 if (code !in 200..299) throw IllegalStateException("GitHub HTTP " + code)
-                val j = JSONObject(c.inputStream.bufferedReader().use { it.readText() })
+                val releases = org.json.JSONArray(c.inputStream.bufferedReader().use { it.readText() })
                 c.disconnect()
 
-                val tag = j.optString("tag_name").removePrefix("v")
-                val assets = j.optJSONArray("assets")
-                var asset: JSONObject? = null
-                if (assets != null) {
-                    for (i in 0 until assets.length()) {
-                        val a = assets.getJSONObject(i)
-                        if (a.optString("name").endsWith(".apk", ignoreCase = true)) {
-                            asset = a
-                            break
+                var selectedTag = ""
+                var selectedAsset: JSONObject? = null
+
+                for (i in 0 until releases.length()) {
+                    val release = releases.getJSONObject(i)
+                    if (release.optBoolean("draft", false)) continue
+                    val assets = release.optJSONArray("assets") ?: continue
+                    for (j in 0 until assets.length()) {
+                        val candidate = assets.getJSONObject(j)
+                        if (!candidate.optString("name").endsWith(".apk", ignoreCase = true)) continue
+                        val candidateTag = release.optString("tag_name").removePrefix("v")
+                        if (compare(candidateTag, current) > 0 &&
+                            (selectedAsset == null || compare(candidateTag, selectedTag) > 0)) {
+                            selectedTag = candidateTag
+                            selectedAsset = candidate
                         }
                     }
                 }
-                if (asset == null) throw IllegalStateException("A release mais recente não possui APK")
-                val assetName = asset.optString("name")
-                if (!assetName.endsWith(".apk", ignoreCase = true)) throw IllegalStateException("O arquivo da atualização não é um APK")
-                if (compare(tag, current) <= 0) {
+
+                if (selectedAsset == null) {
                     activity.runOnUiThread { done("up_to_date") }
                     return@Thread
                 }
 
-                val url = asset!!.getString("browser_download_url")
-                val digest = asset!!.optString("digest").removePrefix("sha256:")
-                activity.runOnUiThread { done("update|" + tag + "|" + url + "|" + digest) }
+                val asset = selectedAsset!!
+                val assetName = asset.optString("name")
+                if (!assetName.endsWith(".apk", ignoreCase = true)) {
+                    throw IllegalStateException("O arquivo da atualização não é um APK")
+                }
+
+                activity.runOnUiThread { done("update|" + selectedTag + "|" + url + "|" + digest) }
             } catch (e: Exception) {
                 activity.runOnUiThread { done("failed|" + (e.message ?: "erro ao verificar atualização")) }
             }
