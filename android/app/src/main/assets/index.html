@@ -40,7 +40,21 @@ body{overflow-x:hidden}.app{min-height:100vh;max-width:1180px;margin:auto;backgr
 </style>
 <script src="editor-enhancements.js"></script>
 <script src="nexus-editor-340-v2.js"></script>
-</head>
+<style>
+/* KZ Documents native Android editor v2 — Word/Docs inspired */
+.editor-modal{align-items:stretch!important;padding:0!important;background:#020711f7!important}
+.nexus-editor-shell{width:100%;height:100%;display:flex;flex-direction:column;background:#0b1420;color:#eaf3ff;overflow:hidden}
+.nexus-editor-header{height:68px;flex:none;display:flex;align-items:center;gap:12px;padding:9px 14px;background:#07111d;border-bottom:1px solid #1b3853}
+.editor-back{width:40px;height:40px;border:0;border-radius:10px;background:#102237;color:#d9ebff;font-size:28px;line-height:1}
+.editor-document-meta{min-width:0;flex:1}.nexus-doc-title{width:min(520px,100%);border:1px solid transparent;background:transparent;color:#f4f9ff;font-size:17px;font-weight:600;padding:7px 9px;border-radius:7px;outline:0}.nexus-doc-title:focus{border-color:#26577c;background:#091b2c}.nexus-doc-status{display:flex;gap:10px;color:#7e98b0;font-size:10px;padding-left:9px;margin-top:1px}.nexus-editor-header-actions{display:flex;gap:7px;align-items:center}.editor-head-btn{height:38px;min-width:38px;border:1px solid #24445f;background:#0d2033;color:#c9def0;border-radius:9px}.editor-save-btn{height:38px!important;padding:0 15px!important}
+.nexus-editor-menubar{height:34px;flex:none;display:flex;align-items:center;gap:4px;padding:0 15px;background:#0a1725;border-bottom:1px solid #18334b}.nexus-editor-menubar button{border:0;background:transparent;color:#9fb4c8;padding:5px 9px;border-radius:6px;font-size:11px}.nexus-editor-menubar button:hover{background:#132b42;color:#e7f4ff}
+.nexus-editor-toolbar{min-height:48px;flex:none;display:flex;align-items:center;gap:4px;padding:7px 10px;background:#0d1c2c;border-bottom:1px solid #1a3851;overflow-x:auto;scrollbar-width:thin}.nx-tool{width:32px;height:32px;flex:0 0 32px;border:1px solid transparent;border-radius:6px;background:transparent;color:#c6d8e8;font-size:14px;display:grid;place-items:center}.nx-tool:hover{background:#17334c;border-color:#255475}.nx-text{font-size:15px}.nx-divider{width:1px;height:25px;background:#27445c;margin:0 4px;flex:0 0 1px}.nx-select{height:32px;min-width:92px;border:1px solid #294862;background:#081726;color:#d5e6f5;border-radius:6px;padding:0 7px;font-size:11px;flex:0 0 auto}.nx-font{min-width:132px}.nx-size{min-width:55px}
+.nexus-editor-workspace{min-height:0;flex:1;display:flex;overflow:hidden;background:#101a27}.nexus-editor-sidebar{width:190px;flex:0 0 190px;background:#091523;border-right:1px solid #19374f;padding:13px 10px;display:flex;flex-direction:column;gap:5px}.sidebar-action{border:0;background:transparent;color:#8da7bd;text-align:left;border-radius:7px;padding:10px 11px;font-size:11px}.sidebar-action.active,.sidebar-action:hover{background:#112c45;color:#dceeff}.sidebar-note{margin-top:auto;border:1px solid #1a3b56;background:#0b1d2d;border-radius:9px;padding:10px;color:#7390a8;font-size:9px;line-height:1.4}.sidebar-note b{display:block;color:#a9c7dc;margin-bottom:4px}
+.nexus-page-stage{flex:1;min-width:0;overflow:auto;padding:27px 30px 50px;background:radial-gradient(circle at 50% 0,#1a3045,#0f1925 45%,#0a121d)}.nexus-page-ruler{height:18px;width:min(794px,100%);margin:0 auto;color:#59758d;font-size:8px;display:flex;justify-content:space-around;align-items:flex-end}.nexus-paper{width:min(794px,100%);min-height:1123px;margin:0 auto;background:#fff;box-shadow:0 12px 45px #0009}.nexus-page{min-height:1123px;padding:76px 72px;color:#202936;background:#fff;font:16px/1.65 Arial,sans-serif;outline:0;word-break:break-word}.nexus-page:empty:before{content:attr(data-placeholder);color:#aeb7c2;pointer-events:none}.nexus-page h1{font-size:31px;line-height:1.2;margin:0 0 20px}.nexus-page h2{font-size:24px;line-height:1.25;margin:20px 0 12px}.nexus-page h3{font-size:19px;line-height:1.3;margin:17px 0 9px}.nexus-page p{margin:0 0 12px}.nexus-page blockquote{margin:15px 0;padding:10px 15px;border-left:4px solid #258fe5;background:#f0f6fb;color:#4e5d6c}.nexus-page table{width:100%;border-collapse:collapse;margin:16px 0}.nexus-page th,.nexus-page td{border:1px solid #aab7c4;padding:8px}.nexus-page th{background:#edf2f6}.nexus-page img{max-width:100%;height:auto}.nexus-page a{color:#176dcc;text-decoration:underline}.nexus-page ul,.nexus-page ol{padding-left:28px}.nexus-page hr{border:0;border-top:1px solid #aeb7c2;margin:24px 0}
+.nexus-editor-footer{height:34px;flex:none;display:flex;align-items:center;gap:18px;padding:0 14px;background:#07111d;border-top:1px solid #19374f;color:#7792aa;font-size:9px}.nexus-editor-footer>div{margin-left:auto;display:flex;align-items:center;gap:7px}.nexus-editor-footer button{border:0;background:#102337;color:#a9c4d9;width:22px;height:22px;border-radius:4px}.nexus-editor-footer b{font-size:9px;color:#b9cee0}
+@media(max-width:720px){.nexus-editor-sidebar{display:none}.nexus-editor-header{height:64px}.nexus-editor-menubar{overflow-x:auto}.nexus-editor-menubar button{white-space:nowrap}.nexus-editor-toolbar{min-height:52px}.nexus-page-stage{padding:12px 5px 35px}.nexus-paper{width:100%;min-height:900px}.nexus-page{min-height:900px;padding:48px 27px;font-size:15px}.nexus-page-ruler{display:none}.editor-head-btn:first-child{display:none}.nexus-doc-title{font-size:15px}.nexus-editor-header-actions{gap:4px}.editor-save-btn{padding:0 11px!important}.nexus-editor-footer{gap:8px}}
+@media(max-width:430px){.nexus-editor-menubar{height:32px}.nexus-editor-menubar button{padding:4px 7px;font-size:10px}.nexus-editor-toolbar{padding:6px 7px}.nx-select.nx-font{min-width:108px}.nexus-page{padding:38px 21px}.nexus-editor-footer>span:nth-child(2){display:none}}
+</style></head>
 <body>
 
 <div id="authScreen" class="auth-screen">
@@ -169,39 +183,55 @@ body{overflow-x:hidden}.app{min-height:100vh;max-width:1180px;margin:auto;backgr
 
 <div class="modal" id="pickerModal"><div class="sheet"><div class="sheet-head"><h2>Escolha o documento</h2><button class="close" onclick="closePicker()">×</button></div><div class="sheet-body"><div class="notice"><strong>Editor</strong><br>Selecione o arquivo que você quer abrir. O Nexus não criará um documento novo só por abrir o editor.</div><div class="row-end" style="justify-content:flex-start;margin-top:0"><button class="btn" onclick="pickFile();closePicker()">Escolher do dispositivo</button><button class="btn" onclick="showView('files');closePicker()">Ver arquivos</button></div><div id="pickerFiles" class="picker-list" style="margin-top:14px"></div></div></div></div><div class="modal" id="saveFolderModal"><div class="sheet"><div class="sheet-head"><div><h2>Salvar documento</h2><div id="saveFolderPath" style="color:#7894ad;font-size:10px;margin-top:4px">Escolha uma pasta</div></div><button class="close" onclick="closeSaveFolder()">×</button></div><div class="sheet-body"><div class="notice"><strong>Escolha onde salvar no celular.</strong><br>Toque em uma pasta para entrar nela. Quando estiver no local desejado, toque em <b>Escolher esta pasta</b>.</div><div class="folder-browser"><div class="folder-items" id="saveFolderItems"></div></div><div class="save-actions"><div class="left"><button class="btn" onclick="saveFolderBack()">‹ Voltar</button></div><div class="right"><button class="btn primary" onclick="chooseSaveFolder()">Escolher esta pasta</button></div></div></div></div></div>
 
-<div class="modal editor-modal" id="editorModal"><div class="sheet editor-sheet"><div class="editor-top"><button class="back" onclick="closeEditor()">‹</button><input id="editorTitle" class="doc-title" placeholder="Documento sem título" autocomplete="off"><span id="saveState" class="save-state"><i></i>Salvo</span><button class="btn primary" onclick="saveEditor()">Salvar</button></div><div class="editor-tools" id="editorTools">
-<button class="tool" data-cmd="undo" title="Desfazer"><svg viewBox="0 0 24 24"><path d="M9 7H4v5M4 7c3-3 8-3 11-1 4 2 5 7 2 11" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg><span>Desfazer</span></button>
-<button class="tool" data-cmd="redo" title="Refazer"><svg viewBox="0 0 24 24"><path d="M15 7h5v5M20 7c-3-3-8-3-11-1-4 2-4 7-2 11" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg><span>Refazer</span></button>
-<span class="sep"></span>
-<button class="tool state-tool" data-cmd="bold"><svg viewBox="0 0 24 24"><path d="M7 5h6a4 4 0 0 1 1 8 4 4 0 0 1-1 8H7V5Zm0 7h5a3 3 0 0 0 0-6H7m0 6h5a3 3 0 0 1 0 6H7" fill="none" stroke="currentColor" stroke-width="1.8"/></svg><span>Negrito</span></button>
-<button class="tool state-tool" data-cmd="italic"><svg viewBox="0 0 24 24"><path d="M10 5h9M5 19h9M14 5l-4 14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg><span>Itálico</span></button>
-<button class="tool state-tool" data-cmd="underline"><svg viewBox="0 0 24 24"><path d="M7 5v6a5 5 0 0 0 10 0V5M5 20h14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg><span>Sublinhado</span></button>
-<button class="tool state-tool" data-cmd="strikeThrough"><svg viewBox="0 0 24 24"><path d="M5 12h14M8 8c1-2 3-3 5-3 3 0 5 1 5 3M16 16c-1 2-3 3-5 3-3 0-5-1-5-3" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg><span>Tachado</span></button>
-<button class="tool state-tool" data-cmd="superscript"><svg viewBox="0 0 24 24"><path d="M5 8l5 5 5-5M5 17l5-5 5 5M17 6h3l-3 4h3" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Superior</span></button>
-<button class="tool state-tool" data-cmd="subscript"><svg viewBox="0 0 24 24"><path d="M5 8l5 5 5-5M5 17l5-5 5 5M17 15h3l-3 4h3" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Inferior</span></button>
-<span class="sep"></span>
-<label class="tool-select-wrap"><svg viewBox="0 0 24 24"><path d="M5 5h14M12 5v14M8 19h8" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg><select class="tool-select" id="blockFormat" title="Estilo"><option value="P">Texto</option><option value="H1">Título 1</option><option value="H2">Título 2</option><option value="H3">Título 3</option><option value="BLOCKQUOTE">Citação</option><option value="PRE">Código</option></select></label>
-<label class="tool-select-wrap"><svg viewBox="0 0 24 24"><path d="M6 5h12M6 9h9M6 13h12M6 17h7" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg><select class="tool-select" id="fontSize" title="Tamanho"><option value="3">Tamanho</option><option value="1">Pequeno</option><option value="2">Menor</option><option value="4">Grande</option><option value="5">Maior</option><option value="6">Muito grande</option><option value="7">Enorme</option></select></label>
-<label class="tool-select-wrap"><svg viewBox="0 0 24 24"><path d="M5 6h14M12 6v12M8 18h8" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg><select class="tool-select" id="fontName" title="Fonte"><option value="Arial">Fonte: Arial</option><option value="Georgia">Georgia</option><option value="Times New Roman">Times</option><option value="Verdana">Verdana</option><option value="Courier New">Monospace</option></select></label>
-<span class="sep"></span>
-<button class="tool state-tool" data-cmd="insertUnorderedList"><svg viewBox="0 0 24 24"><path d="M6 7h1M10 7h9M6 12h1M10 12h9M6 17h1M10 17h9" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg><span>Marcadores</span></button>
-<button class="tool state-tool" data-cmd="insertOrderedList"><svg viewBox="0 0 24 24"><path d="M6 6h1M6 12h1M6 18h1M10 6h9M10 12h9M10 18h9" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg><span>Numerada</span></button>
-<button class="tool" data-cmd="outdent"><svg viewBox="0 0 24 24"><path d="M5 7h14M5 12h9M5 17h14M9 9l-4 3 4 3" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg><span>Recuar −</span></button>
-<button class="tool" data-cmd="indent"><svg viewBox="0 0 24 24"><path d="M5 7h14M10 12h9M5 17h14M6 9l4 3-4 3" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg><span>Recuar +</span></button>
-<span class="sep"></span>
-<button class="tool state-tool" data-cmd="justifyLeft"><svg viewBox="0 0 24 24"><path d="M5 6h14M5 10h10M5 14h14M5 18h9" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg><span>Esquerda</span></button>
-<button class="tool state-tool" data-cmd="justifyCenter"><svg viewBox="0 0 24 24"><path d="M5 6h14M8 10h8M5 14h14M8 18h8" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg><span>Centro</span></button>
-<button class="tool state-tool" data-cmd="justifyRight"><svg viewBox="0 0 24 24"><path d="M5 6h14M9 10h10M5 14h14M10 18h9" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg><span>Direita</span></button>
-<button class="tool state-tool" data-cmd="justifyFull"><svg viewBox="0 0 24 24"><path d="M5 6h14M5 10h14M5 14h14M5 18h14" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg><span>Justificar</span></button>
-<span class="sep"></span>
-<button class="tool" data-cmd="removeFormat"><svg viewBox="0 0 24 24"><path d="M5 19l6-14h4l-6 14M3 19h13M15 5l5 14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg><span>Limpar</span></button>
-<button class="tool" onclick="addLink()"><svg viewBox="0 0 24 24"><path d="M9 15l6-6M7 17H6a4 4 0 0 1 0-8h4M17 7h1a4 4 0 0 1 0 8h-4" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg><span>Link</span></button>
-<button class="tool" onclick="removeLink()"><svg viewBox="0 0 24 24"><path d="M8 8l8 8M16 8l-8 8M6 12a4 4 0 0 1 4-4h2M18 12a4 4 0 0 1-4 4h-2" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg><span>Desvincular</span></button>
-<button class="tool" onclick="setTextColor()"><svg viewBox="0 0 24 24"><path d="M7 19l5-14 5 14M9 14h6M4 21h16" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg><span>Cor</span></button>
-<button class="tool" onclick="setHighlight()"><svg viewBox="0 0 24 24"><path d="M5 15l8-8 5 5-8 8H5zM4 20h16" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/></svg><span>Destaque</span></button>
-<button class="tool" onclick="insertRule()"><svg viewBox="0 0 24 24"><path d="M5 12h14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg><span>Linha</span></button>
-<button class="tool" onclick="insertDate()"><svg viewBox="0 0 24 24"><rect x="5" y="6" width="14" height="13" rx="2" fill="none" stroke="currentColor" stroke-width="1.7"/><path d="M8 4v4M16 4v4M5 10h14" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg><span>Data</span></button>
-</div><div class="page-wrap"><div id="page" class="page" data-placeholder="Comece a escrever aqui…" contenteditable="true" spellcheck="true"></div></div><div class="editor-bottom"><span id="wordCount">0 palavras</span><span id="editorPath">Documento no armazenamento escolhido</span></div></div></div>
+<div class="modal editor-modal" id="editorModal">
+<div class="nexus-editor-shell">
+<header class="nexus-editor-header">
+  <button class="editor-back" onclick="closeEditor()" aria-label="Voltar">‹</button>
+  <div class="editor-document-meta">
+    <input id="editorTitle" class="nexus-doc-title" placeholder="Documento sem título" autocomplete="off">
+    <div class="nexus-doc-status"><span id="saveState" class="save-state"><i></i>Salvo</span><span id="editorPath">Documento novo</span></div>
+  </div>
+  <div class="nexus-editor-header-actions">
+    <button class="editor-head-btn" onclick="stats()" title="Informações do documento">Aa</button>
+    <button class="editor-head-btn" onclick="openFeatureCenter()" title="Todos os recursos">⋮</button>
+    <button class="btn primary editor-save-btn" onclick="saveEditor()">Salvar</button>
+  </div>
+</header>
+<nav class="nexus-editor-menubar">
+  <button onclick="openFeatureCenter()">Arquivo</button><button onclick="openFeatureCenter()">Editar</button><button onclick="openFeatureCenter()">Exibir</button><button onclick="openFeatureCenter()">Inserir</button><button onclick="openFeatureCenter()">Formatar</button><button onclick="openFeatureCenter()">Ferramentas</button>
+</nav>
+<div class="nexus-editor-toolbar" id="editorTools">
+  <div class="toolbar-group">
+    <button class="nx-tool" data-cmd="undo" title="Desfazer">↶</button><button class="nx-tool" data-cmd="redo" title="Refazer">↷</button>
+  </div><span class="nx-divider"></span>
+  <select class="nx-select" id="blockFormat" title="Estilo"><option value="P">Normal</option><option value="H1">Título 1</option><option value="H2">Título 2</option><option value="H3">Título 3</option><option value="BLOCKQUOTE">Citação</option><option value="PRE">Código</option></select>
+  <select class="nx-select nx-font" id="fontName" title="Fonte"><option value="Arial">Arial</option><option value="Calibri">Calibri</option><option value="Georgia">Georgia</option><option value="Times New Roman">Times New Roman</option><option value="Verdana">Verdana</option><option value="Courier New">Courier New</option></select>
+  <select class="nx-select nx-size" id="fontSize" title="Tamanho"><option value="3">12</option><option value="4">14</option><option value="5">18</option><option value="6">24</option><option value="7">32</option></select>
+  <span class="nx-divider"></span>
+  <button class="nx-tool nx-text" data-cmd="bold" title="Negrito"><b>B</b></button><button class="nx-tool nx-text" data-cmd="italic" title="Itálico"><i>I</i></button><button class="nx-tool nx-text" data-cmd="underline" title="Sublinhado"><u>U</u></button><button class="nx-tool nx-text" data-cmd="strikeThrough" title="Tachado"><s>S</s></button>
+  <button class="nx-tool" data-cmd="superscript" title="Sobrescrito">x²</button><button class="nx-tool" data-cmd="subscript" title="Subscrito">x₂</button>
+  <span class="nx-divider"></span>
+  <button class="nx-tool" data-cmd="insertUnorderedList" title="Lista">☷</button><button class="nx-tool" data-cmd="insertOrderedList" title="Lista numerada">1.</button>
+  <button class="nx-tool" data-cmd="outdent" title="Diminuir recuo">⇤</button><button class="nx-tool" data-cmd="indent" title="Aumentar recuo">⇥</button>
+  <span class="nx-divider"></span>
+  <button class="nx-tool" data-cmd="justifyLeft" title="Esquerda">≡</button><button class="nx-tool" data-cmd="justifyCenter" title="Centro">≡</button><button class="nx-tool" data-cmd="justifyRight" title="Direita">≡</button><button class="nx-tool" data-cmd="justifyFull" title="Justificar">☰</button>
+  <span class="nx-divider"></span>
+  <button class="nx-tool" onclick="addLink()" title="Inserir link">🔗</button><button class="nx-tool" onclick="insertImage()" title="Inserir imagem">▧</button><button class="nx-tool" onclick="insertTable()" title="Inserir tabela">▦</button><button class="nx-tool" onclick="insertCheck()" title="Checklist">☑</button><button class="nx-tool" onclick="insertRule()" title="Linha">―</button>
+  <button class="nx-tool" onclick="setTextColor()" title="Cor do texto">A</button><button class="nx-tool" onclick="setHighlight()" title="Realce">A̲</button><button class="nx-tool" data-cmd="removeFormat" title="Limpar formatação">Tx</button>
+  <span class="nx-divider"></span><button class="nx-tool" onclick="findReplace()" title="Pesquisar">⌕</button><button class="nx-tool" onclick="setZoom(100)" title="Zoom">100%</button><button class="nx-tool" onclick="printEditor()" title="Imprimir">⎙</button>
+</div>
+<div class="nexus-editor-workspace">
+  <aside class="nexus-editor-sidebar">
+    <button class="sidebar-action active">Documento</button>
+    <button class="sidebar-action" onclick="stats()">Informações</button>
+    <button class="sidebar-action" onclick="versionsPanel()">Versões</button>
+    <button class="sidebar-action" onclick="openFeatureCenter()">Mais recursos</button>
+    <div class="sidebar-note"><b>Salvamento automático</b><span>O Nexus preserva alterações locais enquanto você edita.</span></div>
+  </aside>
+  <main class="nexus-page-stage"><div class="nexus-page-ruler"><span>0</span><span>10</span><span>20</span><span>30</span><span>40</span></div><div class="nexus-paper"><div id="page" class="page nexus-page" data-placeholder="Comece a escrever aqui…" contenteditable="true" spellcheck="true"></div></div></main>
+</div>
+<footer class="nexus-editor-footer"><span id="wordCount">0 palavras</span><span>Documento · A4 · Português (Brasil)</span><div><button onclick="setZoom(90)">−</button><b id="nxZoom">100%</b><button onclick="setZoom(110)">+</button></div></footer>
+</div></div>
 <div id="toast" class="toast"></div><div id="nexusDialogHost"></div><div class="modal" id="featureCenter"><div class="sheet feature-sheet"><div class="sheet-head"><div><h2>Recursos do Nexus</h2><small id="featureCount">200 recursos integrados</small></div><button class="close" onclick="closeFeatureCenter()">×</button></div><div class="sheet-body"><div class="feature-search"><input class="input" id="featureSearch" placeholder="Pesquisar recurso..." oninput="renderFeatureCenter()"></div><div class="feature-grid" id="featureGrid"></div></div></div></div>
 
 <script>
