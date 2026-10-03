@@ -33,20 +33,93 @@ class StorageManager(private val context: Context) {
     fun listFiles(): JSONArray {
         val a = JSONArray()
         val root = savedTree()?.let { DocumentFile.fromTreeUri(context, it) } ?: return a
+        collectCompatibleFiles(root, a)
+        return a
+    }
+
+    fun listFolders(uri: String? = null): JSONArray {
+        val a = JSONArray()
+        val root = if (uri.isNullOrBlank()) {
+            savedTree()?.let { DocumentFile.fromTreeUri(context, it) }
+        } else {
+            DocumentFile.fromTreeUri(context, Uri.parse(uri))
+        } ?: return a
+
         root.listFiles()
-            .filter { it.isFile }
-            .sortedByDescending { it.lastModified() }
-            .forEach { f ->
+            .filter { it.isDirectory }
+            .sortedBy { (it.name ?: "").lowercase() }
+            .forEach { folder ->
                 a.put(
+                    JSONObject()
+                        .put("name", folder.name ?: "Pasta")
+                        .put("uri", folder.uri.toString())
+                )
+            }
+        return a
+    }
+
+    fun saveInFolder(folderUri: String, name: String, content: String): Pair<Boolean, String?> {
+        val folder = DocumentFile.fromTreeUri(context, Uri.parse(folderUri)) ?: return false to null
+        if (!folder.isDirectory) return false to null
+
+        val safeName = safe(name)
+        val existing = folder.findFile(safeName)
+        val target = existing ?: folder.createFile("application/json", safeName) ?: return false to null
+        val output = context.contentResolver.openOutputStream(target.uri, "wt") ?: return false to null
+        output.use {
+            it.write(content.toByteArray(Charsets.UTF_8))
+            it.flush()
+        }
+        return true to target.uri.toString()
+    }
+
+    private fun collectCompatibleFiles(folder: DocumentFile, out: JSONArray) {
+        folder.listFiles().forEach { f ->
+            if (f.isDirectory) {
+                collectCompatibleFiles(f, out)
+            } else if (isCompatibleDocument(f.name, f.type)) {
+                out.put(
                     JSONObject()
                         .put("name", f.name ?: "Arquivo")
                         .put("uri", f.uri.toString())
-                        .put("mime", f.type ?: "application/octet-stream")
+                        .put("mime", f.type ?: mimeFor(f.name))
                         .put("size", f.length())
                         .put("modified", f.lastModified())
                 )
             }
-        return a
+        }
+    }
+
+    private fun isCompatibleDocument(name: String?, mime: String?): Boolean {
+        val ext = name?.substringAfterLast('.', "")?.lowercase() ?: ""
+        return ext in setOf(
+            "txt", "text", "md", "markdown", "rtf",
+            "doc", "docx", "dot", "dotx", "docm", "dotm",
+            "odt", "ott", "fodt", "wps", "xml", "html", "htm", "kzdoc"
+        ) || mime.orEmpty().lowercase() in setOf(
+            "text/plain", "text/markdown", "text/rtf", "text/html",
+            "application/rtf", "application/msword",
+            "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+            "application/vnd.openxmlformats-officedocument.wordprocessingml.template",
+            "application/vnd.oasis.opendocument.text",
+            "application/vnd.oasis.opendocument.text-template"
+        )
+    }
+
+    private fun mimeFor(name: String?): String {
+        return when (name?.substringAfterLast('.', "")?.lowercase()) {
+            "txt", "text" -> "text/plain"
+            "md", "markdown" -> "text/markdown"
+            "rtf" -> "application/rtf"
+            "doc" -> "application/msword"
+            "docx", "docm" -> "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+            "dot", "dotm", "dotx" -> "application/vnd.openxmlformats-officedocument.wordprocessingml.template"
+            "odt", "ott", "fodt" -> "application/vnd.oasis.opendocument.text"
+            "html", "htm" -> "text/html"
+            "xml" -> "application/xml"
+            "kzdoc" -> "application/json"
+            else -> "application/octet-stream"
+        }
     }
 
     fun importFile(uri: Uri): Boolean {
