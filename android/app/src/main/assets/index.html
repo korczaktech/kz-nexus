@@ -371,24 +371,30 @@ async function editorPaste(){
 
 function insertQuote(){editorCommand('formatBlock','BLOCKQUOTE')}
 function layoutPanel(){nexusInput('Largura da página','Informe a largura em pixels (ex.: 900).','900','900').then(v=>{if(v){$('page').style.maxWidth=Math.max(320,parseInt(v,10)||900)+'px';$('page').style.margin='0 auto'}})}
-async function findReplace(){
+async async function findReplace(){
   saveSelection();
   const q=await nexusInput('Pesquisar no documento','Informe o texto que deseja localizar.','Pesquisar','');
-  if(!q)return;
-  const replacement=await nexusInput('Substituir','Informe o novo texto. Deixe vazio para apenas localizar.','Substituir por','');
+  if(!q){toast('Digite um texto para pesquisar');return;}
   const root=$('page');
   const walker=document.createTreeWalker(root,NodeFilter.SHOW_TEXT);
   const nodes=[];let n;
   while(n=walker.nextNode())nodes.push(n);
   let found=0;
   nodes.forEach(node=>{
-    if(!node.nodeValue||!node.nodeValue.includes(q))return;
-    const count=node.nodeValue.split(q).length-1;
-    found+=count;
-    if(replacement!==null && replacement!==undefined)node.nodeValue=node.nodeValue.split(q).join(replacement);
+    if(!node.nodeValue)return;
+    found+=node.nodeValue.split(q).length-1;
   });
-  if(found){dirty();toast(replacement?found+' ocorrência(s) substituída(s)':found+' ocorrência(s) encontrada(s)');}
-  else toast('Texto não encontrado');
+  if(!found){toast('Texto não encontrado');return;}
+  const replacement=await nexusInput('Substituir (opcional)','Deixe este campo vazio para apenas localizar. Para não alterar o documento, toque em Cancelar.','Substituir por','');
+  if(replacement===null){toast(found+' ocorrência(s) encontrada(s)');return;}
+  if(replacement===''){toast(found+' ocorrência(s) encontrada(s) — documento não alterado');return;}
+  let replaced=0;
+  nodes.forEach(node=>{
+    if(!node.nodeValue||!node.nodeValue.includes(q))return;
+    replaced+=node.nodeValue.split(q).length-1;
+    node.nodeValue=node.nodeValue.split(q).join(replacement);
+  });
+  if(replaced){dirty();toast(replaced+' ocorrência(s) substituída(s)');}
 }
 function versionsKey(){
   return 'nexus_editor_versions_v1';
@@ -430,13 +436,14 @@ function stats(){
   toast(words+' palavras · '+chars+' caracteres · '+paragraphs+' blocos · '+tables+' tabelas · '+images+' imagens · '+links+' links');
 }
 function setZoom(value){
-  ES.zoom=Math.max(60,Math.min(180,Number(value)||100));
+  ES.zoom=Math.max(50,Math.min(200,Number(value)||100));
   const paper=document.querySelector('.nexus-paper');
   if(paper)paper.style.transform='scale('+ES.zoom/100+')';
   if(paper)paper.style.transformOrigin='top center';
   if($('nxZoom'))$('nxZoom').textContent=ES.zoom+'%';
-  toast('Zoom '+ES.zoom+'%');
 }
+function zoomOut(){setZoom(ES.zoom-10);toast('Zoom '+ES.zoom+'%')}
+function zoomIn(){setZoom(ES.zoom+10);toast('Zoom '+ES.zoom+'%')}
 async function exportDoc(){
   const name=(await nexusInput('Exportar documento','Informe o nome do arquivo HTML.','documento','documento'));
   if(!name)return;
