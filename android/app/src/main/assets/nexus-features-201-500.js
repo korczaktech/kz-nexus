@@ -109,7 +109,7 @@ window.runNexusFeature=id=>{id=Number(id);if(id<=200)return window.__nexusLegacy
 window.__nexusExtra481_500=Object.entries(names481).map(([id,name])=>({id:Number(id),name}));
 })();
 
-window.NEXUS_FEATURES_201_500=NAMES_201_500;
+window.NEXUS_FEATURES_201_500=window.NAMES_201_500||[];
 window.__nexusFeatureSelfTest=()=>{const missing=[];for(let i=201;i<=500;i++)if(typeof window.__nexusFeatureRegistry?.[i]!=='function')missing.push(i);return {total:300,implemented:300-missing.length,missing}};
 window.runNexusFeature=function(id){id=Number(id);if(id>=201&&id<=500){const fn=window.__nexusFeatureRegistry?.[id];if(!fn){window.toast?.('Recurso '+id+' sem implementação');return false}try{return fn()}catch(e){window.toast?.('Erro no recurso '+id+': '+(e.message||e));return false}}return window.__nexusLegacyRun?.(id)};
 
