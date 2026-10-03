@@ -10,7 +10,6 @@ import android.webkit.JavascriptInterface
 import android.webkit.WebChromeClient
 import android.webkit.WebView
 import android.webkit.WebViewClient
-import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import org.json.JSONArray
 import org.json.JSONObject
@@ -46,30 +45,37 @@ class MainActivity : AppCompatActivity() {
         web.loadUrl("file:///android_asset/index.html")
 
         requestStartupPermissions()
+        handleFeedbackIntent(intent)
         Updater(this).resumePending()
         Updater(this).check { result ->
             if (result.startsWith("update|")) {
                 val parts = result.split("|", limit = 4)
                 runOnUiThread {
-                    AlertDialog.Builder(this)
-                        .setTitle("Atualização disponível")
-                        .setMessage("Korczak Nexus " + parts.getOrElse(1) { "" } + " está disponível. Deseja instalar?")
-                        .setNegativeButton("Depois", null)
-                        .setPositiveButton("Instalar") { _, _ ->
+                    NexusFeedback.alert(
+                        this,
+                        "Atualização disponível",
+                        "Korczak Nexus " + parts.getOrElse(1) { "" } + " está disponível. Deseja instalar?",
+                        NexusFeedback.Type.INFO,
+                        "Instalar",
+                        "Depois",
+                        onPositive = {
                             Updater(this).install(
                                 parts.getOrElse(2) { "" },
                                 parts.getOrElse(3) { "" }
                             ) { status ->
                                 if (status.startsWith("failed|")) {
-                                    AlertDialog.Builder(this)
-                                        .setTitle("Falha na atualização")
-                                        .setMessage(status.removePrefix("failed|"))
-                                        .setPositiveButton("OK", null)
-                                        .show()
+                                    runOnUiThread {
+                                        NexusFeedback.alert(
+                                            this,
+                                            "Falha na atualização",
+                                            status.removePrefix("failed|"),
+                                            NexusFeedback.Type.ERROR
+                                        )
+                                    }
                                 }
                             }
                         }
-                        .show()
+                    )
                 }
             }
         }
@@ -120,51 +126,50 @@ class MainActivity : AppCompatActivity() {
             return
         }
 
-        AlertDialog.Builder(this)
-            .setTitle("Permissão necessária")
-            .setMessage("O Nexus precisa de: $permission. Essa autorização é usada para acessar os arquivos e manter o aplicativo atualizável.")
-            .setNegativeButton("Agora não") { _, _ ->
+        NexusFeedback.alert(
+            this,
+            "Permissão necessária",
+            "O Nexus precisa de: $permission. Essa autorização é usada para acessar os arquivos e manter o aplicativo atualizável.",
+            NexusFeedback.Type.WARNING,
+            "Autorizar",
+            "Agora não",
+            onPositive = {
                 permissionFlowActive = false
-            }
-            .setPositiveButton("Autorizar") { _, _ ->
                 when (permission) {
                     "Acesso amplo ao armazenamento" -> {
                         try {
-                            startActivity(
-                                Intent(
-                                    Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION,
-                                    Uri.parse("package:$packageName")
-                                )
-                            )
+                            startActivity(Intent(Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION, Uri.parse("package:$packageName")))
                         } catch (_: Exception) {
                             startActivity(Intent(Settings.ACTION_MANAGE_ALL_FILES_ACCESS_PERMISSION))
                         }
                     }
-                    "Permissão para instalar atualizações do Nexus" -> {
-                        startActivity(
-                            Intent(
-                                Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES,
-                                Uri.parse("package:$packageName")
-                            )
-                        )
-                    }
+                    "Permissão para instalar atualizações do Nexus" ->
+                        startActivity(Intent(Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES, Uri.parse("package:$packageName")))
                 }
-            }
-            .setOnDismissListener {
-                // Não abre outra permissão por timer. O Android devolve o controle
-                // ao app e onResume() verifica novamente o estado real.
-                if (!isFinishing) {
-                    window.decorView.post {
-                        val remaining = missingStartupPermissions()
-                        if (remaining.isEmpty()) {
-                            permissionFlowActive = false
-                        } else {
-                            permissionFlowActive = false
-                        }
-                    }
-                }
-            }
-            .show()
+            },
+            onNegative = { permissionFlowActive = false }
+        )
+    }
+
+    override fun onNewIntent(intent: Intent?) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        handleFeedbackIntent(intent)
+    }
+
+    private fun handleFeedbackIntent(intent: Intent?) {
+        val type = intent?.getStringExtra("nexus_feedback_type") ?: return
+        val message = intent.getStringExtra("nexus_feedback_message") ?: return
+        val title = intent.getStringExtra("nexus_feedback_title") ?: "Nexus"
+        when (type) {
+            "success" -> NexusFeedback.toast(this, message, NexusFeedback.Type.SUCCESS)
+            "error" -> NexusFeedback.alert(this, title, message, NexusFeedback.Type.ERROR)
+            "warning" -> NexusFeedback.snackbar(this, message, NexusFeedback.Type.WARNING)
+            else -> NexusFeedback.toast(this, message, NexusFeedback.Type.INFO)
+        }
+        intent.removeExtra("nexus_feedback_type")
+        intent.removeExtra("nexus_feedback_message")
+        intent.removeExtra("nexus_feedback_title")
     }
 
     override fun onResume() {
