@@ -461,10 +461,14 @@ class MainActivity : AppCompatActivity() {
                             }
                         }
 
-                        "readFile" -> respond(
-                            callback,
-                            JSONObject().put("ok", true).put("content", storage.read(p.getString("uri")))
-                        )
+                        "readFile" -> {
+                            try {
+                                val content = storage.read(p.getString("uri"))
+                                respond(callback, JSONObject().put("ok", true).put("content", content))
+                            } catch (error: Exception) {
+                                respond(callback, JSONObject().put("ok", false).put("error", error.message ?: "Não foi possível ler este arquivo."))
+                            }
+                        }
 
                         "rootFolder" -> {
                             val root = storage.savedTree()
@@ -522,13 +526,19 @@ class MainActivity : AppCompatActivity() {
 
                         "openFile" -> runOnUiThread {
                             try {
-                                startActivity(
-                                    Intent(Intent.ACTION_VIEW, Uri.parse(p.getString("uri")))
-                                        .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-                                )
+                                val uri = Uri.parse(p.getString("uri"))
+                                val document = DocumentFile.fromSingleUri(this@MainActivity, uri)
+                                val mime = document?.type?.takeIf { it.isNotBlank() } ?: "*/*"
+                                val intent = Intent(Intent.ACTION_VIEW).apply {
+                                    setDataAndType(uri, mime)
+                                    addCategory(Intent.CATEGORY_DEFAULT)
+                                    addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                                    clipData = android.content.ClipData.newRawUri("Nexus", uri)
+                                }
+                                startActivity(intent)
                                 respond(callback, JSONObject().put("ok", true))
-                            } catch (_: Exception) {
-                                respond(callback, JSONObject().put("ok", false).put("error", "Nenhum aplicativo pode abrir este arquivo."))
+                            } catch (error: Exception) {
+                                respond(callback, JSONObject().put("ok", false).put("error", error.message ?: "Nenhum aplicativo compatível pode abrir este arquivo."))
                             }
                         }
 
@@ -647,9 +657,16 @@ class MainActivity : AppCompatActivity() {
         val callback = pendingCallback
         pendingCallback = null
         if (resultCode == Activity.RESULT_OK && data?.data != null) {
-            storage.rememberTree(data.data!!)
+            val persisted = storage.rememberTree(data.data!!)
             callback?.let {
-                respondJs(it, JSONObject().put("ok", true).put("label", storage.label()))
+                respondJs(
+                    it,
+                    if (persisted) {
+                        JSONObject().put("ok", true).put("label", storage.label())
+                    } else {
+                        JSONObject().put("ok", false).put("error", "O Android não permitiu manter acesso a esta pasta. Escolha a pasta novamente.")
+                    }
+                )
             }
         } else {
             callback?.let { respondJs(it, JSONObject().put("ok", false).put("error", "Seleção cancelada")) }
