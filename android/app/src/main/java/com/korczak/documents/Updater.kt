@@ -21,9 +21,11 @@ class Updater(private val activity: Activity) {
     fun check(done: (String) -> Unit) {
         Thread {
             try {
-                val c = URL("https://api.github.com/repos/" + repo + "/releases?per_page=20").openConnection() as HttpURLConnection
+                val c = URL("https://api.github.com/repos/" + repo + "/releases?per_page=100").openConnection() as HttpURLConnection
                 c.connectTimeout = 20000
                 c.readTimeout = 30000
+                c.useCaches = false
+                c.setRequestProperty("Cache-Control", "no-cache")
                 c.setRequestProperty("Accept", "application/vnd.github+json")
                 c.setRequestProperty("User-Agent", "Korczak-Nexus-Updater")
                 c.setRequestProperty("X-GitHub-Api-Version", "2022-11-28")
