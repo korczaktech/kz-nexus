@@ -25,7 +25,7 @@ class MainActivity:AppCompatActivity(){
  inner class Bridge{
   @JavascriptInterface fun call(action:String,payload:String,cb:String){pool.execute{try{val p=JSONObject(payload);when(action){
    "session"->respond(cb,if(session.token!=null&&session.userJson!=null)JSONObject().put("ok",true).put("user",JSONObject(session.userJson!!)) else JSONObject().put("ok",false))
-   "api"->{val r=api.request(p.optString("method","GET"),p.optString("path"),p.optString("body").takeIf{it.isNotEmpty()});val data=if(r.body.isBlank())JSONObject() else try{JSONObject(r.body)}catch(_:Exception){JSONArray(r.body)};respond(cb,JSONObject().put("ok",r.code in 200..299).put("status",r.code).put("data",data).put("error",if(r.code in 200..299)"" else api.errorMessage(r)))}
+   "api"->{val r=api.request(p.optString("method","GET"),p.optString("path"),p.optString("body").takeIf{it.isNotEmpty()});if(r.code in 200..299 && (p.optString("path")=="/api/v1/auth/login" || p.optString("path")=="/api/v1/auth/register")) api.saveSession(r);val data=if(r.body.isBlank())JSONObject() else try{JSONObject(r.body)}catch(_:Exception){JSONArray(r.body)};respond(cb,JSONObject().put("ok",r.code in 200..299).put("status",r.code).put("data",data).put("error",if(r.code in 200..299)"" else api.errorMessage(r)))}
    "logout"->{api.logout();session.clear();respond(cb,JSONObject().put("ok",true))}
    "storageInfo","listFiles"->respond(cb,JSONObject().put("ok",true).put("label",storage.label()).put("files",storage.listFiles()))
    "readFile"->respond(cb,JSONObject().put("ok",true).put("content",storage.read(p.getString("uri"))))
