@@ -139,12 +139,15 @@ body{overflow-x:hidden}.app{min-height:100vh;max-width:1180px;margin:auto;backgr
     <button class="menu-card" onclick="logout()"><span class="mi">↪</span><span><b>Sair da conta</b><small>Encerrar a sessão no Nexus e no backend.</small></span></button>
   </div></div>
   <div class="settings-section"><h3>Atualizações</h3><div class="settings-list">
-    <button class="menu-card" onclick="checkUpdate()"><span class="mi">↻</span><span><b>Verificar no GitHub Releases</b><small>Consulta diretamente a release mais recente de korczaktechnology-tech/kzdoc.</small></span></button>
+    <button class="menu-card" onclick="checkUpdate()"><span class="mi">↻</span><span><b>Verificar no GitHub Releases</b><small>Consulta diretamente a release mais recente de korczaktech/kzdoc.</small></span></button>
   </div></div>
   <div class="settings-section"><h3>Armazenamento</h3><div class="settings-list">
     <button class="menu-card" onclick="showView('storage')"><span class="mi">▤</span><span><b>Armazenamento do dispositivo</b><small>Gerenciar acesso amplo e pasta selecionada.</small></span></button>
   </div></div>
-  <div class="settings-section"><h3>Diagnóstico</h3><div class="settings-list">
+  <div class="settings-section"><h3>Backup local</h3><div class="settings-list">
+    <button class="menu-card" onclick="exportNexusBackup()"><span class="mi">↓</span><span><b>Exportar backup</b><small>Salvar preferências, favoritos, rascunhos e metadados do Nexus.</small></span></button>
+    <button class="menu-card" onclick="importNexusBackup()"><span class="mi">↑</span><span><b>Restaurar backup</b><small>Importar um backup JSON criado pelo Nexus.</small></span></button>
+  </div></div><div class="settings-section"><h3>Diagnóstico</h3><div class="settings-list">
     <button class="menu-card" onclick="showView('about')"><span class="mi">i</span><span><b>Informações do aplicativo</b><small>Versão, pacote, armazenamento e distribuição.</small></span></button>
     <button class="menu-card danger-zone" onclick="resetLocalSettings()"><span class="mi">↺</span><span><b>Restaurar preferências</b><small>Voltar as configurações do Nexus para o padrão.</small></span></button>
   </div></div>
@@ -224,6 +227,8 @@ function printEditor(){window.print()}
 function saveAs(){openSaveFolder()}
 window.saveEditor=saveEditor;
 window.handleBack=function(){if($('featureCenter')?.style.display==='flex'){closeFeatureCenter();return true}if($('nexusInputDialog')){$('nexusDialogHost').innerHTML='';return true}if($('editorModal')?.style.display==='flex'){closeEditor();return true}return false}
+function exportNexusBackup(){const data={version:1,createdAt:new Date().toISOString(),settings:JSON.parse(localStorage.getItem('nexus_settings')||'{}'),fileMeta:JSON.parse(localStorage.getItem('nexus_file_meta_v1')||'{}'),drafts:Object.keys(localStorage).filter(k=>k.toLowerCase().includes('draft')).reduce((o,k)=>{o[k]=localStorage.getItem(k);return o}, {})};const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download='nexus-backup-'+new Date().toISOString().slice(0,10)+'.json';a.click();URL.revokeObjectURL(url);toast('Backup exportado')}
+function importNexusBackup(){const input=document.createElement('input');input.type='file';input.accept='.json,application/json';input.onchange=async()=>{const file=input.files?.[0];if(!file)return;try{const data=JSON.parse(await file.text());if(data.settings)localStorage.setItem('nexus_settings',JSON.stringify(data.settings));if(data.fileMeta)localStorage.setItem('nexus_file_meta_v1',JSON.stringify(data.fileMeta));if(data.drafts)Object.entries(data.drafts).forEach(([k,v])=>localStorage.setItem(k,String(v)));applySettings();refresh();toast('Backup restaurado')}catch(e){toast('Backup inválido')}};input.click()}
 function showView(v){document.querySelectorAll('.view').forEach(x=>x.classList.remove('active'));const el=$(v+'View');if(el)el.classList.add('active');document.querySelectorAll('.bottom button').forEach(x=>x.classList.remove('active'));if(v==='home')$('navHome').classList.add('active');if(v==='files')$('navFiles').classList.add('active');if(v==='more'||v==='profile'||v==='plan'||v==='about'||v==='storage'||v==='settings')$('navMore').classList.add('active');if(v==='files')refresh();if(v==='storage')refreshStorage();if(v==='profile')loadProfile();if(v==='about')loadAbout();if(v==='settings'){loadProfile();applySettings();}window.scrollTo(0,0)}
 function humanSize(n){if(!n)return'0 B';let i=0,u=['B','KB','MB','GB','TB'];while(n>=1024&&i<u.length-1){n/=1024;i++}return n.toFixed(i?1:0)+' '+u[i]}
 function cleanName(n){return String(n||'Arquivo').replace(/\.kzdoc$/i,'')}
