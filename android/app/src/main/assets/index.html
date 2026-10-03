@@ -733,6 +733,10 @@ function toggleIndependentFormat(c){
   if(c==='underline'||c==='strikeThrough'){
     const nodes=selectedTextNodes(range);
     const active=nodes.length>0&&nodes.every(n=>hasFormat(n,c));
+    if(active){
+      try{document.execCommand(c,false,null)}catch(e){console.warn('Não foi possível remover a formatação:',c,e)}
+      saveSelection();updateToolbarState();dirty();return;
+    }
     if(range.collapsed){
       const tag=c==='underline'?'u':'s';
       const wrapper=document.createElement(tag);
@@ -742,7 +746,7 @@ function toggleIndependentFormat(c){
       range.setStart(marker,1);range.collapse(true);
       sel.removeAllRanges();sel.addRange(range);
     }else{
-      toggleSemanticDecoration(range,c,!active);
+      toggleSemanticDecoration(range,c,true);
     }
     saveSelection();updateToolbarState();dirty();return;
   }
