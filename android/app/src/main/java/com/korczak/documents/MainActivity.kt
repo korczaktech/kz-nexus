@@ -40,7 +40,6 @@ class MainActivity : AppCompatActivity() {
             webViewClient = object : WebViewClient() {
                 override fun onPageFinished(view: WebView?, url: String?) {
                     super.onPageFinished(view, url)
-                    view?.evaluateJavascript("(function(){var s=document.createElement('script');s.src='file:///android_asset/editor-enhancements.js?v=2';document.head.appendChild(s)})()", null)
                 }
             }
             webChromeClient = WebChromeClient()
