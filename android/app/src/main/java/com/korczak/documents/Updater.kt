@@ -14,7 +14,7 @@ import java.security.MessageDigest
 class Updater(private val activity: Activity) {
     private val repo = "korczaktech/kzdoc"
     private val prefsName = "nexus_updater"
-    private val releasesUrl = "https://api.github.com/repos/" + repo + "/releases"
+    private val updateManifestUrl = "https://raw.githubusercontent.com/" + repo + "/updates/update.json"
     private val current: String by lazy {
         activity.packageManager.getPackageInfo(activity.packageName, 0).versionName ?: "0.0.0.1"
     }
@@ -22,69 +22,41 @@ class Updater(private val activity: Activity) {
     fun check(done: (String) -> Unit) {
         Thread {
             try {
-                var page = 1
-                var selectedTag = ""
-                var selectedAsset: JSONObject? = null
+                val connection = URL(updateManifestUrl + "?t=" + System.currentTimeMillis()).openConnection() as HttpURLConnection
+                connection.connectTimeout = 15000
+                connection.readTimeout = 20000
+                connection.useCaches = false
+                connection.instanceFollowRedirects = true
+                connection.setRequestProperty("Cache-Control", "no-cache, no-store")
+                connection.setRequestProperty("Pragma", "no-cache")
+                connection.setRequestProperty("Accept", "application/json")
+                connection.setRequestProperty("User-Agent", "Korczak-Nexus-Updater/3")
+                val code = connection.responseCode
+                if (code !in 200..299) throw IllegalStateException("Servidor de atualização HTTP " + code)
+                val manifest = JSONObject(connection.inputStream.bufferedReader().use { it.readText() })
+                connection.disconnect()
 
-                while (page <= 10) {
-                    val c = URL(releasesUrl + "?per_page=100&page=" + page).openConnection() as HttpURLConnection
-                    c.connectTimeout = 15000
-                    c.readTimeout = 25000
-                    c.useCaches = false
-                    c.setRequestProperty("Cache-Control", "no-cache, no-store")
-                    c.setRequestProperty("Pragma", "no-cache")
-                    c.setRequestProperty("Accept", "application/vnd.github+json")
-                    c.setRequestProperty("User-Agent", "Korczak-Nexus-Updater/2")
-                    c.setRequestProperty("X-GitHub-Api-Version", "2022-11-28")
-                    val code = c.responseCode
-                    if (code !in 200..299) throw IllegalStateException("GitHub HTTP " + code)
-                    val releases = org.json.JSONArray(c.inputStream.bufferedReader().use { it.readText() })
-                    c.disconnect()
-                    if (releases.length() == 0) break
+                val version = manifest.optString("version").removePrefix("v").trim()
+                val url = manifest.optString("url").trim()
+                val digest = manifest.optString("sha256").removePrefix("sha256:").trim().lowercase()
 
-                    for (i in 0 until releases.length()) {
-                        val release = releases.getJSONObject(i)
-                        if (release.optBoolean("draft", false) || release.optBoolean("prerelease", false)) continue
-                        val tag = release.optString("tag_name").removePrefix("v").trim()
-                        if (!isVersion(tag)) continue
-                        val assets = release.optJSONArray("assets") ?: continue
-                        for (j in 0 until assets.length()) {
-                            val candidate = assets.getJSONObject(j)
-                            val name = candidate.optString("name")
-                            if (!name.endsWith(".apk", ignoreCase = true)) continue
-                            if (candidate.optString("state").isNotBlank() && candidate.optString("state") != "uploaded") continue
-                            if (compare(tag, current) <= 0) continue
-                            if (selectedAsset == null || compare(tag, selectedTag) > 0) {
-                                selectedTag = tag
-                                selectedAsset = candidate
-                            }
-                        }
-                    }
-                    if (releases.length() < 100) break
-                    page++
-                }
-
-                if (selectedAsset == null) {
-                    activity.runOnUiThread { done("up_to_date") }
-                    return@Thread
-                }
-
-                val asset = selectedAsset!!
-                val url = asset.optString("browser_download_url")
-                if (url.isBlank() || !url.startsWith("https://github.com/")) {
+                if (!isVersion(version)) throw IllegalStateException("Manifesto de atualização inválido")
+                if (url.isBlank() || !url.startsWith("https://github.com/") || !url.contains("/releases/download/")) {
                     throw IllegalStateException("URL do APK não é confiável")
                 }
-                val digest = asset.optString("digest").removePrefix("sha256:")
-                if (digest.isBlank()) throw IllegalStateException("O APK da atualização não possui SHA-256")
-                activity.runOnUiThread { done("update|" + selectedTag + "|" + url + "|" + digest) }
+                if (!digest.matches(Regex("[0-9a-f]{64}"))) {
+                    throw IllegalStateException("SHA-256 do APK é inválido")
+                }
+
+                if (compare(version, current) <= 0) {
+                    activity.runOnUiThread { done("up_to_date") }
+                } else {
+                    activity.runOnUiThread { done("update|" + version + "|" + url + "|" + digest) }
+                }
             } catch (e: Exception) {
                 activity.runOnUiThread { done("failed|" + (e.message ?: "erro ao verificar atualização")) }
             }
         }.start()
-    }
-
-    private fun isVersion(value: String): Boolean {
-        return value.matches(Regex("""\d+(\.\d+){0,3}"""))
     }
 
     fun install(url: String, expected: String, onDone: (String) -> Unit) {
