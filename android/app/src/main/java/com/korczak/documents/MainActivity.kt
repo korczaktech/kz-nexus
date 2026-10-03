@@ -376,11 +376,30 @@ class MainActivity : AppCompatActivity() {
                         }
 
                         "checkUpdate" -> Updater(this@MainActivity).check { result ->
-                            val message =
-                                if (result.startsWith("update|"))
-                                    "Atualização disponível: " + result.split("|").getOrElse(1) { "" }
-                                else "O aplicativo já está atualizado."
-                            respond(callback, JSONObject().put("ok", true).put("message", message))
+                            when {
+                                result.startsWith("update|") -> {
+                                    val parts = result.split("|", limit = 4)
+                                    respond(
+                                        callback,
+                                        JSONObject()
+                                            .put("ok", true)
+                                            .put("updateAvailable", true)
+                                            .put("version", parts.getOrElse(1) { "" })
+                                            .put("url", parts.getOrElse(2) { "" })
+                                            .put("digest", parts.getOrElse(3) { "" })
+                                            .put("message", "Atualização disponível: " + parts.getOrElse(1) { "" })
+                                    )
+                                }
+                                result == "up_to_date" -> respond(
+                                    callback,
+                                    JSONObject().put("ok", true).put("updateAvailable", false).put("message", "O aplicativo já está atualizado.")
+                                )
+                                result.startsWith("failed|") -> respond(
+                                    callback,
+                                    JSONObject().put("ok", false).put("updateAvailable", false).put("error", result.removePrefix("failed|"))
+                                )
+                                else -> respond(callback, JSONObject().put("ok", false).put("error", "Não foi possível concluir a verificação."))
+                            }
                         }
 
                         else -> respond(callback, JSONObject().put("ok", false).put("error", "Ação não suportada"))
