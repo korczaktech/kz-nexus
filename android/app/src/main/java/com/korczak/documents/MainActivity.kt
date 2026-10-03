@@ -4,6 +4,8 @@ import android.app.Activity
 import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
+import android.os.Environment
+import android.provider.Settings
 import android.webkit.JavascriptInterface
 import android.webkit.WebChromeClient
 import android.webkit.WebView
@@ -30,6 +32,7 @@ class MainActivity : AppCompatActivity() {
         session = SessionStore(this)
         api = ApiClient(session)
         storage = StorageManager(this)
+
         web = WebView(this).apply {
             settings.javaScriptEnabled = true
             settings.domStorageEnabled = true
@@ -41,19 +44,33 @@ class MainActivity : AppCompatActivity() {
         }
         setContentView(web)
         web.loadUrl("file:///android_asset/index.html")
+
         Updater(this).check { result ->
             if (result.startsWith("update|")) {
                 val parts = result.split("|", limit = 4)
                 runOnUiThread {
                     AlertDialog.Builder(this)
                         .setTitle("Atualização disponível")
-                        .setMessage("KZ Documents " + parts.getOrElse(1) { "" } + " está disponível. Deseja instalar?")
+                        .setMessage("Korczak Nexus " + parts.getOrElse(1) { "" } + " está disponível. Deseja instalar?")
                         .setNegativeButton("Depois", null)
                         .setPositiveButton("Instalar") { _, _ ->
-                            Updater(this).install(parts.getOrElse(2) { "" }, parts.getOrElse(3) { "" }) {}
-                        }.show()
+                            Updater(this).install(
+                                parts.getOrElse(2) { "" },
+                                parts.getOrElse(3) { "" }
+                            ) {}
+                        }
+                        .show()
                 }
             }
+        }
+    }
+
+    override fun onResume() {
+        super.onResume()
+        if (::web.isInitialized) {
+            web.postDelayed({
+                web.evaluateJavascript("window.__nativeStorageRefresh && window.__nativeStorageRefresh()", null)
+            }, 350)
         }
     }
 
@@ -65,50 +82,150 @@ class MainActivity : AppCompatActivity() {
                     val p = JSONObject(payload)
                     when (action) {
                         "session" -> {
-                            val result = if (session.token != null && session.userJson != null)
-                                JSONObject().put("ok", true).put("user", JSONObject(session.userJson!!))
-                            else JSONObject().put("ok", false)
+                            val result =
+                                if (session.token != null && session.userJson != null)
+                                    JSONObject().put("ok", true).put("user", JSONObject(session.userJson!!))
+                                else JSONObject().put("ok", false)
                             respond(callback, result)
                         }
+
+                        "appInfo" -> {
+                            val info = packageManager.getPackageInfo(packageName, 0)
+                            respond(
+                                callback,
+                                JSONObject()
+                                    .put("ok", true)
+                                    .put("versionName", info.versionName ?: "—")
+                                    .put("versionCode", if (android.os.Build.VERSION.SDK_INT >= 28) info.longVersionCode else info.versionCode)
+                            )
+                        }
+
                         "api" -> {
-                            val response = api.request(p.optString("method", "GET"), p.optString("path"), p.optString("body").takeIf { it.isNotEmpty() })
-                            if (response.code in 200..299 && (p.optString("path") == "/api/v1/auth/login" || p.optString("path") == "/api/v1/auth/register")) api.saveSession(response)
-                            val data: Any = if (response.body.isBlank()) JSONObject() else try { JSONObject(response.body) } catch (_: Exception) { JSONArray(response.body) }
-                            respond(callback, JSONObject().put("ok", response.code in 200..299).put("status", response.code).put("data", data).put("error", if (response.code in 200..299) "" else api.errorMessage(response)))
+                            val response = api.request(
+                                p.optString("method", "GET"),
+                                p.optString("path"),
+                                p.optString("body").takeIf { it.isNotEmpty() }
+                            )
+                            if (response.code in 200..299 &&
+                                (p.optString("path") == "/api/v1/auth/login" ||
+                                 p.optString("path") == "/api/v1/auth/register")
+                            ) api.saveSession(response)
+
+                            val data: Any =
+                                if (response.body.isBlank()) JSONObject()
+                                else try { JSONObject(response.body) } catch (_: Exception) { JSONArray(response.body) }
+
+                            respond(
+                                callback,
+                                JSONObject()
+                                    .put("ok", response.code in 200..299)
+                                    .put("status", response.code)
+                                    .put("data", data)
+                                    .put("error", if (response.code in 200..299) "" else api.errorMessage(response))
+                            )
                         }
-                        "logout" -> { api.logout(); session.clear(); respond(callback, JSONObject().put("ok", true)) }
-                        "storageInfo", "listFiles" -> respond(callback, JSONObject().put("ok", true).put("label", storage.label()).put("files", storage.listFiles()))
-                        "readFile" -> respond(callback, JSONObject().put("ok", true).put("content", storage.read(p.getString("uri"))))
+
+                        "logout" -> {
+                            api.logout()
+                            session.clear()
+                            respond(callback, JSONObject().put("ok", true))
+                        }
+
+                        "storageInfo", "listFiles" -> {
+                            val result = storage.deviceStorage().put("files", storage.listFiles())
+                            respond(callback, JSONObject().put("ok", true).put("label", storage.label()).put("files", storage.listFiles()).put("total", result.optLong("total")).put("available", result.optLong("available")).put("used", result.optLong("used")).put("allFiles", result.optBoolean("allFiles")))
+                        }
+
+                        "requestStorage" -> runOnUiThread {
+                            if (android.os.Build.VERSION.SDK_INT >= 30) {
+                                try {
+                                    startActivity(
+                                        Intent(
+                                            Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION,
+                                            Uri.parse("package:$packageName")
+                                        )
+                                    )
+                                    respondJs(
+                                        callback,
+                                        JSONObject().put("ok", true).put("message", "A tela de acesso ao armazenamento do Android foi aberta.")
+                                    )
+                                } catch (_: Exception) {
+                                    startActivity(Intent(Settings.ACTION_MANAGE_ALL_FILES_ACCESS_PERMISSION))
+                                    respondJs(callback, JSONObject().put("ok", true).put("message", "A tela de acesso ao armazenamento foi aberta."))
+                                }
+                            } else {
+                                respondJs(callback, JSONObject().put("ok", true).put("message", "Nesta versão do Android o acesso amplo não precisa de uma tela especial."))
+                            }
+                        }
+
+                        "readFile" -> respond(
+                            callback,
+                            JSONObject().put("ok", true).put("content", storage.read(p.getString("uri")))
+                        )
+
                         "writeFile" -> {
-                            val ok = storage.write(p.optString("uri"), p.optString("name", "Novo documento.txt"), p.optString("content"))
-                            respond(callback, JSONObject().put("ok", ok).put("error", if (ok) "" else "Não foi possível salvar"))
+                            val result = storage.write(
+                                p.optString("uri"),
+                                p.optString("name", "Novo documento.kzdoc"),
+                                p.optString("content")
+                            )
+                            respond(
+                                callback,
+                                JSONObject()
+                                    .put("ok", result.first)
+                                    .put("uri", result.second ?: "")
+                                    .put("error", if (result.first) "" else "Selecione um armazenamento para salvar o documento")
+                            )
                         }
+
                         "createFolder" -> {
                             val ok = storage.createFolder(p.optString("name", "Nova pasta"))
-                            respond(callback, JSONObject().put("ok", ok).put("error", if (ok) "" else "Selecione um armazenamento"))
+                            respond(
+                                callback,
+                                JSONObject().put("ok", ok).put("error", if (ok) "" else "Selecione um armazenamento")
+                            )
                         }
+
                         "openFile" -> runOnUiThread {
                             try {
-                                startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(p.getString("uri"))).addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION))
+                                startActivity(
+                                    Intent(Intent.ACTION_VIEW, Uri.parse(p.getString("uri")))
+                                        .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                                )
                                 respond(callback, JSONObject().put("ok", true))
                             } catch (_: Exception) {
                                 respond(callback, JSONObject().put("ok", false).put("error", "Nenhum aplicativo pode abrir este arquivo."))
                             }
                         }
+
                         "pickFile" -> runOnUiThread {
                             pendingFileCallback = callback
-                            val intent = Intent(Intent.ACTION_OPEN_DOCUMENT).setType("*/*").addCategory(Intent.CATEGORY_OPENABLE).addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                            val intent = Intent(Intent.ACTION_OPEN_DOCUMENT)
+                                .setType("*/*")
+                                .addCategory(Intent.CATEGORY_OPENABLE)
+                                .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
                             startActivityForResult(intent, fileRequest)
                         }
+
                         "pickStorage" -> runOnUiThread {
                             pendingCallback = callback
-                            val intent = Intent(Intent.ACTION_OPEN_DOCUMENT_TREE).addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION or Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION)
+                            val intent = Intent(Intent.ACTION_OPEN_DOCUMENT_TREE)
+                                .addFlags(
+                                    Intent.FLAG_GRANT_READ_URI_PERMISSION or
+                                    Intent.FLAG_GRANT_WRITE_URI_PERMISSION or
+                                    Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION
+                                )
                             startActivityForResult(intent, treeRequest)
                         }
+
                         "checkUpdate" -> Updater(this@MainActivity).check { result ->
-                            val message = if (result.startsWith("update|")) "Atualização disponível: " + result.split("|").getOrElse(1) { "" } else "O aplicativo já está atualizado."
+                            val message =
+                                if (result.startsWith("update|"))
+                                    "Atualização disponível: " + result.split("|").getOrElse(1) { "" }
+                                else "O aplicativo já está atualizado."
                             respond(callback, JSONObject().put("ok", true).put("message", message))
                         }
+
                         else -> respond(callback, JSONObject().put("ok", false).put("error", "Ação não suportada"))
                     }
                 } catch (error: Exception) {
@@ -119,7 +236,13 @@ class MainActivity : AppCompatActivity() {
 
         private fun respond(id: String, result: JSONObject) {
             runOnUiThread {
-                web.evaluateJavascript("window.__nativeResult(" + JSONObject.quote(id) + "," + JSONObject.quote(result.toString()) + ")", null)
+                web.evaluateJavascript(
+                    "window.__nativeResult(" +
+                        JSONObject.quote(id) + "," +
+                        JSONObject.quote(result.toString()) +
+                        ")",
+                    null
+                )
             }
         }
     }
@@ -127,26 +250,49 @@ class MainActivity : AppCompatActivity() {
     @Suppress("DEPRECATION")
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         super.onActivityResult(requestCode, resultCode, data)
+
         if (requestCode == fileRequest) {
             val callback = pendingFileCallback
             pendingFileCallback = null
             if (resultCode == Activity.RESULT_OK && data?.data != null) {
                 val ok = storage.importFile(data.data!!)
-                callback?.let { respondJs(it, JSONObject().put("ok", ok).put("error", if (ok) "" else "Não foi possível importar o arquivo")) }
-            } else callback?.let { respondJs(it, JSONObject().put("ok", false).put("error", "Seleção cancelada")) }
+                callback?.let {
+                    respondJs(
+                        it,
+                        JSONObject().put("ok", ok).put(
+                            "error",
+                            if (ok) "" else "Não foi possível importar o arquivo"
+                        )
+                    )
+                }
+            } else {
+                callback?.let { respondJs(it, JSONObject().put("ok", false).put("error", "Seleção cancelada")) }
+            }
             return
         }
+
         if (requestCode != treeRequest) return
+
         val callback = pendingCallback
         pendingCallback = null
         if (resultCode == Activity.RESULT_OK && data?.data != null) {
             storage.rememberTree(data.data!!)
-            callback?.let { respondJs(it, JSONObject().put("ok", true).put("label", storage.label())) }
-        } else callback?.let { respondJs(it, JSONObject().put("ok", false).put("error", "Seleção cancelada")) }
+            callback?.let {
+                respondJs(it, JSONObject().put("ok", true).put("label", storage.label()))
+            }
+        } else {
+            callback?.let { respondJs(it, JSONObject().put("ok", false).put("error", "Seleção cancelada")) }
+        }
     }
 
     private fun respondJs(id: String, result: JSONObject) {
-        web.evaluateJavascript("window.__nativeResult(" + JSONObject.quote(id) + "," + JSONObject.quote(result.toString()) + ")", null)
+        web.evaluateJavascript(
+            "window.__nativeResult(" +
+                JSONObject.quote(id) + "," +
+                JSONObject.quote(result.toString()) +
+                ")",
+            null
+        )
     }
 
     override fun onDestroy() {
