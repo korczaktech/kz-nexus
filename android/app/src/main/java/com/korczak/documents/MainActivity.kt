@@ -320,6 +320,18 @@ class MainActivity : AppCompatActivity() {
                             JSONObject().put("ok", true).put("content", storage.read(p.getString("uri")))
                         )
 
+                        "rootFolder" -> {
+                            val root = storage.savedTree()
+                            respond(
+                                callback,
+                                JSONObject()
+                                    .put("ok", root != null)
+                                    .put("uri", root?.toString() ?: "")
+                                    .put("name", storage.label())
+                                    .put("error", if (root != null) "" else "Escolha um armazenamento antes de salvar")
+                            )
+                        }
+
                         "listFolders" -> {
                             respond(
                                 callback,
