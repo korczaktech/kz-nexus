@@ -21,6 +21,11 @@ body{overflow-x:hidden}.app{min-height:100vh;max-width:1180px;margin:auto;backgr
 .notice{border:1px solid #24557a;background:#081c30;border-radius:15px;padding:14px 16px;margin-bottom:15px;color:#a9c5dc;font-size:12px;line-height:1.5}.notice strong{color:#e6f4ff}.notice.warn{border-color:#6a542a;background:#211a0d}.notice.ok{border-color:#1e5b4c;background:#09201b}
 .bottom{position:fixed;left:50%;bottom:0;transform:translateX(-50%);width:min(1180px,100%);height:78px;background:#061321f7;border:1px solid #194466;border-radius:21px 21px 0 0;display:grid;grid-template-columns:repeat(5,1fr);z-index:40;backdrop-filter:blur(18px)}.bottom button{border:0;background:none;color:#7993ad;font-size:10px}.bottom b{display:grid;place-items:center;width:28px;height:25px;margin:0 auto 3px;font-size:21px;font-weight:500}.bottom b svg{width:21px;height:21px}.bottom .active{color:#35a8ff}.bottom .active b{filter:drop-shadow(0 2px 7px #008cff66)}
 .modal{position:fixed;inset:0;background:#000b;display:none;align-items:flex-end;justify-content:center;z-index:100}.sheet{width:min(760px,100%);max-height:92vh;overflow:auto;background:#081827;border:1px solid #215d88;border-radius:24px 24px 0 0;box-shadow:var(--shadow)}.sheet-head{position:sticky;top:0;z-index:2;display:flex;justify-content:space-between;align-items:center;padding:17px 20px;background:#081827f4;border-bottom:1px solid #173b59;backdrop-filter:blur(15px)}.sheet-head h2{margin:0;font-size:18px}.close{border:0;background:#10283e;color:#c7dbed;width:37px;height:37px;border-radius:10px;font-size:20px}.sheet-body{padding:19px}.field{display:grid;gap:7px;color:#8fa8c0;font-size:11px;margin-bottom:14px}.input{width:100%;padding:12px 13px;border:1px solid #244b6b;border-radius:10px;background:#04101b;color:#eff8ff;outline:0}.input:focus{border-color:#279bff;box-shadow:0 0 0 3px #279bff18}.templates{display:grid;grid-template-columns:repeat(3,1fr);gap:9px}.template{border:1px solid #1c4262;background:#091b2d;border-radius:12px;padding:14px;text-align:left;color:#dcecff}.template.active{border-color:#2098f2}.template b{display:block}.template small{display:block;color:#8099b3;margin-top:5px}.row-end{display:flex;justify-content:flex-end;gap:8px;margin-top:18px}.picker-list{display:grid;gap:8px}.pick-item{display:flex;align-items:center;gap:12px;padding:13px;border:1px solid #193e5d;border-radius:13px;background:#071727;color:#e5f3ff;text-align:left}.pick-item .fileicon{width:43px;height:43px}.pick-item small{display:block;color:#7e97b1;margin-top:4px}.editor-modal{align-items:stretch}.editor-sheet{width:100%;height:100%;max-height:none;border-radius:0;border:0;background:#0a1624}.editor-top{height:64px;display:flex;align-items:center;gap:9px;padding:10px 15px;border-bottom:1px solid #173a58;background:#071422;position:sticky;top:0;z-index:5}.back{width:40px;height:40px;border:0;border-radius:10px;background:#0c2439;color:#c7dbec;font-size:25px}.doc-title{flex:1;min-width:0;background:transparent;border:0;outline:0;color:#fff;font-size:17px;font-weight:700}.save-state{color:#849db6;font-size:10px;white-space:nowrap}.save-state i{display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--green);margin-right:5px}.editor-tools{display:flex;gap:4px;align-items:center;padding:8px 12px;border-bottom:1px solid #173651;background:#091a2a;overflow-x:auto;position:sticky;top:64px;z-index:4}.tool{height:36px;min-width:42px;flex:0 0 auto;padding:0 11px;border:1px solid #153a57;border-radius:9px;background:linear-gradient(145deg,#0c263d,#091a2b);color:#d5e6f5;white-space:nowrap;font-size:12px;line-height:1;box-shadow:inset 0 1px #7bd8ff0c,0 5px 14px #001a2f33}.tool:hover{background:#123450;border-color:#2479ad}.tool svg{width:17px;height:17px;vertical-align:middle;filter:drop-shadow(0 1px 2px #008cff44)}.sep{width:1px;height:23px;background:#234762;margin:0 3px}.page-wrap{overflow:auto;height:calc(100vh - 112px);padding:25px 14px 110px;background:#06101b}.page{width:min(800px,100%);min-height:950px;position:relative;margin:auto;padding:70px 80px;background:#fff;color:#1d2733;box-shadow:0 20px 60px #0008;border-radius:3px;outline:0}.page p,.page li{line-height:1.65}.page:empty:before{content:attr(data-placeholder);color:#9aa7b5;pointer-events:none}.doc-title::placeholder{color:#7e95aa;font-weight:600;opacity:.9}.page h1{font-size:31px}.page h2{font-size:22px}.editor-bottom{position:fixed;left:0;right:0;bottom:0;height:36px;display:flex;justify-content:space-between;align-items:center;padding:0 15px;background:#061321f2;border-top:1px solid #173b58;color:#7892ac;font-size:10px;z-index:6}.toast{position:fixed;left:50%;bottom:92px;transform:translate(-50%,20px);opacity:0;pointer-events:none;z-index:200;background:#0b2439;border:1px solid #2a668e;color:#eef8ff;padding:11px 15px;border-radius:11px;transition:.2s;font-size:12px;box-shadow:var(--shadow)}.toast.show{opacity:1;transform:translate(-50%,0)}
+
+.auth-screen{position:fixed;inset:0;z-index:500;background:radial-gradient(circle at 75% 5%,#0d4675 0,#071727 30%,#020812 75%);display:none;align-items:center;justify-content:center;padding:20px;overflow:auto}
+.auth-screen.show{display:flex}.auth-shell{width:min(460px,100%);border:1px solid #215b86;border-radius:26px;background:linear-gradient(145deg,#0b1f33,#06111d);box-shadow:0 30px 100px #000b;padding:28px}
+.auth-brand{text-align:center}.auth-logo{width:78px;height:78px;margin:auto;filter:drop-shadow(0 0 22px #1596ff55)}.auth-brand h1{font-size:22px;letter-spacing:2px;margin:13px 0 4px}.auth-brand p{margin:0;color:#7995af;font-size:11px;letter-spacing:3px}.auth-tabs{display:grid;grid-template-columns:1fr 1fr;gap:5px;padding:5px;background:#06121f;border:1px solid #173c59;border-radius:12px;margin:24px 0 18px}.auth-tab{border:0;background:transparent;color:#7793ac;padding:10px;border-radius:8px;font-weight:700}.auth-tab.active{background:#0d3d66;color:#eaf6ff}.auth-form{display:grid;gap:11px}.auth-label{display:grid;gap:6px;color:#8ea8c0;font-size:11px}.auth-error{display:none;border:1px solid #6d3341;background:#241017;color:#ffb4bd;border-radius:10px;padding:10px;font-size:11px;line-height:1.45}.auth-error.show{display:block}.auth-submit{width:100%;padding:13px;border:1px solid #1488e6;border-radius:11px;background:linear-gradient(135deg,#158ff0,#075bc7);color:white;font-weight:800}.auth-meta{text-align:center;color:#6f89a2;font-size:10px;margin-top:13px;line-height:1.5}
+.settings-list{display:grid;gap:10px}.setting-row{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:15px;border:1px solid #193f5e;border-radius:15px;background:#081727}.setting-copy{min-width:0}.setting-copy b{display:block;font-size:13px}.setting-copy small{display:block;color:#7892ab;margin-top:4px;line-height:1.4}.switch{width:48px;height:28px;border:1px solid #2a5271;border-radius:99px;background:#0a2237;padding:3px;flex:none}.switch i{display:block;width:20px;height:20px;border-radius:50%;background:#6f879e;transition:.18s}.switch.on{border-color:#218fe0;background:#0b4d7d}.switch.on i{transform:translateX(20px);background:#fff;box-shadow:0 0 10px #5fc5ff}.settings-section{margin:0 0 18px}.settings-section h3{font-size:11px;color:#5faee2;letter-spacing:1.5px;text-transform:uppercase;margin:0 0 9px}.danger-zone{border-color:#673441;background:#201016}.auth-user-badge{padding:12px 14px;border:1px solid #194a6d;border-radius:12px;background:#071a2c;color:#9db7cd;font-size:11px;margin-bottom:12px}.auth-user-badge b{color:#e8f5ff}
 @media(max-width:800px){.content{padding:14px 12px 98px}.top{padding:10px 13px}.hero{grid-template-columns:1fr;min-height:410px}.hero-copy{padding:26px 21px}.hero h1{font-size:33px}.hero-art{height:155px}.orb{width:116px;height:116px;font-size:52px}.orb:before{width:190px;height:60px}.orb:after{width:180px;height:70px}.actions{grid-template-columns:repeat(2,1fr);gap:9px}.action{min-height:132px;padding:13px}.grid,.section-grid{grid-template-columns:1fr}.files-grid{grid-template-columns:1fr}.page-title{align-items:flex-start;flex-direction:column}.kv,.info-list{grid-template-columns:1fr}.storage-top{align-items:flex-start}.page{padding:42px 25px;min-height:800px}.editor-tools{top:64px}.editor-bottom span:last-child{display:none}.templates{grid-template-columns:1fr}.bottom{height:74px}.bottom button b{font-size:20px}}
 @media(max-width:760px){
 .top{height:68px;padding:10px 14px}.logo{width:40px;height:40px}.brand{gap:9px}.brand b{font-size:14px;letter-spacing:1.4px}.brand span{font-size:8px;letter-spacing:3px}.top-actions{gap:6px}.icon,.avatar{width:36px;height:36px}
@@ -32,21 +37,45 @@ body{overflow-x:hidden}.app{min-height:100vh;max-width:1180px;margin:auto;backgr
 </style>
 </head>
 <body>
+
+<div id="authScreen" class="auth-screen">
+  <div class="auth-shell">
+    <div class="auth-brand">
+      <svg class="auth-logo" viewBox="0 0 128 128" aria-label="Korczak Nexus">
+        <defs><linearGradient id="authPaper" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#56c4ff"/><stop offset=".55" stop-color="#1688e8"/><stop offset="1" stop-color="#064783"/></linearGradient></defs>
+        <path d="M28 10h51l21 21v87H28z" fill="#071b2d" stroke="#2ca8ff" stroke-width="3"/>
+        <path d="M79 10v23h21" fill="none" stroke="#65d0ff" stroke-width="3"/>
+        <path d="M47 42h27v11H47zm0 20h34v11H47zm0 20h24v11H47z" fill="#183f60"/>
+        <path d="M43 28h14l27 49V28h13v72H83L56 51v49H43z" fill="url(#authPaper)"/>
+      </svg>
+      <h1>KORCZAK NEXUS</h1><p>DOCUMENTS</p>
+    </div>
+    <div class="auth-tabs">
+      <button id="loginTab" class="auth-tab active" onclick="authMode('login')">Entrar</button>
+      <button id="registerTab" class="auth-tab" onclick="authMode('register')">Criar conta</button>
+    </div>
+    <div id="authError" class="auth-error"></div>
+    <form id="authForm" class="auth-form" onsubmit="submitAuth(event)">
+      <label id="authNameField" class="auth-label" style="display:none">Nome
+        <input id="authName" class="input" autocomplete="name" placeholder="Seu nome">
+      </label>
+      <label class="auth-label">E-mail
+        <input id="authEmail" class="input" type="email" autocomplete="email" placeholder="voce@exemplo.com" required>
+      </label>
+      <label class="auth-label">Senha
+        <input id="authPassword" class="input" type="password" autocomplete="current-password" placeholder="Sua senha" required>
+      </label>
+      <label id="authConfirmField" class="auth-label" style="display:none">Confirmar senha
+        <input id="authConfirm" class="input" type="password" autocomplete="new-password" placeholder="Repita sua senha">
+      </label>
+      <button id="authSubmit" class="auth-submit" type="submit">Entrar no Nexus</button>
+    </form>
+    <div class="auth-meta">Sua sessão é armazenada localmente no dispositivo. A autenticação do serviço usa o backend Korczak e MongoDB.</div>
+  </div>
+</div>
 <div class="app">
 <header class="top">
-<div class="brand"><svg class="logo" viewBox="0 0 128 128" role="img" aria-label="Korczak Nexus N estilizado">
-<defs>
-<linearGradient id="nBlue" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#7cddff"/><stop offset=".38" stop-color="#219dff"/><stop offset=".72" stop-color="#0877e6"/><stop offset="1" stop-color="#06458f"/></linearGradient>
-<linearGradient id="nEdge" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#b9efff" stop-opacity=".85"/><stop offset=".5" stop-color="#4db9ff" stop-opacity=".2"/><stop offset="1" stop-color="#002d69" stop-opacity=".9"/></linearGradient>
-<pattern id="nLines" width="6" height="6" patternUnits="userSpaceOnUse"><path d="M0 6L6 0" stroke="#fff" stroke-opacity=".10"/></pattern>
-<filter id="nShadow" x="-35%" y="-35%" width="170%" height="180%"><feDropShadow dx="0" dy="7" stdDeviation="4" flood-color="#006cff" flood-opacity=".55"/></filter>
-</defs>
-<path d="M27 21H44L86 97V21H102V113H85L43 37V113H27Z" fill="#031b3b" opacity=".72" transform="translate(3 5)" filter="url(#nShadow)"/>
-<path d="M27 18H44L86 94V18H102V110H85L43 34V110H27Z" fill="url(#nBlue)" filter="url(#nShadow)"/>
-<path d="M27 18H44L86 94V18H102V110H85L43 34V110H27Z" fill="url(#nLines)"/>
-<path d="M27 18H31V110H27Z" fill="#fff" opacity=".20"/>
-<path d="M86 18H102V22H86Z" fill="url(#nEdge)" opacity=".8"/>
-</svg><div><b>KORCZAK</b><span>NEXUS</span></div></div>
+<div class="brand"><svg class="logo" viewBox="0 0 128 128" role="img" aria-label="Korczak Nexus documento com N"><defs><linearGradient id="paperBlue" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#73d7ff"/><stop offset=".45" stop-color="#219cff"/><stop offset="1" stop-color="#0754a0"/></linearGradient></defs><path d="M27 9h50l24 24v86H27z" fill="#061a2b" stroke="#39b4ff" stroke-width="3"/><path d="M77 9v26h24" fill="none" stroke="#75dcff" stroke-width="3"/><path d="M43 42h43v7H43zm0 14h35v7H43zm0 14h43v7H43z" fill="#164467"/><path d="M41 31h12l25 47V31h12v68H78L53 53v46H41z" fill="url(#paperBlue)" stroke="#a6eaff" stroke-opacity=".22" stroke-width="1.5"/></svg><div><b>KORCZAK</b><span>NEXUS</span></div></div>
 <div class="top-actions"><button class="avatar" id="avatarTop" onclick="showView('profile')">KT</button></div>
 </header>
 
@@ -86,13 +115,42 @@ body{overflow-x:hidden}.app{min-height:100vh;max-width:1180px;margin:auto;backgr
 <button class="menu-card" onclick="showView('storage')"><span class="mi"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 5h14v14H5zM8 8h8M8 12h8M8 16h5" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg></span><span><b>Armazenamento</b><small>Espaço do dispositivo e pasta do Nexus.</small></span></button>
 <button class="menu-card" onclick="showView('about')"><span class="mi"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.5" fill="none" stroke="currentColor" stroke-width="1.7"/><path d="M12 10.5v5M12 7.5h.01" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/></svg></span><span><b>Sobre o Nexus</b><small>Versão, arquitetura e informações do aplicativo.</small></span></button>
 <button class="menu-card" onclick="checkUpdate()"><span class="mi"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 8a7.5 7.5 0 0 0-12.7-1.9L4 8.5M4 4v4.5h4.5M5 16a7.5 7.5 0 0 0 12.7 1.9l2.3-2.4M20 20v-4.5h-4.5" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg></span><span><b>Atualizações</b><small>Verifique se existe uma nova versão do aplicativo.</small></span></button>
-<button class="menu-card" onclick="toast('As preferências adicionais serão adicionadas aqui.')"><span class="mi"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 8.7a3.3 3.3 0 1 0 0 6.6 3.3 3.3 0 0 0 0-6.6Z" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M19.2 13.4l1.1.8-1.8 3.1-1.3-.5a7.8 7.8 0 0 1-1.9 1.1l-.2 1.4h-3.6l-.2-1.4a7.8 7.8 0 0 1-1.9-1.1l-1.3.5-1.8-3.1 1.1-.8a7.6 7.6 0 0 1 0-2.8l-1.1-.8 1.8-3.1 1.3.5a7.8 7.8 0 0 1 1.9-1.1l.2-1.4h3.6l.2 1.4a7.8 7.8 0 0 1 1.9 1.1l1.3-.5 1.8 3.1-1.1.8a7.6 7.6 0 0 1 0 2.8Z" fill="none" stroke="currentColor" stroke-width="1.1" stroke-linejoin="round"/></svg></span><span><b>Configurações</b><small>Preferências do aplicativo e privacidade.</small></span></button>
-</div></section>
+<button class="menu-card" onclick="showView('settings')"><span class="mi"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 8.7a3.3 3.3 0 1 0 0 6.6 3.3 3.3 0 0 0 0-6.6Z" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M19.2 13.4l1.1.8-1.8 3.1-1.3-.5a7.8 7.8 0 0 1-1.9 1.1l-.2 1.4h-3.6l-.2-1.4a7.8 7.8 0 0 1-1.9-1.1l-1.3.5-1.8-3.1 1.1-.8a7.6 7.6 0 0 1 0-2.8l-1.1-.8 1.8-3.1 1.3.5a7.8 7.8 0 0 1 1.9-1.1l.2-1.4h3.6l.2 1.4a7.8 7.8 0 0 1 1.9 1.1l1.3-.5 1.8 3.1-1.1.8a7.6 7.6 0 0 1 0 2.8Z" fill="none" stroke="currentColor" stroke-width="1.1" stroke-linejoin="round"/></svg></span><span><b>Configurações</b><small>Preferências do aplicativo e privacidade.</small></span></button>
+<button class="menu-card danger-zone" onclick="logout()"><span class="mi">↪</span><span><b>Sair da conta</b><small>Encerrar sua sessão no Nexus.</small></span></button><button class="menu-card danger-zone" onclick="exitApp()"><span class="mi">×</span><span><b>Sair do aplicativo</b><small>Fechar o Nexus.</small></span></button>
+ </div></section>
 
 <section id="profileView" class="view"><div class="page-title"><div><h2>Meu perfil</h2><p>Informações da conta conectada ao Korczak Nexus.</p></div><button class="btn" onclick="showView('more')">Voltar</button></div><div class="card profile-card"><div class="profile-head"><div class="big-avatar" id="profileAvatar">KT</div><div><h3 id="profileName">Conta local</h3><p id="profileEmail">Nenhuma conta conectada</p></div></div><div class="kv"><div><small>Nome</small><b id="profileName2">—</b></div><div><small>E-mail</small><b id="profileEmail2">—</b></div><div><small>Status</small><b id="profileStatus">Disponível offline</b></div><div><small>Aplicativo</small><b>Korczak Nexus</b></div></div></div></section>
 
 <section id="planView" class="view"><div class="page-title"><div><h2>Meu plano</h2><p>Recursos associados à sua conta.</p></div></div><div class="plan"><span class="plan-badge">PLANO ATUAL</span><h3 id="planName">Nexus Free</h3><p id="planDescription">Experiência essencial para documentos, arquivos locais e recursos básicos do Nexus.</p><div class="feature-list"><div>Editor de documentos</div><div>Armazenamento escolhido pelo usuário</div><div>Importação de arquivos</div><div>Atualizações do aplicativo</div></div><button class="btn primary" onclick="toast('A gestão de planos será conectada à conta Nexus.')">Gerenciar plano</button></div></section>
 
+
+<section id="settingsView" class="view">
+  <div class="page-title"><div><h2>Configurações</h2><p>Controle o comportamento, a conta e a experiência do Nexus.</p></div><button class="btn" onclick="showView('more')">Voltar</button></div>
+  <div id="settingsAccount" class="auth-user-badge">Sessão: <b>verificando…</b></div>
+  <div class="settings-section"><h3>Aplicativo</h3><div class="settings-list">
+    <div class="setting-row"><div class="setting-copy"><b>Atualização automática</b><small>Verificar novas versões ao abrir o Nexus.</small></div><button id="setAutoUpdate" class="switch" onclick="toggleSetting('autoUpdate')"><i></i></button></div>
+    <div class="setting-row"><div class="setting-copy"><b>Notificações internas</b><small>Mostrar confirmações e avisos visuais do Nexus.</small></div><button id="setNotifications" class="switch" onclick="toggleSetting('notifications')"><i></i></button></div>
+    <div class="setting-row"><div class="setting-copy"><b>Confirmação ao sair</b><small>Pedir confirmação antes de fechar o aplicativo.</small></div><button id="setConfirmExit" class="switch" onclick="toggleSetting('confirmExit')"><i></i></button></div>
+    <div class="setting-row"><div class="setting-copy"><b>Modo compacto</b><small>Reduz espaçamentos para exibir mais conteúdo.</small></div><button id="setCompact" class="switch" onclick="toggleSetting('compact')"><i></i></button></div>
+  </div></div>
+  <div class="settings-section"><h3>Conta e segurança</h3><div class="settings-list">
+    <button class="menu-card" onclick="loadProfile()"><span class="mi">◉</span><span><b>Dados da conta</b><small>Consultar os dados do usuário autenticado.</small></span></button>
+    <button class="menu-card" onclick="logout()"><span class="mi">↪</span><span><b>Sair da conta</b><small>Encerrar a sessão no Nexus e no backend.</small></span></button>
+  </div></div>
+  <div class="settings-section"><h3>Atualizações</h3><div class="settings-list">
+    <button class="menu-card" onclick="checkUpdate()"><span class="mi">↻</span><span><b>Verificar no GitHub Releases</b><small>Consulta diretamente a release mais recente de korczaktechnology-tech/kzdoc.</small></span></button>
+  </div></div>
+  <div class="settings-section"><h3>Armazenamento</h3><div class="settings-list">
+    <button class="menu-card" onclick="showView('storage')"><span class="mi">▤</span><span><b>Armazenamento do dispositivo</b><small>Gerenciar acesso amplo e pasta selecionada.</small></span></button>
+  </div></div>
+  <div class="settings-section"><h3>Diagnóstico</h3><div class="settings-list">
+    <button class="menu-card" onclick="showView('about')"><span class="mi">i</span><span><b>Informações do aplicativo</b><small>Versão, pacote, armazenamento e distribuição.</small></span></button>
+    <button class="menu-card danger-zone" onclick="resetLocalSettings()"><span class="mi">↺</span><span><b>Restaurar preferências</b><small>Voltar as configurações do Nexus para o padrão.</small></span></button>
+  </div></div>
+  <div class="settings-section"><h3>Aplicativo</h3><div class="settings-list">
+    <button class="menu-card danger-zone" onclick="exitApp()"><span class="mi">×</span><span><b>Sair do aplicativo</b><small>Fechar o Nexus completamente.</small></span></button>
+  </div></div>
+</section>
 <section id="aboutView" class="view"><div class="page-title"><div><h2>Sobre o Nexus</h2><p>Informações do aplicativo.</p></div></div><div class="card about"><div class="nmark">N</div><h2>Korczak Nexus</h2><p>O Nexus é o aplicativo de documentos da Korczak Technology. Ele combina uma interface de documentos com recursos Android nativos para seleção de arquivos, armazenamento local, atualização do aplicativo e integração com os serviços Korczak.</p><div class="info-list"><div><small>Aplicativo</small><b>Korczak Nexus</b></div><div><small>Pacote Android</small><b>com.korczak.documents</b></div><div><small>Versão instalada</small><b id="appVersion">Consultando…</b></div><div><small>Armazenamento</small><b>Android + pasta escolhida</b></div><div><small>Editor</small><b>Documentos HTML/KZDOC</b></div><div><small>Atualizações</small><b>Distribuição Korczak</b></div></div></div></section>
 </main>
 
@@ -114,7 +172,7 @@ const $=id=>document.getElementById(id);
 function toast(s){clearTimeout(toastTimer);$('toast').textContent=s;$('toast').classList.add('show');toastTimer=setTimeout(()=>$('toast').classList.remove('show'),2400)}
 function native(action,payload={}){return new Promise(resolve=>{const id='c'+Date.now()+Math.random().toString(16).slice(2);window.__pending=window.__pending||{};window.__pending[id]=resolve;if(window.Android)Android.call(action,JSON.stringify(payload),id);else{delete window.__pending[id];resolve({ok:false,error:'Recursos Android indisponíveis'})}})}
 window.__nativeResult=(id,json)=>{const r=window.__pending&&window.__pending[id];if(r){delete window.__pending[id];try{r(JSON.parse(json))}catch(e){r({ok:false,error:'Resposta inválida'})}}}
-function showView(v){document.querySelectorAll('.view').forEach(x=>x.classList.remove('active'));const el=$(v+'View');if(el)el.classList.add('active');document.querySelectorAll('.bottom button').forEach(x=>x.classList.remove('active'));if(v==='home')$('navHome').classList.add('active');if(v==='files')$('navFiles').classList.add('active');if(v==='more'||v==='profile'||v==='plan'||v==='about'||v==='storage')$('navMore').classList.add('active');if(v==='files')refresh();if(v==='storage')refreshStorage();if(v==='profile')loadProfile();if(v==='about')loadAbout();window.scrollTo(0,0)}
+function showView(v){document.querySelectorAll('.view').forEach(x=>x.classList.remove('active'));const el=$(v+'View');if(el)el.classList.add('active');document.querySelectorAll('.bottom button').forEach(x=>x.classList.remove('active'));if(v==='home')$('navHome').classList.add('active');if(v==='files')$('navFiles').classList.add('active');if(v==='more'||v==='profile'||v==='plan'||v==='about'||v==='storage'||v==='settings')$('navMore').classList.add('active');if(v==='files')refresh();if(v==='storage')refreshStorage();if(v==='profile')loadProfile();if(v==='about')loadAbout();if(v==='settings'){loadProfile();applySettings();}window.scrollTo(0,0)}
 function humanSize(n){if(!n)return'0 B';let i=0,u=['B','KB','MB','GB','TB'];while(n>=1024&&i<u.length-1){n/=1024;i++}return n.toFixed(i?1:0)+' '+u[i]}
 function cleanName(n){return String(n||'Arquivo').replace(/\.kzdoc$/i,'').replace(/\.html$/i,'').replace(/\.txt$/i,'')}
 function esc(s){return String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]))}
@@ -149,8 +207,24 @@ async function saveEditor(){const name=($('editorTitle').value.trim()||'Document
 async function loadProfile(){const r=await native('session');if(!r.ok)return;const u=r.user||{};const name=u.name||'Conta local',email=u.email||'Nenhuma conta conectada',initial=(name.trim()[0]||'K').toUpperCase();$('profileName').textContent=name;$('profileEmail').textContent=email;$('profileName2').textContent=name;$('profileEmail2').textContent=email;$('profileAvatar').textContent=initial;$('avatarTop').textContent=initial;$('profileStatus').textContent=u.email_verified?'Conta verificada':'Conta local / não verificada'}
 async function loadAbout(){const r=await native('appInfo');if(r.ok)$('appVersion').textContent=r.versionName||'—'}
 async function checkUpdate(){const r=await native('checkUpdate');toast(r.message||'Verificação concluída')}
+
+let authCurrent='login';
+const defaultSettings={autoUpdate:true,notifications:true,confirmExit:true,compact:false};
+function settings(){try{return Object.assign({},defaultSettings,JSON.parse(localStorage.getItem('nexus_settings')||'{}'))}catch(e){return {...defaultSettings}}}
+function saveSettings(s){localStorage.setItem('nexus_settings',JSON.stringify(s));applySettings()}
+function applySettings(){const s=settings();Object.keys(s).forEach(k=>{const el=$('set'+k.charAt(0).toUpperCase()+k.slice(1));if(el)el.classList.toggle('on',!!s[k])});document.body.classList.toggle('compact-mode',!!s.compact)}
+async function toggleSetting(k){const s=settings();s[k]=!s[k];saveSettings(s);await native('setSetting',{key:k,value:s[k]});toast(s[k]?'Opção ativada':'Opção desativada')}
+function resetLocalSettings(){localStorage.removeItem('nexus_settings');applySettings();Object.entries(defaultSettings).forEach(([k,v])=>native('setSetting',{key:k,value:v}));toast('Preferências restauradas')}
+function authMode(mode){authCurrent=mode;const reg=mode==='register';$('loginTab').classList.toggle('active',!reg);$('registerTab').classList.toggle('active',reg);$('authNameField').style.display=reg?'grid':'none';$('authConfirmField').style.display=reg?'grid':'none';$('authSubmit').textContent=reg?'Criar conta':'Entrar no Nexus';$('authPassword').autocomplete=reg?'new-password':'current-password';hideAuthError()}
+function showAuthError(s){$('authError').textContent=s;$('authError').classList.toggle('show',!!s)}
+function hideAuthError(){showAuthError('')}
+async function submitAuth(ev){ev.preventDefault();hideAuthError();const email=$('authEmail').value.trim().toLowerCase(),password=$('authPassword').value,name=$('authName').value.trim(),confirm=$('authConfirm').value;if(!email||!password){showAuthError('Informe e-mail e senha.');return}if(authCurrent==='register'){if(!name){showAuthError('Informe seu nome.');return}if(password.length<12||!/[a-z]/.test(password)||!/[A-Z]/.test(password)||!/[0-9]/.test(password)||!/[^A-Za-z0-9]/.test(password)){showAuthError('A senha precisa ter pelo menos 12 caracteres, maiúscula, minúscula, número e caractere especial.');return}if(password!==confirm){showAuthError('As senhas não coincidem.');return}}
+$('authSubmit').disabled=true;$('authSubmit').textContent='Conectando…';const path=authCurrent==='register'?'/api/v1/auth/register':'/api/v1/auth/login';const body=authCurrent==='register'?{name,email,password}:{email,password};const r=await native('api',{method:'POST',path,body:JSON.stringify(body)});$('authSubmit').disabled=false;$('authSubmit').textContent=authCurrent==='register'?'Criar conta':'Entrar no Nexus';if(!r.ok){showAuthError(r.error||'Não foi possível autenticar.');return}hideAuthError();$('authScreen').classList.remove('show');loadProfile();toast(authCurrent==='register'?'Conta criada com sucesso':'Login realizado com sucesso')}
+async function bootstrapAuth(){applySettings();const s=await native('session');if(!s.ok){$('authScreen').classList.add('show');return}const r=await native('validateSession');if(!r.ok){$('authScreen').classList.add('show');return}$('authScreen').classList.remove('show');loadProfile()}
+async function logout(){const r=await native('logout');if(!r.ok){toast(r.error||'Não foi possível sair');return}$('authScreen').classList.add('show');authMode('login');$('authEmail').value='';$('authPassword').value='';$('authName').value='';$('authConfirm').value='';showView('home');toast('Sessão encerrada')}
+async function exitApp(){const s=settings();if(s.confirmExit){if(!window.confirm('Sair do Korczak Nexus?'))return}const r=await native('exitApp');if(!r.ok)toast(r.error||'Não foi possível fechar o aplicativo')}
 window.__nativeStorageRefresh=()=>{refreshStorage();checkStorageStatus();};
-refresh();checkStorageStatus();loadProfile();loadAbout();
+refresh();checkStorageStatus();loadAbout();bootstrapAuth();
 </script>
 </body>
 </html>
