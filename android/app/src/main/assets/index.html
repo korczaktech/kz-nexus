@@ -230,7 +230,7 @@ const EDITOR_CONTEXTS={
 arquivo:[
 ['Novo','openCreate()','M4 4h12v16H4zM8 8h8M8 12h8M8 16h5'],['Abrir','openEditorPicker()','M5 5h6l2 2h6v12H5z'],['Salvar','saveEditor()','M5 4h12l2 2v14H5zM8 4v6h8V4M9 15h6v5H9z'],['Salvar como','saveAs()','M5 5h14v14H5zM9 9h6M9 13h6'],['Exportar','exportDoc()','M12 4v11M8 11l4 4 4-4M5 20h14'],['Imprimir','printEditor()','M6 9V4h12v5M6 17H4v-6h16v6h-2M7 14h10v6H7z'],['Fechar','closeEditor()','M6 6l12 12M18 6L6 18']],
 editar:[
-['Desfazer','editorCommand("undo")','M9 7H5l4-4M5 7c8-1 13 2 13 9'],['Refazer','editorCommand("redo")','M15 7h4l-4-4M19 7c-8-1-13 2-13 9'],['Recortar','editorCommand("cut")','M7 7l10 10M17 7L7 17M5 6a2 2 0 1 0 0 .1M5 18a2 2 0 1 0 0 .1'],['Copiar','editorCommand("copy")','M8 8h10v11H8zM5 5h10v3'],['Colar','editorCommand("paste")','M8 7h10v13H8zM6 4h8v4H6z'],['Selecionar tudo','editorCommand("selectAll")','M5 5h4M15 5h4M5 19h4M15 19h4'],['Pesquisar','findReplace()','M10 4a6 6 0 1 0 0 12 6 6 0 0 0 0-12M15 15l5 5']],
+['Desfazer','editorCommand("undo")','M9 7H5l4-4M5 7c8-1 13 2 13 9'],['Refazer','editorCommand("redo")','M15 7h4l-4-4M19 7c-8-1-13 2-13 9'],['Recortar','editorCut()','M7 7l10 10M17 7L7 17M5 6a2 2 0 1 0 0 .1M5 18a2 2 0 1 0 0 .1'],['Copiar','editorCopy()','M8 8h10v11H8zM5 5h10v3'],['Colar','editorPaste()','M8 7h10v13H8zM6 4h8v4H6z'],['Selecionar tudo','editorCommand("selectAll")','M5 5h4M15 5h4M5 19h4M15 19h4'],['Pesquisar','findReplace()','M10 4a6 6 0 1 0 0 12 6 6 0 0 0 0-12M15 15l5 5']],
 exibir:[
 ['Zoom −','setZoom(90)','M6 12h12'],['Zoom 100%','setZoom(100)','M10 4a6 6 0 1 0 0 12 6 6 0 0 0 0-12M15 15l5 5M10 7v6M7 10h6'],['Zoom +','setZoom(110)','M6 12h12M12 6v12'],['Tela cheia','toggleEditorFullscreen()','M5 9V5h4M15 5h4v4M19 15v4h-4M9 19H5v-4'],['Régua','toggleEditorRuler()','M4 8h16M6 5v3M10 5v3M14 5v3M18 5v3'],['Layout da página','pageLayoutInfo()','M5 4h14v16H5zM8 8h8M8 12h8']],
 inserir:[
@@ -327,6 +327,34 @@ async function insertTable(){
   toast('Tabela '+rN+'×'+cN+' criada');
 }
 function insertCheck(){restoreSelection();editorCommand('insertHTML','<label class="nx-editor-check" style="display:block;margin:6px 0"><input type="checkbox"> Tarefa</label>');toast('Checklist inserido')}
+async function editorCopy(){
+  saveSelection();
+  const s=window.getSelection();
+  const text=s?.toString()||'';
+  if(!text){toast('Selecione o conteúdo para copiar');return}
+  const r=await native('clipboardSet',{text});
+  if(r.ok)toast('Copiado');
+  else toast(r.error||'Não foi possível copiar');
+}
+async function editorCut(){
+  saveSelection();
+  const s=window.getSelection();
+  const text=s?.toString()||'';
+  if(!text){toast('Selecione o conteúdo para recortar');return}
+  const r=await native('clipboardSet',{text});
+  if(!r.ok){toast(r.error||'Não foi possível recortar');return}
+  restoreSelection();
+  editorCommand('delete');
+  toast('Recortado');
+}
+async function editorPaste(){
+  const r=await native('clipboardGet');
+  if(!r.ok){toast(r.error||'Não foi possível acessar a área de transferência');return}
+  restoreSelection();
+  editorCommand('insertText',String(r.text||''));
+  toast('Colado');
+}
+
 function insertQuote(){editorCommand('formatBlock','BLOCKQUOTE')}
 function layoutPanel(){nexusInput('Largura da página','Informe a largura em pixels (ex.: 900).','900','900').then(v=>{if(v){$('page').style.maxWidth=Math.max(320,parseInt(v,10)||900)+'px';$('page').style.margin='0 auto'}})}
 async function findReplace(){
@@ -399,7 +427,15 @@ function exportDoc(){
   const html='<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>'+esc(currentName||'Documento')+'</title><style>body{font-family:Arial,sans-serif;max-width:900px;margin:40px auto;line-height:1.6}table{border-collapse:collapse;width:100%}td,th{border:1px solid #777;padding:8px}img{max-width:100%}</style></head><body>'+($('page')?.innerHTML||'')+'</body></html>';
   const blob=new Blob([html],{type:'text/html;charset=utf-8'});const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download=(cleanName(currentName||'documento').replace(/\\.[^.]+$/,'')||'documento')+'.html';document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);toast('Documento exportado');
 }
-function printEditor(){saveSelection();window.print()}
+async function printEditor(){
+  saveSelection();
+  if(window.Android){
+    const r=await native('printEditor',{name:currentName||'Documento'});
+    if(r.ok){toast('Impressão aberta');return}
+    if(r.error)toast(r.error);
+  }
+  window.print();
+}
 async function toggleEditorFullscreen(){
   const modal=$('editorModal');if(!modal)return;
   try{
