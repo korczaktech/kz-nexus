@@ -443,25 +443,16 @@ class MainActivity : AppCompatActivity() {
                         }
 
                         "requestStorage" -> runOnUiThread {
-                            if (android.os.Build.VERSION.SDK_INT >= 30) {
-                                try {
-                                    startActivity(
-                                        Intent(
-                                            Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION,
-                                            Uri.parse("package:$packageName")
-                                        )
-                                    )
-                                    respondJs(
-                                        callback,
-                                        JSONObject().put("ok", true).put("message", "A tela de acesso ao armazenamento do Android foi aberta.")
-                                    )
-                                } catch (_: Exception) {
-                                    startActivity(Intent(Settings.ACTION_MANAGE_ALL_FILES_ACCESS_PERMISSION))
-                                    respondJs(callback, JSONObject().put("ok", true).put("message", "A tela de acesso ao armazenamento foi aberta."))
-                                }
-                            } else {
-                                respondJs(callback, JSONObject().put("ok", true).put("message", "Nesta versão do Android o acesso amplo não precisa de uma tela especial."))
-                            }
+                            // O Nexus usa o Storage Access Framework (SAF), evitando acesso
+                            // amplo ao armazenamento. O usuário escolhe explicitamente a pasta.
+                            pendingCallback = callback
+                            val intent = Intent(Intent.ACTION_OPEN_DOCUMENT_TREE)
+                                .addFlags(
+                                    Intent.FLAG_GRANT_READ_URI_PERMISSION or
+                                    Intent.FLAG_GRANT_WRITE_URI_PERMISSION or
+                                    Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION
+                                )
+                            startActivityForResult(intent, treeRequest)
                         }
 
                         "readFile" -> {
