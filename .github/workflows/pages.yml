@@ -2,7 +2,8 @@ name: Deploy GitHub Pages
 
 on:
   push:
-    branches: [main]
+    branches:
+      - main
   workflow_dispatch:
 
 permissions:
@@ -16,35 +17,43 @@ concurrency:
 
 jobs:
   build:
+    name: Build Web
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Setup Node
+      - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: "22"
+          node-version: 22
 
       - name: Install dependencies
         working-directory: frontend
-        run: npm install
+        run: npm install --no-audit --no-fund
 
-      - name: Build
+      - name: TypeScript and Vite build
         working-directory: frontend
         env:
           VITE_API_BASE_URL: https://kzdoc.onrender.com
         run: npm run build
 
+      - name: Verify build output
+        working-directory: frontend
+        run: |
+          test -f dist/index.html
+          touch dist/.nojekyll
+
       - name: Setup Pages
         uses: actions/configure-pages@v5
 
-      - name: Upload artifact
+      - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3
         with:
           path: frontend/dist
 
   deploy:
+    name: Deploy Web
     needs: build
     runs-on: ubuntu-latest
     environment:
