@@ -48,7 +48,7 @@ export function Editor({document,versions,onSave,onClose,onConflict}:{document:D
   useEffect(()=>()=>{if(timer.current)window.clearTimeout(timer.current)},[]);
   function change(next:string){setContent(next);setState('dirty');setMessage('Alterações não salvas');future.current=[];const h=history.current;if(h[h.length-1]!==next){h.push(next);if(h.length>80)h.shift()}}
   function selection(){const el=textarea.current;return{start:el?.selectionStart||0,end:el?.selectionEnd||0}}
-  function isEditableFile(file:File){return /^(text\\/|application\\/(json|javascript|xml|yaml|x-yaml|toml|sql)|image\\/svg\\+xml)/.test(file.type)||/\\.(txt|md|markdown|mdx|json|js|jsx|ts|tsx|css|html|htm|xml|svg|yaml|yml|toml|sql|csv|log)$/i.test(file.name)}
+  function isEditableFile(file:File){return /^(text\/|application\/(json|javascript|xml|yaml|x-yaml|toml|sql)|image\/svg\\+xml)/.test(file.type)||/\.(txt|md|markdown|mdx|json|js|jsx|ts|tsx|css|html|htm|xml|svg|yaml|yml|toml|sql|csv|log)$/i.test(file.name)}
   function chooseFolder(){setFileError('');fileInputRef.current?.click()}
   function handleFolderFiles(list:FileList|null){
     if(!list||!list.length)return;
@@ -62,7 +62,7 @@ export function Editor({document,versions,onSave,onClose,onConflict}:{document:D
       const text=await item.file.text();setContent(text);setName(item.file.name);setType(item.file.name.split('.').pop()?.toLowerCase()||'txt');history.current=[text];future.current=[];setState('dirty');setMessage('Arquivo local aberto — salve para aplicar ao documento');textarea.current?.focus();
     }catch{setFileError('Não foi possível ler este arquivo.')}
   }
-  function downloadCurrent(){const ext=(type||'txt').replace(/[^a-z0-9]/gi,'')||'txt';const blob=new Blob([content],{type:'text/plain;charset=utf-8'});const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download=(name.replace(/\\.[^.]+$/,'')||'documento')+'.'+ext;a.click();URL.revokeObjectURL(url)}
+  function downloadCurrent(){const ext=(type||'txt').replace(/[^a-z0-9]/gi,'')||'txt';const blob=new Blob([content],{type:'text/plain;charset=utf-8'});const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download=(name.replace(/\.[^.]+$/,'')||'documento')+'.'+ext;a.click();URL.revokeObjectURL(url)}
   function clearLocalFolder(){setLocalFiles([]);setFolderName('');setSelectedLocalPath('');setFileError('')}
   function insert(value:string){const{start,end}=selection();const r=toolbarInsert(value,start,end,content);change(r.text);requestAnimationFrame(()=>{textarea.current?.focus();textarea.current?.setSelectionRange(r.start,r.end)})}
   function wrap(left:string,right=left){const{start,end}=selection();const r=applyWrap(content,start,end,left,right);change(r.text);requestAnimationFrame(()=>{textarea.current?.focus();textarea.current?.setSelectionRange(r.start,r.end)})}
