@@ -10,6 +10,14 @@ import android.webkit.JavascriptInterface
 import android.webkit.WebChromeClient
 import android.webkit.WebView
 import android.webkit.WebViewClient
+import android.graphics.Color
+import android.graphics.drawable.GradientDrawable
+import android.view.Gravity
+import android.view.View
+import android.widget.Button
+import android.widget.HorizontalScrollView
+import android.widget.LinearLayout
+import android.widget.FrameLayout
 import androidx.appcompat.app.AppCompatActivity
 import org.json.JSONArray
 import org.json.JSONObject
@@ -17,6 +25,8 @@ import java.util.concurrent.Executors
 
 class MainActivity : AppCompatActivity() {
     private lateinit var web: WebView
+    private lateinit var rootLayout: FrameLayout
+    private lateinit var nativeEditorToolbar: HorizontalScrollView
     private lateinit var session: SessionStore
     private lateinit var api: ApiClient
     private lateinit var storage: StorageManager
@@ -45,7 +55,18 @@ class MainActivity : AppCompatActivity() {
             webChromeClient = WebChromeClient()
             addJavascriptInterface(Bridge(), "Android")
         }
-        setContentView(web)
+        rootLayout = FrameLayout(this).apply {
+            setBackgroundColor(Color.TRANSPARENT)
+            addView(web, FrameLayout.LayoutParams(-1, -1))
+        }
+        nativeEditorToolbar = buildNativeEditorToolbar()
+        nativeEditorToolbar.visibility = View.GONE
+        val toolbarLp = FrameLayout.LayoutParams(-1, dp(58)).apply {
+            gravity = Gravity.BOTTOM
+            bottomMargin = dp(78)
+        }
+        rootLayout.addView(nativeEditorToolbar, toolbarLp)
+        setContentView(rootLayout)
         web.loadUrl("file:///android_asset/index.html")
 
         requestStartupPermissions()
@@ -83,6 +104,92 @@ class MainActivity : AppCompatActivity() {
                     )
                 }
             }
+        }
+    }
+
+    private fun dp(value: Int): Int = (value * resources.displayMetrics.density).toInt().coerceAtLeast(1)
+
+    private fun toolbarButton(label: String, action: String, accent: Boolean = false): Button {
+        return Button(this).apply {
+            text = label
+            isAllCaps = false
+            textSize = 12f
+            setTextColor(Color.WHITE)
+            minWidth = dp(if (label.length > 7) 82 else 52)
+            minimumHeight = dp(46)
+            setPadding(dp(10), 0, dp(10), 0)
+            background = GradientDrawable().apply {
+                cornerRadius = dp(11).toFloat()
+                setStroke(dp(1), if (accent) Color.rgb(24, 139, 229) else Color.rgb(35, 77, 107))
+                setColor(if (accent) Color.rgb(8, 93, 177) else Color.rgb(9, 31, 49))
+            }
+            setOnClickListener {
+                if (action == "save") {
+                    web.evaluateJavascript("window.saveEditor && window.saveEditor()", null)
+                } else {
+                    val js = when (action) {
+                        "undo" -> "document.execCommand('undo')"
+                        "redo" -> "document.execCommand('redo')"
+                        "bold" -> "document.execCommand('bold')"
+                        "italic" -> "document.execCommand('italic')"
+                        "underline" -> "document.execCommand('underline')"
+                        "strike" -> "document.execCommand('strikeThrough')"
+                        "h1" -> "document.execCommand('formatBlock',false,'H1')"
+                        "h2" -> "document.execCommand('formatBlock',false,'H2')"
+                        "list" -> "document.execCommand('insertUnorderedList')"
+                        "numbers" -> "document.execCommand('insertOrderedList')"
+                        "left" -> "document.execCommand('justifyLeft')"
+                        "center" -> "document.execCommand('justifyCenter')"
+                        "right" -> "document.execCommand('justifyRight')"
+                        "justify" -> "document.execCommand('justifyFull')"
+                        "indent" -> "document.execCommand('indent')"
+                        "outdent" -> "document.execCommand('outdent')"
+                        "clear" -> "document.execCommand('removeFormat')"
+                        "focus" -> "document.getElementById('page')?.focus()"
+                        else -> ""
+                    }
+                    if (js.isNotBlank()) web.evaluateJavascript(
+                        "(function(){var p=document.getElementById('page');if(p)p.focus();$js;document.dispatchEvent(new Event('input'))})()",
+                        null
+                    )
+                }
+            }
+        }
+    }
+
+    private fun buildNativeEditorToolbar(): HorizontalScrollView {
+        val row = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+            setPadding(dp(8), dp(6), dp(8), dp(6))
+            background = GradientDrawable().apply {
+                setColor(Color.rgb(6, 19, 33))
+                setStroke(dp(1), Color.rgb(25, 59, 88))
+            }
+        }
+        val buttons = listOf(
+            "↶" to "undo", "↷" to "redo", "B" to "bold", "I" to "italic",
+            "U" to "underline", "S̶" to "strike", "H1" to "h1", "H2" to "h2",
+            "Lista" to "list", "1." to "numbers", "Esq." to "left",
+            "Centro" to "center", "Dir." to "right", "Just." to "justify",
+            "Recuar" to "indent", "Voltar" to "outdent", "Limpar" to "clear",
+            "Foco" to "focus", "Salvar" to "save"
+        )
+        buttons.forEach { (label, action) ->
+            val lp = LinearLayout.LayoutParams(-2, -1).apply { marginEnd = dp(6) }
+            row.addView(toolbarButton(label, action, action == "save"), lp)
+        }
+        return HorizontalScrollView(this).apply {
+            isHorizontalScrollBarEnabled = false
+            setBackgroundColor(Color.rgb(6, 19, 33))
+            addView(row, HorizontalScrollView.LayoutParams(-2, -1))
+        }
+    }
+
+    private fun setNativeEditorMode(visible: Boolean) {
+        runOnUiThread {
+            if (!::nativeEditorToolbar.isInitialized) return@runOnUiThread
+            nativeEditorToolbar.visibility = if (visible) View.VISIBLE else View.GONE
         }
     }
 
@@ -195,6 +302,11 @@ class MainActivity : AppCompatActivity() {
                 try {
                     val p = JSONObject(payload)
                     when (action) {
+                        "editorMode" -> {
+                            setNativeEditorMode(p.optBoolean("visible", false))
+                            respond(callback, JSONObject().put("ok", true))
+                        }
+
                         "session" -> {
                             val result =
                                 if (session.token != null && session.userJson != null)
