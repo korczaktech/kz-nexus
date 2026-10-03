@@ -674,7 +674,18 @@ function toggleIndependentFormat(c){
   const sel=window.getSelection();if(!sel||!sel.rangeCount)return;
   const range=sel.getRangeAt(0).cloneRange();
   if(range.collapsed){
-    document.execCommand(c,false,null);
+    const cfg=FORMAT_STYLE[c];
+    const active=hasFormat(sel.anchorNode,c);
+    const span=document.createElement('span');
+    span.style[cfg.prop]=active?cfg.off:cfg.on;
+    if(c==='superscript'||c==='subscript')span.style.fontSize='0.75em';
+    span.dataset.nxFormatMarker=c;
+    const marker=document.createTextNode('\u200b');
+    span.appendChild(marker);
+    range.insertNode(span);
+    range.setStart(marker,1);
+    range.collapse(true);
+    sel.removeAllRanges();sel.addRange(range);
     saveSelection();updateToolbarState();dirty();return;
   }
   const nodes=selectedTextNodes(range);
@@ -719,7 +730,15 @@ function updateToolbarState(){
   document.querySelectorAll('#editorTools .state-tool').forEach(b=>{
     const c=b.dataset.cmd;
     let active=false;
-    try{active=document.queryCommandState(c)}catch(e){}
+    const sel=window.getSelection();
+    if(sel&&sel.rangeCount){
+      const range=sel.getRangeAt(0);
+      if(range.collapsed)active=hasFormat(sel.anchorNode,c);
+      else{
+        const nodes=selectedTextNodes(range);
+        active=nodes.length>0&&nodes.every(n=>hasFormat(n,c));
+      }
+    }
     b.classList.toggle('active',!!active);
   });
   const sel=document.getElementById('blockFormat');
