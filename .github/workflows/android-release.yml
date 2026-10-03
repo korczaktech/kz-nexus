@@ -82,6 +82,34 @@ jobs:
       - name: Create GitHub Release
         env:
           GH_TOKEN: ${{ github.token }}
+      - name: Publish updater manifest
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          sha256="$(sha256sum "KZDocuments-v$VERSION.apk" | awk '{print $1}')"
+          cat > update.json <<EOF
+          {
+            "version": "$VERSION",
+            "url": "https://github.com/$GITHUB_REPOSITORY/releases/download/v$VERSION/KZDocuments-v$VERSION.apk",
+            "sha256": "$sha256"
+          }
+          EOF
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          if git ls-remote --exit-code --heads origin updates >/dev/null 2>&1; then
+            git fetch origin updates
+            git switch -C updates origin/updates
+            git rm -rf . ':!update.json' || true
+          else
+            git switch --orphan updates
+            git rm -rf . || true
+          fi
+          cp "${GITHUB_WORKSPACE}/update.json" update.json
+          git add update.json
+          git diff --cached --quiet || git commit -m "chore(updater): publicar manifesto da versão $VERSION"
+          git push origin updates
         run: |
           gh release create "v$VERSION" "KZDocuments-v$VERSION.apk" \
             --repo "$GITHUB_REPOSITORY" \
