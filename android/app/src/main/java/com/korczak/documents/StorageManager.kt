@@ -117,11 +117,11 @@ class StorageManager(private val context: Context) {
     private fun isEditableDocument(name: String?, mime: String?): Boolean {
         val ext = name?.substringAfterLast('.', "")?.lowercase() ?: ""
         return ext in setOf(
-            "txt", "text", "md", "markdown", "rtf",
+            "txt", "text", "log", "md", "markdown", "rtf", "csv", "json", "yaml", "yml", "toml", "ini", "conf", "properties", "css", "js", "mjs", "cjs", "ts", "tsx", "jsx",
             "doc", "docx", "dot", "dotx", "docm", "dotm",
             "odt", "ott", "fodt", "wps", "pages", "pdf", "xml", "html", "htm", "kzdoc"
         ) || mime.orEmpty().lowercase() in setOf(
-            "text/plain", "text/markdown", "text/rtf", "text/html",
+            "text/plain", "text/markdown", "text/csv", "application/json", "text/yaml", "text/x-yaml", "text/rtf", "text/html",
             "application/rtf", "application/msword",
             "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
             "application/vnd.openxmlformats-officedocument.wordprocessingml.template",
@@ -132,8 +132,11 @@ class StorageManager(private val context: Context) {
 
     private fun mimeFor(name: String?): String {
         return when (name?.substringAfterLast('.', "")?.lowercase()) {
-            "txt", "text" -> "text/plain"
+            "txt", "text", "log", "ini", "conf", "properties" -> "text/plain"
             "md", "markdown" -> "text/markdown"
+            "csv" -> "text/csv"
+            "json" -> "application/json"
+            "yaml", "yml" -> "text/yaml"
             "rtf" -> "application/rtf"
             "doc" -> "application/msword"
             "docx", "docm" -> "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
