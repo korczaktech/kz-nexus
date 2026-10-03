@@ -1,12 +1,10 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" role="img" aria-label="Korczak Nexus">
 <defs>
- <linearGradient id="n" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#63d0ff"/><stop offset=".52" stop-color="#1596ff"/><stop offset="1" stop-color="#083b86"/></linearGradient>
- <pattern id="lines" width="7" height="7" patternUnits="userSpaceOnUse"><path d="M0 7L7 0" stroke="#fff" stroke-opacity=".13" stroke-width="1"/></pattern>
- <filter id="shadow" x="-30%" y="-30%" width="160%" height="160%"><feDropShadow dx="0" dy="4" stdDeviation="3" flood-color="#008cff" flood-opacity=".5"/></filter>
+<linearGradient id="n" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#63d0ff"/><stop offset=".52" stop-color="#1596ff"/><stop offset="1" stop-color="#083b86"/></linearGradient>
+<pattern id="lines" width="7" height="7" patternUnits="userSpaceOnUse"><path d="M0 7L7 0" stroke="#fff" stroke-opacity=".13"/></pattern>
 </defs>
-<circle cx="64" cy="64" r="59" fill="#06111f" stroke="#168fff" stroke-opacity=".28"/>
-<path d="M24 18h24v28l31-28h25L78 55l28 55H79L52 72h-4v38H24z" fill="#03101e" opacity=".75" transform="translate(0 3)" filter="url(#shadow)"/>
-<path d="M24 18h24v28l31-28h25L78 55l28 55H79L52 72h-4v38H24z" fill="url(#n)"/>
-<path d="M24 18h24v28l31-28h25L78 55l28 55H79L52 72h-4v38H24z" fill="url(#lines)"/>
-<path d="M24 18h5v92h-5z" fill="#fff" opacity=".18"/>
+<circle cx="64" cy="64" r="59" fill="#06111f" stroke="#168fff" stroke-opacity=".3"/>
+<path d="M24 18H48V46L79 18H104L78 55L106 110H79L52 72H48V110H24Z" fill="url(#n)"/>
+<path d="M24 18H48V46L79 18H104L78 55L106 110H79L52 72H48V110H24Z" fill="url(#lines)"/>
+<path d="M24 18H29V110H24Z" fill="#fff" opacity=".18"/>
 </svg>
