@@ -50,7 +50,7 @@ body{overflow-x:hidden}.app{min-height:100vh;max-width:1180px;margin:auto;backgr
 <linearGradient id="authDocGrad" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#7ce0ff"/><stop offset=".48" stop-color="#219cff"/><stop offset="1" stop-color="#07539c"/></linearGradient>
 <filter id="authDocShadow" x="-30%" y="-30%" width="160%" height="170%"><feDropShadow dx="0" dy="5" stdDeviation="4" flood-color="#008cff" flood-opacity=".38"/></filter>
 </defs>
-<path d="M34 12h42l18 18v86H34z" fill="#061a2b" stroke="#43bcff" stroke-width="3" stroke-linejoin="round" filter="url(#DOCSHADOW)"/>
+<path d="M34 12h42l18 18v86H34z" fill="#061a2b" stroke="#43bcff" stroke-width="3" stroke-linejoin="round" filter="url(#authDocShadow)"/>
 <path d="M76 12v20h18" fill="#10334f" stroke="#79ddff" stroke-width="3" stroke-linejoin="round"/>
 <path d="M47 40v56h10V59l24 37h10V40H81v37L57 40z" fill="url(#DOCGRAD)" stroke="#b9efff" stroke-opacity=".28" stroke-width="1.2" stroke-linejoin="round"/>
 </svg>
@@ -92,7 +92,7 @@ body{overflow-x:hidden}.app{min-height:100vh;max-width:1180px;margin:auto;backgr
 <linearGradient id="coreDocGrad" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#7ce0ff"/><stop offset=".48" stop-color="#219cff"/><stop offset="1" stop-color="#07539c"/></linearGradient>
 <filter id="coreDocShadow" x="-30%" y="-30%" width="160%" height="170%"><feDropShadow dx="0" dy="5" stdDeviation="4" flood-color="#008cff" flood-opacity=".38"/></filter>
 </defs>
-<circle cx="64" cy="64" r="45" fill="#071b2d" stroke="#38b7ff" stroke-width="2"/><path d="M39 38v52h10V56l28 34h10V38H77v33L49 38z" fill="url(#DOCGRAD)" stroke="#b9efff" stroke-opacity=".3" stroke-width="1.1" stroke-linejoin="round"/></svg></div></div></section>
+<circle cx="64" cy="64" r="45" fill="#071b2d" stroke="#38b7ff" stroke-width="2"/><path d="M39 38v52h10V56l28 34h10V38H77v33L49 38z" fill="url(#coreDocGrad)" stroke="#b9efff" stroke-opacity=".3" stroke-width="1.1" stroke-linejoin="round"/></svg></div></div></section>
 <div class="actions">
 <button class="action" onclick="openCreate()"><span class="ico"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4v16M4 12h16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></span><b>Novo documento</b><small>Crie um documento novo e escolha o modelo.</small></button>
 <button class="action" onclick="pickFile()"><span class="ico"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 16V4m0 0L7 9m5-5 5 5M5 14v4a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-4" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg></span><b>Adicionar arquivo</b><small>Importe um arquivo do armazenamento do celular.</small></button>
