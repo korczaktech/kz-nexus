@@ -406,6 +406,24 @@ class MainActivity : AppCompatActivity() {
                             startActivityForResult(intent, treeRequest)
                         }
 
+                        "installUpdate" -> {
+                            val url = p.optString("url")
+                            val digest = p.optString("digest")
+                            if (url.isBlank()) {
+                                respond(callback, JSONObject().put("ok", false).put("error", "URL da atualização não encontrada"))
+                            } else {
+                                Updater(this@MainActivity).install(url, digest) { result ->
+                                    val response = when {
+                                        result == "permission_install" -> JSONObject().put("ok", true).put("permission", true)
+                                        result == "installer" -> JSONObject().put("ok", true).put("message", "Instalação entregue ao Android")
+                                        result.startsWith("failed|") -> JSONObject().put("ok", false).put("error", result.removePrefix("failed|"))
+                                        else -> JSONObject().put("ok", false).put("error", "Não foi possível iniciar a atualização")
+                                    }
+                                    respond(callback, response)
+                                }
+                            }
+                        }
+
                         "checkUpdate" -> Updater(this@MainActivity).check { result ->
                             when {
                                 result.startsWith("update|") -> {
