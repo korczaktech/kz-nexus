@@ -319,7 +319,7 @@ async function insertImage(){
   toast('Imagem inserida');
 }
 async function insertTable(){
-  restoreSelection();
+  saveSelection();
   const rows=await nexusInput('Inserir tabela','Número de linhas (1–30).','2','2');
   if(!rows)return;
   const cols=await nexusInput('Inserir tabela','Número de colunas (1–12).','2','2');
@@ -331,10 +331,11 @@ async function insertTable(){
   html+='</tr></thead><tbody>';
   for(let rr=0;rr<rN-1;rr++){html+='<tr>';for(let cc=0;cc<cN;cc++)html+='<td style="border:1px solid #52708a;padding:8px;min-width:60px"> </td>';html+='</tr>';}
   if(rN===1){html+='</tbody></table><p><br></p>';}else{html+='</tbody></table><p><br></p>';}
+  restoreSelection();
   editorCommand('insertHTML',html);
   toast('Tabela '+rN+'×'+cN+' criada');
 }
-function insertCheck(){restoreSelection();editorCommand('insertHTML','<label class="nx-editor-check" style="display:block;margin:6px 0"><input type="checkbox"> Tarefa</label>');toast('Checklist inserido')}
+function insertCheck(){saveSelection();restoreSelection();editorCommand('insertHTML','<label class="nx-editor-check" style="display:block;margin:6px 0"><input type="checkbox"> Tarefa</label>');toast('Checklist inserido')}
 async function editorCopy(){
   saveSelection();
   const s=window.getSelection();
@@ -577,15 +578,16 @@ function nexusInput(title,message,placeholder,value=''){
     setTimeout(()=>{$('nexusDialogInput').focus();$('nexusDialogInput').select()},30);
   });
 }
-async function addLink(){restoreSelection();const u=await nexusInput('Inserir link','Informe o endereço do link.','https://','https://');if(u)editorCommand('createLink',u)}
+async function addLink(){saveSelection();const u=await nexusInput('Inserir link','Informe o endereço do link.','https://','https://');if(u){restoreSelection();editorCommand('createLink',u)}}
 function removeLink(){editorCommand('unlink')}
 async function setTextColor(){restoreSelection();const color=await nexusInput('Cor do texto','Informe uma cor CSS.','#168cff','#168cff');if(color)editorCommand('foreColor',color)}
 async function setHighlight(){restoreSelection();const color=await nexusInput('Cor de destaque','Informe uma cor CSS para o destaque.','#fff59d','#fff59d');if(color)editorCommand('hiliteColor',color)}
-function insertRule(){editorCommand('insertHorizontalRule')}
-function insertDate(){editorCommand('insertText',new Date().toLocaleDateString('pt-BR'))}
+function insertRule(){saveSelection();restoreSelection();editorCommand('insertHorizontalRule')}
+function insertDate(){saveSelection();restoreSelection();editorCommand('insertText',new Date().toLocaleDateString('pt-BR'))}
 async function insertSymbol(){
+  saveSelection();
   const s=await nexusInput('Inserir símbolo','Informe o símbolo ou caractere que deseja inserir.','© ™ → • §','©');
-  if(s)editorCommand('insertText',s);
+  if(s){restoreSelection();editorCommand('insertText',s);}
 }
 function updateToolbarState(){
   document.querySelectorAll('#editorTools .state-tool').forEach(b=>{
@@ -607,7 +609,10 @@ function initEditorTools(){
   const tools=$('editorTools');
   tools.addEventListener('mousedown',e=>{
     const b=e.target.closest('[data-editor-action]');
-    if(b)e.preventDefault();
+    if(b){
+      saveSelection();
+      e.preventDefault();
+    }
   });
   tools.addEventListener('click',e=>{
     const b=e.target.closest('[data-editor-action]');
