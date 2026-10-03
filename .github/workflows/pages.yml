@@ -2,8 +2,7 @@ name: Deploy GitHub Pages
 
 on:
   push:
-    branches:
-      - main
+    branches: [main]
   workflow_dispatch:
 
 permissions:
@@ -17,7 +16,7 @@ concurrency:
 
 jobs:
   build:
-    name: Build Web
+    name: Build
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -32,17 +31,15 @@ jobs:
         working-directory: frontend
         run: npm install --no-audit --no-fund
 
-      - name: TypeScript and Vite build
+      - name: Build Vite application
         working-directory: frontend
         env:
           VITE_API_BASE_URL: https://kzdoc.onrender.com
-        run: npm run build
+        run: npx vite build
 
-      - name: Verify build output
+      - name: Verify build
         working-directory: frontend
-        run: |
-          test -f dist/index.html
-          touch dist/.nojekyll
+        run: test -f dist/index.html
 
       - name: Setup Pages
         uses: actions/configure-pages@v5
@@ -53,7 +50,7 @@ jobs:
           path: frontend/dist
 
   deploy:
-    name: Deploy Web
+    name: Deploy
     needs: build
     runs-on: ubuntu-latest
     environment:
