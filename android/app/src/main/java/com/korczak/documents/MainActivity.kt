@@ -35,7 +35,9 @@ class MainActivity : AppCompatActivity() {
     private val pool = Executors.newCachedThreadPool()
     private val treeRequest = 7001
     private val fileRequest = 7002
+    private val mediaRequest = 7003
     private var pendingFileCallback: String? = null
+    private var pendingMediaCallback: String? = null
     private var pendingCallback: String? = null
 
     override fun onCreate(state: Bundle?) {
@@ -611,6 +613,16 @@ class MainActivity : AppCompatActivity() {
                             startActivityForResult(intent, fileRequest)
                         }
 
+                        "pickMedia" -> runOnUiThread {
+                            pendingMediaCallback = callback
+                            val mime = p.optString("mime", "*/*").ifBlank { "*/*" }
+                            val intent = Intent(Intent.ACTION_OPEN_DOCUMENT)
+                                .setType(mime)
+                                .addCategory(Intent.CATEGORY_OPENABLE)
+                                .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                            startActivityForResult(intent, mediaRequest)
+                        }
+
                         "pickStorage" -> runOnUiThread {
                             pendingCallback = callback
                             val intent = Intent(Intent.ACTION_OPEN_DOCUMENT_TREE)
@@ -691,6 +703,29 @@ class MainActivity : AppCompatActivity() {
     @Suppress("DEPRECATION")
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         super.onActivityResult(requestCode, resultCode, data)
+
+        if (requestCode == mediaRequest) {
+            val callback = pendingMediaCallback
+            pendingMediaCallback = null
+            if (resultCode == Activity.RESULT_OK && data?.data != null) {
+                val uri = data.data!!
+                try {
+                    contentResolver.takePersistableUriPermission(uri, Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                } catch (_: Exception) {}
+                callback?.let {
+                    respondJs(
+                        it,
+                        JSONObject()
+                            .put("ok", true)
+                            .put("uri", uri.toString())
+                            .put("mime", contentResolver.getType(uri) ?: "*/*")
+                    )
+                }
+            } else {
+                callback?.let { respondJs(it, JSONObject().put("ok", false).put("error", "Seleção cancelada")) }
+            }
+            return
+        }
 
         if (requestCode == fileRequest) {
             val callback = pendingFileCallback
