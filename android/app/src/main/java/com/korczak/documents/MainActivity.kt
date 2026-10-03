@@ -45,6 +45,8 @@ class MainActivity : AppCompatActivity() {
         setContentView(web)
         web.loadUrl("file:///android_asset/index.html")
 
+        requestStartupPermissions()
+        Updater(this).resumePending()
         Updater(this).check { result ->
             if (result.startsWith("update|")) {
                 val parts = result.split("|", limit = 4)
@@ -57,7 +59,15 @@ class MainActivity : AppCompatActivity() {
                             Updater(this).install(
                                 parts.getOrElse(2) { "" },
                                 parts.getOrElse(3) { "" }
-                            ) {}
+                            ) { status ->
+                                if (status.startsWith("failed|")) {
+                                    AlertDialog.Builder(this)
+                                        .setTitle("Falha na atualização")
+                                        .setMessage(status.removePrefix("failed|"))
+                                        .setPositiveButton("OK", null)
+                                        .show()
+                                }
+                            }
                         }
                         .show()
                 }
@@ -65,8 +75,53 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    private fun requestStartupPermissions() {
+        val missing = mutableListOf<String>()
+        if (android.os.Build.VERSION.SDK_INT >= 30 && !Environment.isExternalStorageManager()) {
+            missing.add("Acesso amplo ao armazenamento")
+        }
+        if (android.os.Build.VERSION.SDK_INT >= 26 && !packageManager.canRequestPackageInstalls()) {
+            missing.add("Permissão para instalar atualizações do Nexus")
+        }
+        if (missing.isEmpty()) {
+            AlertDialog.Builder(this)
+                .setTitle("Permissões do Nexus")
+                .setMessage("As permissões necessárias para armazenamento e atualizações já estão autorizadas.")
+                .setPositiveButton("Continuar", null)
+                .show()
+            return
+        }
+        requestNextPermission(missing, 0)
+    }
+
+    private fun requestNextPermission(missing: List<String>, index: Int) {
+        if (index >= missing.size) return
+        val permission = missing[index]
+        AlertDialog.Builder(this)
+            .setTitle("Permissão necessária")
+            .setMessage("O Nexus precisa de: " + permission + ". Essa autorização é usada para acessar os arquivos e manter o aplicativo atualizável.")
+            .setNegativeButton("Agora não") { _, _ -> requestNextPermission(missing, index + 1) }
+            .setPositiveButton("Autorizar") { _, _ ->
+                when (permission) {
+                    "Acesso amplo ao armazenamento" -> {
+                        try {
+                            startActivity(Intent(Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION, Uri.parse("package:" + packageName)))
+                        } catch (_: Exception) {
+                            startActivity(Intent(Settings.ACTION_MANAGE_ALL_FILES_ACCESS_PERMISSION))
+                        }
+                    }
+                    "Permissão para instalar atualizações do Nexus" -> {
+                        startActivity(Intent(Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES, Uri.parse("package:" + packageName)))
+                    }
+                }
+                window.decorView.postDelayed({ requestNextPermission(missing, index + 1) }, 900)
+            }
+            .show()
+    }
+
     override fun onResume() {
         super.onResume()
+        Updater(this).resumePending()
         if (::web.isInitialized) {
             web.postDelayed({
                 web.evaluateJavascript("window.__nativeStorageRefresh && window.__nativeStorageRefresh()", null)
