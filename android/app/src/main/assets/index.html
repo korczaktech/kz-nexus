@@ -52,7 +52,7 @@ body{overflow-x:hidden}.app{min-height:100vh;max-width:1180px;margin:auto;backgr
 .nexus-editor-workspace{min-height:0;flex:1;display:flex;overflow:hidden;background:#101a27}.nexus-editor-sidebar{width:190px;flex:0 0 190px;background:#091523;border-right:1px solid #19374f;padding:13px 10px;display:flex;flex-direction:column;gap:5px}.sidebar-action{border:0;background:transparent;color:#8da7bd;text-align:left;border-radius:7px;padding:10px 11px;font-size:11px}.sidebar-action.active,.sidebar-action:hover{background:#112c45;color:#dceeff}.sidebar-note{margin-top:auto;border:1px solid #1a3b56;background:#0b1d2d;border-radius:9px;padding:10px;color:#7390a8;font-size:9px;line-height:1.4}.sidebar-note b{display:block;color:#a9c7dc;margin-bottom:4px}
 .nexus-page-stage{flex:1;min-width:0;overflow:auto;padding:27px 30px 50px;background:radial-gradient(circle at 50% 0,#1a3045,#0f1925 45%,#0a121d)}.nexus-page-ruler{height:18px;width:min(794px,100%);margin:0 auto;color:#59758d;font-size:8px;display:flex;justify-content:space-around;align-items:flex-end}.nexus-paper{width:min(794px,100%);min-height:1123px;margin:0 auto;background:#fff;box-shadow:0 12px 45px #0009}.nexus-page{min-height:1123px;padding:76px 72px;color:#202936;background:#fff;font:16px/1.65 Arial,sans-serif;outline:0;word-break:break-word}.nexus-page:empty:before{content:attr(data-placeholder);color:#aeb7c2;pointer-events:none}.nexus-page h1{font-size:31px;line-height:1.2;margin:0 0 20px}.nexus-page h2{font-size:24px;line-height:1.25;margin:20px 0 12px}.nexus-page h3{font-size:19px;line-height:1.3;margin:17px 0 9px}.nexus-page p{margin:0 0 12px}.nexus-page blockquote{margin:15px 0;padding:10px 15px;border-left:4px solid #258fe5;background:#f0f6fb;color:#4e5d6c}.nexus-page table{width:100%;border-collapse:collapse;margin:16px 0}.nexus-page th,.nexus-page td{border:1px solid #aab7c4;padding:8px}.nexus-page th{background:#edf2f6}.nexus-page img{max-width:100%;height:auto}.nexus-page a{color:#176dcc;text-decoration:underline}.nexus-page ul,.nexus-page ol{padding-left:28px}.nexus-page hr{border:0;border-top:1px solid #aeb7c2;margin:24px 0}
 .nexus-editor-footer{height:34px;flex:none;display:flex;align-items:center;gap:18px;padding:0 14px;background:#07111d;border-top:1px solid #19374f;color:#7792aa;font-size:9px}.nexus-editor-footer>div{margin-left:auto;display:flex;align-items:center;gap:7px}.nexus-editor-footer button{border:0;background:#102337;color:#a9c4d9;width:22px;height:22px;border-radius:4px}.nexus-editor-footer b{font-size:9px;color:#b9cee0}
-@media(max-width:720px){.nexus-editor-sidebar{display:none}.nexus-editor-header{height:64px}.nexus-editor-menubar{overflow-x:auto}.nexus-editor-menubar button{white-space:nowrap}.nexus-editor-toolbar{min-height:52px}.nx-tool{min-width:74px;padding:7px 9px}.nx-tool span{display:inline-block;font-size:9px}.nexus-page-stage{padding:12px 5px 35px}.nexus-paper{width:100%;min-height:900px}.nexus-page{min-height:900px;padding:48px 27px;font-size:15px}.nexus-page-ruler{display:none}.editor-head-btn:first-child{display:none}.nexus-doc-title{font-size:15px}.nexus-editor-header-actions{gap:4px}.editor-save-btn{padding:0 11px!important}.nexus-editor-footer{gap:8px}}
+@media(max-width:720px){.nexus-editor-sidebar{display:none}.nexus-editor-header{height:64px}.nexus-editor-menubar{overflow-x:auto}.nexus-editor-menubar button{white-space:nowrap}.nexus-editor-toolbar{min-height:52px}.nx-tool{min-width:74px;padding:7px 9px}.nx-tool span{display:inline-block;font-size:9px}.nx-tool.state-tool.active{border-color:#299cff;background:linear-gradient(145deg,#123f63,#0b2942);color:#fff;box-shadow:inset 0 0 0 1px #299cff55,0 0 0 2px #299cff18}.nx-tool.state-tool.active svg{filter:drop-shadow(0 0 5px #299cff99)}.nexus-page-stage{padding:12px 5px 35px}.nexus-paper{width:100%;min-height:900px}.nexus-page{min-height:900px;padding:48px 27px;font-size:15px}.nexus-page-ruler{display:none}.editor-head-btn:first-child{display:none}.nexus-doc-title{font-size:15px}.nexus-editor-header-actions{gap:4px}.editor-save-btn{padding:0 11px!important}.nexus-editor-footer{gap:8px}}
 @media(max-width:430px){.nexus-editor-menubar{height:32px}.nexus-editor-menubar button{padding:4px 7px;font-size:10px}.nexus-editor-toolbar{padding:6px 7px}.nx-tool{min-width:70px;padding:6px 8px}.nx-tool span{display:inline-block;font-size:9px}.nx-select.nx-font{min-width:108px}.nexus-page{padding:38px 21px}.nexus-editor-footer>span:nth-child(2){display:none}}
 </style></head>
 <body>
@@ -470,18 +470,52 @@ function toggleEditorRuler(){
   ruler.classList.toggle('hidden');
   toast(ruler.classList.contains('hidden')?'Régua ocultada':'Régua exibida');
 }
+const PAGE_SIZES_MM={
+  A0:[841,1189],A1:[594,841],A2:[420,594],A3:[297,420],A4:[210,297],A5:[148,210],
+  B0:[1000,1414],B1:[707,1000],B2:[500,707],B3:[353,500],B4:[250,353],B5:[176,250],
+  LETTER:[216,279],LEGAL:[216,356],TABLOID:[279,432],STATEMENT:[140,216],EXECUTIVE:[184,267]
+};
+let editorPageSettings={size:'A4',widthMm:210,heightMm:297,orientation:'portrait',marginMm:20};
+function pageSettingsKey(){return 'nexus_page_settings_v1'}
+function loadPageSettings(){
+  try{
+    const raw=JSON.parse(localStorage.getItem(pageSettingsKey())||'null');
+    if(raw&&Number(raw.widthMm)>0&&Number(raw.heightMm)>0)editorPageSettings={...editorPageSettings,...raw};
+  }catch(e){}
+  return editorPageSettings;
+}
+function savePageSettings(){
+  localStorage.setItem(pageSettingsKey(),JSON.stringify(editorPageSettings));
+}
+function mmToPx(mm){return Math.round(Number(mm||0)*96/25.4)}
+function applyPageSettings(){
+  const s=loadPageSettings(), landscape=s.orientation==='landscape';
+  const w=landscape?s.heightMm:s.widthMm, h=landscape?s.widthMm:s.heightMm;
+  const paper=document.querySelector('.nexus-paper'), page=$('page'), ruler=document.querySelector('.nexus-page-ruler');
+  if(paper){paper.style.width=mmToPx(w)+'px';paper.style.minHeight=mmToPx(h)+'px';paper.dataset.pageSize=s.size||'CUSTOM';paper.dataset.orientation=s.orientation}
+  if(page){page.style.width='100%';page.style.minHeight=mmToPx(h)+'px';page.style.padding=mmToPx(s.marginMm)+'px';page.dataset.orientation=s.orientation;page.dataset.pageSize=s.size||'CUSTOM'}
+  if(ruler)ruler.style.width=mmToPx(w)+'px';
+}
 async function pageLayoutInfo(){
-  const orientation=await nexusInput('Orientação da página','Digite retrato ou paisagem.','retrato','retrato');
-  if(!orientation)return;
-  const landscape=orientation.toLowerCase().startsWith('paisa');
-  const margin=await nexusInput('Margens','Informe a margem em pixels.','48','48');
-  if(!margin)return;
-  const m=Math.max(12,Math.min(160,parseInt(margin,10)||48));
-  const paper=document.querySelector('.nexus-paper');
-  const page=$('page');
-  if(paper){paper.style.width=landscape?'1123px':'794px';paper.style.minHeight=landscape?'794px':'1123px';}
-  if(page){page.style.padding=m+'px';page.dataset.orientation=landscape?'landscape':'portrait';}
-  toast('Página configurada: '+(landscape?'paisagem':'retrato')+' · margem '+m+'px');
+  loadPageSettings();
+  const host=$('nexusDialogHost');
+  const sizeOptions=Object.keys(PAGE_SIZES_MM).map(k=>'<option value="'+k+'"'+(editorPageSettings.size===k?' selected':'')+'>'+({'LETTER':'Carta','LEGAL':'Ofício','TABLOID':'Tabloide','STATEMENT':'Statement','EXECUTIVE':'Executive'}[k]||k)+'</option>').join('');
+  host.innerHTML='<div class="nexus-dialog" id="pageLayoutDialog"><div class="nexus-dialog-card" style="max-width:680px"><div class="nexus-dialog-head"><b>Configuração da página</b><button id="pageLayoutClose" type="button">×</button></div><div class="nexus-dialog-body"><p>Escolha o tamanho do papel, orientação, proporção e margens. O papel permanece com dimensões fixas no editor.</p><div style="display:grid;grid-template-columns:1fr 1fr;gap:10px"><label class="field">Tamanho<select id="pageSizeSelect" class="input">'+sizeOptions+'<option value="CUSTOM"'+(editorPageSettings.size==='CUSTOM'?' selected':'')+'>Personalizado</option></select></label><label class="field">Orientação<select id="pageOrientation" class="input"><option value="portrait"'+(editorPageSettings.orientation==='portrait'?' selected':'')+'>Retrato</option><option value="landscape"'+(editorPageSettings.orientation==='landscape'?' selected':'')+'>Paisagem</option></select></label><label class="field">Largura (mm)<input id="pageWidthMm" class="input" type="number" min="20" step="1" value="'+editorPageSettings.widthMm+'"></label><label class="field">Altura (mm)<input id="pageHeightMm" class="input" type="number" min="20" step="1" value="'+editorPageSettings.heightMm+'"></label><label class="field" style="grid-column:1/-1">Margem (mm)<input id="pageMarginMm" class="input" type="number" min="0" max="100" step="1" value="'+editorPageSettings.marginMm+'"></label></div><div class="row-end"><button class="btn" id="pageLayoutCancel" type="button">Cancelar</button><button class="btn primary" id="pageLayoutApply" type="button">Aplicar</button></div></div></div></div>';
+  const close=()=>host.innerHTML='';
+  $('pageLayoutClose').onclick=close;$('pageLayoutCancel').onclick=close;
+  $('pageSizeSelect').onchange=()=>{
+    const k=$('pageSizeSelect').value;
+    if(PAGE_SIZES_MM[k]){$('pageWidthMm').value=PAGE_SIZES_MM[k][0];$('pageHeightMm').value=PAGE_SIZES_MM[k][1];}
+  };
+  $('pageLayoutApply').onclick=()=>{
+    const w=Math.max(20,Math.min(2000,Number($('pageWidthMm').value)||210));
+    const h=Math.max(20,Math.min(2000,Number($('pageHeightMm').value)||297));
+    const m=Math.max(0,Math.min(100,Number($('pageMarginMm').value)||0));
+    editorPageSettings={size:$('pageSizeSelect').value,widthMm:w,heightMm:h,orientation:$('pageOrientation').value,marginMm:m};
+    savePageSettings();applyPageSettings();dirty();close();
+    toast('Página: '+editorPageSettings.size+' · '+w+' × '+h+' mm · '+(editorPageSettings.orientation==='landscape'?'paisagem':'retrato'));
+  };
+  setTimeout(()=>$('pageSizeSelect').focus(),30);
 }
 
 function saveAs(){openSaveFolder()}
@@ -539,9 +573,9 @@ function openCreate(){templateKind='blank';$('docName').value='';document.queryS
 function closeCreate(){$('createModal').style.display='none'}
 function template(el,k){templateKind=k;document.querySelectorAll('.template').forEach(x=>x.classList.remove('active'));el.classList.add('active')}
 function templateHtml(k){if(k==='meeting')return '<h1>Ata de reunião</h1><p><b>Data:</b> </p><p><b>Participantes:</b> </p><h2>Pauta</h2><ul><li>Primeiro ponto</li><li>Segundo ponto</li></ul><h2>Decisões</h2><p>Registre aqui as decisões tomadas.</p><h2>Próximos passos</h2><ol><li>Responsável — tarefa</li></ol>';if(k==='notes')return '<h1>Anotações</h1><p>Comece a escrever suas ideias aqui.</p><h2>Pontos principais</h2><ul><li></li></ul>';return ''}
-function openEditor(html,name,uri){currentUri=uri||'';currentName=name||'Documento sem título';savedSelection=null;$('editorTitle').value=(currentName&&currentName!=='Documento sem título')?cleanName(currentName):'';$('page').innerHTML=html||'';$('saveState').innerHTML='<i></i>Salvo';$('editorPath').textContent=currentUri?'Arquivo selecionado':'Novo documento';$('editorModal').style.display='flex';countWords();setTimeout(()=>{initEditorTools();$('page').focus();updateToolbarState()},120)}
+function openEditor(html,name,uri,pageSettings){currentUri=uri||'';currentName=name||'Documento sem título';savedSelection=null;if(pageSettings&&Number(pageSettings.widthMm)>0&&Number(pageSettings.heightMm)>0){editorPageSettings={...editorPageSettings,...pageSettings};savePageSettings()}else loadPageSettings();$('editorTitle').value=(currentName&&currentName!=='Documento sem título')?cleanName(currentName):'';$('page').innerHTML=html||'';$('saveState').innerHTML='<i></i>Salvo';$('editorPath').textContent=currentUri?'Arquivo selecionado':'Novo documento';$('editorModal').style.display='flex';applyPageSettings();countWords();setTimeout(()=>{initEditorTools();$('page').focus();updateToolbarState()},120)}
 async function createDocument(){const name=$('docName').value.trim()||'Documento sem título';closeCreate();openEditor(templateHtml(templateKind),name,'')}
-async function openExisting(uri,name){const ext=(String(name).split('.').pop()||'').toLowerCase();const editable=['txt','text','log','md','markdown','rtf','csv','json','yaml','yml','toml','ini','conf','properties','css','js','mjs','cjs','ts','tsx','jsx','xml','html','htm','kzdoc'];if(!editable.includes(ext)){const r=await native('openFile',{uri});if(!r.ok)toast(r.error||'Nenhum aplicativo pode abrir este arquivo.');return}const r=await native('readFile',{uri});if(!r.ok){toast('Este arquivo não pode ser lido pelo editor do Nexus.');return}let html=r.content||'';try{const obj=JSON.parse(html);if(obj.korczak_document)html=obj.content}catch(e){}if(!/<[a-z][\s\S]*>/i.test(html))html='<p>'+esc(html).replace(/\n/g,'<br>')+'</p>';openEditor(html,name,uri)}
+async function openExisting(uri,name){const ext=(String(name).split('.').pop()||'').toLowerCase();const editable=['txt','text','log','md','markdown','rtf','csv','json','yaml','yml','toml','ini','conf','properties','css','js','mjs','cjs','ts','tsx','jsx','xml','html','htm','kzdoc'];if(!editable.includes(ext)){const r=await native('openFile',{uri});if(!r.ok)toast(r.error||'Nenhum aplicativo pode abrir este arquivo.');return}const r=await native('readFile',{uri});if(!r.ok){toast('Este arquivo não pode ser lido pelo editor do Nexus.');return}let html=r.content||'';let pageSettings=null;try{const obj=JSON.parse(html);if(obj.korczak_document){html=obj.content;pageSettings=obj.pageSettings||null}}catch(e){}if(!/<[a-z][\s\S]*>/i.test(html))html='<p>'+esc(html).replace(/\n/g,'<br>')+'</p>';openEditor(html,name,uri,pageSettings)}
 document.addEventListener('DOMContentLoaded',()=>switchEditorContext('arquivo'));
 function closeEditor(){$('editorModal').style.display='none'}
 let savedSelection=null;
@@ -635,11 +669,11 @@ function initEditorTools(){
 }
 function dirty(){$('saveState').innerHTML='<i style="background:#f1bd5a"></i>Não salvo';countWords()}
 function countWords(){const t=$('page').innerText.trim();const n=t?t.split(/\s+/).length:0;$('wordCount').textContent=n+' palavra'+(n===1?'':'s')}
-let saveFolderStack=[];async function openSaveFolder(){const root=await native('rootFolder');if(!root.ok){toast(root.error||'Escolha uma pasta de armazenamento primeiro');return}saveFolderStack=[{uri:root.uri,name:root.name||'Armazenamento'}];$('saveFolderModal').style.display='flex';await renderSaveFolder()}function closeSaveFolder(){$('saveFolderModal').style.display='none'}async function renderSaveFolder(){const current=saveFolderStack[saveFolderStack.length-1];$('saveFolderPath').innerHTML='Pasta atual: <b>'+esc(current.name)+'</b>';const r=await native('listFolders',{uri:current.uri});if(!r.ok){$('saveFolderItems').innerHTML='<div class="empty"><b>Não foi possível listar as pastas</b><small>'+esc(r.error||'Erro')+'</small></div>';return}const folders=r.folders||[];$('saveFolderItems').innerHTML=folders.length?folders.map(f=>'<button class="folder-item" onclick="enterSaveFolder('+JSON.stringify(f.uri)+','+JSON.stringify(f.name)+')"><span class="folder-icon">▰</span><span><b>'+esc(f.name)+'</b><small>Abrir pasta</small></span></button>').join(''):'<div class="empty"><b>Nenhuma subpasta</b><small>Você pode salvar diretamente nesta pasta.</small></div>'}async function enterSaveFolder(uri,name){saveFolderStack.push({uri,name});await renderSaveFolder()}async function saveFolderBack(){if(saveFolderStack.length<=1){closeSaveFolder();return}saveFolderStack.pop();await renderSaveFolder()}async function chooseSaveFolder(){const current=saveFolderStack[saveFolderStack.length-1];const name=($('editorTitle').value.trim()||'Documento sem título').replace(/[\\/:*?"<>|]/g,'_');const fileName=name.endsWith('.kzdoc')?name:name+'.kzdoc';const payload=JSON.stringify({korczak_document:1,title:name,content:$('page').innerHTML,updatedAt:new Date().toISOString()});$('saveState').innerHTML='<i style="background:#5d89ff"></i>Salvando…';const r=await native('writeFile',{folderUri:current.uri,name:fileName,content:payload});if(!r.ok){$('saveState').innerHTML='<i style="background:#ff6678"></i>Erro';toast(r.error||'Não foi possível salvar');return}currentUri=r.uri||currentUri;currentName=fileName;rememberEditorVersion('Salvar como');$('saveState').innerHTML='<i></i>Salvo';$('editorPath').textContent='Salvo em '+current.name;closeSaveFolder();toast('Documento salvo em '+current.name);refresh()}async function saveEditor(){
+let saveFolderStack=[];async function openSaveFolder(){const root=await native('rootFolder');if(!root.ok){toast(root.error||'Escolha uma pasta de armazenamento primeiro');return}saveFolderStack=[{uri:root.uri,name:root.name||'Armazenamento'}];$('saveFolderModal').style.display='flex';await renderSaveFolder()}function closeSaveFolder(){$('saveFolderModal').style.display='none'}async function renderSaveFolder(){const current=saveFolderStack[saveFolderStack.length-1];$('saveFolderPath').innerHTML='Pasta atual: <b>'+esc(current.name)+'</b>';const r=await native('listFolders',{uri:current.uri});if(!r.ok){$('saveFolderItems').innerHTML='<div class="empty"><b>Não foi possível listar as pastas</b><small>'+esc(r.error||'Erro')+'</small></div>';return}const folders=r.folders||[];$('saveFolderItems').innerHTML=folders.length?folders.map(f=>'<button class="folder-item" onclick="enterSaveFolder('+JSON.stringify(f.uri)+','+JSON.stringify(f.name)+')"><span class="folder-icon">▰</span><span><b>'+esc(f.name)+'</b><small>Abrir pasta</small></span></button>').join(''):'<div class="empty"><b>Nenhuma subpasta</b><small>Você pode salvar diretamente nesta pasta.</small></div>'}async function enterSaveFolder(uri,name){saveFolderStack.push({uri,name});await renderSaveFolder()}async function saveFolderBack(){if(saveFolderStack.length<=1){closeSaveFolder();return}saveFolderStack.pop();await renderSaveFolder()}async function chooseSaveFolder(){const current=saveFolderStack[saveFolderStack.length-1];const name=($('editorTitle').value.trim()||'Documento sem título').replace(/[\\/:*?"<>|]/g,'_');const fileName=name.endsWith('.kzdoc')?name:name+'.kzdoc';const payload=JSON.stringify({korczak_document:1,title:name,content:$('page').innerHTML,pageSettings:editorPageSettings,updatedAt:new Date().toISOString()});$('saveState').innerHTML='<i style="background:#5d89ff"></i>Salvando…';const r=await native('writeFile',{folderUri:current.uri,name:fileName,content:payload});if(!r.ok){$('saveState').innerHTML='<i style="background:#ff6678"></i>Erro';toast(r.error||'Não foi possível salvar');return}currentUri=r.uri||currentUri;currentName=fileName;rememberEditorVersion('Salvar como');$('saveState').innerHTML='<i></i>Salvo';$('editorPath').textContent='Salvo em '+current.name;closeSaveFolder();toast('Documento salvo em '+current.name);refresh()}async function saveEditor(){
   if(currentUri){
     const title=($('editorTitle').value.trim()||currentName||'Documento.kzdoc').replace(/[\\/:*?"<>|]/g,'_');
     const fileName=title.includes('.')?title:title+'.kzdoc';
-    const payload=JSON.stringify({korczak_document:1,title:fileName.replace(/\.kzdoc$/i,''),content:$('page').innerHTML,updatedAt:new Date().toISOString()});
+    const payload=JSON.stringify({korczak_document:1,title:fileName.replace(/\.kzdoc$/i,''),content:$('page').innerHTML,pageSettings:editorPageSettings,updatedAt:new Date().toISOString()});
     $('saveState').innerHTML='<i style="background:#5d89ff"></i>Salvando…';
     const r=await native('writeFile',{uri:currentUri,name:fileName,content:payload});
     if(!r.ok){
@@ -735,7 +769,7 @@ async function bootstrapAuth(){applySettings();const st=settings();Object.entrie
 async function logout(){const r=await native('logout');if(!r.ok){toast(r.error||'Não foi possível sair');return}$('authScreen').classList.add('show');authMode('login');$('authEmail').value='';$('authPassword').value='';$('authName').value='';$('authConfirm').value='';showView('home');toast('Sessão encerrada')}
 async function exitApp(){const s=settings();if(s.confirmExit){const r=await native('confirmExit');if(!r.ok&&r.error)toast(r.error);return}const r=await native('exitApp');if(!r.ok)toast(r.error||'Não foi possível fechar o aplicativo')}
 window.__nativeStorageRefresh=()=>{refreshStorage();checkStorageStatus();};
-refresh();checkStorageStatus();loadAbout();bootstrapAuth();
+loadPageSettings();applyPageSettings();refresh();checkStorageStatus();loadAbout();bootstrapAuth();
 </script>
 </body>
 </html>
