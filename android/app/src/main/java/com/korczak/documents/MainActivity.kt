@@ -197,7 +197,7 @@ class MainActivity : AppCompatActivity() {
         return HorizontalScrollView(this).apply {
             isHorizontalScrollBarEnabled = false
             setBackgroundColor(Color.rgb(6, 19, 33))
-            addView(row, HorizontalScrollView.LayoutParams(-2, -1))
+            addView(row, ViewGroup.LayoutParams(-2, -1))
         }
     }
 
