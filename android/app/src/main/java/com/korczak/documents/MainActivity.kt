@@ -290,7 +290,7 @@ class MainActivity : AppCompatActivity() {
 
                         "storageInfo", "listFiles" -> {
                             val result = storage.deviceStorage().put("files", storage.listFiles())
-                            respond(callback, JSONObject().put("ok", true).put("label", storage.label()).put("files", storage.listFiles()).put("total", result.optLong("total")).put("available", result.optLong("available")).put("used", result.optLong("used")).put("allFiles", result.optBoolean("allFiles")))
+                            respond(callback, JSONObject().put("ok", true).put("label", storage.label()).put("files", storage.listFiles()).put("total", result.optLong("total")).put("available", result.optLong("available")).put("used", result.optLong("used")).put("allFiles", result.optBoolean("allFiles")).put("documentStats", result.optJSONObject("documentStats") ?: JSONObject()))
                         }
 
                         "requestStorage" -> runOnUiThread {
