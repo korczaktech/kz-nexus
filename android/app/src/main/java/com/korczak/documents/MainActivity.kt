@@ -525,6 +525,65 @@ class MainActivity : AppCompatActivity() {
                             )
                         }
 
+                        "renameFile" -> {
+                            val ok = storage.rename(p.optString("uri"), p.optString("name", "Arquivo"))
+                            respond(callback, JSONObject().put("ok", ok).put("error", if (ok) "" else "Não foi possível renomear o arquivo"))
+                        }
+
+                        "deleteFile" -> {
+                            val ok = storage.delete(p.optString("uri"))
+                            respond(callback, JSONObject().put("ok", ok).put("error", if (ok) "" else "Não foi possível excluir o arquivo"))
+                        }
+
+                        "fileInfo" -> {
+                            try { respond(callback, JSONObject().put("ok", true).put("info", storage.fileInfo(p.optString("uri")))) }
+                            catch (e: Exception) { respond(callback, JSONObject().put("ok", false).put("error", e.message ?: "Não foi possível obter informações")) }
+                        }
+
+                        "copyFile" -> {
+                            val result = storage.copy(p.optString("uri"), p.optString("folderUri"), p.optString("name"))
+                            respond(callback, JSONObject().put("ok", result.first).put("uri", result.second ?: "").put("error", if (result.first) "" else "Não foi possível copiar o arquivo"))
+                        }
+
+                        "zipFiles" -> {
+                            val result = storage.zipFiles(p.optJSONArray("uris") ?: JSONArray(), p.optString("folderUri"), p.optString("name", "Nexus-Arquivo"))
+                            respond(callback, JSONObject().put("ok", result.first).put("uri", result.second ?: "").put("error", if (result.first) "" else "Não foi possível criar o ZIP"))
+                        }
+
+                        "shareText" -> runOnUiThread {
+                            val text = p.optString("text")
+                            val send = Intent(Intent.ACTION_SEND).apply {
+                                type = p.optString("mime", "text/plain")
+                                putExtra(Intent.EXTRA_TEXT, text)
+                            }
+                            try {
+                                startActivity(Intent.createChooser(send, p.optString("title", "Compartilhar pelo Nexus")))
+                                respond(callback, JSONObject().put("ok", true))
+                            } catch (e: Exception) {
+                                respond(callback, JSONObject().put("ok", false).put("error", e.message ?: "Nenhum aplicativo de compartilhamento disponível"))
+                            }
+                        }
+
+                        "copyText" -> {
+                            val clipboard = getSystemService(CLIPBOARD_SERVICE) as android.content.ClipboardManager
+                            clipboard.setPrimaryClip(android.content.ClipData.newPlainText("Nexus", p.optString("text")))
+                            respond(callback, JSONObject().put("ok", true))
+                        }
+
+                        "openLocation" -> runOnUiThread {
+                            try {
+                                val uri = Uri.parse(p.optString("uri"))
+                                val intent = Intent(Intent.ACTION_VIEW).apply {
+                                    data = uri
+                                    addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                                }
+                                startActivity(intent)
+                                respond(callback, JSONObject().put("ok", true))
+                            } catch (e: Exception) {
+                                respond(callback, JSONObject().put("ok", false).put("error", e.message ?: "Não foi possível abrir o local"))
+                            }
+                        }
+
                         "openFile" -> runOnUiThread {
                             try {
                                 val uri = Uri.parse(p.getString("uri"))
