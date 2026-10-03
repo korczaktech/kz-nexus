@@ -42,7 +42,7 @@ class StorageManager(private val context: Context) {
         val root = if (uri.isNullOrBlank()) {
             savedTree()?.let { DocumentFile.fromTreeUri(context, it) }
         } else {
-            DocumentFile.fromTreeUri(context, Uri.parse(uri))
+            DocumentFile.fromSingleUri(context, Uri.parse(uri))
         } ?: return a
 
         root.listFiles()
@@ -59,7 +59,7 @@ class StorageManager(private val context: Context) {
     }
 
     fun saveInFolder(folderUri: String, name: String, content: String): Pair<Boolean, String?> {
-        val folder = DocumentFile.fromTreeUri(context, Uri.parse(folderUri)) ?: return false to null
+        val folder = DocumentFile.fromSingleUri(context, Uri.parse(folderUri)) ?: return false to null
         if (!folder.isDirectory) return false to null
 
         val safeName = safe(name)
