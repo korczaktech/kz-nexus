@@ -654,7 +654,66 @@ let saveFolderStack=[];async function openSaveFolder(){const root=await native('
 }
 async function loadProfile(){const r=await native('session');if(!r.ok)return;const u=r.user||{};const name=u.name||'Conta local',email=u.email||'Nenhuma conta conectada',initial=(name.trim()[0]||'K').toUpperCase();$('profileName').textContent=name;$('profileEmail').textContent=email;$('profileName2').textContent=name;$('profileEmail2').textContent=email;$('profileAvatar').textContent=initial;$('avatarTop').textContent=initial;$('profileStatus').textContent=u.email_verified?'Conta verificada':'Conta local / não verificada'}
 async function loadAbout(){const r=await native('appInfo');if(r.ok)$('appVersion').textContent=r.versionName||'—'}
-async function checkUpdate(){const r=await native('checkUpdate');if(!r.ok){toast(r.error||'Não foi possível verificar atualizações');return}if(!r.updateAvailable){toast(r.message||'O Nexus já está atualizado');return}const box=document.createElement('div');box.className='modal';box.style.display='flex';box.innerHTML='<div class="sheet"><div class="sheet-head"><h2>Atualização disponível</h2><button class="close">×</button></div><div class="sheet-body"><div class="notice">A versão <b>'+esc(r.version||'nova')+'</b> está disponível. O Nexus baixará o APK oficial e entregará a instalação ao Android.</div><div class="row-end"><button class="btn later">Depois</button><button class="btn primary install">Atualizar agora</button></div></div></div>';document.body.appendChild(box);box.querySelector('.close').onclick=()=>box.remove();box.querySelector('.later').onclick=()=>box.remove();box.querySelector('.install').onclick=async()=>{box.remove();const x=await native('installUpdate',{url:r.url||'',digest:r.digest||''});if(!x.ok)toast(x.error||'Não foi possível iniciar a atualização');else if(x.permission)toast('Autorize a instalação do Nexus nas configurações do Android e volte ao aplicativo.')};}
+let updateCheckBusy=false;
+async function checkUpdate(){
+  if(updateCheckBusy)return;
+  updateCheckBusy=true;
+  const box=document.createElement('div');
+  box.className='modal';
+  box.style.display='flex';
+  box.innerHTML='<div class="sheet"><div class="sheet-head"><h2>Atualizações</h2><button class="close" type="button">×</button></div><div class="sheet-body"><div class="notice" id="updateCheckStatus">Verificando a versão instalada e o manifesto oficial do Nexus…</div><div class="row-end" id="updateCheckActions"></div></div></div>';
+  document.body.appendChild(box);
+  const close=()=>{box.remove();updateCheckBusy=false};
+  box.querySelector('.close').onclick=close;
+  try{
+    const r=await native('checkUpdate');
+    const status=box.querySelector('#updateCheckStatus');
+    const actions=box.querySelector('#updateCheckActions');
+    if(!r.ok){
+      status.innerHTML='<b>Não foi possível verificar.</b><br>'+esc(r.error||'Erro desconhecido');
+      actions.innerHTML='<button class="btn" type="button">Fechar</button>';
+      actions.querySelector('button').onclick=close;
+      return;
+    }
+    if(!r.updateAvailable){
+      status.innerHTML='<b>O Nexus já está atualizado.</b><br>'+esc(r.message||'Nenhuma versão mais recente foi publicada.');
+      actions.innerHTML='<button class="btn primary" type="button">Fechar</button>';
+      actions.querySelector('button').onclick=close;
+      return;
+    }
+    status.innerHTML='A versão <b>'+esc(r.version||'nova')+'</b> está disponível. O APK oficial será baixado e entregue ao instalador do Android.';
+    actions.innerHTML='<button class="btn" type="button">Depois</button><button class="btn primary" type="button">Atualizar agora</button>';
+    actions.children[0].onclick=close;
+    actions.children[1].onclick=async()=>{
+      actions.children[1].disabled=true;
+      actions.children[1].textContent='Iniciando…';
+      const x=await native('installUpdate',{url:r.url||'',digest:r.digest||''});
+      if(!x.ok){
+        status.innerHTML='<b>Falha ao iniciar a atualização.</b><br>'+esc(x.error||'Erro desconhecido');
+        actions.children[1].disabled=false;
+        actions.children[1].textContent='Tentar novamente';
+        return;
+      }
+      if(x.permission){
+        status.innerHTML='O Android precisa permitir a instalação de atualizações do Nexus. Autorize e volte ao aplicativo.';
+        actions.children[1].textContent='Fechar';
+        actions.children[1].onclick=close;
+        return;
+      }
+      status.innerHTML='<b>Atualização entregue ao Android.</b><br>Conclua a instalação na tela do sistema.';
+      actions.children[1].textContent='Fechar';
+      actions.children[1].onclick=close;
+    };
+  }catch(e){
+    const status=box.querySelector('#updateCheckStatus');
+    const actions=box.querySelector('#updateCheckActions');
+    status.innerHTML='<b>Erro ao verificar atualizações.</b><br>'+esc(e&&e.message?e.message:String(e));
+    actions.innerHTML='<button class="btn primary" type="button">Fechar</button>';
+    actions.querySelector('button').onclick=close;
+  }finally{
+    if(!box.isConnected)updateCheckBusy=false;
+  }
+}
 
 let authCurrent='login';
 const defaultSettings={autoUpdate:true,notifications:true,confirmExit:true,compact:false};
