@@ -423,9 +423,20 @@ function setZoom(value){
   if($('nxZoom'))$('nxZoom').textContent=ES.zoom+'%';
   toast('Zoom '+ES.zoom+'%');
 }
-function exportDoc(){
-  const html='<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>'+esc(currentName||'Documento')+'</title><style>body{font-family:Arial,sans-serif;max-width:900px;margin:40px auto;line-height:1.6}table{border-collapse:collapse;width:100%}td,th{border:1px solid #777;padding:8px}img{max-width:100%}</style></head><body>'+($('page')?.innerHTML||'')+'</body></html>';
-  const blob=new Blob([html],{type:'text/html;charset=utf-8'});const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download=(cleanName(currentName||'documento').replace(/\\.[^.]+$/,'')||'documento')+'.html';document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);toast('Documento exportado');
+async function exportDoc(){
+  const name=(await nexusInput('Exportar documento','Informe o nome do arquivo HTML.','documento','documento'));
+  if(!name)return;
+  const fileName=(name.replace(/[\\/:*?"<>|]/g,'_').replace(/\\.html?$/i,'')||'documento')+'.html';
+  const html='<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>'+esc(name)+'</title><style>body{font-family:Arial,sans-serif;max-width:900px;margin:40px auto;line-height:1.6}table{border-collapse:collapse;width:100%}td,th{border:1px solid #777;padding:8px}img{max-width:100%}</style></head><body>'+($('page')?.innerHTML||'')+'</body></html>';
+  const root=await native('rootFolder');
+  if(root.ok){
+    const saved=await native('writeFile',{folderUri:root.uri,name:fileName,content:html});
+    if(saved.ok){toast('Exportado como '+fileName);return}
+    if(saved.error)toast(saved.error);
+  }
+  // Fallback para WebView/browser quando o armazenamento nativo não estiver disponível.
+  const blob=new Blob([html],{type:'text/html;charset=utf-8'});const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download=fileName;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);
+  toast('Documento exportado');
 }
 async function printEditor(){
   saveSelection();
