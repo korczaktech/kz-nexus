@@ -75,7 +75,9 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    private fun requestStartupPermissions() {
+    private var permissionFlowActive = false
+
+    private fun missingStartupPermissions(): List<String> {
         val missing = mutableListOf<String>()
         if (android.os.Build.VERSION.SDK_INT >= 30 && !Environment.isExternalStorageManager()) {
             missing.add("Acesso amplo ao armazenamento")
@@ -83,44 +85,91 @@ class MainActivity : AppCompatActivity() {
         if (android.os.Build.VERSION.SDK_INT >= 26 && !packageManager.canRequestPackageInstalls()) {
             missing.add("Permissão para instalar atualizações do Nexus")
         }
-        if (missing.isEmpty()) {
-            AlertDialog.Builder(this)
-                .setTitle("Permissões do Nexus")
-                .setMessage("As permissões necessárias para armazenamento e atualizações já estão autorizadas.")
-                .setPositiveButton("Continuar", null)
-                .show()
-            return
-        }
+        return missing
+    }
+
+    private fun requestStartupPermissions() {
+        if (permissionFlowActive) return
+        val missing = missingStartupPermissions()
+
+        // Se tudo já estiver autorizado, não mostra aviso nenhum.
+        if (missing.isEmpty()) return
+
+        permissionFlowActive = true
         requestNextPermission(missing, 0)
     }
 
     private fun requestNextPermission(missing: List<String>, index: Int) {
-        if (index >= missing.size) return
+        if (index >= missing.size) {
+            permissionFlowActive = false
+            return
+        }
+
         val permission = missing[index]
+        // A lista pode ter mudado enquanto a tela do Android estava aberta.
+        val stillMissing = when (permission) {
+            "Acesso amplo ao armazenamento" ->
+                android.os.Build.VERSION.SDK_INT >= 30 && !Environment.isExternalStorageManager()
+            "Permissão para instalar atualizações do Nexus" ->
+                android.os.Build.VERSION.SDK_INT >= 26 && !packageManager.canRequestPackageInstalls()
+            else -> false
+        }
+
+        if (!stillMissing) {
+            requestNextPermission(missing, index + 1)
+            return
+        }
+
         AlertDialog.Builder(this)
             .setTitle("Permissão necessária")
-            .setMessage("O Nexus precisa de: " + permission + ". Essa autorização é usada para acessar os arquivos e manter o aplicativo atualizável.")
-            .setNegativeButton("Agora não") { _, _ -> requestNextPermission(missing, index + 1) }
+            .setMessage("O Nexus precisa de: $permission. Essa autorização é usada para acessar os arquivos e manter o aplicativo atualizável.")
+            .setNegativeButton("Agora não") { _, _ ->
+                permissionFlowActive = false
+            }
             .setPositiveButton("Autorizar") { _, _ ->
                 when (permission) {
                     "Acesso amplo ao armazenamento" -> {
                         try {
-                            startActivity(Intent(Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION, Uri.parse("package:" + packageName)))
+                            startActivity(
+                                Intent(
+                                    Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION,
+                                    Uri.parse("package:$packageName")
+                                )
+                            )
                         } catch (_: Exception) {
                             startActivity(Intent(Settings.ACTION_MANAGE_ALL_FILES_ACCESS_PERMISSION))
                         }
                     }
                     "Permissão para instalar atualizações do Nexus" -> {
-                        startActivity(Intent(Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES, Uri.parse("package:" + packageName)))
+                        startActivity(
+                            Intent(
+                                Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES,
+                                Uri.parse("package:$packageName")
+                            )
+                        )
                     }
                 }
-                window.decorView.postDelayed({ requestNextPermission(missing, index + 1) }, 900)
+            }
+            .setOnDismissListener {
+                // Não abre outra permissão por timer. O Android devolve o controle
+                // ao app e onResume() verifica novamente o estado real.
+                if (!isFinishing) {
+                    window.decorView.post {
+                        val remaining = missingStartupPermissions()
+                        if (remaining.isEmpty()) {
+                            permissionFlowActive = false
+                        } else {
+                            permissionFlowActive = false
+                        }
+                    }
+                }
             }
             .show()
     }
 
     override fun onResume() {
         super.onResume()
+        if (!permissionFlowActive) requestStartupPermissions()
         Updater(this).resumePending()
         if (::web.isInitialized) {
             web.postDelayed({
