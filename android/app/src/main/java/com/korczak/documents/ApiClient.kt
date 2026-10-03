@@ -14,15 +14,17 @@ class ApiClient(private val session: SessionStore) {
     private val base = "https://kzdoc.onrender.com"
     fun request(method:String,path:String,body:String?=null):ApiResult{
         val c=(URL(base+path).openConnection() as HttpURLConnection).apply{
-            requestMethod=method; connectTimeout=15000; readTimeout=30000
+            requestMethod=method; connectTimeout=20000; readTimeout=60000
             setRequestProperty("Accept","application/json")
             session.token?.let{setRequestProperty("Authorization","Bearer "+it)}
             if(body!=null){doOutput=true;setRequestProperty("Content-Type","application/json")}
         }
         return try{
             if(body!=null)c.outputStream.use{it.write(body.toByteArray(Charsets.UTF_8))}
-            val s=if(c.responseCode>=400)c.errorStream else c.inputStream
-            ApiResult(c.responseCode,s?.use{BufferedReader(InputStreamReader(it)).readText()}?:"")
+            val status=c.responseCode
+            val stream=if(status>=400)c.errorStream else c.inputStream
+            val text=stream?.use{BufferedReader(InputStreamReader(it)).readText()}?:""
+            ApiResult(status,text)
         }finally{c.disconnect()}
     }
     fun login(e:String,p:String)=request("POST","/api/v1/auth/login",JSONObject().put("email",e).put("password",p).toString())
