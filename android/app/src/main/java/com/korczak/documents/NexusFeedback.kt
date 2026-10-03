@@ -165,11 +165,13 @@ object NexusFeedback {
         if (negative != null) {
             val b = button(context, negative, Color.rgb(154, 177, 198))
             b.setOnClickListener { onNegative?.invoke(); dialog.dismiss() }
-            actions.addView(b)
+            val lp = LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, dp(context, 44))
+            lp.marginEnd = dp(context, 8)
+            actions.addView(b, lp)
         }
         val p = button(context, positive, accent(type))
         p.setOnClickListener { onPositive?.invoke(); dialog.dismiss() }
-        actions.addView(p)
+        actions.addView(p, LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, dp(context, 44)))
         root.addView(actions)
         dialog.setContentView(root)
         dialog.setCanceledOnTouchOutside(false)
