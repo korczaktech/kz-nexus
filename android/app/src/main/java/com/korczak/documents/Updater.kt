@@ -12,7 +12,7 @@ import java.net.URL
 import java.security.MessageDigest
 
 class Updater(private val activity: Activity) {
-    private val repo = "korczaktechnology-tech/kzdoc"
+    private val repo = "korczaktech/kzdoc"
     private val prefsName = "nexus_updater"
     private val current: String by lazy {
         activity.packageManager.getPackageInfo(activity.packageName, 0).versionName ?: "0.0.0.1"
