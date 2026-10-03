@@ -22,9 +22,11 @@ class Updater(private val activity: Activity) {
         Thread {
             try {
                 val c = URL("https://api.github.com/repos/" + repo + "/releases/latest").openConnection() as HttpURLConnection
-                c.connectTimeout = 10000
-                c.readTimeout = 15000
+                c.connectTimeout = 20000
+                c.readTimeout = 30000
                 c.setRequestProperty("Accept", "application/vnd.github+json")
+                c.setRequestProperty("User-Agent", "Korczak-Nexus-Updater")
+                c.setRequestProperty("X-GitHub-Api-Version", "2022-11-28")
                 val code = c.responseCode
                 if (code !in 200..299) throw IllegalStateException("GitHub HTTP " + code)
                 val j = JSONObject(c.inputStream.bufferedReader().use { it.readText() })
@@ -43,6 +45,8 @@ class Updater(private val activity: Activity) {
                     }
                 }
                 if (asset == null) throw IllegalStateException("A release mais recente não possui APK")
+                val assetName = asset.optString("name")
+                if (!assetName.endsWith(".apk", ignoreCase = true)) throw IllegalStateException("O arquivo da atualização não é um APK")
                 if (compare(tag, current) <= 0) {
                     activity.runOnUiThread { done("up_to_date") }
                     return@Thread
@@ -88,7 +92,9 @@ class Updater(private val activity: Activity) {
                     setAppPackageName(activity.packageName)
                     setSize(apk.length())
                 }
-                val sessionId = installer.createSession(params)
+                val sessionId = try { installer.createSession(params) } catch (e: Exception) {
+                    throw IllegalStateException("Android não conseguiu preparar a instalação: " + (e.message ?: "erro desconhecido"))
+                }
                 val session = installer.openSession(sessionId)
                 var committed = false
                 try {
@@ -142,12 +148,15 @@ class Updater(private val activity: Activity) {
         c.setRequestProperty("X-GitHub-Api-Version", "2022-11-28")
         val code = c.responseCode
         if (code !in 200..299) {
+            val detail = try { c.errorStream?.bufferedReader()?.use { it.readText().take(240) } } catch (_: Exception) { null }
             c.disconnect()
-            throw IllegalStateException("Download HTTP " + code)
+            throw IllegalStateException("Download HTTP $code" + if (detail.isNullOrBlank()) "" else ": $detail")
         }
+        val contentType = c.contentType.orEmpty()
         c.inputStream.use { input -> apk.outputStream().use { output -> input.copyTo(output) } }
         c.disconnect()
         if (apk.length() < 100000L) throw IllegalStateException("APK baixado está incompleto")
+        if (contentType.contains("text/html", ignoreCase = true)) throw IllegalStateException("O GitHub devolveu uma página em vez do APK")
     }
 
     private fun verify(apk: File, expected: String) {
