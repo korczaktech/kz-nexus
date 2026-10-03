@@ -47,6 +47,18 @@ class UpdateReceiver : BroadcastReceiver() {
                 ).show()
             }
 
+            PackageInstaller.STATUS_FAILURE_BLOCKED -> {
+                try {
+                    context.startActivity(
+                        Intent(
+                            android.provider.Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES,
+                            android.net.Uri.parse("package:" + context.packageName)
+                        ).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                    )
+                } catch (_: Exception) { }
+                Toast.makeText(context, "O Android bloqueou a instalação. Autorize o Nexus a instalar atualizações e tente novamente.", Toast.LENGTH_LONG).show()
+            }
+
             else -> {
                 Toast.makeText(
                     context,
