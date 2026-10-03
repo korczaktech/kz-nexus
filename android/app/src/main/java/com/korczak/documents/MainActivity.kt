@@ -261,6 +261,21 @@ class MainActivity : AppCompatActivity() {
                             respond(callback, JSONObject().put("ok", true))
                         }
 
+                        "confirmExit" -> runOnUiThread {
+                            NexusFeedback.alert(
+                                this@MainActivity,
+                                "Sair do Nexus",
+                                "Deseja fechar o aplicativo agora?",
+                                NexusFeedback.Type.WARNING,
+                                "Sair",
+                                "Cancelar",
+                                onPositive = {
+                                    finishAndRemoveTask()
+                                }
+                            )
+                            respondJs(callback, JSONObject().put("ok", true))
+                        }
+
                         "exitApp" -> runOnUiThread {
                             finishAndRemoveTask()
                             respondJs(callback, JSONObject().put("ok", true))
