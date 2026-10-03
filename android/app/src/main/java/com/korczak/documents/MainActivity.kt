@@ -320,30 +320,6 @@ class MainActivity : AppCompatActivity() {
                             JSONObject().put("ok", true).put("content", storage.read(p.getString("uri")))
                         )
 
-                        "writeFile" -> {
-                            val folderUri = p.optString("folderUri")
-                            val result = if (folderUri.isNotBlank()) {
-                                storage.saveInFolder(
-                                    folderUri,
-                                    p.optString("name", "Novo documento.kzdoc"),
-                                    p.optString("content")
-                                )
-                            } else {
-                                storage.write(
-                                    p.optString("uri"),
-                                    p.optString("name", "Novo documento.kzdoc"),
-                                    p.optString("content")
-                                )
-                            }
-                            respond(
-                                callback,
-                                JSONObject()
-                                    .put("ok", result.first)
-                                    .put("uri", result.second ?: "")
-                                    .put("error", if (result.first) "" else "Selecione um armazenamento para salvar o documento")
-                            )
-                        }
-
                         "listFolders" -> {
                             respond(
                                 callback,
