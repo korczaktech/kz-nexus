@@ -734,7 +734,10 @@ function toggleIndependentFormat(c){
     const nodes=selectedTextNodes(range);
     const active=nodes.length>0&&nodes.every(n=>hasFormat(n,c));
     if(active){
-      try{document.execCommand(c,false,null)}catch(e){console.warn('Não foi possível remover a formatação:',c,e)}
+      // Não use execCommand aqui: no WebView ele pode remover a decoração
+      // do ancestral inteiro ou simplesmente não desligá-la. Extraímos
+      // exatamente a seleção e recolocamos o conteúdo sem <u>/<s>.
+      toggleSemanticDecoration(range,c,false);
       saveSelection();updateToolbarState();dirty();return;
     }
     if(range.collapsed){
