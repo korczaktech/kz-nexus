@@ -52,15 +52,8 @@ def verify_password(password: str, encoded: str) -> bool:
 
 
 def needs_password_rehash(encoded: str) -> bool:
-    if not isinstance(encoded, str):
-        return False
-    encoded = encoded.strip()
-    if not encoded.startswith(("$2a$", "$2b$", "$2y$")):
-        return True
-    try:
-        return bool(bcrypt and bcrypt.needs_rehash(encoded.encode("utf-8")))
-    except (ValueError, TypeError, AttributeError):
-        return False
+    # O único formato aceito é bcrypt. A aplicação não migra para outro algoritmo.
+    return False
 
 def create_token() -> str:
     return secrets.token_urlsafe(48)
