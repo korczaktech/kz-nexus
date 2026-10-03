@@ -37,8 +37,8 @@ class Updater(private val activity:Activity){
                 val dir=File(activity.cacheDir,"updates").apply{mkdirs()}
                 val apk=File(dir,"update.apk")
                 val c=URL(url).openConnection() as HttpURLConnection
-                c.connectTimeout=15000;c.readTimeout=120000
-                c.inputStream.use{input->apk.outputStream().use{out->input.copyTo(out)}};c.disconnect()
+                c.instanceFollowRedirects=true;c.connectTimeout=20000;c.readTimeout=180000;c.setRequestProperty("User-Agent","Korczak-Nexus-Updater")
+                if(c.responseCode !in 200..299)throw IllegalStateException("Download HTTP "+c.responseCode);c.inputStream.use{input->apk.outputStream().use{out->input.copyTo(out)}};c.disconnect();if(apk.length()<100000L)throw IllegalStateException("APK baixado está incompleto")
                 val md=MessageDigest.getInstance("SHA-256")
                 apk.inputStream().use{input->val b=ByteArray(8192);while(true){val n=input.read(b);if(n<0)break;md.update(b,0,n)}}
                 val actual=md.digest().joinToString(""){"%02x".format(it)}
@@ -53,7 +53,19 @@ class Updater(private val activity:Activity){
                     session.commit(pi.intentSender)
                 }
                 activity.runOnUiThread{onDone("installing")}
-            }catch(e:Exception){activity.runOnUiThread{onDone("failed|"+(e.message?:"erro"))}}
+            }catch(e:Exception){
+                try{
+                    val uri=androidx.core.content.FileProvider.getUriForFile(activity,activity.packageName+".fileprovider",apk)
+                    val intent=Intent(Intent.ACTION_VIEW).apply{
+                        setDataAndType(uri,"application/vnd.android.package-archive")
+                        addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_ACTIVITY_NEW_TASK)
+                    }
+                    activity.startActivity(intent)
+                    activity.runOnUiThread{onDone("installer")}
+                }catch(fallback:Exception){
+                    activity.runOnUiThread{onDone("failed|"+(fallback.message?:"Não foi possível instalar a atualização"))}
+                }
+            }
         }.start()
     }
 
