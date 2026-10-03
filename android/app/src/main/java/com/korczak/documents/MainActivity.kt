@@ -321,17 +321,60 @@ class MainActivity : AppCompatActivity() {
                         )
 
                         "writeFile" -> {
-                            val result = storage.write(
-                                p.optString("uri"),
-                                p.optString("name", "Novo documento.kzdoc"),
-                                p.optString("content")
-                            )
+                            val folderUri = p.optString("folderUri")
+                            val result = if (folderUri.isNotBlank()) {
+                                storage.saveInFolder(
+                                    folderUri,
+                                    p.optString("name", "Novo documento.kzdoc"),
+                                    p.optString("content")
+                                )
+                            } else {
+                                storage.write(
+                                    p.optString("uri"),
+                                    p.optString("name", "Novo documento.kzdoc"),
+                                    p.optString("content")
+                                )
+                            }
                             respond(
                                 callback,
                                 JSONObject()
                                     .put("ok", result.first)
                                     .put("uri", result.second ?: "")
                                     .put("error", if (result.first) "" else "Selecione um armazenamento para salvar o documento")
+                            )
+                        }
+
+                        "listFolders" -> {
+                            respond(
+                                callback,
+                                JSONObject().put("ok", true).put(
+                                    "folders",
+                                    storage.listFolders(p.optString("uri").takeIf { it.isNotBlank() })
+                                )
+                            )
+                        }
+
+                        "writeFile" -> {
+                            val folderUri = p.optString("folderUri")
+                            val result = if (folderUri.isNotBlank()) {
+                                storage.saveInFolder(
+                                    folderUri,
+                                    p.optString("name", "Novo documento.kzdoc"),
+                                    p.optString("content")
+                                )
+                            } else {
+                                storage.write(
+                                    p.optString("uri"),
+                                    p.optString("name", "Novo documento.kzdoc"),
+                                    p.optString("content")
+                                )
+                            }
+                            respond(
+                                callback,
+                                JSONObject()
+                                    .put("ok", result.first)
+                                    .put("uri", result.second ?: "")
+                                    .put("error", if (result.first) "" else "Não foi possível salvar nesta pasta")
                             )
                         }
 
