@@ -95,14 +95,14 @@ class StorageManager(private val context: Context) {
         return ext in setOf(
             "txt", "text", "md", "markdown", "rtf",
             "doc", "docx", "dot", "dotx", "docm", "dotm",
-            "odt", "ott", "fodt", "wps", "xml", "html", "htm", "kzdoc"
+            "odt", "ott", "fodt", "wps", "pages", "pdf", "xml", "html", "htm", "kzdoc"
         ) || mime.orEmpty().lowercase() in setOf(
             "text/plain", "text/markdown", "text/rtf", "text/html",
             "application/rtf", "application/msword",
             "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
             "application/vnd.openxmlformats-officedocument.wordprocessingml.template",
             "application/vnd.oasis.opendocument.text",
-            "application/vnd.oasis.opendocument.text-template"
+            "application/vnd.oasis.opendocument.text-template", "application/pdf"
         )
     }
 
@@ -115,6 +115,7 @@ class StorageManager(private val context: Context) {
             "docx", "docm" -> "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
             "dot", "dotm", "dotx" -> "application/vnd.openxmlformats-officedocument.wordprocessingml.template"
             "odt", "ott", "fodt" -> "application/vnd.oasis.opendocument.text"
+            "pdf" -> "application/pdf"
             "html", "htm" -> "text/html"
             "xml" -> "application/xml"
             "kzdoc" -> "application/json"
