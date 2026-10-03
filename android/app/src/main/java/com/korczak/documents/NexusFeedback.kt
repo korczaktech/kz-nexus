@@ -216,14 +216,20 @@ object NexusFeedback {
     private fun button(context: Context, text: String, color: Int): Button =
         Button(context).apply {
             this.text = text
-            textSize = 11f
-            setTextColor(color)
+            textSize = 12f
+            isAllCaps = false
+            typeface = android.graphics.Typeface.create("sans-serif-medium", android.graphics.Typeface.NORMAL)
+            setTextColor(Color.WHITE)
+            stateListAnimator = null
+            elevation = 0f
             background = GradientDrawable().apply {
-                setColor(Color.rgb(10, 35, 57))
+                setColor(if (color == Color.rgb(154, 177, 198)) Color.rgb(13, 33, 51) else Color.rgb(14, 102, 190))
                 setStroke(dp(context, 1), color)
-                cornerRadius = dp(context, 10).toFloat()
+                cornerRadius = dp(context, 12).toFloat()
             }
-            minHeight = dp(context, 42)
-            setPadding(dp(context, 14), 0, dp(context, 14), 0)
+            minHeight = dp(context, 44)
+            minimumHeight = dp(context, 44)
+            minWidth = dp(context, 92)
+            setPadding(dp(context, 18), 0, dp(context, 18), 0)
         }
 }
