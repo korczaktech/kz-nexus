@@ -288,7 +288,10 @@ function switchEditorContext(ctx){
     b.type='button';b.className='nx-tool';
     b.dataset.editorAction=x[1];b.title=x[0];b.setAttribute('aria-label',x[0]);
     const stateMatch=x[1].match(/^editorCommand\("([^"]+)"\)$/);
-    if(stateMatch){b.classList.add('state-tool');b.dataset.cmd=stateMatch[1];}
+    if(stateMatch && INDEPENDENT_FORMATS.includes(stateMatch[1])){
+      b.classList.add('state-tool');
+      b.dataset.cmd=stateMatch[1];
+    }
     b.appendChild(originalEditorIcon(x[0],x[2]));
     const s=document.createElement('span');s.textContent=x[0];b.appendChild(s);
     bar.appendChild(b);
@@ -601,21 +604,10 @@ function editorCommand(c,v=null){
   const page=$('page');if(!page)return;
   page.focus();
   restoreSelection();
-  const before={};
-  INDEPENDENT_FORMATS.forEach(x=>{if(x!==c)before[x]=commandState(x)});
+  // Cada comando é executado isoladamente. Não tentamos ligar/desligar
+  // nenhum outro comando ao redor dele: Bold, Italic, Underline etc.
+  // possuem estados independentes, como em um editor de documentos.
   try{document.execCommand(c,false,v)}catch(e){console.warn('Comando do editor falhou:',c,e)}
-  // Cada formatação de caracteres é independente. Se o WebView alterar outra
-  // formatação ao executar o comando, restaura somente aquela que mudou.
-  if(INDEPENDENT_FORMATS.includes(c)){
-    restoreSelection();
-    INDEPENDENT_FORMATS.forEach(x=>{
-      if(x===c)return;
-      const now=commandState(x);
-      if(now!==before[x]){
-        try{document.execCommand(x,false,null)}catch(e){}
-      }
-    });
-  }
   saveSelection();
   updateToolbarState();
   dirty();
