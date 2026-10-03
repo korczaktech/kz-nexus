@@ -21,7 +21,7 @@ class Updater(private val activity: Activity) {
     fun check(done: (String) -> Unit) {
         Thread {
             try {
-                val c = URL("https://api.github.com/repos/" + repo + "/releases/latest").openConnection() as HttpURLConnection
+                val c = URL("https://api.github.com/repos/" + repo + "/releases?per_page=20").openConnection() as HttpURLConnection
                 c.connectTimeout = 20000
                 c.readTimeout = 30000
                 c.setRequestProperty("Accept", "application/vnd.github+json")
@@ -91,6 +91,9 @@ class Updater(private val activity: Activity) {
                 val params = PackageInstaller.SessionParams(PackageInstaller.SessionParams.MODE_FULL_INSTALL).apply {
                     setAppPackageName(activity.packageName)
                     setSize(apk.length())
+                    if (android.os.Build.VERSION.SDK_INT >= 31) {
+                        setRequireUserAction(PackageInstaller.SessionParams.USER_ACTION_REQUIRED)
+                    }
                 }
                 val sessionId = try { installer.createSession(params) } catch (e: Exception) {
                     throw IllegalStateException("Android não conseguiu preparar a instalação: " + (e.message ?: "erro desconhecido"))
@@ -109,7 +112,9 @@ class Updater(private val activity: Activity) {
                         action = "com.korczak.documents.UPDATE_RESULT"
                     }
                     val flags = PendingIntent.FLAG_UPDATE_CURRENT or
-                        if (android.os.Build.VERSION.SDK_INT >= 23) PendingIntent.FLAG_IMMUTABLE else 0
+                        if (android.os.Build.VERSION.SDK_INT >= 31) PendingIntent.FLAG_MUTABLE
+                        else if (android.os.Build.VERSION.SDK_INT >= 23) PendingIntent.FLAG_IMMUTABLE
+                        else 0
                     val pending = PendingIntent.getBroadcast(activity, 7401, callback, flags)
                     session.commit(pending.intentSender)
                     committed = true
