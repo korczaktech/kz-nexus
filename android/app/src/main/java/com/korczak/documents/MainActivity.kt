@@ -83,7 +83,15 @@ class MainActivity : AppCompatActivity() {
         handleFeedbackIntent(intent)
         handleDocumentIntent(intent)
         Updater(this).resumePending()
-        checkForUpdateIfEnabled()
+
+        // A verificação automática precisa ocorrer depois que o WebView foi iniciado.
+        // Fazemos uma tentativa inicial e uma segunda tentativa curta para recuperar
+        // falhas transitórias de rede sem exigir que o usuário abra "Atualizações".
+        web.postDelayed({ checkForUpdateIfEnabled() }, 1200)
+        web.postDelayed({
+            if (isFinishing || isDestroyed) return@postDelayed
+            checkForUpdateIfEnabled()
+        }, 9000)
     }
 
 
@@ -363,7 +371,7 @@ class MainActivity : AppCompatActivity() {
         handleDocumentIntent(intent)
         Updater(this).resumePending()
         if (::web.isInitialized) {
-            web.postDelayed({ checkForUpdateIfEnabled() }, 700)
+            web.postDelayed({ checkForUpdateIfEnabled() }, 1500)
         }
         if (::web.isInitialized) {
             web.postDelayed({
