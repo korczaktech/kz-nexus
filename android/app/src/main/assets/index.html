@@ -679,18 +679,66 @@ function wrapSelectedText(range,c,turnOn){
     parent.replaceChild(marker,node);
   });
 }
+function unwrapFormatNodes(root,tag,decoration){
+  const wanted=String(tag||'').toLowerCase();
+  const nodes=[];
+  const walker=document.createTreeWalker(root,NodeFilter.SHOW_ELEMENT);
+  let el;
+  while(el=walker.nextNode()){
+    const tagName=String(el.tagName||'').toLowerCase();
+    const styleValue=String(el.style?.textDecorationLine||'').toLowerCase();
+    if(tagName===wanted||styleValue.includes(decoration))nodes.push(el);
+  }
+  nodes.reverse().forEach(el=>{
+    const parent=el.parentNode;if(!parent)return;
+    while(el.firstChild)parent.insertBefore(el.firstChild,el);
+    parent.removeChild(el);
+  });
+}
+function toggleSemanticDecoration(range,c,turnOn){
+  const tag=c==='underline'?'u':'s';
+  const decoration=c==='underline'?'underline':'line-through';
+  const fragment=range.extractContents();
+  if(turnOn){
+    const wrapper=document.createElement(tag);
+    wrapper.appendChild(fragment);
+    range.insertNode(wrapper);
+    const sel=window.getSelection();
+    const r=document.createRange();
+    r.selectNodeContents(wrapper);
+    r.collapse(false);
+    sel.removeAllRanges();sel.addRange(r);
+    return;
+  }
+  unwrapFormatNodes(fragment,tag,decoration);
+  range.insertNode(fragment);
+  const sel=window.getSelection();
+  const r=document.createRange();
+  r.setStartAfter(fragment.lastChild||range.startContainer);
+  r.collapse(true);
+  sel.removeAllRanges();sel.addRange(r);
+}
 function toggleIndependentFormat(c){
   const page=$('page');if(!page)return;
   page.focus();restoreSelection();
   const sel=window.getSelection();if(!sel||!sel.rangeCount)return;
-  /* Underline/strike are CSS text decorations: a child cannot reliably cancel
-     a decoration painted by an ancestor. Let the browser toggle these two
-     marks natively; they remain independent from bold/italic/super/sub. */
+  const range=sel.getRangeAt(0).cloneRange();
   if(c==='underline'||c==='strikeThrough'){
-    try{document.execCommand(c,false,null)}catch(e){console.warn('Toggle de formatação falhou:',c,e)}
+    const nodes=selectedTextNodes(range);
+    const active=nodes.length>0&&nodes.every(n=>hasFormat(n,c));
+    if(range.collapsed){
+      const tag=c==='underline'?'u':'s';
+      const wrapper=document.createElement(tag);
+      const marker=document.createTextNode('\u200b');
+      wrapper.appendChild(marker);
+      range.insertNode(wrapper);
+      range.setStart(marker,1);range.collapse(true);
+      sel.removeAllRanges();sel.addRange(range);
+    }else{
+      toggleSemanticDecoration(range,c,!active);
+    }
     saveSelection();updateToolbarState();dirty();return;
   }
-  const range=sel.getRangeAt(0).cloneRange();
   if(range.collapsed){
     const cfg=FORMAT_STYLE[c];
     const active=hasFormat(sel.anchorNode,c);
