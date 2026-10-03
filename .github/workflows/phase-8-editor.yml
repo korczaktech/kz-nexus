@@ -57,3 +57,12 @@ jobs:
       - name: Testes do editor
         working-directory: frontend
         run: npm test -- --run
+
+      - name: Validar JavaScript embarcado no Android
+        run: |
+          set -euo pipefail
+          while IFS= read -r -d '' file; do
+            echo "Validando $file"
+            node --check "$file"
+          done < <(find android/app/src/main/assets -type f -name '*.js' -print0)
+
