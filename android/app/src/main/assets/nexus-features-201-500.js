@@ -114,3 +114,22 @@ window.__nexusFeatureSelfTest=()=>{const missing=[];for(let i=201;i<=500;i++)if(
 window.runNexusFeature=function(id){id=Number(id);if(id>=201&&id<=500){const fn=window.__nexusFeatureRegistry?.[id];if(!fn){window.toast?.('Recurso '+id+' sem implementação');return false}try{return fn()}catch(e){window.toast?.('Erro no recurso '+id+': '+(e.message||e));return false}}return window.__nexusLegacyRun?.(id)};
 
 window.renderFeatureCenter=function(){const all=[...(window.NEXUS_FEATURES||[]),...(window.NEXUS_FEATURES_201_500||[])];const q=String(document.getElementById('featureSearch')?.value||'').trim().toLowerCase();const items=all.filter(f=>!q||f.name.toLowerCase().includes(q));const g=document.getElementById('featureGrid');if(g)g.innerHTML=items.map(f=>'<button class="feature-item" onclick="runNexusFeature('+f.id+')"><span class="feature-num">'+String(f.id).padStart(3,'0')+'</span><span><b>'+String(f.name).replace(/[&<>]/g,'')+'</b><small>'+(((window.__nexusFeatureRegistry?.[f.id])?'Recurso integrado':'Recurso Nexus'))+'</small></span></button>').join('');const c=document.getElementById('featureCount');if(c)c.textContent=items.length+' de 500 recursos'};
+
+(function(){
+const insertMedia=async(id,mime,tag)=>{
+ const r=await window.native?.('pickMedia',{mime});
+ if(!r?.ok)return window.toast?.(r?.error||'Seleção cancelada');
+ const uri=String(r.uri||'').replace(/"/g,'&quot;');
+ if(!uri)return window.toast?.('URI de mídia ausente');
+ const attrs=tag==='img'?'style="max-width:100%;height:auto"':'controls style="max-width:100%"';
+ document.execCommand('insertHTML',false,'<'+tag+' src="'+uri+'" '+attrs+'></'+tag+'><p><br></p>');
+ return window.toast?.('Mídia inserida');
+};
+window.__nexusFeatureRegistry[361]=()=>insertMedia(361,'image/*','img');
+window.__nexusFeatureRegistry[362]=()=>insertMedia(362,'image/*','img');
+window.__nexusFeatureRegistry[371]=()=>insertMedia(371,'image/svg+xml','img');
+window.__nexusFeatureRegistry[372]=()=>insertMedia(372,'image/gif','img');
+window.__nexusFeatureRegistry[373]=()=>insertMedia(373,'audio/*','audio');
+window.__nexusFeatureRegistry[374]=()=>insertMedia(374,'video/*','video');
+window.__nexusFeatureRegistry[364]=()=>window.nexusInput?window.nexusInput('Redimensionar imagem','Informe a largura em pixels.','600','600').then(v=>{const n=window.getSelection?.()?.anchorNode?.parentElement?.closest('img');if(!n||!v)return false;n.style.width=Math.max(20,Number(v)||600)+'px';window.toast?.('Imagem redimensionada');return true}):false;
+})();
