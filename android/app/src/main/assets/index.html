@@ -319,63 +319,6 @@ function selectionStatus(){
   const text=s?.toString?.().trim()||'';
   el.textContent=text?'Texto selecionado':'Pronto para editar';
 }
-function createDocument(){
-  const name=$('docName').value.trim()||'Documento sem título';
-  closeCreate();
-  openEditor(templateHtml(templateKind),name,'');
-}
-async function openExisting(uri,name){
-  const ext=(String(name).split('.').pop()||'').toLowerCase();
-  const external=['doc','docx','docm','dot','dotx','dotm','odt','ott','fodt','wps','pages','pdf'];
-  if(external.includes(ext)){
-    const r=await native('openFile',{uri});
-    if(!r.ok)toast(r.error||'Nenhum aplicativo pode abrir este arquivo.');
-    return;
-  }
-  const r=await native('readFile',{uri});
-  if(!r.ok){toast(r.error||'Este arquivo não pode ser aberto.');return}
-  let html=r.content||'';
-  try{const obj=JSON.parse(html);if(obj.korczak_document)html=obj.content||''}catch(e){}
-  if(!/<[a-z][\\s\\S]*>/i.test(html))html='<p>'+esc(html).replace(/\\n/g,'<br>')+'</p>';
-  openEditor(html,name,uri);
-}
-function saveEditor(){
-  if(!$('editorModal')||$('editorModal').style.display!=='flex')return;
-  openSaveFolder();
-}
-async function openSaveFolder(){
-  const root=await native('rootFolder');
-  $('saveFolderModal').style.display='flex';
-  if(!root.ok){showSaveStorageChoice();return}
-  saveFolderStack=[{uri:root.uri,name:root.name||'Armazenamento'}];
-  $('saveFolderFooter').innerHTML='<button class="nexus-action secondary" onclick="saveFolderBack()">Voltar</button><button class="nexus-action primary" onclick="chooseSaveFolder()">Salvar nesta pasta</button>';
-  await renderSaveFolder();
-}
-async function renderSaveFolder(){
-  const cur=saveFolderStack.at(-1);
-  if(!cur){showSaveStorageChoice();return}
-  $('saveFolderPath').innerHTML='Pasta atual: <b>'+esc(cur.name)+'</b>';
-  const r=await native('listFolders',{uri:cur.uri});
-  if(!r.ok){$('saveFolderItems').innerHTML='<div class="empty"><b>Não foi possível listar as pastas</b><small>'+esc(r.error||'Erro')+'</small></div>';return}
-  renderSaveFolderItems(r.folders||[]);
-}
-async function chooseSaveFolder(){
-  const cur=saveFolderStack.at(-1);
-  if(!cur){showSaveStorageChoice();return}
-  const name=($('editorTitle').value.trim()||'Documento sem título').replace(/[\\/:*?"<>|]/g,'_');
-  const fileName=name.toLowerCase().endsWith('.kzdoc')?name:name+'.kzdoc';
-  const payload=JSON.stringify({korczak_document:1,title:name,content:$('page').innerHTML,updatedAt:new Date().toISOString()});
-  $('saveState').innerHTML='<i style="background:#5d89ff"></i>Salvando…';
-  const r=await native('writeFile',{folderUri:cur.uri,name:fileName,content:payload});
-  if(!r.ok){$('saveState').innerHTML='<i style="background:#ff6678"></i>Erro';toast(r.error||'Não foi possível salvar');return}
-  currentUri=r.uri||currentUri;
-  currentName=fileName;
-  $('saveState').innerHTML='<i></i>Salvo';
-  $('editorPath').textContent='Salvo em '+cur.name;
-  closeSaveFolder();
-  toast('Documento salvo em '+cur.name);
-  await refresh();
-}
 
 window.__nativeStorageRefresh=()=>{refreshStorage();checkStorageStatus();};
 refresh();checkStorageStatus();loadAbout();bootstrapAuth();
