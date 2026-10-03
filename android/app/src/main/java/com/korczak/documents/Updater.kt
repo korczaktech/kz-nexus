@@ -33,9 +33,9 @@ class Updater(private val activity:Activity){
 
     fun install(url:String,expected:String,onDone:(String)->Unit){
         Thread{
+            val dir=File(activity.cacheDir,"updates").apply{mkdirs()}
+            val apk=File(dir,"update.apk")
             try{
-                val dir=File(activity.cacheDir,"updates").apply{mkdirs()}
-                val apk=File(dir,"update.apk")
                 val c=URL(url).openConnection() as HttpURLConnection
                 c.instanceFollowRedirects=true;c.connectTimeout=20000;c.readTimeout=180000;c.setRequestProperty("User-Agent","Korczak-Nexus-Updater")
                 if(c.responseCode !in 200..299)throw IllegalStateException("Download HTTP "+c.responseCode);c.inputStream.use{input->apk.outputStream().use{out->input.copyTo(out)}};c.disconnect();if(apk.length()<100000L)throw IllegalStateException("APK baixado está incompleto")
