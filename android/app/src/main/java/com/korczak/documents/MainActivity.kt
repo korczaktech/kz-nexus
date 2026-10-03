@@ -2,6 +2,11 @@ package com.korczak.documents
 
 import android.app.Activity
 import android.content.Intent
+import android.content.ClipData
+import android.content.ClipboardManager
+import android.content.Context
+import android.print.PrintAttributes
+import android.print.PrintManager
 import android.net.Uri
 import android.os.Bundle
 import android.os.Environment
@@ -639,6 +644,37 @@ class MainActivity : AppCompatActivity() {
                                 respond(callback, JSONObject().put("ok", true))
                             } catch (error: Exception) {
                                 respond(callback, JSONObject().put("ok", false).put("error", error.message ?: "Nenhum aplicativo compatível pode abrir este arquivo."))
+                            }
+                        }
+
+                        "clipboardSet" -> {
+                            val text = p.optString("text")
+                            val clipboard = getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+                            clipboard.setPrimaryClip(ClipData.newPlainText("Korczak Nexus", text))
+                            respond(callback, JSONObject().put("ok", true))
+                        }
+
+                        "clipboardGet" -> {
+                            val clipboard = getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+                            val text = if (clipboard.hasPrimaryClip()) clipboard.primaryClip?.getItemAt(0)?.coerceToText(this@MainActivity)?.toString() ?: "" else ""
+                            respond(callback, JSONObject().put("ok", true).put("text", text))
+                        }
+
+                        "printEditor" -> runOnUiThread {
+                            try {
+                                val printManager = getSystemService(Context.PRINT_SERVICE) as PrintManager
+                                val adapter = web.createPrintDocumentAdapter("Korczak Nexus - " + (p.optString("name").ifBlank { "Documento" }))
+                                printManager.print(
+                                    "Korczak Nexus",
+                                    adapter,
+                                    PrintAttributes.Builder()
+                                        .setMediaSize(PrintAttributes.MediaSize.ISO_A4)
+                                        .setMinMargins(PrintAttributes.Margins.NO_MARGINS)
+                                        .build()
+                                )
+                                respond(callback, JSONObject().put("ok", true))
+                            } catch (error: Exception) {
+                                respond(callback, JSONObject().put("ok", false).put("error", error.message ?: "Não foi possível abrir a impressão"))
                             }
                         }
 
