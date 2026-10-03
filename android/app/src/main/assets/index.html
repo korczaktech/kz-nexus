@@ -630,12 +630,23 @@ function splitTextForRange(range,node){
 }
 function hasFormat(node,c){
   const cfg=FORMAT_STYLE[c];if(!cfg)return false;
-  let el=node.nodeType===3?node.parentElement:node;
+  let el=node&&node.nodeType===3?node.parentElement:node;
   while(el&&el!==$('page')){
-    const v=getComputedStyle(el)[cfg.prop];
+    const inline=el.style&&el.style[cfg.prop];
+    if(inline){
+      const value=String(inline).toLowerCase();
+      if(c==='bold')return Number(value)>=600;
+      if(c==='italic')return value==='italic';
+      if(c==='underline')return value.includes('underline');
+      if(c==='strikeThrough')return value.includes('line-through');
+      if(c==='superscript')return value==='super';
+      if(c==='subscript')return value==='sub';
+    }
+    const v=String(getComputedStyle(el)[cfg.prop]||'').toLowerCase();
     if(c==='bold'&&Number(v)>=600)return true;
     if(c==='italic'&&v==='italic')return true;
-    if((c==='underline'||c==='strikeThrough')&&String(v).includes(c==='underline'?'underline':'line-through'))return true;
+    if(c==='underline'&&v.includes('underline'))return true;
+    if(c==='strikeThrough'&&v.includes('line-through'))return true;
     if(c==='superscript'&&v==='super')return true;
     if(c==='subscript'&&v==='sub')return true;
     el=el.parentElement;
@@ -672,6 +683,13 @@ function toggleIndependentFormat(c){
   const page=$('page');if(!page)return;
   page.focus();restoreSelection();
   const sel=window.getSelection();if(!sel||!sel.rangeCount)return;
+  /* Underline/strike are CSS text decorations: a child cannot reliably cancel
+     a decoration painted by an ancestor. Let the browser toggle these two
+     marks natively; they remain independent from bold/italic/super/sub. */
+  if(c==='underline'||c==='strikeThrough'){
+    try{document.execCommand(c,false,null)}catch(e){console.warn('Toggle de formatação falhou:',c,e)}
+    saveSelection();updateToolbarState();dirty();return;
+  }
   const range=sel.getRangeAt(0).cloneRange();
   if(range.collapsed){
     const cfg=FORMAT_STYLE[c];
