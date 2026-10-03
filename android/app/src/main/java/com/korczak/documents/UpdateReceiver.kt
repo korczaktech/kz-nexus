@@ -1,11 +1,9 @@
 package com.korczak.documents
 
-import android.app.Activity
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageInstaller
-import android.widget.Toast
 
 class UpdateReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
@@ -23,28 +21,18 @@ class UpdateReceiver : BroadcastReceiver() {
                     @Suppress("DEPRECATION")
                     intent.getParcelableExtra(Intent.EXTRA_INTENT)
                 }
-
                 if (confirmation != null) {
                     confirmation.addFlags(
-                        Intent.FLAG_ACTIVITY_NEW_TASK or
-                        Intent.FLAG_ACTIVITY_CLEAR_TOP
+                        Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
                     )
                     context.startActivity(confirmation)
                 } else {
-                    Toast.makeText(
-                        context,
-                        "O Android precisa confirmar a instalação.",
-                        Toast.LENGTH_LONG
-                    ).show()
+                    showInNexus(context, "warning", "O Android precisa confirmar a instalação.", "Atualização")
                 }
             }
 
             PackageInstaller.STATUS_SUCCESS -> {
-                Toast.makeText(
-                    context,
-                    "KZ Documents atualizado com sucesso.",
-                    Toast.LENGTH_LONG
-                ).show()
+                showInNexus(context, "success", "Korczak Nexus foi atualizado com sucesso.", "Atualização concluída")
             }
 
             PackageInstaller.STATUS_FAILURE_BLOCKED -> {
@@ -56,16 +44,32 @@ class UpdateReceiver : BroadcastReceiver() {
                         ).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
                     )
                 } catch (_: Exception) { }
-                Toast.makeText(context, "O Android bloqueou a instalação. Autorize o Nexus a instalar atualizações e tente novamente.", Toast.LENGTH_LONG).show()
+                showInNexus(
+                    context,
+                    "error",
+                    "O Android bloqueou a instalação. Autorize o Nexus a instalar atualizações.",
+                    "Atualização bloqueada"
+                )
             }
 
             else -> {
-                Toast.makeText(
+                showInNexus(
                     context,
-                    "Não foi possível atualizar: " + (message.ifBlank { "erro de instalação" }),
-                    Toast.LENGTH_LONG
-                ).show()
+                    "error",
+                    message.ifBlank { "Não foi possível instalar a atualização." },
+                    "Falha na atualização"
+                )
             }
         }
+    }
+
+    private fun showInNexus(context: Context, type: String, message: String, title: String) {
+        val launch = Intent(context, MainActivity::class.java).apply {
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_CLEAR_TOP)
+            putExtra("nexus_feedback_type", type)
+            putExtra("nexus_feedback_message", message)
+            putExtra("nexus_feedback_title", title)
+        }
+        context.startActivity(launch)
     }
 }
