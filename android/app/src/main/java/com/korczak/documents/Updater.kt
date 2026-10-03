@@ -90,6 +90,7 @@ class Updater(private val activity: Activity) {
                 }
                 val sessionId = installer.createSession(params)
                 val session = installer.openSession(sessionId)
+                var committed = false
                 try {
                     apk.inputStream().use { input ->
                         session.openWrite("base.apk", 0, apk.length()).use { output ->
@@ -105,7 +106,9 @@ class Updater(private val activity: Activity) {
                         if (android.os.Build.VERSION.SDK_INT >= 23) PendingIntent.FLAG_IMMUTABLE else 0
                     val pending = PendingIntent.getBroadcast(activity, 7401, callback, flags)
                     session.commit(pending.intentSender)
+                    committed = true
                 } finally {
+                    if (!committed) try { session.abandon() } catch (_: Exception) {}
                     session.close()
                 }
 
@@ -124,8 +127,9 @@ class Updater(private val activity: Activity) {
         val url = prefs.getString("pending_url", null) ?: return
         val digest = prefs.getString("pending_digest", "") ?: ""
         if (android.os.Build.VERSION.SDK_INT >= 26 && !activity.packageManager.canRequestPackageInstalls()) return
-        prefs.edit().clear().apply()
-        install(url, digest) {}
+        install(url, digest) { result ->
+            if (result == "installer") prefs.edit().clear().apply()
+        }
     }
 
     private fun download(url: String, apk: File) {
@@ -135,6 +139,7 @@ class Updater(private val activity: Activity) {
         c.readTimeout = 180000
         c.setRequestProperty("User-Agent", "Korczak-Nexus-Updater")
         c.setRequestProperty("Accept", "application/octet-stream")
+        c.setRequestProperty("X-GitHub-Api-Version", "2022-11-28")
         val code = c.responseCode
         if (code !in 200..299) {
             c.disconnect()
