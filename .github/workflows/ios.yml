@@ -1,0 +1,40 @@
+name: Build iOS
+
+on:
+  push:
+    branches: [main, feature/ios-support]
+    paths:
+      - "ios/**"
+      - ".github/workflows/ios.yml"
+  pull_request:
+    branches: [main]
+    paths:
+      - "ios/**"
+      - ".github/workflows/ios.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build-ios:
+    name: Build KZ Documents iOS
+    runs-on: macos-14
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Select Xcode
+        run: sudo xcode-select -s /Applications/Xcode_16.2.app
+
+      - name: Build simulator
+        working-directory: ios/KZDocuments
+        run: |
+          xcodebuild             -project KZDocuments.xcodeproj             -scheme KZDocuments             -sdk iphonesimulator             -configuration Debug             -destination 'generic/platform=iOS Simulator'             CODE_SIGNING_ALLOWED=NO             build
+
+      - name: Validate project
+        working-directory: ios/KZDocuments
+        run: |
+          test -f KZDocuments.xcodeproj/project.pbxproj
+          test -f KZDocuments.xcodeproj/xcshareddata/xcschemes/KZDocuments.xcscheme
+          test -f KZDocuments/Info.plist
