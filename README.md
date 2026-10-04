@@ -1,4 +1,4 @@
-# Korczak Documents
+# Korczak Nexus
 
 Sistema multiplataforma de gestão documental.
 
@@ -53,7 +53,7 @@ Sistema multiplataforma de gestão documental.
 
 ## Fase 0 — Definição e Congelamento do Projeto
 **Itens:** 1–16  
-**Objetivo:** transformar o Korczak Documents em uma especificação fechada antes da implementação.
+**Objetivo:** transformar o Korczak Nexus em uma especificação fechada antes da implementação.
 
 - escopo definitivo;
 - funcionalidades obrigatórias e futuras;
@@ -108,7 +108,7 @@ Sistema multiplataforma de gestão documental.
 **Itens:** 45–59  
 **Objetivo:** criar a persistência oficial e garantir integridade e recuperação.
 
-- MongoDB e banco KZDocs;
+- MongoDB e banco Korczak Nexuss;
 - usuários, documentos, versões, pastas, etiquetas, sessões, eventos e notificações;
 - índices;
 - referências;
@@ -763,13 +763,13 @@ O projeto só deve ser considerado 100% concluído quando os itens **1–503** e
 
 # Critério global de conclusão
 
-O Korczak Documents não deve ser considerado concluído somente porque o código foi escrito.
+O Korczak Nexus não deve ser considerado concluído somente porque o código foi escrito.
 
 O critério final é a validação dos **503 itens da checklist oficial**, cobrindo:
 
 **Planejamento → Ambiente → Estrutura → Banco → Backend → Segurança → Interface → Funcionalidades → Integração → Responsividade → Web → Desktop → Mobile → Sincronização → Testes → Segurança final → Produção → Documentação → Homologação → Release → Operação.**
 
-**Projeto:** Korczak Documents  
+**Projeto:** Korczak Nexus  
 **Checklist total:** 503 itens  
 **Fases:** 30  
 **Plataformas:** 6  
