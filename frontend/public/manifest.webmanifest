@@ -14,7 +14,7 @@
   "theme_color": "#0b0b0f",
   "categories": ["productivity", "business"],
   "icons": [
-    {"src": "./icons/nexus-icon-192.svg?v=2", "sizes": "192x192", "type": "image/svg+xml", "purpose": "any maskable"},
-    {"src": "./icons/nexus-icon-512.svg?v=2", "sizes": "512x512", "type": "image/svg+xml", "purpose": "any maskable"}
+    {"src": "./icons/nexus-icon-192.png?v=3", "sizes": "192x192", "type": "image/svg+xml", "purpose": "any maskable"},
+    {"src": "./icons/nexus-icon-512.png?v=3", "sizes": "512x512", "type": "image/svg+xml", "purpose": "any maskable"}
   ]
 }
