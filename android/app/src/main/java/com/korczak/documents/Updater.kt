@@ -12,7 +12,7 @@ import java.net.URL
 import java.security.MessageDigest
 
 class Updater(private val activity: Activity) {
-    private val repo = "korczaktech/kzdoc"
+    private val repo = "korczaktech/kz-nexus"
     private val prefsName = "nexus_updater"
     private val updateManifestUrl = "https://raw.githubusercontent.com/" + repo + "/updates/update.json"
     private val current: String by lazy {
