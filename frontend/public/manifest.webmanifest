@@ -1,0 +1,19 @@
+{
+  "name": "KZ Nexus",
+  "short_name": "KZ Nexus",
+  "description": "KZ Documents — documentos, editor e armazenamento.",
+  "lang": "pt-BR",
+  "dir": "ltr",
+  "start_url": "/kzdoc/",
+  "scope": "/kzdoc/",
+  "display": "standalone",
+  "display_override": ["window-controls-overlay", "standalone"],
+  "orientation": "portrait-primary",
+  "background_color": "#0b0b0f",
+  "theme_color": "#0b0b0f",
+  "categories": ["productivity", "business"],
+  "icons": [
+    {"src": "/kzdoc/icons/icon-192.svg", "sizes": "192x192", "type": "image/svg+xml", "purpose": "any maskable"},
+    {"src": "/kzdoc/icons/icon-512.svg", "sizes": "512x512", "type": "image/svg+xml", "purpose": "any maskable"}
+  ]
+}
