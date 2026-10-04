@@ -1,4 +1,4 @@
-const CACHE = "kz-nexus-shell-v2";
+const CACHE = "kz-nexus-shell-v3";
 const BASE = new URL("./", self.registration.scope).pathname;
 const SHELL = [
   BASE,
