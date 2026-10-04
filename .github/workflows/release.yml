@@ -17,8 +17,8 @@ jobs:
   prepare:
     runs-on: ubuntu-latest
     outputs:
-      version: \${{ steps.version.outputs.version }}
-      tag: \${{ steps.version.outputs.tag }}
+      version: ${{ steps.version.outputs.version }}
+      tag: ${{ steps.version.outputs.tag }}
     steps:
       - uses: actions/checkout@v4
       - name: Resolve release version
@@ -26,14 +26,14 @@ jobs:
         shell: bash
         run: |
           set -e
-          if [ "\$GITHUB_REF_TYPE" = "tag" ]; then
-            VERSION="\${GITHUB_REF_NAME#v}"
+          if [ "$GITHUB_REF_TYPE" = "tag" ]; then
+            VERSION="${GITHUB_REF_NAME#v}"
           else
-            VERSION="\${{ inputs.version }}"
+            VERSION="${{ inputs.version }}"
           fi
-          [[ "\$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+([.-][0-9A-Za-z.-]+)?$ ]] || { echo "Versão inválida: \$VERSION"; exit 1; }
-          echo "version=\$VERSION" >> "\$GITHUB_OUTPUT"
-          echo "tag=v\$VERSION" >> "\$GITHUB_OUTPUT"
+          [[ "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+([.-][0-9A-Za-z.-]+)?$ ]] || { echo "Versão inválida: $VERSION"; exit 1; }
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "tag=v$VERSION" >> "$GITHUB_OUTPUT"
 
   android:
     needs: prepare
@@ -46,9 +46,9 @@ jobs:
         run: |
           set -e
           WRAPPER=$(find . -type f -name gradlew -print -quit)
-          test -n "\$WRAPPER" || { echo 'Android Gradle wrapper não encontrado.'; exit 1; }
-          chmod +x "\$WRAPPER"
-          echo "wrapper=\$WRAPPER" >> "\$GITHUB_OUTPUT"
+          test -n "$WRAPPER" || { echo 'Android Gradle wrapper não encontrado.'; exit 1; }
+          chmod +x "$WRAPPER"
+          echo "wrapper=$WRAPPER" >> "$GITHUB_OUTPUT"
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
@@ -56,15 +56,15 @@ jobs:
       - uses: gradle/actions/setup-gradle@v4
       - name: Build APK
         run: |
-          cd "$(dirname '\${{ steps.gradle.outputs.wrapper }}')"
+          cd "$(dirname '${{ steps.gradle.outputs.wrapper }}')"
           ./gradlew --no-daemon assembleRelease
       - name: Prepare APK
         run: |
           set -e
           APK=$(find . -type f -path '*/build/outputs/apk/release/*.apk' -print -quit)
-          test -n "\$APK"
+          test -n "$APK"
           mkdir -p release-assets
-          cp "\$APK" "release-assets/KZ-Nexus-Android-v\${{ needs.prepare.outputs.version }}.apk"
+          cp "$APK" "release-assets/KZ-Nexus-Android-v${{ needs.prepare.outputs.version }}.apk"
       - uses: actions/upload-artifact@v4
         with:
           name: KZ-Nexus-Android
@@ -85,17 +85,17 @@ jobs:
             -configuration Release \
             -sdk iphonesimulator \
             -destination 'generic/platform=iOS Simulator' \
-            -derivedDataPath "\$RUNNER_TEMP/KZDocumentsDerivedData" \
+            -derivedDataPath "$RUNNER_TEMP/KZDocumentsDerivedData" \
             CODE_SIGNING_ALLOWED=NO \
             CODE_SIGNING_REQUIRED=NO \
             build
       - name: Package iOS Simulator artifact
         run: |
           set -e
-          APP=$(find "\$RUNNER_TEMP/KZDocumentsDerivedData/Build/Products/Release-iphonesimulator" -maxdepth 1 -name '*.app' -print -quit)
-          test -n "\$APP"
+          APP=$(find "$RUNNER_TEMP/KZDocumentsDerivedData/Build/Products/Release-iphonesimulator" -maxdepth 1 -name '*.app' -print -quit)
+          test -n "$APP"
           mkdir -p release-assets
-          ditto -c -k --sequesterRsrc --keepParent "\$APP" "release-assets/KZ-Nexus-iOS-Simulator-v\${{ needs.prepare.outputs.version }}.zip"
+          ditto -c -k --sequesterRsrc --keepParent "$APP" "release-assets/KZ-Nexus-iOS-Simulator-v${{ needs.prepare.outputs.version }}.zip"
       - uses: actions/upload-artifact@v4
         with:
           name: KZ-Nexus-iOS-Simulator
@@ -116,11 +116,11 @@ jobs:
       - name: Publish release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: \${{ needs.prepare.outputs.tag }}
-          name: KZ Nexus v\${{ needs.prepare.outputs.version }}
+          tag_name: ${{ needs.prepare.outputs.tag }}
+          name: KZ Nexus v${{ needs.prepare.outputs.version }}
           generate_release_notes: true
           body: |
-            ## KZ Nexus v\${{ needs.prepare.outputs.version }}
+            ## KZ Nexus v${{ needs.prepare.outputs.version }}
 
             ### Downloads
             - **Android:** APK pronto para instalação.
