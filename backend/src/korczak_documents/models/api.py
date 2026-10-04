@@ -172,3 +172,9 @@ class PaginatedResponse(ResponseModel):
     total: int
     page: int
     page_size: int
+
+
+class FeedbackRequest(APIModel):
+    category: str = Field(default="Geral", min_length=1, max_length=80)
+    message: str = Field(min_length=3, max_length=5000)
+    rating: int | None = Field(default=None, ge=1, le=5)
