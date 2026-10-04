@@ -43,6 +43,20 @@ async def recovery(payload: RecoveryRequest):
     return await service.request_recovery(payload.email)
 
 
+@router.post("/feedback", status_code=status.HTTP_201_CREATED)
+async def submit_feedback(payload: FeedbackRequest, user=Depends(current_user)):
+    feedback = {
+        "id": __import__("uuid").uuid4().hex,
+        "user_id": user["id"],
+        "category": payload.category.strip(),
+        "message": payload.message.strip(),
+        "rating": payload.rating,
+        "created_at": service.repo.now(),
+    }
+    await get_database()["feedbacks"].insert_one(feedback)
+    await repo.log_event(user["id"], "feedback.created", {"feedback_id": feedback["id"], "category": feedback["category"]})
+    return {"message": "Feedback enviado com sucesso"}
+
 @router.get("/users/me", response_model=UserResponse)
 async def me(user=Depends(current_user)):
     return service.clean_user(user)
