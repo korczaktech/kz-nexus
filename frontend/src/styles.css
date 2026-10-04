@@ -474,3 +474,660 @@ button:hover>.icon-svg,.button:hover>.icon-svg,.nav-item:hover>.icon-svg,.link-r
 .brand-logo.small.image-brand img{
   border-radius:13px;
 }
+
+
+/* =========================================================
+   Nexus — viewport mobile hardening
+   Mantém a mesma interface; corrige somente encaixe/responsividade.
+   ========================================================= */
+html{
+  width:100%;
+  min-width:0;
+  overflow-x:hidden;
+  -webkit-text-size-adjust:100%;
+}
+body,#root{
+  width:100%;
+  max-width:100%;
+  min-width:0;
+  overflow-x:hidden;
+}
+img,svg,video,canvas{
+  max-width:100%;
+}
+button,input,textarea,select{
+  max-width:100%;
+}
+.app-shell{
+  width:100%;
+  max-width:100vw;
+  min-width:0;
+  overflow-x:hidden;
+}
+.main-shell,
+.content,
+.panel,
+.side-card,
+.hero,
+.home-columns,
+.home-side,
+.editor-workspace,
+.editor-body,
+.editor-head,
+.editor-toolbar,
+.editor-info,
+.editor-foot{
+  min-width:0;
+  max-width:100%;
+}
+.content{
+  overflow-x:clip;
+}
+.table-wrap,
+.document-toolbar,
+.file-tabs,
+.editor-toolbar{
+  max-width:100%;
+  -webkit-overflow-scrolling:touch;
+  scrollbar-width:thin;
+}
+
+@media(max-width:760px){
+  html,body,#root{
+    min-height:100%;
+    min-height:100dvh;
+  }
+
+  .app-shell{
+    min-height:100dvh;
+  }
+
+  .main-shell{
+    width:100%;
+    margin-left:0;
+    padding-bottom:calc(82px + env(safe-area-inset-bottom));
+  }
+
+  .topbar{
+    width:100%;
+    max-width:100vw;
+    height:auto;
+    min-height:74px;
+    padding:10px 12px;
+    gap:0;
+    overflow:hidden;
+  }
+
+  .mobile-nexus-header{
+    width:100%;
+    min-width:0;
+  }
+
+  .mobile-nexus-brand{
+    min-width:0;
+    flex:1 1 auto;
+    overflow:hidden;
+  }
+
+  .mobile-nexus-brand>div:last-child{
+    min-width:0;
+    overflow:hidden;
+  }
+
+  .mobile-nexus-brand strong,
+  .mobile-nexus-brand span{
+    overflow:hidden;
+    text-overflow:ellipsis;
+    white-space:nowrap;
+  }
+
+  .mobile-nexus-actions{
+    flex:0 0 auto;
+  }
+
+  .mobile-nexus-actions button{
+    flex:0 0 40px;
+  }
+
+  .content{
+    width:100%;
+    padding:12px 10px 18px;
+  }
+
+  .page-head{
+    width:100%;
+    min-width:0;
+    gap:10px;
+    align-items:flex-start;
+    flex-wrap:wrap;
+  }
+
+  .page-head>div{
+    min-width:0;
+    max-width:100%;
+  }
+
+  .page-head h1{
+    max-width:100%;
+    overflow-wrap:anywhere;
+  }
+
+  .hero{
+    width:100%;
+    min-width:0;
+    min-height:0;
+  }
+
+  .hero-copy{
+    width:100%;
+    min-width:0;
+    padding:22px 18px 20px;
+  }
+
+  .hero h1{
+    max-width:100%;
+    font-size:clamp(26px,8vw,30px);
+    overflow-wrap:anywhere;
+  }
+
+  .hero-copy>p:not(.eyebrow){
+    max-width:100%;
+    overflow-wrap:anywhere;
+  }
+
+  .hero-points{
+    width:100%;
+    gap:8px 14px;
+  }
+
+  .quick-actions{
+    width:100%;
+    grid-template-columns:repeat(2,minmax(0,1fr));
+    gap:8px;
+  }
+
+  .quick-actions button{
+    width:100%;
+    min-width:0;
+    min-height:104px;
+    padding:11px;
+    gap:9px;
+    overflow:hidden;
+  }
+
+  .quick-actions button>div{
+    min-width:0;
+    overflow:hidden;
+  }
+
+  .quick-actions button strong,
+  .quick-actions button small{
+    display:block;
+    max-width:100%;
+    overflow-wrap:anywhere;
+  }
+
+  .quick-icon{
+    flex:0 0 42px;
+    width:42px;
+    height:42px;
+  }
+
+  .home-columns,
+  .home-side{
+    width:100%;
+    min-width:0;
+    grid-template-columns:minmax(0,1fr);
+  }
+
+  .panel,
+  .side-card,
+  .mini-card{
+    width:100%;
+    min-width:0;
+  }
+
+  .panel-head,
+  .card-title{
+    min-width:0;
+    gap:10px;
+  }
+
+  .panel-head>div,
+  .card-title>div{
+    min-width:0;
+  }
+
+  .panel-head h2,
+  .card-title h2{
+    overflow-wrap:anywhere;
+  }
+
+  .table-wrap{
+    width:100%;
+    overflow-x:auto;
+    overflow-y:hidden;
+  }
+
+  .table-wrap table{
+    min-width:620px;
+  }
+
+  .file-name{
+    max-width:240px;
+  }
+
+  .file-name strong{
+    min-width:0;
+    overflow:hidden;
+    text-overflow:ellipsis;
+    white-space:nowrap;
+  }
+
+  .document-toolbar{
+    width:100%;
+    display:flex;
+    flex-wrap:nowrap;
+    overflow-x:auto;
+    overflow-y:hidden;
+    margin:0 10px 14px;
+    padding:0 2px 5px;
+  }
+
+  .document-toolbar>*{
+    flex:0 0 auto;
+  }
+
+  .document-view{
+    width:calc(100% - 20px);
+    margin:0 10px 14px;
+    min-width:0;
+    overflow:hidden;
+    padding:15px;
+  }
+
+  .document-meta{
+    min-width:0;
+    align-items:flex-start;
+  }
+
+  .document-meta>div{
+    min-width:0;
+  }
+
+  .document-meta strong{
+    display:block;
+    overflow-wrap:anywhere;
+  }
+
+  .document-content{
+    width:100%;
+    min-width:0;
+    overflow-wrap:anywhere;
+    word-break:break-word;
+  }
+
+  .document-content .md-table{
+    overflow-x:auto;
+    white-space:pre-wrap;
+  }
+
+  .inline-form{
+    width:100%;
+    min-width:0;
+    flex-wrap:wrap;
+  }
+
+  .inline-form input{
+    min-width:0;
+    flex:1 1 150px;
+  }
+
+  .editor-workspace{
+    width:100%;
+    min-width:0;
+    min-height:calc(100dvh - 170px);
+    overflow:hidden;
+  }
+
+  .editor-head{
+    width:100%;
+    min-width:0;
+    flex-wrap:wrap;
+    padding:13px 12px;
+    gap:10px;
+  }
+
+  .editor-head>div{
+    min-width:0;
+    max-width:100%;
+  }
+
+  .editor-head>div:first-child{
+    flex:1 1 100%;
+  }
+
+  .editor-title{
+    width:100%;
+    max-width:100%;
+    min-width:0;
+    font-size:19px;
+    overflow:hidden;
+    text-overflow:ellipsis;
+  }
+
+  .editor-actions{
+    width:100%;
+    min-width:0;
+    display:grid;
+    grid-template-columns:repeat(2,minmax(0,1fr));
+  }
+
+  .editor-actions>*{
+    width:100%;
+    min-width:0;
+  }
+
+  .editor-toolbar{
+    width:100%;
+    flex-wrap:nowrap;
+    overflow-x:auto;
+    overflow-y:hidden;
+    padding:8px 9px;
+  }
+
+  .editor-toolbar>*{
+    flex:0 0 auto;
+  }
+
+  .editor-info{
+    width:100%;
+    min-width:0;
+    gap:10px;
+    overflow-x:auto;
+    white-space:nowrap;
+  }
+
+  .editor-body{
+    width:100%;
+    min-width:0;
+    grid-template-columns:minmax(0,1fr);
+  }
+
+  .editor-body textarea{
+    width:100%;
+    min-width:0;
+    min-height:52dvh;
+    max-width:100%;
+    padding:22px 17px;
+    font-size:14px;
+    overflow-x:hidden;
+    overflow-y:auto;
+  }
+
+  .editor-side{
+    width:100%;
+    min-width:0;
+    border-left:0;
+    border-top:1px solid var(--line);
+    padding:14px;
+  }
+
+  .editor-side>*{
+    min-width:0;
+    max-width:100%;
+  }
+
+  .editor-foot{
+    width:100%;
+    min-width:0;
+    flex-wrap:wrap;
+    gap:8px;
+    padding:9px 11px;
+  }
+
+  .editor-foot>*{
+    min-width:0;
+    max-width:100%;
+  }
+
+  .editor-foot-actions{
+    width:100%;
+    flex-wrap:wrap;
+  }
+
+  .advanced-grid,
+  .permission-grid{
+    width:100%;
+    min-width:0;
+    grid-template-columns:minmax(0,1fr);
+  }
+
+  .advanced-grid>*,
+  .permission-grid>*{
+    min-width:0;
+  }
+
+  .settings-list article{
+    min-width:0;
+    gap:12px;
+    flex-wrap:wrap;
+  }
+
+  .settings-storage{
+    min-width:0;
+    max-width:100%;
+  }
+
+  .card-grid{
+    grid-template-columns:repeat(2,minmax(0,1fr));
+  }
+
+  .modal-backdrop{
+    width:100%;
+    min-width:0;
+    padding:10px;
+    align-items:end;
+  }
+
+  .modal{
+    width:100%;
+    max-width:100%;
+    max-height:calc(100dvh - 20px);
+    min-width:0;
+  }
+
+  .modal header{
+    min-width:0;
+  }
+
+  .modal-form{
+    min-width:0;
+  }
+
+  .modal-form>*{
+    min-width:0;
+    max-width:100%;
+  }
+
+  .storage-gate{
+    width:100%;
+    min-width:0;
+    min-height:100dvh;
+    padding:10px;
+    align-items:end;
+  }
+
+  .storage-gate-card{
+    width:100%;
+    max-width:100%;
+    min-width:0;
+    max-height:calc(100dvh - 20px);
+    padding:21px 16px;
+  }
+
+  .storage-gate-copy h1{
+    max-width:100%;
+    font-size:clamp(23px,7vw,27px);
+    overflow-wrap:anywhere;
+  }
+
+  .storage-option{
+    width:100%;
+    min-width:0;
+    grid-template-columns:42px minmax(0,1fr) 18px;
+  }
+
+  .storage-option>span:nth-child(2){
+    min-width:0;
+  }
+
+  .storage-option strong,
+  .storage-option small{
+    overflow-wrap:anywhere;
+  }
+
+  .dashboard-foot{
+    width:100%;
+    min-width:0;
+    overflow-wrap:anywhere;
+  }
+}
+
+@media(max-width:380px){
+  .topbar{
+    padding-left:9px;
+    padding-right:9px;
+  }
+
+  .mobile-nexus-brand{
+    gap:7px;
+  }
+
+  .mobile-nexus-brand .brand-logo{
+    width:36px;
+    height:36px;
+    flex-basis:36px;
+  }
+
+  .mobile-nexus-brand strong{
+    font-size:12px;
+    letter-spacing:1px;
+  }
+
+  .mobile-nexus-brand span{
+    font-size:8px;
+    letter-spacing:2px;
+  }
+
+  .mobile-nexus-actions{
+    gap:4px;
+  }
+
+  .mobile-nexus-actions button{
+    width:37px;
+    height:37px;
+    flex-basis:37px;
+    border-radius:10px;
+  }
+
+  .mobile-nexus-actions button .icon-svg{
+    width:17px;
+    height:17px;
+  }
+
+  .mobile-nexus-actions .avatar{
+    width:27px;
+    height:27px;
+  }
+
+  .content{
+    padding-left:8px;
+    padding-right:8px;
+  }
+
+  .quick-actions{
+    gap:7px;
+  }
+
+  .quick-actions button{
+    min-height:100px;
+    padding:9px;
+    gap:7px;
+  }
+
+  .quick-icon{
+    flex-basis:36px;
+    width:36px;
+    height:36px;
+  }
+
+  .quick-actions button strong{
+    font-size:11px;
+  }
+
+  .quick-actions button small{
+    font-size:9px;
+  }
+
+  .mobile-nexus-bottom{
+    padding-left:4px;
+    padding-right:4px;
+  }
+
+  .mobile-nexus-bottom button{
+    font-size:9px;
+  }
+
+  .mobile-nexus-bottom button:nth-child(3){
+    width:54px;
+    height:54px;
+  }
+
+  .card-grid{
+    grid-template-columns:minmax(0,1fr);
+  }
+
+  .editor-actions{
+    grid-template-columns:minmax(0,1fr);
+  }
+
+  .editor-title{
+    font-size:17px;
+  }
+}
+
+@media(orientation:landscape) and (max-width:900px){
+  .main-shell{
+    padding-bottom:calc(72px + env(safe-area-inset-bottom));
+  }
+
+  .topbar{
+    min-height:66px;
+  }
+
+  .hero{
+    min-height:210px;
+  }
+
+  .hero-copy{
+    padding:18px;
+  }
+
+  .editor-body textarea{
+    min-height:55dvh;
+  }
+
+  .mobile-nexus-bottom{
+    height:66px;
+    padding-top:5px;
+  }
+
+  .mobile-nexus-bottom button{
+    height:54px;
+  }
+
+  .mobile-nexus-bottom button:nth-child(3){
+    margin-top:-8px;
+  }
+}
