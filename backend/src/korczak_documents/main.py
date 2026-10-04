@@ -22,7 +22,7 @@ app = FastAPI(title=settings.app_name, version="0.3.0", description="API do Korc
 configured_origin = settings.frontend_url.rstrip("/") if settings.frontend_url else ""
 allowed_origins = [origin for origin in {
     configured_origin,
-    "https://korczaktechnology-tech.github.io",
+    "https://korczaktech.github.io",
 } if origin]
 app.add_middleware(
     CORSMiddleware,
