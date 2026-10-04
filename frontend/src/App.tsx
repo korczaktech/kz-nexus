@@ -33,8 +33,8 @@ function StoragePicker({onComplete,allowClose=false}:{onComplete:(provider:Stora
         :Boolean(import.meta.env.VITE_ONEDRIVE_CLIENT_ID);
       if(!configured){
         setError(provider==='google-drive'
-          ?'O Google Drive ainda precisa ser configurado pelo administrador do KZDoc. A opção já está preparada para OAuth.'
-          :'O OneDrive ainda precisa ser configurado pelo administrador do KZDoc. A opção já está preparada para OAuth.');
+          ?'O Google Drive ainda precisa ser configurado pelo administrador do Korczak Nexus. A opção já está preparada para OAuth.'
+          :'O OneDrive ainda precisa ser configurado pelo administrador do Korczak Nexus. A opção já está preparada para OAuth.');
         return;
       }
       const selection={provider,label:storageLabel(provider),connectedAt:new Date().toISOString()};
@@ -51,7 +51,7 @@ function StoragePicker({onComplete,allowClose=false}:{onComplete:(provider:Stora
       <div className="storage-gate-copy">
         <span className="storage-gate-eyebrow">PRIMEIRO ACESSO</span>
         <h1 id="storage-gate-title">Onde deseja armazenar seus documentos?</h1>
-        <p>Escolha o armazenamento principal do KZDoc. Você poderá alterar essa opção depois em Configurações.</p>
+        <p>Escolha o armazenamento principal do Korczak Nexus. Você poderá alterar essa opção depois em Configurações.</p>
       </div>
       <div className="storage-options">
         <button className="storage-option" onClick={()=>select('local')} disabled={!!busy}>
@@ -61,19 +61,19 @@ function StoragePicker({onComplete,allowClose=false}:{onComplete:(provider:Stora
         </button>
         <button className="storage-option" onClick={()=>select('google-drive')} disabled={!!busy}>
           <span className="storage-option-icon cloud"><Icon name="cloud"/></span>
-          <span><strong>Google Drive</strong><small>Use seu Google Drive como armazenamento do KZDoc.</small></span>
+          <span><strong>Google Drive</strong><small>Use seu Google Drive como armazenamento do Korczak Nexus.</small></span>
           <Icon name="arrowRight" size={18}/>
         </button>
         <button className="storage-option" onClick={()=>select('onedrive')} disabled={!!busy}>
           <span className="storage-option-icon cloud"><Icon name="cloud"/></span>
-          <span><strong>OneDrive</strong><small>Use seu Microsoft OneDrive como armazenamento do KZDoc.</small></span>
+          <span><strong>OneDrive</strong><small>Use seu Microsoft OneDrive como armazenamento do Korczak Nexus.</small></span>
           <Icon name="arrowRight" size={18}/>
         </button>
       </div>
       {busy&&<p className="storage-gate-status">Preparando {storageLabel(busy)}…</p>}
       {error&&<div className="storage-gate-error">{error}</div>}
       {allowClose&&<button className="storage-gate-later" onClick={()=>onComplete(getStorageSelection()?.provider||'local')}>Continuar com a configuração atual</button>}
-      <small className="storage-gate-foot">A escolha é salva neste navegador/dispositivo. O KZDoc não acessa arquivos sem sua autorização.</small>
+      <small className="storage-gate-foot">A escolha é salva neste navegador/dispositivo. O Korczak Nexus não acessa arquivos sem sua autorização.</small>
     </div>
   </div>
 }
@@ -117,7 +117,7 @@ function Home({user,docs,notes,onNew,onSelect,onAction,setView}:{user:User;docs:
   
   return <>
     <section className="hero">
-      <div className="hero-copy"><p className="eyebrow">KORCZAK DOCUMENTS</p><h1>Seus documentos,<br/><span>sempre organizados.</span></h1><p>Armazene, compartilhe e gerencie seus arquivos com segurança e praticidade. Tudo o que você precisa, em um só lugar.</p>
+      <div className="hero-copy"><p className="eyebrow">KORCZAK NEXUS</p><h1>Seus documentos,<br/><span>sempre organizados.</span></h1><p>Armazene, compartilhe e gerencie seus arquivos com segurança e praticidade. Tudo o que você precisa, em um só lugar.</p>
       <div className="hero-points"><span><Icon name="shield" size={15}/> Seguro</span><span><Icon name="clock" size={15}/> Rápido</span><span><Icon name="folder" size={15}/> Organizado</span><span><Icon name="cloud" size={15}/> Sempre disponível</span></div></div>
       <div className="hero-art" aria-hidden="true"><div className="mountain mountain-one"/><div className="mountain mountain-two"/><div className="beam"/></div>
     </section>
@@ -135,7 +135,7 @@ function Home({user,docs,notes,onNew,onSelect,onAction,setView}:{user:User;docs:
         <section className="side-card"><div className="card-title"><h2>Links rápidos</h2></div><button className="link-row" onClick={()=>setView('folders')}><Icon name="folder"/> <span>Pastas</span><Icon name="chevronRight" size={15}/></button><button className="link-row" onClick={()=>setView('favorites')}><Icon name="star"/> <span>Documentos favoritos</span><Icon name="chevronRight" size={15}/></button><button className="link-row" onClick={()=>setView('documents')}><Icon name="file"/> <span>Todos os documentos</span><Icon name="chevronRight" size={15}/></button><button className="link-row" onClick={()=>setView('trash')}><Icon name="trash"/> <span>Lixeira</span><Icon name="chevronRight" size={15}/></button></section>
       </div>
     </div>
-    <div className="dashboard-foot"><span><Icon name="shield"/> Seus dados são protegidos por autenticação e controle de acesso.</span><span>Korczak Technologies&nbsp; • &nbsp;Korczak Documents v1.0.0</span></div>
+    <div className="dashboard-foot"><span><Icon name="shield"/> Seus dados são protegidos por autenticação e controle de acesso.</span><span>Korczak Technologies&nbsp; • &nbsp;Korczak Nexus v1.0.0</span></div>
   </>
 }
 
@@ -188,9 +188,9 @@ function App(){
   }
   async function createDocument(e:FormEvent<HTMLFormElement>){e.preventDefault();const f=new FormData(e.currentTarget);try{const d=await api.createDocument({name:String(f.get('name')),document_type:String(f.get('type')),description:String(f.get('description')||''),folder_id:String(f.get('folder')||'')||null,content:String(f.get('content')||'')});setModal(false);setSelected(await api.document(d.id));setView('viewer')}catch(x){setError(x instanceof Error?x.message:'Não foi possível criar.')}}
   async function restoreVersion(v:Version){if(!selected)return;try{await api.restoreVersion(selected.id,v.id);setSelected(await api.document(selected.id));setVersions(await api.versions(selected.id));setView('viewer')}catch(x){setError(x instanceof Error?x.message:'Não foi possível restaurar a versão.')}}
-  if(boot)return <StatePanel title="Iniciando" message="Preparando o Korczak Documents…"/>; if(!user)return <Auth done={setUser}/>;
+  if(boot)return <StatePanel title="Iniciando" message="Preparando o Korczak Nexus…"/>; if(!user)return <Auth done={setUser}/>;
 
-  const title=nav.concat(secondary).find(n=>n[0]===view)?.[1]||'Korczak Documents';
+  const title=nav.concat(secondary).find(n=>n[0]===view)?.[1]||'Korczak Nexus';
   const action=async(d:DocumentItem)=>{try{if(d.status==='deleted')await api.restore(d.id);else await api.favorite(d.id,!d.favorite);await load(view)}catch(x){setError(x instanceof Error?x.message:'Operação não concluída.')}};
 
   return <div className="app-shell">
@@ -224,7 +224,7 @@ function App(){
         <button className={['settings','profile','users','groups','audit','advanced-search','search'].includes(view)?'active':''} onClick={()=>setView('settings')}><Icon name="gridMenu"/><span>Mais</span></button>
       </nav>
       <main className="content">
-        {view!=='home'&&<div className="page-head"><div><p className="eyebrow">KORCZAK DOCUMENTS</p><h1>{title}</h1></div>{(view==='documents'||view==='folders')&&<Button onClick={()=>{setEditingFolder(null);setModal(true)}}><Icon name="plus"/>{view==='folders'?'Nova pasta':'Novo documento'}</Button>}</div>}
+        {view!=='home'&&<div className="page-head"><div><p className="eyebrow">KORCZAK NEXUS</p><h1>{title}</h1></div>{(view==='documents'||view==='folders')&&<Button onClick={()=>{setEditingFolder(null);setModal(true)}}><Icon name="plus"/>{view==='folders'?'Nova pasta':'Novo documento'}</Button>}</div>}
         {error&&<div className="alert alert-error">{error}<button onClick={()=>load(view)}>Tentar novamente</button></div>}
         {view==='home'&&<Home user={user} docs={docs} notes={notes} onNew={()=>setModal(true)} onSelect={openDoc} onAction={action} setView={setView}/>}
         {(view==='documents'||view==='favorites'||view==='recent'||view==='search')&&<Section title={title} actions={view==='search'?<Button variant="secondary" onClick={()=>setView('advanced-search')}>Pesquisa avançada</Button>:undefined}><DocumentTable docs={docs} onSelect={openDoc} onAction={action}/></Section>}
