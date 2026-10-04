@@ -2,7 +2,17 @@
   "name": "KZ Nexus",
   "short_name": "KZ Nexus",
   "description": "Korczak Nexus — documentos, editor e armazenamento.",
+  "lang": "pt-BR",
+  "dir": "ltr",
   "id": "./",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "display_override": ["window-controls-overlay", "standalone"],
+  "orientation": "portrait-primary",
+  "background_color": "#0b0b0f",
+  "theme_color": "#0b0b0f",
+  "categories": ["productivity", "business"],
   "icons": [
     {"src": "./icons/nexus-icon-192.svg?v=2", "sizes": "192x192", "type": "image/svg+xml", "purpose": "any maskable"},
     {"src": "./icons/nexus-icon-512.svg?v=2", "sizes": "512x512", "type": "image/svg+xml", "purpose": "any maskable"}
