@@ -305,3 +305,55 @@ body{background:radial-gradient(circle at 75% 0%,rgba(52,80,170,.12),transparent
  .storage-option-icon{width:40px;height:40px}
  .settings-storage{align-items:flex-start;justify-content:space-between}
 }
+
+/* Editor visual language — circular Nexus controls */
+.editor-workspace .icon-svg{flex:0 0 auto;stroke-width:1.75;stroke-linecap:round;stroke-linejoin:round}
+.editor-toolbar{gap:6px;padding:10px 14px;align-items:center;scrollbar-width:thin}
+.editor-toolbar .editor-select{height:34px;border:1px solid #263b58;background:#091727;color:#d9e5f4;border-radius:999px;padding:0 12px;font-size:11px;box-shadow:inset 0 0 0 1px rgba(255,255,255,.02);transition:border-color .18s,background .18s,box-shadow .18s}
+.editor-toolbar .editor-select:hover,.editor-toolbar .editor-select:focus{border-color:#536cff;background:#0c1b2e;box-shadow:0 0 0 3px rgba(83,108,255,.10);outline:none}
+.editor-toolbar .editor-tool,.editor-toolbar .editor-labeled{min-width:auto;height:34px;padding:0 10px;border:1px solid transparent;border-radius:999px;background:transparent;color:#91a4bd;display:inline-flex;align-items:center;justify-content:center;gap:7px;font-size:10px;font-weight:600;white-space:nowrap;transition:background .18s,border-color .18s,color .18s,transform .18s}
+.editor-toolbar .editor-tool:hover:not(:disabled){background:#10213a;border-color:#29415f;color:#eef5ff;transform:translateY(-1px)}
+.editor-toolbar .editor-tool:active:not(:disabled){transform:scale(.97)}
+.editor-toolbar .editor-tool .icon-svg{width:16px;height:16px}
+.editor-toolbar .toolbar-separator{height:22px;width:1px;background:#263852;margin:0 3px}
+.editor-head .editor-secondary,.editor-head .editor-save,.editor-foot .editor-secondary,.editor-file-action{display:inline-flex;align-items:center;justify-content:center;gap:7px;border-radius:999px;min-height:34px}
+.editor-head .editor-secondary{background:#0b1727;border-color:#263b58}
+.editor-head .editor-secondary:hover,.editor-foot .editor-secondary:hover,.editor-file-action:hover{border-color:#536cff;background:#10213a;color:#edf4ff}
+.editor-head .editor-save{box-shadow:0 8px 24px rgba(64,80,212,.24)}
+.editor-title{border-radius:999px;padding:4px 10px;margin-left:-10px;transition:background .18s,border-color .18s}
+.editor-title:focus{background:#091727;box-shadow:0 0 0 1px #30486a}
+.editor-info{align-items:center}
+.editor-zoom{gap:6px}
+.editor-zoom-label{display:inline-flex;align-items:center;gap:5px;color:#7186a1}
+.editor-zoom button{display:inline-grid;place-items:center;border:1px solid #263b58;background:#091727;color:#aabbd0;border-radius:50%;width:28px;height:28px;padding:0;transition:.18s}
+.editor-zoom button:hover{border-color:#536cff;background:#10213a;color:#fff}
+.editor-side{gap:14px}
+.editor-side label{color:#91a5be}
+.editor-side select,.editor-side input,.editor-side textarea{width:100%;min-height:36px;box-sizing:border-box;border:1px solid #263b58;background:#091727;color:#d9e5f4;border-radius:999px;padding:0 12px;outline:none;transition:border-color .18s,box-shadow .18s,background .18s}
+.editor-side select:focus,.editor-side input:focus,.editor-side textarea:focus{border-color:#6174ff;box-shadow:0 0 0 3px rgba(97,116,255,.10);background:#0b1a2d}
+.editor-file-action{padding:8px 12px;cursor:pointer;font-size:10px}
+.editor-folder-name{border:1px solid #223750;border-radius:999px;background:#091727;color:#c5d3e5;padding:8px 10px;display:flex;align-items:center;gap:7px}
+.editor-folder-name span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.editor-folder-name button{width:24px;height:24px;border-radius:50%;display:grid;place-items:center;margin-left:auto}
+.editor-file-item{border:1px solid transparent;border-radius:999px;padding:8px 10px;gap:8px}
+.editor-file-item:hover,.editor-file-item.active{background:rgba(83,108,255,.13);border-color:#304a70}
+.editor-file-error{border:1px solid rgba(239,104,120,.25);border-radius:12px}
+.editor-side-divider{margin:4px 0 2px}
+.editor-foot{align-items:center}
+.editor-foot-actions{gap:9px;align-items:center}
+.editor-workspace input:not(.editor-title),.editor-workspace select,.editor-workspace textarea{font-family:inherit}
+@media(max-width:850px){
+ .editor-toolbar .editor-tool{padding:0 9px}
+ .editor-toolbar .editor-tool span{display:inline}
+ .editor-head .editor-secondary,.editor-head .editor-save{flex:1}
+ .editor-side select{border-radius:14px}
+}
+@media(max-width:520px){
+ .editor-toolbar{padding:9px 10px}
+ .editor-toolbar .editor-tool{padding:0 9px}
+ .editor-toolbar .editor-tool span{font-size:9px}
+ .editor-toolbar .editor-select.font-family{width:110px}
+ .editor-toolbar .editor-select.font-size{width:62px}
+ .editor-head .editor-secondary,.editor-head .editor-save{min-height:36px}
+ .editor-zoom-label span{display:none}
+}
