@@ -14,7 +14,7 @@ settings = get_settings()
 configure_logging(settings)
 logger = get_logger(__name__)
 
-app = FastAPI(title=settings.app_name, version="0.3.0", description="API do Korczak Documents.")
+app = FastAPI(title=settings.app_name, version="0.3.0", description="API do Korczak Nexus.")
 
 # Produção: o frontend é publicado no GitHub Pages. Mantemos também a
 # origem configurada por ambiente para permitir mudanças de domínio sem
