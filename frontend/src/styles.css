@@ -417,3 +417,60 @@ button:hover>.icon-svg,.button:hover>.icon-svg,.nav-item:hover>.icon-svg,.link-r
 .sidebar-footer strong{letter-spacing:.12em;font-size:10px;}
 .sidebar-footer span{display:block;margin-top:5px;font-size:11px;opacity:.55;}
 @media(max-width:850px){.sidebar .nav-item{min-height:46px!important;border-radius:14px!important}.sidebar-icon{width:34px;height:34px;flex-basis:34px;}}
+
+
+/* Nexus iconography v2 — the glyph itself carries the identity; containers no longer fake the icon with circles */
+.sidebar .sidebar-icon{
+  width:34px!important;
+  height:34px!important;
+  flex:0 0 34px!important;
+  border-radius:12px!important;
+  background:rgba(255,255,255,.025)!important;
+  border:1px solid rgba(255,255,255,.06)!important;
+}
+.sidebar .nav-item:hover .sidebar-icon{
+  border-radius:13px!important;
+  background:rgba(139,124,255,.09)!important;
+}
+.sidebar .nav-item.active .sidebar-icon{
+  border-radius:13px!important;
+  background:rgba(139,124,255,.12)!important;
+}
+.quick-icon{
+  border-radius:14px!important;
+}
+.activity-icon{
+  border-radius:13px!important;
+}
+.storage-option-icon{
+  border-radius:13px!important;
+}
+.folder-icon{
+  border-radius:13px!important;
+}
+.file-type{
+  border-radius:11px!important;
+}
+
+/* The supplied Nexus mark is the brand mark, not a letter inside a decorative badge. */
+.brand-logo.image-brand{
+  padding:0!important;
+  border-radius:18px!important;
+  background:transparent!important;
+  border:0!important;
+  box-shadow:none!important;
+  overflow:hidden!important;
+}
+.brand-logo.image-brand img{
+  display:block;
+  width:100%;
+  height:100%;
+  object-fit:cover;
+  border-radius:18px;
+}
+.brand-logo.small.image-brand{
+  border-radius:13px!important;
+}
+.brand-logo.small.image-brand img{
+  border-radius:13px;
+}
