@@ -394,3 +394,26 @@ button:hover>.icon-svg,.button:hover>.icon-svg,.nav-item:hover>.icon-svg,.link-r
 .app-shell .table-wrap{border-radius:var(--nexus-radius-md);overflow:auto;border:1px solid var(--nexus-line);}
 .app-shell .tag,.app-shell .status{border-radius:999px;}
 @media(max-width:850px){.app-shell .panel,.app-shell .side-card,.app-shell .mini-card,.app-shell .hero,.app-shell .quick-actions>button{border-radius:22px}.app-shell .button{min-height:44px}.app-shell input,.app-shell select,.app-shell textarea{min-height:44px;}}
+
+
+/* Sidebar redesign — circular Nexus navigation */
+.sidebar{background:linear-gradient(180deg,rgba(15,17,24,.98),rgba(11,13,19,.98));border-right:1px solid rgba(255,255,255,.08);}
+.side-brand{gap:12px!important;padding:22px 18px!important;}
+.brand-logo{width:46px!important;height:46px!important;border-radius:50%!important;display:flex!important;align-items:center!important;justify-content:center!important;background:radial-gradient(circle at 35% 30%,rgba(139,124,255,.34),rgba(139,124,255,.08) 58%,rgba(255,255,255,.03));border:1px solid rgba(139,124,255,.34);box-shadow:0 10px 30px rgba(0,0,0,.22),inset 0 1px 0 rgba(255,255,255,.08);color:#b9b1ff;}
+.brand-logo .icon-svg{width:24px;height:24px;stroke-width:1.7;}
+.side-nav{gap:7px!important;}
+.nav-label{margin:22px 14px 8px!important;letter-spacing:.16em!important;font-size:10px!important;opacity:.58;}
+.sidebar .nav-item{position:relative!important;min-height:48px!important;padding:6px 12px!important;border:1px solid transparent!important;border-radius:16px!important;background:transparent!important;color:rgba(255,255,255,.68)!important;gap:11px!important;transition:background .2s ease,border-color .2s ease,color .2s ease,transform .2s ease!important;}
+.sidebar .nav-item::before{content:"";position:absolute;left:-1px;top:10px;bottom:10px;width:3px;border-radius:999px;background:transparent;transition:background .2s ease,transform .2s ease;}
+.sidebar .nav-item:hover{background:rgba(255,255,255,.045)!important;border-color:rgba(255,255,255,.07)!important;color:#fff!important;transform:translateX(2px);}
+.sidebar .nav-item.active{background:linear-gradient(100deg,rgba(139,124,255,.16),rgba(139,124,255,.045))!important;border-color:rgba(139,124,255,.2)!important;color:#fff!important;box-shadow:inset 0 1px 0 rgba(255,255,255,.04);}
+.sidebar .nav-item.active::before{background:#9a8dff;box-shadow:0 0 14px rgba(139,124,255,.7);}
+.sidebar-icon{width:36px;height:36px;flex:0 0 36px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;color:rgba(255,255,255,.62);background:rgba(255,255,255,.035);border:1px solid rgba(255,255,255,.07);transition:background .2s ease,border-color .2s ease,color .2s ease,transform .2s ease,box-shadow .2s ease;}
+.sidebar-icon .icon-svg{width:18px;height:18px;stroke-width:1.8;}
+.sidebar .nav-item:hover .sidebar-icon{color:#fff;background:rgba(139,124,255,.1);border-color:rgba(139,124,255,.22);transform:scale(1.05);}
+.sidebar .nav-item.active .sidebar-icon{color:#bdb5ff;background:rgba(139,124,255,.14);border-color:rgba(139,124,255,.34);box-shadow:0 5px 18px rgba(139,124,255,.12);}
+.nav-text{font-size:13px;font-weight:600;letter-spacing:-.01em;}
+.sidebar-footer{margin:14px 10px!important;padding:15px 14px!important;border:1px solid rgba(255,255,255,.07);border-radius:20px!important;background:rgba(255,255,255,.025);}
+.sidebar-footer strong{letter-spacing:.12em;font-size:10px;}
+.sidebar-footer span{display:block;margin-top:5px;font-size:11px;opacity:.55;}
+@media(max-width:850px){.sidebar .nav-item{min-height:46px!important;border-radius:14px!important}.sidebar-icon{width:34px;height:34px;flex-basis:34px;}}
