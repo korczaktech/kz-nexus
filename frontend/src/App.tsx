@@ -4,6 +4,7 @@ import {Button, Icon, Modal, StatePanel} from './components/ui';
 import {Editor, markdownToHtml} from './components/Editor';
 import {ApiError} from './services/api';
 import {chooseLocalFolder, getStorageSelection, saveStorageSelection, storageLabel, type StorageProvider} from './services/storage';
+import nexusLogo from './assets/nexus-header-logo.webp';
 
 type View='home'|'documents'|'viewer'|'editor'|'create'|'history'|'versions'|'folders'|'favorites'|'recent'|'trash'|'search'|'advanced-search'|'profile'|'users'|'groups'|'permissions'|'folder-permissions'|'audit'|'admin'|'settings';
 
@@ -47,7 +48,7 @@ function StoragePicker({onComplete,allowClose=false}:{onComplete:(provider:Stora
   }
   return <div className="storage-gate" role="dialog" aria-modal="true" aria-labelledby="storage-gate-title">
     <div className="storage-gate-card">
-      <div className="storage-gate-brand"><div className="brand-logo">KZ</div><div><strong>KORCZAK</strong><span>DOCUMENTS</span></div></div>
+      <div className="storage-gate-brand"><div className="brand-logo image-brand"><img src={nexusLogo} alt="" /></div><div><strong>KORCZAK</strong><span>NEXUS</span></div></div>
       <div className="storage-gate-copy">
         <span className="storage-gate-eyebrow">PRIMEIRO ACESSO</span>
         <h1 id="storage-gate-title">Onde deseja armazenar seus documentos?</h1>
@@ -89,7 +90,7 @@ function Auth({done}:{done:(u:User)=>void}){
     }catch(x){setError(x instanceof Error?x.message:'Não foi possível concluir.')}
   }
   return <main className="auth-shell"><section className="auth-card">
-    <div className="brand-lockup"><div className="brand-logo">KZ</div><div><strong>KORCZAK</strong><span>DOCUMENTS</span></div></div>
+    <div className="brand-lockup"><div className="brand-logo image-brand"><img src={nexusLogo} alt="" /></div><div><strong>KORCZAK</strong><span>NEXUS</span></div></div>
     <p className="eyebrow">KORCZAK TECHNOLOGIES</p><h1>{recovery?'Recupere seu acesso':register?'Crie sua conta':'Bem-vindo de volta'}</h1>
     <p className="auth-subtitle">{recovery?'Informe seu e-mail para receber as instruções.':'Gerencie seus documentos com organização, segurança e praticidade.'}</p>
     {error&&<div className="alert alert-error">{error}</div>}{message&&<div className="alert">{message}</div>}
@@ -195,7 +196,7 @@ function App(){
 
   return <div className="app-shell">
     <aside className="sidebar">
-      <div className="side-brand"><div className="brand-logo"><Icon name="nexusHome" size={24}/></div><div><strong>KORCZAK</strong><span>NEXUS</span></div></div>
+      <div className="side-brand"><div className="brand-logo image-brand"><img src={nexusLogo} alt="" /></div><div><strong>KORCZAK</strong><span>NEXUS</span></div></div>
       <nav className="side-nav">{nav.map(n=><button className={'nav-item '+(view===n[0]?'active':'')} onClick={()=>setView(n[0])} key={n[0]}><span className="sidebar-icon"><Icon name={n[2]}/></span><span className="nav-text">{n[1]}</span></button>)}</nav>
       {(user.role==='admin'||user.role==='manager')&&<><div className="nav-label">ADMINISTRAÇÃO</div><nav className="side-nav"><button className={'nav-item '+(view==='users'?'active':'')} onClick={()=>setView('users')}><span className="sidebar-icon"><Icon name="users"/></span><span className="nav-text">Usuários</span></button><button className={'nav-item '+(view==='groups'?'active':'')} onClick={()=>setView('groups')}><span className="sidebar-icon"><Icon name="gridMenu"/></span><span className="nav-text">Grupos</span></button></nav></>}
       <div className="nav-label">PESQUISA</div><nav className="side-nav"><button className={'nav-item '+(view==='search'?'active':'')} onClick={()=>setView('search')}><span className="sidebar-icon"><Icon name="search"/></span><span className="nav-text">Pesquisa rápida</span></button><button className={'nav-item '+(view==='advanced-search'?'active':'')} onClick={()=>setView('advanced-search')}><span className="sidebar-icon"><Icon name="scan"/></span><span className="nav-text">Pesquisa avançada</span></button></nav>
@@ -205,14 +206,14 @@ function App(){
     <div className="main-shell">
       <header className="topbar">
         <div className="mobile-nexus-header">
-          <div className="mobile-nexus-brand"><div className="brand-logo small">KZ</div><div><strong>KORCZAK</strong><span>NEXUS</span></div></div>
+          <div className="mobile-nexus-brand"><div className="brand-logo small image-brand"><img src={nexusLogo} alt="" /></div><div><strong>KORCZAK</strong><span>NEXUS</span></div></div>
           <div className="mobile-nexus-actions">
             <button aria-label="Pesquisar" onClick={()=>setView('search')}><Icon name="search"/></button>
             <button aria-label="Notificações" onClick={()=>setView('home')} className="mobile-notify"><Icon name="cloud"/>{notes.some(n=>!n.read)&&<i/>}</button>
             <button aria-label="Minha conta" onClick={()=>setView('profile')}><span className="avatar">{user.name[0]}</span></button>
           </div>
         </div>
-        <div className="mobile-brand"><div className="brand-logo small">KZ</div><strong>KORCZAK <span>DOCUMENTS</span></strong></div>
+        <div className="mobile-brand"><div className="brand-logo small image-brand"><img src={nexusLogo} alt="" /></div><strong>KORCZAK <span>NEXUS</span></strong></div>
         <div className="top-search"><Icon name="search"/><input value={query} onChange={async e=>{const q=e.target.value;setQuery(q);setView('search');try{if(q.trim())setDocs((await api.search(q)).items);else setDocs(await api.documents())}catch(x){setError(x instanceof Error?x.message:'Não foi possível pesquisar.')}}} placeholder="Buscar documentos, pastas, projetos…"/><kbd>Ctrl + K</kbd></div>
         <div className="top-actions"><button aria-label="Notificações" onClick={()=>setView('home')} className="top-icon"><Icon name="cloud"/>{notes.some(n=>!n.read)&&<i/>}</button><button aria-label="Alternar tema" onClick={()=>setTheme(theme==='dark'?'light':'dark')} className="top-icon"><Icon name="settings"/></button><div className="top-user" onClick={()=>setView('profile')}><span className="avatar">{user.name[0]}</span><div><strong>{user.name}</strong><small>{user.role==='admin'?'Administrador':user.role==='manager'?'Gestor':'Usuário'}</small></div><span><Icon name="chevronDown" size={15}/></span></div></div>
       </header>
