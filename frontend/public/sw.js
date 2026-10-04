@@ -1,5 +1,5 @@
 const CACHE = "kz-nexus-shell-v1";
-const BASE = "/kzdoc/";
+const BASE = new URL("./", self.registration.scope).pathname;
 const SHELL = [
   BASE,
   BASE + "manifest.webmanifest",
