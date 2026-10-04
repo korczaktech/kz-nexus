@@ -1,10 +1,14 @@
 import {FormEvent, ReactNode, useEffect, useState} from 'react';
+import packageJson from '../package.json';
 import {api, clearToken, getToken, saveSession, type DocumentItem, type Event, type Folder, type Group, type Notification, type User, type Version} from './services/api';
 import {Button, Icon, Modal, StatePanel} from './components/ui';
 import {Editor, markdownToHtml} from './components/Editor';
 import {ApiError} from './services/api';
 import {chooseLocalFolder, getStorageSelection, saveStorageSelection, storageLabel, type StorageProvider} from './services/storage';
 const nexusLogo = `${import.meta.env.BASE_URL}icons/favicon-nexus.svg?v=2`;
+const NEXUS_WEB_VERSION = String(packageJson.version);
+function versionParts(value:string){return value.replace(/^v/i,'').split('.').map(part=>Number.parseInt(part,10)||0)}
+function compareVersions(a:string,b:string){const aa=versionParts(a),bb=versionParts(b);for(let i=0;i<3;i++){if((aa[i]||0)!==(bb[i]||0))return (aa[i]||0)>(bb[i]||0)?1:-1}return 0}
 
 type View='home'|'documents'|'viewer'|'editor'|'create'|'history'|'versions'|'folders'|'favorites'|'recent'|'trash'|'search'|'advanced-search'|'profile'|'users'|'groups'|'permissions'|'folder-permissions'|'audit'|'admin'|'settings';
 
@@ -136,7 +140,7 @@ function Home({user,docs,notes,onNew,onSelect,onAction,setView}:{user:User;docs:
         <section className="side-card"><div className="card-title"><h2>Links rápidos</h2></div><button className="link-row" onClick={()=>setView('folders')}><Icon name="folder"/> <span>Pastas</span><Icon name="chevronRight" size={15}/></button><button className="link-row" onClick={()=>setView('favorites')}><Icon name="star"/> <span>Documentos favoritos</span><Icon name="chevronRight" size={15}/></button><button className="link-row" onClick={()=>setView('documents')}><Icon name="file"/> <span>Todos os documentos</span><Icon name="chevronRight" size={15}/></button><button className="link-row" onClick={()=>setView('trash')}><Icon name="trash"/> <span>Lixeira</span><Icon name="chevronRight" size={15}/></button></section>
       </div>
     </div>
-    <div className="dashboard-foot"><span><Icon name="shield"/> Seus dados são protegidos por autenticação e controle de acesso.</span><span>Korczak Technologies&nbsp; • &nbsp;Korczak Nexus v1.0.0</span></div>
+    <div className="dashboard-foot"><span><Icon name="shield"/> Seus dados são protegidos por autenticação e controle de acesso.</span><span>Korczak Technologies&nbsp; • &nbsp;Korczak Nexus v{NEXUS_WEB_VERSION}</span></div>
   </>
 }
 
