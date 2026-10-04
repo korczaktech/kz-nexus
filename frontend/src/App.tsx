@@ -151,11 +151,11 @@ function App(){
         <div className="top-actions"><button aria-label="Notificações" onClick={()=>setView('home')} className="top-icon"><Icon name="cloud"/>{notes.some(n=>!n.read)&&<i/>}</button><button aria-label="Alternar tema" onClick={()=>setTheme(theme==='dark'?'light':'dark')} className="top-icon"><Icon name="settings"/></button><div className="top-user" onClick={()=>setView('profile')}><span className="avatar">{user.name[0]}</span><div><strong>{user.name}</strong><small>{user.role==='admin'?'Administrador':user.role==='manager'?'Gestor':'Usuário'}</small></div><span><Icon name="chevronDown" size={15}/></span></div></div>
       </header>
       <nav className="mobile-nexus-bottom" aria-label="Navegação principal">
-        <button className={view==='home'?'active':''} onClick={()=>setView('home')}><Icon name="home"/><span>Início</span></button>
-        <button className={['documents','folders','favorites','recent','trash'].includes(view)?'active':''} onClick={()=>setView('documents')}><Icon name="folder"/><span>Arquivos</span></button>
-        <button className={view==='create'?'active':''} onClick={()=>setModal(true)}><Icon name="plus"/><span>Novo</span></button>
-        <button className={view==='editor'?'active':''} onClick={()=>setView('editor')}><Icon name="edit"/><span>Editor</span></button>
-        <button className={['settings','profile','users','groups','audit','advanced-search','search'].includes(view)?'active':''} onClick={()=>setView('settings')}><Icon name="menu"/><span>Mais</span></button>
+        <button className={view==='home'?'active':''} onClick={()=>setView('home')}><Icon name="nexusHome"/><span>Início</span></button>
+        <button className={['documents','folders','favorites','recent','trash'].includes(view)?'active':''} onClick={()=>setView('documents')}><Icon name="folderOpen"/><span>Arquivos</span></button>
+        <button className={view==='create'?'active':''} onClick={()=>setModal(true)}><Icon name="plusCircle"/><span>Novo</span></button>
+        <button className={view==='editor'?'active':''} onClick={()=>setView('editor')}><Icon name="editSquare"/><span>Editor</span></button>
+        <button className={['settings','profile','users','groups','audit','advanced-search','search'].includes(view)?'active':''} onClick={()=>setView('settings')}><Icon name="gridMenu"/><span>Mais</span></button>
       </nav>
       <main className="content">
         {view!=='home'&&<div className="page-head"><div><p className="eyebrow">KORCZAK DOCUMENTS</p><h1>{title}</h1></div>{(view==='documents'||view==='folders')&&<Button onClick={()=>{setEditingFolder(null);setModal(true)}}><Icon name="plus"/>{view==='folders'?'Nova pasta':'Novo documento'}</Button>}</div>}
