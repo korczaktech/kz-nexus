@@ -49,3 +49,167 @@ body{background:radial-gradient(circle at 75% 0%,rgba(52,80,170,.12),transparent
 .main-shell{margin-left:0;width:100%;padding-bottom:calc(64px + env(safe-area-inset-bottom))}.sidebar{display:none}.content{padding:10px 12px 18px}.page-head{margin:4px 0 12px}.page-head h1{font-size:22px}.mobile-safari-toolbar{position:fixed;left:0;right:0;bottom:0;height:64px;padding:7px 18px max(7px,env(safe-area-inset-bottom));display:flex;align-items:center;justify-content:space-between;background:rgba(10,13,19,.96);border-top:1px solid rgba(255,255,255,.08);backdrop-filter:blur(24px);z-index:55}.mobile-safari-toolbar button{width:42px;height:42px;border:0;background:transparent;color:#d9e1ee;font-size:25px;border-radius:12px;display:grid;place-items:center;padding:0}.mobile-safari-toolbar button:active{background:rgba(255,255,255,.09)}
 .hero{min-height:350px}.hero-copy{padding:22px}.quick-actions{gap:9px;margin:12px 0}.quick-actions button{min-height:68px;padding:11px}.panel,.side-card{border-radius:14px}.document-toolbar{overflow:auto;flex-wrap:nowrap;padding-bottom:3px}.document-toolbar>*{flex:none}.editor-workspace{min-height:calc(100vh - 150px);border-radius:12px}.editor-head{padding:13px}.editor-title{font-size:18px;width:50vw}.editor-body{grid-template-columns:1fr}.editor-sidebar{display:none}.editor-body textarea{padding:25px 18px}.table-wrap table{min-width:590px}.modal-backdrop{padding:10px}.modal{max-height:calc(100vh - 20px);border-radius:16px}
 }
+
+
+/* Nexus mobile shell — mirrors the Android APK without changing app content */
+.mobile-nexus-header,.mobile-nexus-bottom{display:none}
+@media(max-width:760px){
+  .mobile-safari-bar,.mobile-safari-toolbar{display:none!important}
+  .topbar{
+    height:78px;
+    padding:10px 14px;
+    background:#06111ef2;
+    border-bottom:1px solid #173b59;
+    backdrop-filter:blur(20px);
+  }
+  .mobile-nexus-header{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    width:100%;
+    min-width:0;
+    gap:10px;
+  }
+  .mobile-nexus-brand{
+    display:flex;
+    align-items:center;
+    gap:10px;
+    min-width:0;
+  }
+  .mobile-nexus-brand .brand-logo{
+    width:42px;
+    height:42px;
+    flex:0 0 42px;
+    border-radius:12px;
+  }
+  .mobile-nexus-brand strong{
+    display:block;
+    color:#eef7ff;
+    font-size:14px;
+    line-height:1.1;
+    letter-spacing:1.5px;
+  }
+  .mobile-nexus-brand span{
+    display:block;
+    color:#299cff;
+    font-size:9px;
+    letter-spacing:3px;
+    margin-top:3px;
+  }
+  .mobile-nexus-actions{
+    display:flex;
+    align-items:center;
+    gap:7px;
+    flex:none;
+  }
+  .mobile-nexus-actions button{
+    position:relative;
+    width:40px;
+    height:40px;
+    border:1px solid #234e73;
+    border-radius:11px;
+    background:#091b2e;
+    color:#d8ecff;
+    display:grid;
+    place-items:center;
+    padding:0;
+  }
+  .mobile-nexus-actions button:active{background:#0e2941}
+  .mobile-nexus-actions .avatar{
+    width:30px;
+    height:30px;
+    border:0;
+    font-size:11px;
+  }
+  .mobile-notify i{
+    position:absolute;
+    top:7px;
+    right:7px;
+    width:6px;
+    height:6px;
+    border-radius:50%;
+    background:#31d6a4;
+    box-shadow:0 0 8px #31d6a4;
+  }
+  .mobile-nexus-bottom{
+    position:fixed;
+    left:0;
+    right:0;
+    bottom:0;
+    height:78px;
+    padding:7px 7px max(7px,env(safe-area-inset-bottom));
+    display:grid;
+    grid-template-columns:repeat(5,1fr);
+    background:#061321f7;
+    border-top:1px solid #194466;
+    z-index:80;
+    backdrop-filter:blur(18px);
+  }
+  .mobile-nexus-bottom button{
+    border:0;
+    background:none;
+    color:#7993ad;
+    font-size:10px;
+    font-weight:600;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:center;
+    gap:4px;
+    min-width:0;
+    padding:4px 2px;
+    border-radius:12px;
+  }
+  .mobile-nexus-bottom button .icon-svg{
+    width:21px;
+    height:21px;
+  }
+  .mobile-nexus-bottom button.active{
+    color:#35a8ff;
+    background:#0b2338;
+  }
+  .mobile-nexus-bottom button:nth-child(3){
+    color:#e9f6ff;
+  }
+  .mobile-nexus-bottom button:nth-child(3) .icon-svg{
+    width:23px;
+    height:23px;
+  }
+  .main-shell{
+    margin-left:0;
+    width:100%;
+    padding-bottom:calc(78px + env(safe-area-inset-bottom));
+  }
+  .sidebar{display:none}
+  .content{
+    padding:14px 12px 20px;
+  }
+  .page-head{margin:2px 0 12px}
+  .page-head h1{font-size:22px}
+  .hero{
+    min-height:270px;
+    border-radius:18px;
+    grid-template-columns:1fr;
+  }
+  .hero-copy{padding:24px}
+  .hero-art{display:none}
+  .quick-actions{
+    grid-template-columns:repeat(2,1fr);
+    gap:9px;
+    margin:12px 0;
+  }
+  .quick-actions button{
+    min-height:112px;
+    padding:12px;
+    border-radius:14px;
+  }
+  .quick-actions button small{font-size:10px}
+  .home-columns{grid-template-columns:1fr}
+  .home-side{display:grid;grid-template-columns:1fr;gap:10px}
+  .panel,.side-card{border-radius:16px}
+  .document-toolbar{overflow:auto;flex-wrap:nowrap;padding-bottom:3px}
+  .document-toolbar>*{flex:none}
+  .editor-workspace{min-height:calc(100vh - 156px);border-radius:12px}
+  .modal-backdrop{padding:10px}
+  .modal{max-height:calc(100vh - 20px);border-radius:16px}
+}
