@@ -70,48 +70,13 @@ jobs:
           name: KZ-Nexus-Android
           path: release-assets/*.apk
 
-  ios:
-    needs: prepare
-    runs-on: macos-14
-    steps:
-      - uses: actions/checkout@v4
-      - name: Build unsigned iOS Simulator app
-        working-directory: ios/KZDocuments
-        run: |
-          set -e
-          xcodebuild \
-            -project KZDocuments.xcodeproj \
-            -scheme KZDocuments \
-            -configuration Release \
-            -sdk iphonesimulator \
-            -destination 'generic/platform=iOS Simulator' \
-            -derivedDataPath "$RUNNER_TEMP/KZDocumentsDerivedData" \
-            CODE_SIGNING_ALLOWED=NO \
-            CODE_SIGNING_REQUIRED=NO \
-            build
-      - name: Package iOS Simulator artifact
-        run: |
-          set -e
-          APP=$(find "$RUNNER_TEMP/KZDocumentsDerivedData/Build/Products/Release-iphonesimulator" -maxdepth 1 -name '*.app' -print -quit)
-          test -n "$APP"
-          mkdir -p release-assets
-          ditto -c -k --sequesterRsrc --keepParent "$APP" "release-assets/KZ-Nexus-iOS-Simulator-v${{ needs.prepare.outputs.version }}.zip"
-      - uses: actions/upload-artifact@v4
-        with:
-          name: KZ-Nexus-iOS-Simulator
-          path: release-assets/*.zip
-
   release:
-    needs: [prepare, android, ios]
+    needs: [prepare, android]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/download-artifact@v4
         with:
           name: KZ-Nexus-Android
-          path: release-assets
-      - uses: actions/download-artifact@v4
-        with:
-          name: KZ-Nexus-iOS-Simulator
           path: release-assets
       - name: Publish release
         uses: softprops/action-gh-release@v2
@@ -124,8 +89,8 @@ jobs:
 
             ### Downloads
             - **Android:** APK pronto para instalação.
-            - **iOS:** build gratuita para **iOS Simulator**. Não é uma IPA assinada para instalação direta em iPhone.
+            - **iPhone/iPad:** use o KZ Nexus diretamente no Safari e adicione à Tela de Início como app.
 
-            ### Apple
-            Esta pipeline não usa Apple Developer Program, certificados de distribuição, provisioning profiles, App Store Connect ou TestFlight.
+            ### PWA
+            O KZ Nexus para iOS é distribuído como Web App/PWA. Não exige App Store, Apple Developer Program, IPA, Mac ou instalação de arquivo.
           files: release-assets/*
