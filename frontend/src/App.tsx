@@ -137,12 +137,27 @@ function App(){
       <div className="sidebar-footer"><strong>KORCZAK TECHNOLOGIES</strong><span>Tecnologia que organiza o seu mundo.</span></div>
     </aside>
     <div className="main-shell">
-      <header className="topbar"><div className="mobile-safari-bar"><button className="mobile-browser-icon" aria-label="Voltar" onClick={()=>window.history.length>1?window.history.back():setView('home')}>‹</button><button className="mobile-address" aria-label="Endereço atual" onClick={()=>setView('home')}><span className="mobile-lock">⌕</span><span className="mobile-address-text">korczaktech.github.io/kzdoc</span><span className="mobile-refresh" onClick={e=>{e.stopPropagation();window.location.reload()}}>↻</span></button><button className="mobile-browser-icon" aria-label="Compartilhar" onClick={async()=>{if(navigator.share)await navigator.share({title:'KZ Nexus',url:window.location.href});else if(navigator.clipboard)await navigator.clipboard.writeText(window.location.href)}}>↑</button></div>
+      <header className="topbar">
+        <div className="mobile-nexus-header">
+          <div className="mobile-nexus-brand"><div className="brand-logo small">KZ</div><div><strong>KORCZAK</strong><span>NEXUS</span></div></div>
+          <div className="mobile-nexus-actions">
+            <button aria-label="Pesquisar" onClick={()=>setView('search')}><Icon name="search"/></button>
+            <button aria-label="Notificações" onClick={()=>setView('home')} className="mobile-notify"><Icon name="cloud"/>{notes.some(n=>!n.read)&&<i/>}</button>
+            <button aria-label="Minha conta" onClick={()=>setView('profile')}><span className="avatar">{user.name[0]}</span></button>
+          </div>
+        </div>
         <div className="mobile-brand"><div className="brand-logo small">KZ</div><strong>KORCZAK <span>DOCUMENTS</span></strong></div>
         <div className="top-search"><Icon name="search"/><input value={query} onChange={async e=>{const q=e.target.value;setQuery(q);setView('search');try{if(q.trim())setDocs((await api.search(q)).items);else setDocs(await api.documents())}catch(x){setError(x instanceof Error?x.message:'Não foi possível pesquisar.')}}} placeholder="Buscar documentos, pastas, projetos…"/><kbd>Ctrl + K</kbd></div>
         <div className="top-actions"><button aria-label="Notificações" onClick={()=>setView('home')} className="top-icon"><Icon name="cloud"/>{notes.some(n=>!n.read)&&<i/>}</button><button aria-label="Alternar tema" onClick={()=>setTheme(theme==='dark'?'light':'dark')} className="top-icon"><Icon name="settings"/></button><div className="top-user" onClick={()=>setView('profile')}><span className="avatar">{user.name[0]}</span><div><strong>{user.name}</strong><small>{user.role==='admin'?'Administrador':user.role==='manager'?'Gestor':'Usuário'}</small></div><span><Icon name="chevronDown" size={15}/></span></div></div>
       </header>
-      <div className="mobile-safari-toolbar" aria-label="Navegação móvel"><button aria-label="Voltar" onClick={()=>window.history.length>1?window.history.back():setView('home')}>‹</button><button aria-label="Avançar" onClick={()=>window.history.forward()}>›</button><button aria-label="Compartilhar" onClick={async()=>{if(navigator.share)await navigator.share({title:'KZ Nexus',url:window.location.href});else if(navigator.clipboard)await navigator.clipboard.writeText(window.location.href)}}>↑</button><button aria-label="Nova aba" onClick={()=>setView('home')}>⊞</button><button aria-label="Menu" onClick={()=>setView('settings')}>☰</button></div><main className="content">
+      <nav className="mobile-nexus-bottom" aria-label="Navegação principal">
+        <button className={view==='home'?'active':''} onClick={()=>setView('home')}><Icon name="home"/><span>Início</span></button>
+        <button className={['documents','folders','favorites','recent','trash'].includes(view)?'active':''} onClick={()=>setView('documents')}><Icon name="folder"/><span>Arquivos</span></button>
+        <button className={view==='create'?'active':''} onClick={()=>setModal(true)}><Icon name="plus"/><span>Novo</span></button>
+        <button className={view==='editor'?'active':''} onClick={()=>setView('editor')}><Icon name="edit"/><span>Editor</span></button>
+        <button className={['settings','profile','users','groups','audit','advanced-search','search'].includes(view)?'active':''} onClick={()=>setView('settings')}><Icon name="menu"/><span>Mais</span></button>
+      </nav>
+      <main className="content">
         {view!=='home'&&<div className="page-head"><div><p className="eyebrow">KORCZAK DOCUMENTS</p><h1>{title}</h1></div>{(view==='documents'||view==='folders')&&<Button onClick={()=>{setEditingFolder(null);setModal(true)}}><Icon name="plus"/>{view==='folders'?'Nova pasta':'Novo documento'}</Button>}</div>}
         {error&&<div className="alert alert-error">{error}<button onClick={()=>load(view)}>Tentar novamente</button></div>}
         {view==='home'&&<Home user={user} docs={docs} notes={notes} onNew={()=>setModal(true)} onSelect={openDoc} onAction={action} setView={setView}/>}
