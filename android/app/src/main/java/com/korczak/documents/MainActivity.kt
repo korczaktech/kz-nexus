@@ -551,13 +551,13 @@ class MainActivity : AppCompatActivity() {
                             val result = if (folderUri.isNotBlank()) {
                                 storage.saveInFolder(
                                     folderUri,
-                                    p.optString("name", "Novo documento.kzdoc"),
+                                    p.optString("name", "Novo documento.kz-nexus"),
                                     p.optString("content")
                                 )
                             } else {
                                 storage.write(
                                     p.optString("uri"),
-                                    p.optString("name", "Novo documento.kzdoc"),
+                                    p.optString("name", "Novo documento.kz-nexus"),
                                     p.optString("content")
                                 )
                             }
