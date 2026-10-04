@@ -741,25 +741,26 @@ function toggleDecorationAtCursor(range,c){
     ?range.startContainer.parentElement:range.startContainer;
   while(el&&el!==$('page')&&String(el.tagName||'').toLowerCase()!==tag)el=el.parentElement;
   if(!el||el===$('page'))return false;
-  // Insere um marcador no ponto do cursor e divide o elemento decorado em
-  // duas partes. O cursor fica fora do <u>/<s>, então a próxima digitação
-  // não herda a decoração.
+  // Coloca um marcador exatamente no cursor e clona os dois lados do
+  // elemento decorado. Assim o texto anterior/posterior continua formatado,
+  // mas o ponto de inserção fica fora do <u>/<s>.
   const marker=document.createTextNode('\u200b');
   range.insertNode(marker);
+  const leftRange=document.createRange();
+  leftRange.selectNodeContents(el);
+  leftRange.setEndBefore(marker);
+  const left=leftRange.cloneContents();
+  const rightRange=document.createRange();
+  rightRange.selectNodeContents(el);
+  rightRange.setStartAfter(marker);
+  const right=rightRange.cloneContents();
   const parent=el.parentNode;
   if(!parent)return false;
-  const before=document.createElement(el.tagName.toLowerCase());
-  const after=document.createElement(el.tagName.toLowerCase());
+  const before=document.createElement(tag);
+  const after=document.createElement(tag);
   Array.from(el.attributes).forEach(a=>{before.setAttribute(a.name,a.value);after.setAttribute(a.name,a.value)});
-  const left=document.createDocumentFragment();
-  const right=document.createDocumentFragment();
-  let afterMarker=false;
-  Array.from(el.childNodes).forEach(node=>{
-    if(node===marker){afterMarker=true;return}
-    (afterMarker?right:left).appendChild(node);
-  });
-  if(left.childNodes.length)before.appendChild(left);
-  if(right.childNodes.length)after.appendChild(right);
+  before.appendChild(left);
+  after.appendChild(right);
   const frag=document.createDocumentFragment();
   if(before.childNodes.length)frag.appendChild(before);
   frag.appendChild(marker);
