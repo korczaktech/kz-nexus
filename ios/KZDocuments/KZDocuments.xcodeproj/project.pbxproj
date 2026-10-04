@@ -78,7 +78,6 @@ D85D5F6E129E4A3796E0D95C /* Products */ = {isa = PBXGroup; children = (C9E0581F3
 
 /* Begin XCBuildConfiguration section */
 8DC884A697A5488D8DCF9898 /* Debug */ = {isa = XCBuildConfiguration; buildSettings = {
- ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
  CLANG_ENABLE_MODULES = YES;
  CODE_SIGN_STYLE = Automatic;
  CURRENT_PROJECT_VERSION = 1;
