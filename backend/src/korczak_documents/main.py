@@ -68,4 +68,4 @@ async def shutdown_mongodb() -> None:
 @app.get("/health", include_in_schema=False)
 def root_health() -> dict[str, str]:
     logger.debug("Health check executado")
-    return {"status": "ok", "service": "korczak-documents-api"}
+    return {"status": "ok", "service": "korczak-nexus-api"}
