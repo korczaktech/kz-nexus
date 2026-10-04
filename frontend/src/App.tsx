@@ -4,7 +4,7 @@ import {Button, Icon, Modal, StatePanel} from './components/ui';
 import {Editor, markdownToHtml} from './components/Editor';
 import {ApiError} from './services/api';
 import {chooseLocalFolder, getStorageSelection, saveStorageSelection, storageLabel, type StorageProvider} from './services/storage';
-import nexusLogo from './assets/nexus-header-logo.webp';
+const nexusLogo = `${import.meta.env.BASE_URL}icons/favicon-nexus.svg?v=2`;
 
 type View='home'|'documents'|'viewer'|'editor'|'create'|'history'|'versions'|'folders'|'favorites'|'recent'|'trash'|'search'|'advanced-search'|'profile'|'users'|'groups'|'permissions'|'folder-permissions'|'audit'|'admin'|'settings';
 
