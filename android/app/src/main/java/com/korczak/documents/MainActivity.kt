@@ -442,9 +442,12 @@ class MainActivity : AppCompatActivity() {
                                  p.optString("path") == "/api/v1/auth/register")
                             ) api.saveSession(response)
 
-                            val data: Any =
-                                if (response.body.isBlank()) JSONObject()
-                                else try { JSONObject(response.body) } catch (_: Exception) { JSONArray(response.body) }
+                            val data: Any = when {
+                                response.body.isBlank() -> JSONObject()
+                                response.body.trimStart().startsWith("{") -> JSONObject(response.body)
+                                response.body.trimStart().startsWith("[") -> JSONArray(response.body)
+                                else -> response.body
+                            }
 
                             respond(
                                 callback,
