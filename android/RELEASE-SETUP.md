@@ -13,9 +13,9 @@ Para assinar o APK de release e permitir atualizações sobre a instalação ant
 
 O mesmo keystore deve ser usado em todas as versões. O Android exige a mesma assinatura para aceitar uma atualização como atualização do mesmo aplicativo.
 
-O APK publicado no GitHub Release recebe o nome KZDocuments-vX.Y.Z.W.apk.
+O APK publicado no GitHub Release recebe o nome Korczak Nexusuments-vX.Y.Z.W.apk.
 
-O aplicativo consulta a última release pública do repositório korczaktech/kzdoc, compara a versão instalada, valida o SHA-256 do APK e inicia o fluxo nativo de instalação do Android.
+O aplicativo consulta a última release pública do repositório korczaktech/kz-nexus, compara a versão instalada, valida o SHA-256 do APK e inicia o fluxo nativo de instalação do Android.
 
 ## BYOS
 
