@@ -1,0 +1,39 @@
+import fs from 'node:fs';
+import path from 'node:path';
+
+const root=process.cwd();
+const files={
+  web:fs.readFileSync(path.join(root,'frontend/src/App.tsx'),'utf8'),
+  android:fs.readFileSync(path.join(root,'android/app/src/main/assets/index.html'),'utf8'),
+  ios:fs.readFileSync(path.join(root,'ios/KZDocuments/ContentView.swift'),'utf8')
+};
+const checks=[
+  ['Web: documents',files.web.includes("api.documents()")],
+  ['Web: folders',files.web.includes("api.folders()")],
+  ['Web: favorites',files.web.includes("api.favorites()")],
+  ['Web: recent',files.web.includes("api.recent()")],
+  ['Web: trash',files.web.includes("api.trash()")],
+  ['Web: quick search',files.web.includes("api.search(")],
+  ['Web: advanced search',files.web.includes("api.advancedSearch(")],
+  ['Web: users',files.web.includes("api.users()")],
+  ['Web: groups',files.web.includes("api.groups()")],
+  ['Web: permissions',files.web.includes("api.permissions(")],
+  ['Web: audit',files.web.includes("api.audit(")],
+  ['Web: NexusAPI',files.web.includes('NexusAPI')],
+  ['Web: feedback',files.web.includes("api.feedback(")],
+  ['Web: updates',files.web.includes("releases/latest")],
+  ['Android: parity center',files.android.includes("NEXUS_PHASE1_PARITY_CENTER")],
+  ['Android: users',files.android.includes("/api/v1/users")],
+  ['Android: groups',files.android.includes("/api/v1/groups")],
+  ['Android: permissions',files.android.includes("/api/v1/permissions/")],
+  ['Android: audit',files.android.includes("/api/v1/audit")],
+  ['Android: advanced search',files.android.includes("/api/v1/search?")],
+  ['Android: NexusAPI',files.android.includes('>NexusAPI<')],
+  ['Android: feedback',files.android.includes('Dar um feedback')],
+  ['Android: updates',files.android.includes('Atualizações')],
+  ['iOS: current Nexus URL',files.ios.includes('https://korczaktech.github.io/kz-nexus/')]
+];
+const failed=checks.filter(([,ok])=>!ok);
+for(const [name,ok] of checks) console.log(`${ok?'PASS':'FAIL'} — ${name}`);
+if(failed.length){console.error(`Fase 1: ${failed.length} verificações falharam.`);process.exit(1)}
+console.log(`Fase 1: ${checks.length} verificações passaram.`);
