@@ -265,3 +265,43 @@ body{background:radial-gradient(circle at 75% 0%,rgba(52,80,170,.12),transparent
   .mobile-nexus-bottom button:not(:nth-child(3)):active{transform:translateY(1px) scale(.97)}
   .mobile-nexus-bottom button:nth-child(3):active{transform:scale(.95)}
 }
+
+/* Storage provider onboarding */
+.storage-gate{position:fixed;inset:0;z-index:500;display:grid;place-items:center;padding:24px;background:rgba(2,8,16,.82);backdrop-filter:blur(18px)}
+.storage-gate-card{width:min(620px,100%);max-height:min(760px,calc(100vh - 40px));overflow:auto;border:1px solid var(--border,#244765);border-radius:26px;background:linear-gradient(145deg,#0b1d2f,#071321);box-shadow:0 30px 100px #000b;padding:30px}
+.storage-gate-brand{display:flex;align-items:center;gap:12px;margin-bottom:30px}
+.storage-gate-brand .brand-logo{width:42px;height:42px}
+.storage-gate-brand strong,.storage-gate-brand span{display:block}
+.storage-gate-brand strong{font-size:15px;letter-spacing:1.5px}
+.storage-gate-brand span{font-size:9px;letter-spacing:3px;color:#4eb5ff;margin-top:2px}
+.storage-gate-copy{margin-bottom:22px}
+.storage-gate-eyebrow{font-size:10px;font-weight:800;letter-spacing:2px;color:#45adff}
+.storage-gate-copy h1{font-size:30px;line-height:1.1;letter-spacing:-.8px;margin:9px 0 10px;color:#f1f8ff}
+.storage-gate-copy p{margin:0;color:#91a9bf;font-size:13px;line-height:1.55}
+.storage-options{display:grid;gap:10px}
+.storage-option{display:grid;grid-template-columns:48px minmax(0,1fr) 20px;gap:13px;align-items:center;width:100%;padding:15px;border:1px solid #1b425f;border-radius:16px;background:#081827;color:#edf7ff;text-align:left;transition:.16s}
+.storage-option:hover:not(:disabled){border-color:#299cff;background:#0b2034;transform:translateY(-1px)}
+.storage-option:disabled{opacity:.6;cursor:wait}
+.storage-option>span:nth-child(2){min-width:0}
+.storage-option strong,.storage-option small{display:block}
+.storage-option strong{font-size:14px}
+.storage-option small{color:#809ab2;font-size:11px;line-height:1.4;margin-top:4px}
+.storage-option>svg{color:#55baff}
+.storage-option-icon{width:44px;height:44px;border-radius:13px;display:grid;place-items:center;background:#0b3962;color:#72c9ff;border:1px solid #1c6798}
+.storage-option-icon.cloud{background:#102d4b;color:#65c3ff}
+.storage-option-icon svg{width:21px;height:21px}
+.storage-gate-status{margin:14px 0 0;text-align:center;color:#72c9ff;font-size:12px}
+.storage-gate-error{margin-top:14px;padding:11px 13px;border:1px solid #633844;border-radius:11px;background:#28131a;color:#ffb1ba;font-size:12px;line-height:1.45}
+.storage-gate-later{display:block;margin:15px auto 0;border:0;background:none;color:#65bfff;font-size:11px}
+.storage-gate-foot{display:block;margin-top:20px;color:#657f98;text-align:center;font-size:10px;line-height:1.45}
+.settings-storage{display:flex;align-items:center;gap:12px;justify-content:flex-end}
+.settings-storage span{display:flex;flex-direction:column;align-items:flex-end;color:#9eb4c9}
+.settings-storage small{color:#69839c;margin-top:3px}
+@media(max-width:720px){
+ .storage-gate{padding:12px;align-items:end}
+ .storage-gate-card{padding:23px 18px;border-radius:23px;max-height:calc(100vh - 24px)}
+ .storage-gate-copy h1{font-size:25px}
+ .storage-option{grid-template-columns:42px minmax(0,1fr) 18px;padding:13px}
+ .storage-option-icon{width:40px;height:40px}
+ .settings-storage{align-items:flex-start;justify-content:space-between}
+}
