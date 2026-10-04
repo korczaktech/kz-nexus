@@ -1,0 +1,122 @@
+// !$*UTF8*$!
+{
+ archiveVersion = 1;
+ classes = {};
+ objectVersion = 56;
+ objects = {
+
+/* Begin PBXBuildFile section */
+BC423E287FB644909495FF3A /* KZDocumentsApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = C91DB9EB584D49C4B3C50760 /* KZDocumentsApp.swift */; };
+525D0FF878E64C1B8EB44616 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 55923EAA433D4D27AAE1BA1B /* ContentView.swift */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXFileReference section */
+C9E0581F34BD43AC8A884CAE /* KZDocuments.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = KZDocuments.app; sourceTree = BUILT_PRODUCTS_DIR; };
+C91DB9EB584D49C4B3C50760 /* KZDocumentsApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KZDocumentsApp.swift; sourceTree = "<group>"; };
+55923EAA433D4D27AAE1BA1B /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
+61A371ACDC3F4D8DB10C28CA /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+F4EF6B8F801847C2B404E882 /* Frameworks */ = {isa = PBXFrameworksBuildPhase; buildActionMask = 2147483647; files = (); runOnlyForDeploymentPostprocessing = 0; };
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+2485A3E603614AEFB31EE872 = {
+ isa = PBXGroup;
+ children = (887DFD0C71244D248C0B6E58 /* KZDocuments */, D85D5F6E129E4A3796E0D95C /* Products */);
+ sourceTree = "<group>";
+};
+887DFD0C71244D248C0B6E58 /* KZDocuments */ = {
+ isa = PBXGroup;
+ children = (C91DB9EB584D49C4B3C50760 /* KZDocumentsApp.swift */, 55923EAA433D4D27AAE1BA1B /* ContentView.swift */, 61A371ACDC3F4D8DB10C28CA /* Info.plist */);
+ path = KZDocuments;
+ sourceTree = "<group>";
+};
+D85D5F6E129E4A3796E0D95C /* Products */ = {isa = PBXGroup; children = (C9E0581F34BD43AC8A884CAE /* KZDocuments.app */); name = Products; sourceTree = "<group>";};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+3939F0A635014BFDAC9C6E5D /* KZDocuments */ = {
+ isa = PBXNativeTarget;
+ buildConfigurationList = 834DE5E9D39E433C8A85DA6A /* Build configuration list for PBXNativeTarget "KZDocuments" */;
+ buildPhases = (532837AC003A4B008AEA3817 /* Sources */, F4EF6B8F801847C2B404E882 /* Frameworks */, 01838B8BC4584418AAB76960 /* Resources */);
+ buildRules = ();
+ dependencies = ();
+ name = KZDocuments;
+ productName = KZDocuments;
+ productReference = C9E0581F34BD43AC8A884CAE /* KZDocuments.app */;
+ productType = "com.apple.product-type.application";
+};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+492B3FCE10EB40D8BC2B513C /* Project object */ = {
+ isa = PBXProject;
+ attributes = { LastUpgradeCheck = 1600; TargetAttributes = { 3939F0A635014BFDAC9C6E5D = { CreatedOnToolsVersion = 16.0; }; };
+ };
+ buildConfigurationList = D6AB7EF6CF6D41928155C4AC /* Build configuration list for PBXProject "KZDocuments" */;
+ compatibilityVersion = "Xcode 15.0";
+ developmentRegion = en;
+ hasScannedForEncodings = 0;
+ knownRegions = (en, Base);
+ mainGroup = 2485A3E603614AEFB31EE872;
+ productRefGroup = D85D5F6E129E4A3796E0D95C;
+ projectDirPath = "";
+ projectRoot = "";
+ targets = (3939F0A635014BFDAC9C6E5D);
+};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+01838B8BC4584418AAB76960 /* Resources */ = {isa = PBXResourcesBuildPhase; buildActionMask = 2147483647; files = (); runOnlyForDeploymentPostprocessing = 0; };
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+532837AC003A4B008AEA3817 /* Sources */ = {isa = PBXSourcesBuildPhase; buildActionMask = 2147483647; files = (BC423E287FB644909495FF3A, 525D0FF878E64C1B8EB44616); runOnlyForDeploymentPostprocessing = 0; };
+/* End PBXSourcesBuildPhase section */
+
+/* Begin XCBuildConfiguration section */
+8DC884A697A5488D8DCF9898 /* Debug */ = {isa = XCBuildConfiguration; buildSettings = {
+ ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+ CLANG_ENABLE_MODULES = YES;
+ CODE_SIGN_STYLE = Automatic;
+ CURRENT_PROJECT_VERSION = 1;
+ DEVELOPMENT_TEAM = "";
+ INFOPLIST_FILE = KZDocuments/Info.plist;
+ IPHONEOS_DEPLOYMENT_TARGET = 16.0;
+ LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks";
+ PRODUCT_BUNDLE_IDENTIFIER = com.korczaktech.kzdoc;
+ PRODUCT_NAME = "$(TARGET_NAME)";
+ SWIFT_EMIT_LOC_STRINGS = YES;
+ SWIFT_VERSION = 5.0;
+ TARGETED_DEVICE_FAMILY = "1,2";
+};
+ name = Debug;
+};
+F4E60CE66DA549D580B70A92 /* Release */ = {isa = XCBuildConfiguration; buildSettings = {
+ ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+ CLANG_ENABLE_MODULES = YES;
+ CODE_SIGN_STYLE = Automatic;
+ CURRENT_PROJECT_VERSION = 1;
+ DEVELOPMENT_TEAM = "";
+ INFOPLIST_FILE = KZDocuments/Info.plist;
+ IPHONEOS_DEPLOYMENT_TARGET = 16.0;
+ LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks";
+ PRODUCT_BUNDLE_IDENTIFIER = com.korczaktech.kzdoc;
+ PRODUCT_NAME = "$(TARGET_NAME)";
+ SWIFT_EMIT_LOC_STRINGS = YES;
+ SWIFT_VERSION = 5.0;
+ TARGETED_DEVICE_FAMILY = "1,2";
+};
+ name = Release;
+};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+D6AB7EF6CF6D41928155C4AC /* Build configuration list for PBXProject "KZDocuments" */ = {isa = XCConfigurationList; buildConfigurations = (8DC884A697A5488D8DCF9898, F4E60CE66DA549D580B70A92); defaultConfigurationIsVisible = 0; defaultConfigurationName = Release; };
+834DE5E9D39E433C8A85DA6A /* Build configuration list for PBXNativeTarget "KZDocuments" */ = {isa = XCConfigurationList; buildConfigurations = (8DC884A697A5488D8DCF9898, F4E60CE66DA549D580B70A92); defaultConfigurationIsVisible = 0; defaultConfigurationName = Release; };
+/* End XCConfigurationList section */
+ };
+ rootObject = 492B3FCE10EB40D8BC2B513C /* Project object */;
+}
