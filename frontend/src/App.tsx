@@ -149,7 +149,7 @@ function App(){
   const[theme,setTheme]=useState(localStorage.getItem('kz_theme')||'dark'),[feedbackOpen,setFeedbackOpen]=useState(false),[feedbackBusy,setFeedbackBusy]=useState(false),[feedbackSent,setFeedbackSent]=useState(false);
   const[advancedFilters,setAdvancedFilters]=useState({term:'',folder:'',tag:'',owner:'',status:'',from:'',to:'',sort:'updated_desc'});
   const[searchPage,setSearchPage]=useState(1),[searchTotal,setSearchTotal]=useState(0),searchPageSize=25;
-  const[auditPage,setAuditPage]=useState(1),auditPageSize=50;
+  const[auditPage,setAuditPage]=useState(1),auditPageSize=50;\n  const[webRelease,setWebRelease]=useState<{tag_name?:string;html_url?:string}|null>(null),[webReleaseBusy,setWebReleaseBusy]=useState(false),[webReleaseError,setWebReleaseError]=useState('');\n  async function checkWebRelease(){setWebReleaseBusy(true);setWebReleaseError('');try{const r=await fetch('https://api.github.com/repos/korczaktech/kz-nexus/releases/latest',{headers:{Accept:'application/vnd.github+json'}});if(!r.ok)throw new Error('Não foi possível consultar a versão publicada.');setWebRelease(await r.json())}catch(e){setWebReleaseError(e instanceof Error?e.message:'Não foi possível verificar atualizações.')}finally{setWebReleaseBusy(false)}}
 
   useEffect(()=>{document.documentElement.dataset.theme=theme;localStorage.setItem('kz_theme',theme)},[theme]);
   useEffect(()=>{if(!getToken()){setBoot(false);return}api.me().then(setUser).catch(()=>clearToken()).finally(()=>setBoot(false))},[]);
