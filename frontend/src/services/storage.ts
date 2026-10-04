@@ -34,7 +34,7 @@ export function storageLabel(provider: StorageProvider): string {
 
 export async function chooseLocalFolder(): Promise<StorageSelection | null> {
   const picker = (window as Window & {
-    showDirectoryPicker?: (options?: { mode?: 'read' | 'readwrite' }) => Promise<FileSystemDirectoryHandle>;
+    showDirectoryPicker?: (options?: { mode?: 'read' | 'readwrite' }) => Promise<{name:string}>;
   }).showDirectoryPicker;
 
   if (!picker) {
