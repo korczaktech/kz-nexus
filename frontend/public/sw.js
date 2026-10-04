@@ -1,10 +1,10 @@
-const CACHE = "kz-nexus-shell-v1";
+const CACHE = "kz-nexus-shell-v2";
 const BASE = new URL("./", self.registration.scope).pathname;
 const SHELL = [
   BASE,
   BASE + "manifest.webmanifest",
-  BASE + "icons/icon-192.svg",
-  BASE + "icons/icon-512.svg"
+  BASE + "icons/nexus-icon-192.svg?v=2",
+  BASE + "icons/nexus-icon-512.svg?v=2"
 ];
 
 self.addEventListener("install", (event) => {
