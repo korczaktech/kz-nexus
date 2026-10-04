@@ -189,7 +189,7 @@ function App(){
   }
   async function createDocument(e:FormEvent<HTMLFormElement>){e.preventDefault();const f=new FormData(e.currentTarget);try{const d=await api.createDocument({name:String(f.get('name')),document_type:String(f.get('type')),description:String(f.get('description')||''),folder_id:String(f.get('folder')||'')||null,content:String(f.get('content')||'')});setModal(false);setSelected(await api.document(d.id));setView('viewer')}catch(x){setError(x instanceof Error?x.message:'Não foi possível criar.')}}
   async function restoreVersion(v:Version){if(!selected)return;try{await api.restoreVersion(selected.id,v.id);setSelected(await api.document(selected.id));setVersions(await api.versions(selected.id));setView('viewer')}catch(x){setError(x instanceof Error?x.message:'Não foi possível restaurar a versão.')}}
-  if(boot)return <StatePanel title="Iniciando" message="Preparando o Korczak Nexus…"/>; if(!user)return <Auth done={setUser}/>;
+  if(boot)return <StatePanel title="Iniciando" message="Preparando o Korczak Nexus… Isso pode levar cerca de 30 a 60 segundos. Em alguns casos, pode levar até 2 minutos."/>; if(!user)return <Auth done={setUser}/>;
 
   const title=nav.concat(secondary).find(n=>n[0]===view)?.[1]||'Korczak Nexus';
   const action=async(d:DocumentItem)=>{try{if(d.status==='deleted')await api.restore(d.id);else await api.favorite(d.id,!d.favorite);await load(view)}catch(x){setError(x instanceof Error?x.message:'Operação não concluída.')}};
