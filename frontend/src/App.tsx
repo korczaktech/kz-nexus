@@ -3,6 +3,7 @@ import {api, clearToken, getToken, saveSession, type DocumentItem, type Event, t
 import {Button, Icon, Modal, StatePanel} from './components/ui';
 import {Editor, markdownToHtml} from './components/Editor';
 import {ApiError} from './services/api';
+import {chooseLocalFolder, getStorageSelection, saveStorageSelection, storageLabel, type StorageProvider} from './services/storage';
 
 type View='home'|'documents'|'viewer'|'editor'|'create'|'history'|'versions'|'folders'|'favorites'|'recent'|'trash'|'search'|'advanced-search'|'profile'|'users'|'groups'|'permissions'|'folder-permissions'|'audit'|'admin'|'settings';
 
@@ -13,6 +14,69 @@ const nav:[View,string,string][]=[
 const secondary:[View,string,string][]=[
   ['search','Pesquisa','search'],['profile','Minha conta','user'],['settings','Configurações','settings']
 ];
+
+function StoragePicker({onComplete,allowClose=false}:{onComplete:(provider:StorageProvider)=>void;allowClose?:boolean}){
+  const[busy,setBusy]=useState<StorageProvider|null>(null);
+  const[error,setError]=useState('');
+  async function select(provider:StorageProvider){
+    setError('');setBusy(provider);
+    try{
+      if(provider==='local'){
+        const selection=await chooseLocalFolder();
+        if(!selection) return;
+        saveStorageSelection(selection);
+        onComplete(provider);
+        return;
+      }
+      const configured=provider==='google-drive'
+        ?Boolean(import.meta.env.VITE_GOOGLE_CLIENT_ID)
+        :Boolean(import.meta.env.VITE_ONEDRIVE_CLIENT_ID);
+      if(!configured){
+        setError(provider==='google-drive'
+          ?'O Google Drive ainda precisa ser configurado pelo administrador do KZDoc. A opção já está preparada para OAuth.'
+          :'O OneDrive ainda precisa ser configurado pelo administrador do KZDoc. A opção já está preparada para OAuth.');
+        return;
+      }
+      const selection={provider,label:storageLabel(provider),connectedAt:new Date().toISOString()};
+      saveStorageSelection(selection);
+      onComplete(provider);
+    }catch(e){
+      if(e instanceof DOMException&&e.name==='AbortError')return;
+      setError(e instanceof Error?e.message:'Não foi possível selecionar este armazenamento.');
+    }finally{setBusy(null)}
+  }
+  return <div className="storage-gate" role="dialog" aria-modal="true" aria-labelledby="storage-gate-title">
+    <div className="storage-gate-card">
+      <div className="storage-gate-brand"><div className="brand-logo">KZ</div><div><strong>KORCZAK</strong><span>DOCUMENTS</span></div></div>
+      <div className="storage-gate-copy">
+        <span className="storage-gate-eyebrow">PRIMEIRO ACESSO</span>
+        <h1 id="storage-gate-title">Onde deseja armazenar seus documentos?</h1>
+        <p>Escolha o armazenamento principal do KZDoc. Você poderá alterar essa opção depois em Configurações.</p>
+      </div>
+      <div className="storage-options">
+        <button className="storage-option" onClick={()=>select('local')} disabled={!!busy}>
+          <span className="storage-option-icon"><Icon name="folder"/></span>
+          <span><strong>Pasta deste dispositivo</strong><small>Escolha uma pasta no celular. Funciona no Android e em navegadores compatíveis com o seletor de pastas.</small></span>
+          <Icon name="arrowRight" size={18}/>
+        </button>
+        <button className="storage-option" onClick={()=>select('google-drive')} disabled={!!busy}>
+          <span className="storage-option-icon cloud"><Icon name="cloud"/></span>
+          <span><strong>Google Drive</strong><small>Use seu Google Drive como armazenamento do KZDoc.</small></span>
+          <Icon name="arrowRight" size={18}/>
+        </button>
+        <button className="storage-option" onClick={()=>select('onedrive')} disabled={!!busy}>
+          <span className="storage-option-icon cloud"><Icon name="cloud"/></span>
+          <span><strong>OneDrive</strong><small>Use seu Microsoft OneDrive como armazenamento do KZDoc.</small></span>
+          <Icon name="arrowRight" size={18}/>
+        </button>
+      </div>
+      {busy&&<p className="storage-gate-status">Preparando {storageLabel(busy)}…</p>}
+      {error&&<div className="storage-gate-error">{error}</div>}
+      {allowClose&&<button className="storage-gate-later" onClick={()=>onComplete(getStorageSelection()?.provider||'local')}>Continuar com a configuração atual</button>}
+      <small className="storage-gate-foot">A escolha é salva neste navegador/dispositivo. O KZDoc não acessa arquivos sem sua autorização.</small>
+    </div>
+  </div>
+}
 
 function Auth({done}:{done:(u:User)=>void}){
   const[register,setRegister]=useState(false),[recovery,setRecovery]=useState(false);
@@ -77,6 +141,7 @@ function Home({user,docs,notes,onNew,onSelect,onAction,setView}:{user:User;docs:
 
 function App(){
   const[user,setUser]=useState<User|null>(null),[boot,setBoot]=useState(true),[view,setView]=useState<View>('home');
+  const[storageSelection,setStorageSelection]=useState(()=>getStorageSelection()),[showStoragePicker,setShowStoragePicker]=useState(false);
   const[docs,setDocs]=useState<DocumentItem[]>([]),[selected,setSelected]=useState<DocumentItem|null>(null),[versions,setVersions]=useState<Version[]>([]),[history,setHistory]=useState<Event[]>([]);
   const[auditFilters,setAuditFilters]=useState({event_type:'',actor_id:'',resource:'',result:'',date_from:'',date_to:''}),[auditTotal,setAuditTotal]=useState(0),[folders,setFolders]=useState<Folder[]>([]),[deletedFolders,setDeletedFolders]=useState<Folder[]>([]),[tags,setTags]=useState<{id:string;owner_id:string;name:string}[]>([]),[moveModal,setMoveModal]=useState(false),[showFolderTrash,setShowFolderTrash]=useState(false),[users,setUsers]=useState<User[]>([]),[editingUser,setEditingUser]=useState<User|null>(null),[groups,setGroups]=useState<Group[]>([]),[events,setEvents]=useState<Event[]>([]),[notes,setNotes]=useState<Notification[]>([]);
   const[permissions,setPermissions]=useState<{role:string;actions:string[];user_ids:string[];group_ids:string[]}|null>(null),[folderPermissions,setFolderPermissions]=useState<{role:string;actions:string[];user_ids:string[];group_ids:string[]}|null>(null),[permissionFolder,setPermissionFolder]=useState<Folder|null>(null),[query,setQuery]=useState(''),[error,setError]=useState(''),[modal,setModal]=useState(false),[editingFolder,setEditingFolder]=useState<Folder|null>(null);
@@ -87,6 +152,7 @@ function App(){
 
   useEffect(()=>{document.documentElement.dataset.theme=theme;localStorage.setItem('kz_theme',theme)},[theme]);
   useEffect(()=>{if(!getToken()){setBoot(false);return}api.me().then(setUser).catch(()=>clearToken()).finally(()=>setBoot(false))},[]);
+  useEffect(()=>{if(user&&!getStorageSelection())setShowStoragePicker(true)},[user]);
   useEffect(()=>{if(user)load(view)},[user,view]);
 
   async function load(v:View=view){try{setError('');
@@ -208,9 +274,10 @@ function App(){
   <div className="event-list">{events.map(e=><article key={e.id}><strong>{e.type}</strong><span>{new Date(e.created_at).toLocaleString('pt-BR')} · {e.result||'success'} · {e.integrity_valid===false?'Integridade inválida':'Integridade válida'}</span><small>Ator: {e.actor_id||e.user_id||'sistema'} · Recurso: {e.resource||'system'} {e.resource_id||''}</small><code>{JSON.stringify(e.payload)}</code></article>)}</div>
   {auditTotal>auditPageSize&&<div className="pagination"><Button variant="secondary" disabled={auditPage<=1} onClick={async()=>{const p=auditPage-1;const r=await api.audit({...auditFilters,page:p,page_size:auditPageSize});setAuditPage(p);setEvents(r.items)}}>Anterior</Button><span>Página {auditPage} de {Math.ceil(auditTotal/auditPageSize)}</span><Button variant="secondary" disabled={auditPage>=Math.ceil(auditTotal/auditPageSize)} onClick={async()=>{const p=auditPage+1;const r=await api.audit({...auditFilters,page:p,page_size:auditPageSize});setAuditPage(p);setEvents(r.items)}}>Próxima</Button></div>}
 </Section>}
-        {view==='settings'&&<Section title="Configurações"><div className="settings-list"><article><strong>Tema</strong><button onClick={()=>setTheme(theme==='dark'?'light':'dark')}>{theme==='dark'?'Usar tema claro':'Usar tema escuro'}</button></article><article><strong>Sessão</strong><span>{user.email}</span></article><article><strong>API</strong><span>Configurada por VITE_API_BASE_URL</span></article><article><strong>Sair</strong><button onClick={async()=>{try{if(getToken())await api.logout()}catch{}finally{clearToken();setUser(null)}}}>Encerrar sessão</button></article></div></Section>}
+        {view==='settings'&&<Section title="Configurações"><div className="settings-list"><article><strong>Tema</strong><button onClick={()=>setTheme(theme==='dark'?'light':'dark')}>{theme==='dark'?'Usar tema claro':'Usar tema escuro'}</button></article><article><strong>Armazenamento</strong><div className="settings-storage"><span>{storageSelection?storageLabel(storageSelection.provider):'Não configurado'}{storageSelection?.folderName&&<small>{storageSelection.folderName}</small>}</span><button onClick={()=>setShowStoragePicker(true)}>Alterar armazenamento</button></div></article><article><strong>Sessão</strong><span>{user.email}</span></article><article><strong>API</strong><span>Configurada por VITE_API_BASE_URL</span></article><article><strong>Sair</strong><button onClick={async()=>{try{if(getToken())await api.logout()}catch{}finally{clearToken();setUser(null)}}}>Encerrar sessão</button></article></div></Section>}
       </main>
     </div>
+    {showStoragePicker&&<StoragePicker allowClose={Boolean(storageSelection)} onComplete={(provider)=>{const next=getStorageSelection();setStorageSelection(next||{provider,label:storageLabel(provider),connectedAt:new Date().toISOString()});setShowStoragePicker(false)}}/>}
     {moveModal&&selected&&<Modal title="Mover documento" onClose={()=>setMoveModal(false)}><form className="modal-form" onSubmit={async e=>{e.preventDefault();const f=new FormData(e.currentTarget);try{const d=await api.updateDocument(selected.id,{folder_id:String(f.get('folder')||'')||null});setSelected(await api.document(d.id));setMoveModal(false)}catch(x){setError(x instanceof Error?x.message:'Não foi possível mover o documento.')}}}><label>Pasta de destino<select name="folder" defaultValue={selected.folder_id||''}><option value="">Sem pasta</option>{folders.map(f=><option key={f.id} value={f.id}>{f.name}</option>)}</select></label><Button type="submit">Mover documento</Button></form></Modal>}
     {modal&&view==='users'&&<Modal title={editingUser?'Editar usuário':'Novo usuário'} onClose={()=>setModal(false)}><form className="modal-form" onSubmit={async e=>{e.preventDefault();const f=new FormData(e.currentTarget);if(editingUser){await api.adminUpdateUser(editingUser.id,{name:String(f.get('name')),phone:String(f.get('phone')),role:String(f.get('role'))});}else{await api.adminCreateUser({name:String(f.get('name')),email:String(f.get('email')),password:String(f.get('password')),phone:String(f.get('phone')||''),role:String(f.get('role'))});}setUsers(await api.users());setModal(false)}}><label>Nome<input name="name" defaultValue={editingUser?.name||''} required/></label><label>E-mail<input name="email" defaultValue={editingUser?.email||''} type="email" required disabled={!!editingUser}/></label>{!editingUser&&<label>Senha<input name="password" type="password" minLength={12} required/></label>}<label>Telefone<input name="phone" defaultValue={editingUser?.phone||''}/></label><label>Perfil<select name="role" defaultValue={editingUser?.role||'user'}><option value="user">Usuário</option><option value="manager">Gestor</option>{user.role==='admin'&&<option value="admin">Administrador</option>}</select></label><Button type="submit">Salvar</Button></form></Modal>}
     {modal&&view!=='users'&&<Modal title={view==='folders'?(editingFolder?'Renomear pasta':'Nova pasta'):'Novo documento'}  onClose={()=>setModal(false)}><form className="modal-form" onSubmit={async e=>{e.preventDefault();const f=new FormData(e.currentTarget);if(view==='folders'){if(editingFolder)await api.updateFolder(editingFolder.id,{name:String(f.get('name'))});else await api.createFolder(String(f.get('name')),String(f.get('parent')||'')||null);setModal(false);load('folders')}else await createDocument(e)}}>{view==='folders'?<><label>Nome<input name="name" defaultValue={editingFolder?.name||''} required/></label>{!editingFolder&&<label>Pasta pai<select name="parent"><option value="">Raiz</option>{folders.map(f=><option key={f.id} value={f.id}>{f.name}</option>)}</select></label>}</>:<><label>Nome<input name="name" required/></label><label>Descrição<input name="description" maxLength={2000}/></label><label>Tipo<input name="type" defaultValue="txt" required/></label><label>Pasta<select name="folder"><option value="">Sem pasta</option>{folders.map(f=><option key={f.id} value={f.id}>{f.name}</option>)}</select></label><label>Conteúdo<textarea name="content" rows={8}/></label></>}<Button type="submit">Salvar</Button></form></Modal>}
