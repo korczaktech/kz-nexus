@@ -675,14 +675,26 @@ class MainActivity : AppCompatActivity() {
                             try {
                                 val printManager = getSystemService(Context.PRINT_SERVICE) as PrintManager
                                 val adapter = web.createPrintDocumentAdapter("Korczak Nexus - " + (p.optString("name").ifBlank { "Documento" }))
-                                printManager.print(
-                                    "Korczak Nexus",
-                                    adapter,
-                                    PrintAttributes.Builder()
-                                        .setMediaSize(PrintAttributes.MediaSize.ISO_A4)
-                                        .setMinMargins(PrintAttributes.Margins.NO_MARGINS)
-                                        .build()
-                                )
+                                val paper = when (p.optString("paper", "A4").uppercase()) {
+                                    "A3" -> PrintAttributes.MediaSize.ISO_A3
+                                    "A5" -> PrintAttributes.MediaSize.ISO_A5
+                                    "LETTER" -> PrintAttributes.MediaSize.NA_LETTER
+                                    "LEGAL" -> PrintAttributes.MediaSize.NA_LEGAL
+                                    else -> PrintAttributes.MediaSize.ISO_A4
+                                }
+                                val landscape = p.optString("orientation", "portrait").equals("landscape", ignoreCase = true)
+                                val builder = PrintAttributes.Builder()
+                                    .setMediaSize(if (landscape) paper.asLandscape() else paper)
+                                    .setMinMargins(PrintAttributes.Margins.NO_MARGINS)
+                                if (android.os.Build.VERSION.SDK_INT >= 23) {
+                                    builder.setColorMode(
+                                        if (p.optBoolean("color", true)) PrintAttributes.COLOR_MODE_COLOR else PrintAttributes.COLOR_MODE_MONOCHROME
+                                    )
+                                    if (p.optBoolean("duplex", false)) {
+                                        builder.setDuplexMode(PrintAttributes.DUPLEX_MODE_LONG_EDGE)
+                                    }
+                                }
+                                printManager.print("Korczak Nexus", adapter, builder.build())
                                 respond(callback, JSONObject().put("ok", true))
                             } catch (error: Exception) {
                                 respond(callback, JSONObject().put("ok", false).put("error", error.message ?: "Não foi possível abrir a impressão"))
