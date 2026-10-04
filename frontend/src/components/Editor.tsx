@@ -2,6 +2,7 @@ import {useEffect,useMemo,useRef,useState} from 'react';
 import type {KeyboardEvent} from 'react';
 import type {DocumentItem,Version} from '../services/api';
 import {clearDraft,preserveDraft,recoverDraft,saveWithDraftFallback} from './editorPersistence';
+import {Icon} from './ui';
 
 export type SaveState='saved'|'dirty'|'saving'|'conflict'|'error';
 const escapeHtml=(value:string)=>value.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
