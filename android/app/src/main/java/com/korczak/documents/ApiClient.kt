@@ -11,7 +11,7 @@ import java.net.URLEncoder
 data class ApiResult(val code: Int, val body: String)
 
 class ApiClient(private val session: SessionStore) {
-    private val base = "https://kzdoc.onrender.com"
+    private val base = "https://kz-nexus.onrender.com"
     fun request(method:String,path:String,body:String?=null):ApiResult{
         val c=(URL(base+path).openConnection() as HttpURLConnection).apply{
             requestMethod=method; connectTimeout=20000; readTimeout=60000
