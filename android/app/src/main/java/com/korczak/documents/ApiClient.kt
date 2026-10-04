@@ -42,6 +42,21 @@ class ApiClient(private val session: SessionStore) {
     fun permanentDelete(id:String)=request("DELETE","/api/v1/documents/"+id+"/permanent")
     fun logout()=request("POST","/api/v1/auth/logout","{}")
     fun errorMessage(r:ApiResult):String=try{JSONObject(r.body).optJSONObject("error")?.optString("message")?.takeIf{it.isNotBlank()}?:"Erro HTTP "+r.code}catch(_:Exception){"Erro HTTP "+r.code}
-    fun saveSession(r:ApiResult){val j=JSONObject(r.body);session.token=j.getString("token");session.userJson=j.getJSONObject("user").toString()}
+    fun saveSession(r:ApiResult){
+        val j=JSONObject(r.body)
+        val token = when {
+            j.has("token") && !j.isNull("token") -> j.optString("token", "")
+            j.has("access_token") && !j.isNull("access_token") -> j.optString("access_token", "")
+            else -> ""
+        }.trim()
+        if (token.isBlank()) throw IllegalStateException("Resposta de login sem token")
+        val user = when {
+            j.opt("user") is JSONObject -> j.getJSONObject("user")
+            j.opt("user") is String -> JSONObject(j.getString("user"))
+            else -> throw IllegalStateException("Resposta de login sem usuário")
+        }
+        session.token = token
+        session.userJson = user.toString()
+    }
     fun listText(body:String):String=try{val a=JSONArray(body);buildString{for(i in 0 until a.length()){val o=a.optJSONObject(i)?:continue;append("• ").append(o.optString("name",o.optString("id"))).append("\n")}}.ifBlank{"Nenhum item encontrado."}}catch(_:Exception){body}
 }
