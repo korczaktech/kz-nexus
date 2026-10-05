@@ -58,7 +58,7 @@ def _account_to_user(account: dict | None):
         "name": account.get("Nome", ""),
         "email": account.get("Email", ""),
         "phone": account.get("Telefone"),
-        "password_hash": account.get("Aplicativos", {}).get("Workspace", {}).get("Nexus", {}).get("Senha", ""),
+        "password_hash": account.get("Aplicativos", {}).get("Nexus", {}).get("Senha", ""),
         "email_verified": account.get("EmailVerified", False),
         "phone_verified": account.get("PhoneVerified", False),
         "role": conta.get("Role", "user"),
