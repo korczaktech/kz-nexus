@@ -60,11 +60,6 @@ jobs:
           sha256="$(sha256sum "$APK" | awk '{print $1}')"
           printf '%s\n' '{' '  "version": "'"$VERSION"'",' '  "url": "https://github.com/'"$GITHUB_REPOSITORY"'/releases/download/v'"$VERSION"'/'"$APK"'",' '  "sha256": "'"$sha256"'"' '}' > update.json
 
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git fetch origin updates
-          git checkout -B updates origin/updates
-          cp "$GITHUB_WORKSPACE/update.json" update.json
-          git add update.json
-          git diff --cached --quiet || git commit -m "chore(updater): publicar $VERSION"
-          git push origin updates
+          content="$(base64 -w 0 update.json)"
+          existing="$(gh api "repos/$GITHUB_REPOSITORY/contents/update.json?ref=updates" --jq '.sha')"
+          gh api --method PUT "repos/$GITHUB_REPOSITORY/contents/update.json"             -f message="chore(updater): publicar $VERSION"             -f content="$content"             -f branch="updates"             -f sha="$existing"
