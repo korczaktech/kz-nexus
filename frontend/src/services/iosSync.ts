@@ -66,7 +66,7 @@ export async function flushIOSOperationQueue(base:string,getToken:()=>string|nul
     if(op.body!==undefined) headers.set("Content-Type","application/json");
     const token=getToken(); if(token) headers.set("Authorization","Bearer "+token);
     try{
-      const response=await fetch(base.replace(/\\/$/,"")+op.path,{method:op.method,headers,body:op.body});
+      const response=await fetch(base.replace(/\/$/,"")+op.path,{method:op.method,headers,body:op.body});
       if(response.ok || (response.status>=400 && response.status<500 && response.status!==409)){
         await remove(op.id); synced++; continue;
       }
