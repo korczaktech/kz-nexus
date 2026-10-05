@@ -30,7 +30,7 @@ F4EF6B8F801847C2B404E882 /* Frameworks */ = {isa = PBXFrameworksBuildPhase; buil
 887DFD0C71244D248C0B6E58 /* KZDocuments */ = {
  isa = PBXGroup;
  children = (C91DB9EB584D49C4B3C50760 /* KZDocumentsApp.swift */, 55923EAA433D4D27AAE1BA1B /* ContentView.swift */, 61A371ACDC3F4D8DB10C28CA /* Info.plist */);
- path = KZDocuments;
+ name = KZDocuments;
  sourceTree = "<group>";
 };
 D85D5F6E129E4A3796E0D95C /* Products */ = {isa = PBXGroup; children = (C9E0581F34BD43AC8A884CAE /* KZDocuments.app */); name = Products; sourceTree = "<group>";};
@@ -82,7 +82,7 @@ D85D5F6E129E4A3796E0D95C /* Products */ = {isa = PBXGroup; children = (C9E0581F3
  CODE_SIGN_STYLE = Automatic;
  CURRENT_PROJECT_VERSION = 1;
  DEVELOPMENT_TEAM = "";
- INFOPLIST_FILE = KZDocuments/Info.plist;
+ INFOPLIST_FILE = Info.plist;
  IPHONEOS_DEPLOYMENT_TARGET = 16.0;
  LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks";
  PRODUCT_BUNDLE_IDENTIFIER = com.korczaktech.nexus;
