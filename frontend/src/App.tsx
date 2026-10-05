@@ -5,6 +5,7 @@ import {Button, Icon, Modal, StatePanel} from './components/ui';
 import {Editor, markdownToHtml} from './components/Editor';
 import {ApiError} from './services/api';
 import {chooseLocalFolder, getStorageSelection, saveStorageSelection, storageLabel, type StorageProvider} from './services/storage';
+import {isIOS, listIOSFiles, getIOSFile, deleteIOSFile} from './services/iosFiles';
 const nexusLogo = `${import.meta.env.BASE_URL}icons/favicon-nexus.svg?v=2`;
 const NEXUS_WEB_VERSION = String(packageJson.version);
 function versionParts(value:string){return value.replace(/^v/i,'').split('.').map(part=>Number.parseInt(part,10)||0)}
@@ -155,22 +156,52 @@ function App(){
   const[searchPage,setSearchPage]=useState(1),[searchTotal,setSearchTotal]=useState(0),searchPageSize=25;
   const[auditPage,setAuditPage]=useState(1),auditPageSize=50;
   const[webRelease,setWebRelease]=useState<{tag_name?:string;html_url?:string}|null>(null),[webReleaseBusy,setWebReleaseBusy]=useState(false),[webReleaseError,setWebReleaseError]=useState('');
+  const[iosOffline,setIosOffline]=useState(isIOS&&!navigator.onLine),[iosLocalFiles,setIosLocalFiles]=useState<Array<{id:string;name:string;type:string;size:number;lastModified:number}>>([]);
   async function checkWebRelease(){setWebReleaseBusy(true);setWebReleaseError('');try{const r=await fetch('https://api.github.com/repos/korczaktech/kz-nexus/releases/latest',{headers:{Accept:'application/vnd.github+json'}});if(!r.ok)throw new Error('Não foi possível consultar a versão publicada.');setWebRelease(await r.json())}catch(e){setWebReleaseError(e instanceof Error?e.message:'Não foi possível verificar atualizações.')}finally{setWebReleaseBusy(false)}}
 
   useEffect(()=>{document.documentElement.dataset.theme=theme;localStorage.setItem('kz_theme',theme)},[theme]);
   useEffect(()=>{if(!getToken()){setBoot(false);return}api.me().then(setUser).catch(()=>clearToken()).finally(()=>setBoot(false))},[]);
   useEffect(()=>{if(user&&!getStorageSelection())setShowStoragePicker(true)},[user]);
   useEffect(()=>{if(user)load(view)},[user,view]);
+  useEffect(()=>{
+    if(!isIOS)return;
+    const onRuntime=(event:Event)=>setIosOffline(!((event as CustomEvent<{online:boolean}>).detail?.online));
+    const loadLocal=()=>listIOSFiles().then(setIosLocalFiles).catch(()=>setIosLocalFiles([]));
+    loadLocal();
+    window.addEventListener('nexusIOSRuntime',onRuntime as EventListener);
+    window.addEventListener('online',()=>setIosOffline(false),{passive:true});
+    window.addEventListener('offline',()=>setIosOffline(true),{passive:true});
+    return()=>window.removeEventListener('nexusIOSRuntime',onRuntime as EventListener);
+  },[]);
 
   async function load(v:View=view){try{setError('');
-    if(v==='home'||v==='documents')setDocs(await api.documents());
+    if(v==='home'||v==='documents'){
+      const remote=await api.documents();
+      if(isIOS){
+        const local=iosLocalFiles.map(f=>({id:'ios:'+f.id,owner_id:user?.id||'',name:f.name,document_type:(f.type.split('/').pop()||'file').slice(0,12),folder_id:null,current_version_id:null,status:'local',favorite:false,created_at:new Date(f.lastModified||Date.now()).toISOString(),updated_at:new Date(f.lastModified||Date.now()).toISOString(),content:null}));
+        setDocs([...local,...remote]);
+      }else setDocs(remote);
+    }
     if(v==='favorites')setDocs(await api.favorites()); if(v==='trash')setDocs(await api.trash()); if(v==='recent')setDocs(await api.recent());
     if(v==='folders'){setFolders(await api.folders());if(showFolderTrash)setDeletedFolders(await api.folderTrash())} if(v==='users'||v==='admin'||v==='permissions'||v==='folder-permissions')setUsers(await api.users()); if(v==='groups'||v==='permissions'||v==='folder-permissions')setGroups(await api.groups());
     if(v==='audit'){const result=await api.audit({...auditFilters,page:auditPage,page_size:auditPageSize});setEvents(result.items);setAuditTotal(result.total);if(user?.role==='admin'||user?.role==='manager')setUsers(await api.users())} if(v==='home')setNotes(await api.notifications());
     if(v==='search'&&query.trim())setDocs((await api.search(query)).items); if(v==='search'&&!query.trim())setDocs(await api.documents());
     if(v==='advanced-search'){setFolders(await api.folders());setTags(await api.tags());const result=await api.advancedSearch({...advancedFilters,page:searchPage,page_size:searchPageSize});setDocs(result.items);setSearchTotal(result.total)}
   }catch(x){setError(x instanceof Error?x.message:'Falha ao carregar dados.')}}
-  async function openDoc(d:DocumentItem){try{const full=await api.document(d.id);setSelected(full);setVersions(await api.versions(d.id));setTags(await api.tags());await api.open(d.id)}catch(x){setError(x instanceof Error?x.message:'Não foi possível abrir o documento.')}setView('viewer')}
+  async function openDoc(d:DocumentItem){
+    if(d.id.startsWith('ios:')){
+      try{
+        const file=await getIOSFile(d.id.slice(4));
+        if(!file){setError('O arquivo local não está mais disponível no dispositivo.');return;}
+        let content='Arquivo local importado pelo Arquivos do iOS.';
+        if(file.type.startsWith('text/')||/\.(txt|md|csv|json|rtf|html|xml)$/i.test(file.name)) content=await file.text();
+        setSelected({...d,content});
+        setVersions([]);
+        setView('viewer');
+      }catch(x){setError(x instanceof Error?x.message:'Não foi possível abrir o arquivo local.')}
+      return;
+    }
+    try{const full=await api.document(d.id);setSelected(full);setVersions(await api.versions(d.id));setTags(await api.tags());await api.open(d.id)}catch(x){setError(x instanceof Error?x.message:'Não foi possível abrir o documento.')}setView('viewer')}
   async function showVersions(v:View){if(!selected)return;setVersions(await api.versions(selected.id));setView(v)}
   async function showHistory(){if(!selected)return;setHistory((await api.audit({document_id:selected.id})).items);setView('history')}
   async function saveEditor(data:{name:string;document_type:string;content:string;base_version_id:string|null}){
@@ -198,7 +229,13 @@ function App(){
   if(boot)return <StatePanel title="Iniciando" message="Preparando o Korczak Nexus… Isso pode levar cerca de 30 a 60 segundos. Em alguns casos, pode levar até 2 minutos."/>; if(!user)return <Auth done={setUser}/>;
 
   const title=nav.concat(secondary).find(n=>n[0]===view)?.[1]||'Korczak Nexus';
-  const action=async(d:DocumentItem)=>{try{if(d.status==='deleted')await api.restore(d.id);else await api.favorite(d.id,!d.favorite);await load(view)}catch(x){setError(x instanceof Error?x.message:'Operação não concluída.')}};
+  const action=async(d:DocumentItem)=>{
+    if(d.id.startsWith('ios:')){
+      try{await deleteIOSFile(d.id.slice(4));const local=await listIOSFiles();setIosLocalFiles(local);await load(view)}
+      catch(x){setError(x instanceof Error?x.message:'Não foi possível remover o arquivo local.')}
+      return;
+    }
+    try{if(d.status==='deleted')await api.restore(d.id);else await api.favorite(d.id,!d.favorite);await load(view)}catch(x){setError(x instanceof Error?x.message:'Operação não concluída.')}};
 
   return <div className="app-shell">
     <aside className="sidebar">
@@ -210,6 +247,7 @@ function App(){
       <div className="sidebar-footer"><strong>KORCZAK TECHNOLOGIES</strong><span>Korczak Nexus</span></div>
     </aside>
     <div className="main-shell">
+      {isIOS&&iosOffline&&<div className="ios-offline-banner" role="status"><Icon name="cloud"/> Você está offline. Arquivos locais continuam disponíveis; alterações online serão retomadas quando a conexão voltar.</div>
       <header className="topbar">
         <div className="mobile-nexus-header">
           <div className="mobile-nexus-brand"><div className="brand-logo small image-brand"><img src={nexusLogo} alt="" /></div><div><strong>KORCZAK</strong><span>NEXUS</span></div></div>
