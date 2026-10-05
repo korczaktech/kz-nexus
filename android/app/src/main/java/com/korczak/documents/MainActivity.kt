@@ -10,8 +10,6 @@ import android.print.PrintManager
 import android.net.Uri
 import android.os.Bundle
 import android.os.Environment
-import android.net.ConnectivityManager
-import android.net.NetworkCapabilities
 import android.webkit.JavascriptInterface
 import android.webkit.WebChromeClient
 import android.webkit.WebView
@@ -275,6 +273,57 @@ class MainActivity : AppCompatActivity() {
 
     // Android storage permissions are requested only when a feature explicitly needs them.
 
+    private fun showNativeSplash() {
+        if (nativeSplash != null) return
+        val root = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            gravity = Gravity.CENTER
+            setPadding(dp(24), 0, dp(24), 0)
+            setBackgroundColor(Color.rgb(3, 9, 20))
+        }
+        val icon = ImageView(this).apply {
+            setImageDrawable(ContextCompat.getDrawable(this@MainActivity, R.drawable.ic_kz))
+            scaleType = ImageView.ScaleType.CENTER_INSIDE
+        }
+        root.addView(icon, LinearLayout.LayoutParams(dp(108), dp(108)))
+        root.addView(TextView(this).apply {
+            text = "KORCZAK NEXUS"
+            textSize = 17f
+            gravity = Gravity.CENTER
+            setTextColor(Color.WHITE)
+            letterSpacing = 0.16f
+            setPadding(0, dp(14), 0, 0)
+        }, LinearLayout.LayoutParams(-1, -2))
+        root.addView(TextView(this).apply {
+            text = "DOCUMENTS"
+            textSize = 10f
+            gravity = Gravity.CENTER
+            setTextColor(Color.rgb(83, 200, 255))
+            letterSpacing = 0.38f
+            setPadding(0, dp(4), 0, 0)
+        }, LinearLayout.LayoutParams(-1, -2))
+        nativeSplash = root
+        rootLayout.addView(root, FrameLayout.LayoutParams(-1, -1))
+    }
+
+    private fun hideNativeSplash() {
+        val splash = nativeSplash ?: return
+        nativeSplash = null
+        splash.animate().alpha(0f).setDuration(180).withEndAction {
+            rootLayout.removeView(splash)
+        }.start()
+    }
+
+    private fun syncSystemInsets() {
+        if (!::web.isInitialized) return
+        val top = web.paddingTop
+        val bottom = web.paddingBottom
+        val js = "(function(){document.documentElement.style.setProperty('--nx-native-top-inset','" +
+            top + "px');document.documentElement.style.setProperty('--nx-native-bottom-inset','" +
+            bottom + "px');})();"
+        web.evaluateJavascript(js, null)
+    }
+
     override fun onNewIntent(intent: Intent?) {
         super.onNewIntent(intent)
         setIntent(intent)
@@ -387,6 +436,7 @@ class MainActivity : AppCompatActivity() {
     override fun onResume() {
         super.onResume()
         handleDocumentIntent(intent)
+        handleShareIntent(intent)
         Updater(this).resumePending()
         if (::web.isInitialized) {
             web.postDelayed({ checkForUpdateIfEnabled() }, 1500)
@@ -578,7 +628,7 @@ class MainActivity : AppCompatActivity() {
                             } else {
                                 storage.write(p.optString("uri"), name, content)
                             }
-                            if (!result.first && offline.networkState().optBoolean("online").not()) {
+                            if (!result.first && !offline.networkState().optBoolean("online")) {
                                 val id = offline.enqueue(p.optString("uri"), name, content)
                                 respond(callback, JSONObject().put("ok", true).put("queued", true).put("queueId", id).put("uri", result.second ?: "").put("error", "Sem conexão. Alteração preservada localmente."))
                             } else {
