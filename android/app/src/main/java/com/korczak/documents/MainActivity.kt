@@ -51,6 +51,8 @@ class MainActivity : AppCompatActivity() {
     private var pendingCallback: String? = null
     private var lastHandledDocumentUri: String? = null
     private var nativeSplash: View? = null
+    private var updateCheckInFlight = false
+    private var lastPromptedUpdateVersion: String? = null
 
     override fun onCreate(state: Bundle?) {
         super.onCreate(state)
@@ -119,20 +121,22 @@ class MainActivity : AppCompatActivity() {
         // A verificação automática precisa ocorrer depois que o WebView foi iniciado.
         // Fazemos uma tentativa inicial e uma segunda tentativa curta para recuperar
         // falhas transitórias de rede sem exigir que o usuário abra "Atualizações".
-        web.postDelayed({ checkForUpdateIfEnabled() }, 1200)
-        web.postDelayed({
-            if (isFinishing || isDestroyed) return@postDelayed
-            checkForUpdateIfEnabled()
-        }, 9000)
+        web.postDelayed({ checkForUpdateIfEnabled() }, 1600)
+        web.postDelayed({ hideNativeSplash() }, 6000)
     }
 
 
     private fun checkForUpdateIfEnabled() {
+        if (updateCheckInFlight || isFinishing || isDestroyed) return
         val prefs = getSharedPreferences("nexus_settings", MODE_PRIVATE)
         if (!prefs.getBoolean("autoUpdate", true)) return
+        updateCheckInFlight = true
         Updater(this).check { result ->
+            updateCheckInFlight = false
             if (!result.startsWith("update|")) return@check
             val parts = result.split("|", limit = 4)
+            if (parts.getOrElse(1) { "" } == lastPromptedUpdateVersion) return@check
+            lastPromptedUpdateVersion = parts.getOrElse(1) { "" }
             runOnUiThread {
                 NexusFeedback.alert(
                     this,
