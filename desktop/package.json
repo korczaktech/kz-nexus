@@ -15,9 +15,6 @@
     "dist:mac": "electron-builder --mac dmg",
     "dist:linux": "electron-builder --linux AppImage deb"
   },
-  "dependencies": {
-    "electron-updater": "^6.6.2"
-  },
   "devDependencies": {
     "electron": "^38.1.2",
     "electron-builder": "^26.0.12"
@@ -35,12 +32,6 @@
       "package.json"
     ],
     "asar": true,
-    "publish": {
-      "provider": "github",
-      "owner": "korczaktech",
-      "repo": "kz-nexus",
-      "releaseType": "release"
-    },
     "win": {
       "target": [
         "nsis"
