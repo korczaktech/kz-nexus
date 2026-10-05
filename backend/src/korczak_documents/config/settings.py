@@ -10,6 +10,7 @@ class Settings(BaseSettings):
     frontend_url: str = "http://localhost:5173"
     mongodb_uri: str = "mongodb://localhost:27017"
     mongodb_database: str = "KZDocs"
+    mongodb_accounts_database: str = "Contas"
     mongodb_server_selection_timeout_ms: int = 3000
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", extra="ignore", case_sensitive=False)
     @property
