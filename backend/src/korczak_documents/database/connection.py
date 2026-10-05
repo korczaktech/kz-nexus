@@ -31,6 +31,11 @@ def get_database(settings: Settings | None = None):
     return get_client()[current.mongodb_database]
 
 
+def get_accounts_database(settings: Settings | None = None):
+    current = settings or get_settings()
+    return get_client()[current.mongodb_accounts_database]
+
+
 def close_client() -> None:
     try:
         loop = asyncio.get_running_loop()
