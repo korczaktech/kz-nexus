@@ -42,35 +42,77 @@ def _canonical_event(event: dict) -> str:
 
 
 async def find_user_by_email(email: str):
-    return await get_database()["usuarios"].find_one({"email": email.lower().strip()})
+    return await get_accounts_database()["contas"].find_one({"Email": email.lower().strip()})
 
 
 async def find_user(user_id: str):
-    return await get_database()["usuarios"].find_one({"id": user_id})
+    return await get_accounts_database()["contas"].find_one({"id": user_id})
+
+
+def _account_to_user(account: dict | None):
+    if not account:
+        return None
+    conta = account.get("Conta", {})
+    return {
+        "id": account.get("id"),
+        "name": account.get("Nome", ""),
+        "email": account.get("Email", ""),
+        "phone": account.get("Telefone"),
+        "password_hash": account.get("Aplicativos", {}).get("Workspace", {}).get("Nexus", {}).get("Senha", ""),
+        "email_verified": account.get("EmailVerified", False),
+        "phone_verified": account.get("PhoneVerified", False),
+        "role": conta.get("Role", "user"),
+        "status": conta.get("Status", "active"),
+        "created_at": conta.get("CriadaEm"),
+        "updated_at": conta.get("AtualizadaEm"),
+        "_account": account,
+    }
 
 
 async def create_user(data: dict):
+    timestamp = now()
+    password_hash = data["password_hash"]
+    app_names = [
+        "Site", "Morok", "IDE", "AI", "ERP", "FLOW", "DOCUMENTS", "VISION", "OPS", "CONNECT", "MOBILE",
+        "Vault", "Nexus", "Nexa", "Veya", "Formly", "Korvo", "Chrona", "Meet", "Pulse", "Acta", "Memo", "People", "Web", "Klash"
+    ]
+    aplicativos = {}
+    for name in app_names:
+        aplicativos[name] = {"Senha": password_hash, "Ativo": True}
     document = {
         "id": str(uuid4()),
-        "name": data["name"].strip(),
-        "email": data["email"].lower().strip(),
-        "phone": data.get("phone"),
-        "password_hash": data["password_hash"],
-        "email_verified": False,
-        "phone_verified": False,
-        "role": data.get("role", "user"),
-        "status": data.get("status", "active"),
-        "created_at": now(),
-        "updated_at": now(),
+        "Nome": data["name"].strip(),
+        "Email": data["email"].lower().strip(),
+        "Telefone": data.get("phone"),
+        "Aplicativos": aplicativos,
+        "Planos": {
+            "KOS": {"Free": True, "Hephaestus": False, "Apollo": False, "Athena": False, "Zeus": False, "Veles": False, "Marzanna": False},
+            "Workspace": {"Free": True, "Hephaestus": False, "Apollo": False, "Athena": False, "Zeus": False, "Veles": False, "Marzanna": False}
+        },
+        "Verified": False,
+        "EmailVerified": False,
+        "PhoneVerified": False,
+        "Conta": {"Status": data.get("status", "active"), "Role": data.get("role", "user"), "CriadaEm": timestamp, "AtualizadaEm": timestamp, "UltimoLogin": None},
+        "Produtos": {"KOS": True, "Workspace": True, "Site": True},
+        "Seguranca": {"TwoFactorEnabled": False, "RecoveryEnabled": True},
+        "Preferencias": {"Idioma": "pt-BR", "Tema": "dark"},
+        "Metadados": {"OrigemCadastro": "Nexus", "VersaoCadastro": "", "UltimoDispositivo": "", "UltimoIP": None}
     }
-    await get_database()["usuarios"].insert_one(document)
-    return document
+    await get_accounts_database()["contas"].insert_one(document)
+    return _account_to_user(document)
 
 
 async def update_user(user_id: str, changes: dict):
-    changes["updated_at"] = now()
-    await get_database()["usuarios"].update_one({"id": user_id}, {"$set": changes})
-    return await find_user(user_id)
+    mapped = {}
+    if "name" in changes: mapped["Nome"] = changes["name"]
+    if "phone" in changes: mapped["Telefone"] = changes["phone"]
+    if "email_verified" in changes: mapped["EmailVerified"] = changes["email_verified"]
+    if "phone_verified" in changes: mapped["PhoneVerified"] = changes["phone_verified"]
+    if "role" in changes: mapped["Conta.Role"] = changes["role"]
+    if "status" in changes: mapped["Conta.Status"] = changes["status"]
+    mapped["Conta.AtualizadaEm"] = now()
+    await get_accounts_database()["contas"].update_one({"id": user_id}, {"$set": mapped})
+    return _account_to_user(await get_accounts_database()["contas"].find_one({"id": user_id}))
 
 
 async def create_document(owner_id: str, data: dict):
