@@ -24,6 +24,11 @@ import android.widget.Button
 import android.widget.HorizontalScrollView
 import android.widget.LinearLayout
 import android.widget.FrameLayout
+import android.widget.ImageView
+import android.widget.TextView
+import androidx.core.content.ContextCompat
+import androidx.core.view.ViewCompat
+import androidx.core.view.WindowInsetsCompat
 import androidx.appcompat.app.AppCompatActivity
 import androidx.documentfile.provider.DocumentFile
 import org.json.JSONArray
@@ -45,9 +50,13 @@ class MainActivity : AppCompatActivity() {
     private var pendingMediaCallback: String? = null
     private var pendingCallback: String? = null
     private var lastHandledDocumentUri: String? = null
+    private var nativeSplash: View? = null
 
     override fun onCreate(state: Bundle?) {
         super.onCreate(state)
+        window.statusBarColor = Color.rgb(3, 9, 20)
+        window.navigationBarColor = Color.rgb(3, 9, 20)
+        window.setSoftInputMode(android.view.WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE)
         session = SessionStore(this)
         api = ApiClient(session)
         storage = StorageManager(this)
@@ -57,17 +66,31 @@ class MainActivity : AppCompatActivity() {
             settings.domStorageEnabled = true
             settings.allowFileAccess = true
             settings.allowContentAccess = true
+            settings.allowFileAccessFromFileURLs = false
+            settings.allowUniversalAccessFromFileURLs = false
+            settings.builtInZoomControls = false
+            settings.displayZoomControls = false
+            if (android.os.Build.VERSION.SDK_INT >= 26) settings.safeBrowsingEnabled = true
             webViewClient = object : WebViewClient() {
                 override fun onPageFinished(view: WebView?, url: String?) {
                     super.onPageFinished(view, url)
+                    syncSystemInsets()
+                    view?.postDelayed({ hideNativeSplash() }, 420)
                 }
             }
             webChromeClient = WebChromeClient()
             addJavascriptInterface(Bridge(), "Android")
         }
         rootLayout = FrameLayout(this).apply {
-            setBackgroundColor(Color.TRANSPARENT)
+            setBackgroundColor(Color.rgb(3, 9, 20))
             addView(web, FrameLayout.LayoutParams(-1, -1))
+        }
+        ViewCompat.setOnApplyWindowInsetsListener(rootLayout) { _, insets ->
+            val bars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
+            web.setPadding(0, bars.top, 0, bars.bottom)
+            nativeSplash?.setPadding(0, bars.top, 0, bars.bottom)
+            syncSystemInsets()
+            insets
         }
         nativeEditorToolbar = buildNativeEditorToolbar()
         nativeEditorToolbar.visibility = View.GONE
@@ -77,6 +100,7 @@ class MainActivity : AppCompatActivity() {
         }
         rootLayout.addView(nativeEditorToolbar, toolbarLp)
         setContentView(rootLayout)
+        showNativeSplash()
         val html = assets.open("index.html").bufferedReader(Charsets.UTF_8).use { it.readText() }
         web.loadDataWithBaseURL(
             "file:///android_asset/",
@@ -86,9 +110,10 @@ class MainActivity : AppCompatActivity() {
             null
         )
 
-        requestStartupPermissions()
+        // Storage Access Framework is requested on demand; no broad permission is required at startup.
         handleFeedbackIntent(intent)
         handleDocumentIntent(intent)
+        handleShareIntent(intent)
         Updater(this).resumePending()
 
         // A verificação automática precisa ocorrer depois que o WebView foi iniciado.
@@ -238,16 +263,58 @@ class MainActivity : AppCompatActivity() {
 
     private var permissionFlowActive = false
 
-    private fun missingStartupPermissions(): List<String> {
-        val missing = mutableListOf<String>()
-        if (android.os.Build.VERSION.SDK_INT >= 30 && !Environment.isExternalStorageManager()) {
-            missing.add("Acesso amplo ao armazenamento")
+    private fun showNativeSplash() {
+        if (nativeSplash != null) return
+        val root = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            gravity = Gravity.CENTER
+            setPadding(dp(24), 0, dp(24), 0)
+            setBackgroundColor(Color.rgb(3, 9, 20))
         }
-        if (android.os.Build.VERSION.SDK_INT >= 26 && !packageManager.canRequestPackageInstalls()) {
-            missing.add("Permissão para instalar atualizações do Nexus")
+        val icon = ImageView(this).apply {
+            setImageDrawable(ContextCompat.getDrawable(this@MainActivity, R.drawable.ic_kz))
+            scaleType = ImageView.ScaleType.CENTER_INSIDE
         }
-        return missing
+        root.addView(icon, LinearLayout.LayoutParams(dp(108), dp(108)))
+        root.addView(TextView(this).apply {
+            text = "KORCZAK NEXUS"
+            textSize = 17f
+            gravity = Gravity.CENTER
+            setTextColor(Color.WHITE)
+            letterSpacing = 0.16f
+            setPadding(0, dp(14), 0, 0)
+        }, LinearLayout.LayoutParams(-1, -2))
+        root.addView(TextView(this).apply {
+            text = "DOCUMENTS"
+            textSize = 10f
+            gravity = Gravity.CENTER
+            setTextColor(Color.rgb(83, 200, 255))
+            letterSpacing = 0.38f
+            setPadding(0, dp(4), 0, 0)
+        }, LinearLayout.LayoutParams(-1, -2))
+        nativeSplash = root
+        rootLayout.addView(root, FrameLayout.LayoutParams(-1, -1))
     }
+
+    private fun hideNativeSplash() {
+        val splash = nativeSplash ?: return
+        nativeSplash = null
+        splash.animate().alpha(0f).setDuration(180).withEndAction {
+            rootLayout.removeView(splash)
+        }.start()
+    }
+
+    private fun syncSystemInsets() {
+        if (!::web.isInitialized) return
+        val top = web.paddingTop
+        val bottom = web.paddingBottom
+        val js = "(function(){document.documentElement.style.setProperty('--nx-native-top-inset','" +
+            top + "px');document.documentElement.style.setProperty('--nx-native-bottom-inset','" +
+            bottom + "px');})();"
+        web.evaluateJavascript(js, null)
+    }
+
+    private fun missingStartupPermissions(): List<String> = emptyList()
 
     private fun requestStartupPermissions() {
         if (permissionFlowActive) return
@@ -311,6 +378,26 @@ class MainActivity : AppCompatActivity() {
         setIntent(intent)
         handleFeedbackIntent(intent)
         handleDocumentIntent(intent)
+        handleShareIntent(intent)
+    }
+
+    private fun handleShareIntent(intent: Intent?) {
+        if (intent?.action != Intent.ACTION_SEND) return
+        val uri = intent.getParcelableExtra<Uri>(Intent.EXTRA_STREAM)
+        val text = intent.getStringExtra(Intent.EXTRA_TEXT)
+        if (uri != null) {
+            try { contentResolver.takePersistableUriPermission(uri, Intent.FLAG_GRANT_READ_URI_PERMISSION) } catch (_: Exception) {}
+            web.postDelayed({
+                val name = DocumentFile.fromSingleUri(this, uri)?.name ?: "Arquivo compartilhado"
+                val js = "window.openExisting && window.openExisting(" + JSONObject.quote(uri.toString()) + "," + JSONObject.quote(name) + ")"
+                web.evaluateJavascript(js, null)
+            }, 650)
+        }
+        if (!text.isNullOrBlank()) {
+            web.postDelayed({
+                web.evaluateJavascript("(window.openCreateFromText&&window.openCreateFromText(" + JSONObject.quote(text) + "))", null)
+            }, 750)
+        }
     }
 
     /**
@@ -885,6 +972,8 @@ class MainActivity : AppCompatActivity() {
     override fun onDestroy() {
         pool.shutdownNow()
         web.removeJavascriptInterface("Android")
+        web.stopLoading()
+        web.destroy()
         super.onDestroy()
     }
 }
