@@ -1,6 +1,6 @@
 const DB_NAME = "korczak-nexus-ios";
 const STORE = "files";
-const DB_VERSION = 1;
+const DB_VERSION = 2;
 
 function openDb(): Promise<IDBDatabase> {
   return new Promise((resolve,reject)=>{
@@ -60,6 +60,27 @@ export async function deleteIOSFile(id:string): Promise<void> {
     tx.onerror=()=>reject(tx.error);
   });
   db.close();
+}
+
+export async function shareIOSFile(file: File): Promise<boolean> {
+  const nav = navigator as Navigator & { share?: (data: ShareData) => Promise<void>; canShare?: (data: ShareData) => boolean };
+  if (nav.share) {
+    const data: ShareData = { title: "Korczak Nexus", text: file.name, files: [file] };
+    try {
+      if (!nav.canShare || nav.canShare(data)) { await nav.share(data); return true; }
+    } catch (error) {
+      if (error instanceof DOMException && error.name === "AbortError") return true;
+    }
+  }
+  if (!hasNativeIOSBridge()) return false;
+  const bytes = new Uint8Array(await file.arrayBuffer());
+  let binary = "";
+  const chunk = 0x8000;
+  for (let i=0;i<bytes.length;i+=chunk) binary += String.fromCharCode(...bytes.subarray(i,i+chunk));
+  (window as Window & {webkit?: {messageHandlers?: {ios?: {postMessage?: (body: unknown)=>void}}}}).webkit?.messageHandlers?.ios?.postMessage?.({
+    action:"share", name:file.name, mime:file.type || "application/octet-stream", base64:btoa(binary)
+  });
+  return true;
 }
 
 export function hasNativeIOSBridge(): boolean {
