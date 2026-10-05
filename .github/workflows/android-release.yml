@@ -77,15 +77,15 @@ jobs:
 
       - name: Rename APK
         run: |
-          cp android/app/build/outputs/apk/release/app-release.apk "KZDocuments-v$VERSION.apk"
+          cp android/app/build/outputs/apk/release/app-release.apk "Korczak-Nexus-v$VERSION.apk"
 
       - name: Create GitHub Release
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh release create "v$VERSION" "KZDocuments-v$VERSION.apk" \
+          gh release create "v$VERSION" "Korczak-Nexus-v$VERSION.apk" \
             --repo "$GITHUB_REPOSITORY" \
-            --title "KZ Documents $VERSION" \
+            --title "Korczak Nexus $VERSION" \
             --generate-notes
 
       - name: Publish updater manifest
@@ -93,11 +93,11 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
-          sha256="$(sha256sum "KZDocuments-v$VERSION.apk" | awk '{print $1}')"
+          sha256="$(sha256sum "Korczak-Nexus-v$VERSION.apk" | awk '{print $1}')"
           cat > "$RUNNER_TEMP/update.json" <<EOF
           {
             "version": "$VERSION",
-            "url": "https://github.com/$GITHUB_REPOSITORY/releases/download/v$VERSION/KZDocuments-v$VERSION.apk",
+            "url": "https://github.com/$GITHUB_REPOSITORY/releases/download/v$VERSION/Korczak-Nexus-v$VERSION.apk",
             "sha256": "$sha256"
           }
           EOF
