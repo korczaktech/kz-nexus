@@ -7,8 +7,7 @@ from ..connection import get_database
 async def run_migrations() -> None:
     """Run only migrations for data owned by KZDocs.
 
-    User identity is owned by Contas.contas and is intentionally not
-    migrated or created in KZDocs.
+    Identity is owned by Contas.contas and is never created or migrated here.
     """
     database = get_database()
     await database["migrations"].update_one(
