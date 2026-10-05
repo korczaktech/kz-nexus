@@ -168,7 +168,7 @@ function App(){
     const onRuntime=(event:globalThis.Event)=>setIosOffline(!((event as CustomEvent<{online:boolean}>).detail?.online));
     const loadLocal=()=>listIOSFiles().then(setIosLocalFiles).catch(()=>setIosLocalFiles([]));
     loadLocal();
-    const onFilesChanged=()=>listIOSFiles().then(setIosLocalFiles).catch(()=>setIosLocalFiles([]));
+    const onFilesChanged=()=>listIOSFiles().then(rows=>{setIosLocalFiles(rows);if(view==='home'||view==='documents')load(view)}).catch(()=>setIosLocalFiles([]));
     window.addEventListener('nexusIOSRuntime',onRuntime as EventListener);
     window.addEventListener('nexusIOSFilesChanged',onFilesChanged as EventListener);
     window.addEventListener('online',()=>setIosOffline(false),{passive:true});
