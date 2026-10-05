@@ -12,23 +12,6 @@ export function getIOSRuntimeState(): IOSRuntimeState {
   return {ios:isIOS,standalone:isStandalone,online:navigator.onLine,serviceWorker:"serviceWorker" in navigator};
 }
 
-export async function registerIOSServiceWorker() {
-  if (!isIOS || !("serviceWorker" in navigator)) return null;
-  try {
-    const registration = await navigator.serviceWorker.register("./sw.js",{scope:"./"});
-    if (registration.waiting) registration.waiting.postMessage({type:"SKIP_WAITING"});
-    registration.addEventListener("updatefound",()=>{
-      const worker=registration.installing;
-      if(!worker)return;
-      worker.addEventListener("statechange",()=>{
-        if(worker.state==="installed" && navigator.serviceWorker.controller)
-          window.dispatchEvent(new CustomEvent("nexusPwaUpdate"));
-      });
-    });
-    return registration;
-  } catch { return null; }
-}
-
 export function installIOSRuntime() {
   if(!isIOS)return;
   document.documentElement.classList.add("ios-pwa");
