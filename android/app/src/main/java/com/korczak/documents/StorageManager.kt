@@ -52,6 +52,7 @@ class StorageManager(private val context: Context) {
             .sortedWith(compareBy<DocumentFile> { !it.isDirectory }.thenBy { (it.name ?: "").lowercase() })
             .forEach { f ->
                 val name = f.name ?: "Arquivo"
+                if (f.isDirectory && name == trashFolderName) return@forEach
                 val path = if (relativePath.isBlank()) name else "$relativePath/$name"
                 if (f.isDirectory) {
                     collectFiles(f, path, out)
