@@ -77,7 +77,14 @@ class MainActivity : AppCompatActivity() {
         }
         rootLayout.addView(nativeEditorToolbar, toolbarLp)
         setContentView(rootLayout)
-        web.loadUrl("file:///android_asset/index.html")
+        val html = assets.open("index.html").bufferedReader(Charsets.UTF_8).use { it.readText() }
+        web.loadDataWithBaseURL(
+            "file:///android_asset/",
+            html,
+            "text/html",
+            "UTF-8",
+            null
+        )
 
         requestStartupPermissions()
         handleFeedbackIntent(intent)
