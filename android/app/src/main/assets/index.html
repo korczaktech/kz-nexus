@@ -517,7 +517,18 @@ async function exportDoc(){
   if(!name)return;
   const fileName=(name.replace(/[\\/:*?"<>|]/g,'_').replace(/\\.html?$/i,'')||'documento')+'.html';
   const body=$('page')?.innerHTML||'';
-  const html='<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>'+esc(name)+'</title><style>body{font-family:Arial,sans-serif;max-width:900px;margin:40px auto;padding:0 20px;line-height:1.6;color:#152235}table{border-collapse:collapse;width:100%}td,th{border:1px solid #777;padding:8px}img{max-width:100%;height:auto}pre{white-space:pre-wrap}</style></head><body>'+body+'</body></html>';
+  const html='<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>'+esc(name)+'</title><style>body{font-family:Arial,sans-serif;max-width:900px;margin:40px auto;padding:0 20px;line-height:1.6;color:#152235}table{border-collapse:collapse;width:100%}td,th{border:1px solid #777;padding:8px}img{max-width:100%;height:auto}pre{white-space:pre-wrap}</style></head><body>'+body+'<script>
+(function(){
+  if(!window.Android||!window.Android.call)return;
+  var style=document.createElement('style');style.textContent='.nx-android-network{position:fixed;left:50%;bottom:calc(12px + var(--nx-native-bottom-inset,0px));transform:translateX(-50%);z-index:99999;background:#121a24;color:#fff;border:1px solid #33475c;border-radius:999px;padding:8px 14px;font:600 12px system-ui;box-shadow:0 8px 30px #0008;display:none;pointer-events:none}.nx-android-network.offline{display:block}';document.head.appendChild(style);
+  var badge=document.createElement('div');badge.className='nx-android-network';badge.textContent='Sem conexão · alterações locais serão preservadas';document.body.appendChild(badge);
+  function call(action,payload,cb){try{window.Android.call(action,JSON.stringify(payload||{}),'__nx_'+action+'_'+Date.now());window.__nxCallbacks=window.__nxCallbacks||{};window.__nxCallbacks['__nx_'+action+'_'+Date.now()]=cb}catch(e){}}
+  window.__nexusAndroidNetwork=function(){window.Android.call('networkState','{}','__nx_network');};
+  window.__nexusAndroidNetworkResult=function(data){try{var online=!!data.online;badge.classList.toggle('offline',!online);badge.textContent=online?'':'Sem conexão · alterações locais serão preservadas';window.dispatchEvent(new CustomEvent('nexusNetworkState',{detail:data}));}catch(e){}};
+  window.addEventListener('online',window.__nexusAndroidNetwork);window.addEventListener('offline',window.__nexusAndroidNetwork);
+  setInterval(window.__nexusAndroidNetwork,15000);setTimeout(window.__nexusAndroidNetwork,500);
+})();
+</script></body></html>';
   const root=await native('rootFolder');
   if(root.ok){
     const saved=await native('writeFile',{folderUri:root.uri,name:fileName,content:html});
