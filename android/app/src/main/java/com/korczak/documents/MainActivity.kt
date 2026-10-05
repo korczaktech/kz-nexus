@@ -436,7 +436,6 @@ class MainActivity : AppCompatActivity() {
         super.onResume()
         handleDocumentIntent(intent)
         handleShareIntent(intent)
-        Updater(this).resumePending()
         if (::web.isInitialized) {
             web.postDelayed({ checkForUpdateIfEnabled() }, 1500)
         }
