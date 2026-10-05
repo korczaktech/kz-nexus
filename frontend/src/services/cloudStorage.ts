@@ -3,7 +3,7 @@ type CloudSession={provider:CloudProvider;accessToken:string;refreshToken?:strin
 const KEY="kz_cloud_sessions_v1";
 function read():Partial<Record<CloudProvider,CloudSession>>{try{return JSON.parse(localStorage.getItem(KEY)||"{}")}catch{return {}}}
 function write(v:Partial<Record<CloudProvider,CloudSession>>){localStorage.setItem(KEY,JSON.stringify(v));}
-export function getCloudSession(provider:CloudProvider){const s=read()[provider];if(!s)return null;if(Date.now()>s.expiresAt-30000)return null;return s}
+export function getCloudSession(provider:CloudProvider){return read()[provider]||null}
 export function disconnectCloud(provider:CloudProvider){const all=read();delete all[provider];write(all);}
 function b64url(bytes:Uint8Array){let s="";for(const b of bytes)s+=String.fromCharCode(b);return btoa(s).replace(/\\+/g,"-").replace(/\\//g,"_").replace(/=+$/,"")}
 async function pkce(){const bytes=crypto.getRandomValues(new Uint8Array(32));const verifier=b64url(bytes);const hash=await crypto.subtle.digest("SHA-256",new TextEncoder().encode(verifier));return {verifier,challenge:b64url(new Uint8Array(hash))}}
