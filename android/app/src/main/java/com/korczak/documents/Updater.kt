@@ -41,7 +41,7 @@ class Updater(private val activity: Activity) {
                 val digest = manifest.optString("sha256").removePrefix("sha256:").trim().lowercase()
 
                 if (!isVersion(version)) throw IllegalStateException("Manifesto de atualização inválido")
-                if (url.isBlank() || !url.startsWith("https://github.com/") || !url.contains("/releases/download/")) {
+                if (url.isBlank() || !url.startsWith("https://github.com/") || !url.contains("/releases/download/") || !url.endsWith(".apk")) {
                     throw IllegalStateException("URL do APK não é confiável")
                 }
                 if (!digest.matches(Regex("[0-9a-f]{64}"))) {
