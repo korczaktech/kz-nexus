@@ -8,7 +8,7 @@ import {chooseLocalFolder, getStorageSelection, saveStorageSelection, storageLab
 
 import {listIOSFiles, getIOSFile, deleteIOSFile, shareIOSFile} from './services/iosFiles';
 import {isIOS} from './iosPwa';
-import {finishCloudOAuth,getCloudSession,disconnectCloud} from './services/cloudStorage';
+import {finishCloudOAuth} from './services/cloudStorage';
 const nexusLogo = `${import.meta.env.BASE_URL}icons/favicon-nexus.svg?v=2`;
 const NEXUS_WEB_VERSION = String(packageJson.version);
 function versionParts(value:string){return value.replace(/^v/i,'').split('.').map(part=>Number.parseInt(part,10)||0)}
@@ -61,11 +61,6 @@ await connectCloudStorage(provider);
         <button className="storage-option" onClick={()=>select('google-drive')} disabled={!!busy}>
           <span className="storage-option-icon cloud"><Icon name="cloud"/></span>
           <span><strong>Google Drive</strong><small>Use seu Google Drive como armazenamento do Korczak Nexus.</small></span>
-          <Icon name="arrowRight" size={18}/>
-        </button>
-        <button className="storage-option" onClick={()=>select('onedrive')} disabled={!!busy}>
-          <span className="storage-option-icon cloud"><Icon name="cloud"/></span>
-          <span><strong>OneDrive</strong><small>Use seu Microsoft OneDrive como armazenamento do Korczak Nexus.</small></span>
           <Icon name="arrowRight" size={18}/>
         </button>
       </div>
