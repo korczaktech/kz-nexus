@@ -1,5 +1,13 @@
-export const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
-export const isStandalone = window.matchMedia("(display-mode: standalone)").matches || (navigator as Navigator & {standalone?: boolean}).standalone === true;
+const hasBrowser = typeof window !== "undefined" && typeof navigator !== "undefined";
+const userAgent = hasBrowser ? navigator.userAgent : "";
+const platform = hasBrowser ? navigator.platform : "";
+const maxTouchPoints = hasBrowser ? navigator.maxTouchPoints : 0;
+
+export const isIOS = /iPad|iPhone|iPod/.test(userAgent) || (platform === "MacIntel" && maxTouchPoints > 1);
+export const isStandalone = hasBrowser && (
+  (typeof window.matchMedia === "function" && window.matchMedia("(display-mode: standalone)").matches) ||
+  (navigator as Navigator & {standalone?: boolean}).standalone === true
+);
 
 export type IOSRuntimeState = {
   ios: boolean;
@@ -9,11 +17,16 @@ export type IOSRuntimeState = {
 };
 
 export function getIOSRuntimeState(): IOSRuntimeState {
-  return {ios:isIOS,standalone:isStandalone,online:navigator.onLine,serviceWorker:"serviceWorker" in navigator};
+  return {
+    ios: isIOS,
+    standalone: isStandalone,
+    online: hasBrowser ? navigator.onLine : true,
+    serviceWorker: hasBrowser && "serviceWorker" in navigator
+  };
 }
 
 export function installIOSRuntime() {
-  if(!isIOS)return;
+  if(!isIOS || typeof document === "undefined" || typeof window === "undefined") return;
   document.documentElement.classList.add("ios-pwa");
   document.documentElement.dataset.iosStandalone=String(isStandalone);
   const setViewport=()=>document.documentElement.style.setProperty("--ios-vh",`${window.innerHeight}px`);
