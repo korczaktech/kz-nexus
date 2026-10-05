@@ -5,7 +5,7 @@ const DB_VERSION = 2;
 function openDb(): Promise<IDBDatabase> {
   return new Promise((resolve,reject)=>{
     const request=indexedDB.open(DB_NAME,DB_VERSION);
-    request.onupgradeneeded=()=>request.result.createObjectStore(STORE,{keyPath:"id"});
+    request.onupgradeneeded=()=>{ const db=request.result; if(!db.objectStoreNames.contains(STORE)) db.createObjectStore(STORE,{keyPath:"id"}); if(!db.objectStoreNames.contains("syncQueue")) db.createObjectStore("syncQueue",{keyPath:"id"}); };
     request.onsuccess=()=>resolve(request.result);
     request.onerror=()=>reject(request.error||new Error("Não foi possível abrir o armazenamento local."));
   });
