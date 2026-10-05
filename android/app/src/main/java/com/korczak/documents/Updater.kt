@@ -68,7 +68,7 @@ class Updater(private val activity: Activity) {
                 if (android.os.Build.VERSION.SDK_INT >= 26 &&
                     !activity.packageManager.canRequestPackageInstalls()) {
                     activity.getSharedPreferences(prefsName, Activity.MODE_PRIVATE).edit()
-                        putString("pending_url", url)
+                        .putString("pending_url", url)
                         .putString("pending_digest", expected)
                         .putBoolean("pending_install", true)
                         .apply()
