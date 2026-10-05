@@ -37,6 +37,14 @@ jobs:
         run: gradle -p android test
       - name: Android debug build verification
         run: gradle -p android assembleDebug
+      - name: Launch Activity on emulator
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: ${{ matrix.api-level }}
+          target: google_apis
+          arch: x86_64
+          profile: ${{ matrix.profile }}
+          script: gradle -p android connectedDebugAndroidTest
 
   release:
     needs: verify
