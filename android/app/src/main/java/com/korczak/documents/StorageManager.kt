@@ -191,6 +191,8 @@ class StorageManager(private val context: Context) {
         return root.createDirectory(safe(name)) != null
     }
 
+    fun delete(uri: String): Boolean = DocumentFile.fromSingleUri(context, Uri.parse(uri))?.delete() == true
+
     fun rename(uri: String, name: String): Boolean {
         val file = DocumentFile.fromSingleUri(context, Uri.parse(uri)) ?: return false
         return file.renameTo(safe(name))
