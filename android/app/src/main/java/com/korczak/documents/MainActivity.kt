@@ -80,6 +80,7 @@ class MainActivity : AppCompatActivity() {
                 override fun onPageFinished(view: WebView?, url: String?) {
                     super.onPageFinished(view, url)
                     syncSystemInsets()
+                    publishNetworkState()
                     view?.postDelayed({ hideNativeSplash() }, 420)
                 }
             }
