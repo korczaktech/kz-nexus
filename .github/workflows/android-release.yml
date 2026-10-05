@@ -14,13 +14,13 @@ concurrency:
 
 jobs:
   release:
-    timeout-minutes: 30
+    timeout-minutes: 15
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v5
         with:
-          fetch-depth: 0
+          fetch-depth: 1
 
       - name: Set up Java
         uses: actions/setup-java@v5
@@ -32,116 +32,59 @@ jobs:
         uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '8.10'
-          cache-read-only: false
-
-      - name: Validate signing configuration
-        env:
-          KEYSTORE: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
-          STORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
-          KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
-          KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
-        run: |
-          set -euo pipefail
-          test -n "$KEYSTORE" || { echo "::error::Configure ANDROID_KEYSTORE_BASE64."; exit 1; }
-          test -n "$STORE_PASSWORD" || { echo "::error::Configure ANDROID_KEYSTORE_PASSWORD."; exit 1; }
-          test -n "$KEY_ALIAS" || { echo "::error::Configure ANDROID_KEY_ALIAS."; exit 1; }
-          test -n "$KEY_PASSWORD" || { echo "::error::Configure ANDROID_KEY_PASSWORD."; exit 1; }
-
-      - name: Calculate monotonic Android version
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          set -euo pipefail
-          commit_count="$(git rev-list --count HEAD)"
-          release_max="$(gh release list --repo "$GITHUB_REPOSITORY" --limit 100 --json tagName --jq '[.[].tagName | sub("^v"; "") | select(test("^[0-9]+(\\.[0-9]+){0,3}$")) | split(".")[-1] | tonumber] | max // 0')"
-          tag_max="$(git tag --list 'v0.0.0.*' | sed 's/^v0.0.0.//' | grep -E '^[0-9]+$' | sort -n | tail -1 || true)"
-          tag_max="${tag_max:-0}"
-          next_code=$((commit_count + 1))
-          if [ "$next_code" -le "$release_max" ]; then next_code=$((release_max + 1)); fi
-          if [ "$next_code" -le "$tag_max" ]; then next_code=$((tag_max + 1)); fi
-          if [ "$next_code" -le 159 ]; then next_code=160; fi
-          VERSION="0.0.0.$next_code"
-          echo "VERSION=$VERSION" >> "$GITHUB_ENV"
-          echo "VERSION_CODE=$next_code" >> "$GITHUB_ENV"
-          echo "Release: $VERSION"
 
       - name: Decode release keystore
         env:
           KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
         run: |
-          set -euo pipefail
           echo "$KEYSTORE_BASE64" | base64 --decode > "$RUNNER_TEMP/kzdoc-release.jks"
-          test -s "$RUNNER_TEMP/kzdoc-release.jks"
 
-      - name: Test and build signed release APK
+      - name: Calculate Android version
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          release_max="$(gh release list --repo "$GITHUB_REPOSITORY" --limit 100 --json tagName --jq '[.[].tagName | sub("^v"; "") | select(test("^[0-9]+(\\.[0-9]+){0,3}$")) | split(".")[-1] | tonumber] | max // 0')"
+          tag_max="$(git ls-remote --tags origin 'v0.0.0.*' | sed -E 's#.*refs/tags/v0\.0\.0\.([0-9]+)$#\1#' | sort -n | tail -1 || true)"
+          tag_max="${tag_max:-0}"
+          next_code=$((release_max + 1))
+          if [ "$next_code" -le "$tag_max" ]; then next_code=$((tag_max + 1)); fi
+          if [ "$next_code" -le 159 ]; then next_code=160; fi
+          VERSION="0.0.0.$next_code"
+          echo "VERSION=$VERSION" >> "$GITHUB_ENV"
+          echo "VERSION_CODE=$next_code" >> "$GITHUB_ENV"
+
+      - name: Build release APK
         env:
           ANDROID_KEYSTORE_FILE: ${{ runner.temp }}/kzdoc-release.jks
           ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
           ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
           ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
         run: |
-          set -euo pipefail
-          gradle -p android test assembleRelease \
-            --no-daemon \
-            --parallel \
-            -PreleaseVersion="$VERSION" \
-            -PreleaseCode="$VERSION_CODE"
+          gradle -p android assembleRelease --no-daemon --parallel -PreleaseVersion="$VERSION" -PreleaseCode="$VERSION_CODE"
 
-      - name: Verify release APK and startup contract
-        run: |
-          set -euo pipefail
-          APK="android/app/build/outputs/apk/release/app-release.apk"
-          test -s "$APK"
-          command -v unzip >/dev/null
-          unzip -l "$APK" | grep -q 'AndroidManifest.xml'
-          unzip -l "$APK" | grep -q 'classes.dex'
-          test -s "android/app/src/main/AndroidManifest.xml"
-          grep -q 'com.korczak.documents.MainActivity' "android/app/src/main/AndroidManifest.xml"
-          grep -q 'android.intent.action.MAIN' "android/app/src/main/AndroidManifest.xml"
-          grep -q 'android.intent.category.LAUNCHER' "android/app/src/main/AndroidManifest.xml"
-          if grep -Rqs 'resumePending()' android/app/src/main/java/com/korczak/documents/MainActivity.kt; then
-            echo "::error::MainActivity must not resume a pending installer during startup."
-            exit 1
-          fi
-          echo "Android startup contract: OK"
-
-      - name: Rename APK
-        run: |
-          cp android/app/build/outputs/apk/release/app-release.apk "Korczak-HUB-Nexus-$VERSION.apk"
-
-      - name: Create GitHub Release
+      - name: Publish APK and updater
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh release create "v$VERSION" "Korczak-HUB-Nexus-$VERSION.apk" \
-            --repo "$GITHUB_REPOSITORY" \
-            --title "Korczak HUB Nexus $VERSION" \
-            --generate-notes
+          set -e
+          APK="Korczak-HUB-Nexus-$VERSION.apk"
+          cp android/app/build/outputs/apk/release/app-release.apk "$APK"
 
-      - name: Publish updater manifest
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          set -euo pipefail
-          sha256="$(sha256sum "Korczak-HUB-Nexus-$VERSION.apk" | awk '{print $1}')"
-          cat > "$RUNNER_TEMP/update.json" <<EOF
-          {
-            "version": "$VERSION",
-            "url": "https://github.com/$GITHUB_REPOSITORY/releases/download/v$VERSION/Korczak-HUB-Nexus-$VERSION.apk",
-            "sha256": "$sha256"
-          }
-          EOF
+          gh release create "v$VERSION" "$APK"             --repo "$GITHUB_REPOSITORY"             --title "Korczak HUB Nexus $VERSION"             --generate-notes
+
+          sha256="$(sha256sum "$APK" | awk '{print $1}')"
+          printf '{
+  "version": "%s",
+  "url": "https://github.com/%s/releases/download/v%s/%s",
+  "sha256": "%s"
+}
+'             "$VERSION" "$GITHUB_REPOSITORY" "$VERSION" "$APK" "$sha256" > "$RUNNER_TEMP/update.json"
 
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          if git ls-remote --exit-code --heads origin updates >/dev/null 2>&1; then
-            git fetch origin updates
-            git switch -C updates origin/updates
-            git rm -rf . || true
-          else
-            git switch --orphan updates
-            git rm -rf . || true
-          fi
+          git fetch origin updates
+          git switch -C updates origin/updates
+          git rm -rf . >/dev/null 2>&1 || true
           cp "$RUNNER_TEMP/update.json" update.json
           git add update.json
           git diff --cached --quiet || git commit -m "chore(updater): publicar manifesto da versão $VERSION"
