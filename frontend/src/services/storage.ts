@@ -1,4 +1,4 @@
-export type StorageProvider = 'local' | 'google-drive' | 'onedrive';
+export type StorageProvider = 'local' | 'google-drive';
 
 export interface StorageSelection {
   provider: StorageProvider;
@@ -28,8 +28,7 @@ export function clearStorageSelection(): void {
 
 export function storageLabel(provider: StorageProvider): string {
   if (provider === 'local') return 'Pasta deste dispositivo';
-  if (provider === 'google-drive') return 'Google Drive';
-  return 'OneDrive';
+  return 'Google Drive';
 }
 
 export async function chooseLocalFolder(): Promise<StorageSelection | null> {
@@ -62,4 +61,4 @@ export async function chooseLocalFolder(): Promise<StorageSelection | null> {
   };
 }
 
-export async function connectCloudStorage(provider: Exclude<StorageProvider,'local'>){const {connectCloud}=await import('./cloudStorage');return connectCloud(provider)}
+export async function connectCloudStorage(provider: 'google-drive'){const {connectCloud}=await import('./cloudStorage');return connectCloud()}
