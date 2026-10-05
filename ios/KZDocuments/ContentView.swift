@@ -39,7 +39,7 @@ final class IOSBridge: NSObject, ObservableObject, UIDocumentPickerDelegate {
             let name = url.lastPathComponent.replacingOccurrences(of: "'", with: "\\'")
             let base64 = data.base64EncodedString()
             let mime = mimeType(for: url.pathExtension)
-            let script = "window.dispatchEvent(new CustomEvent('ios-document-open', {detail:{name:'(name)',mime:'(mime)',base64:'(base64)'}}));"
+            let script = "window.dispatchEvent(new CustomEvent('ios-document-open', {detail:{name:'\(name)',mime:'\(mime)',base64:'\(base64)'}}));"
             webView?.evaluateJavaScript(script)
         } catch {
             webView?.evaluateJavaScript("window.dispatchEvent(new CustomEvent('ios-document-error'));")
