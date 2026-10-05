@@ -1,3 +1,5 @@
+import {queueIOSOperation} from './iosSync';
+import {isIOS} from '../iosPwa';
 export type User={id:string;name:string;email:string;phone:string|null;email_verified:boolean;phone_verified:boolean;role:string;status:string;created_at:string;updated_at:string};
 export type Session={token:string;expires_at:string;user:User};
 export type SearchResult={items:DocumentItem[];total:number;page:number;page_size:number};
