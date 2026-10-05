@@ -18,16 +18,19 @@ permissions:
 
 jobs:
   build-ios:
-    name: Build KZ Documents iOS
-    runs-on: macos-14
+    name: Build Korczak Nexus iOS
+    runs-on: macos-15
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Select Xcode
+        run: sudo xcode-select -s /Applications/Xcode_16.4.app
+
       - name: Build simulator
         working-directory: ios/KZDocuments
         run: |
-          xcodebuild             -project KZDocuments.xcodeproj             -scheme KZDocuments             -sdk iphonesimulator             -configuration Debug             -destination 'generic/platform=iOS Simulator'             CODE_SIGNING_ALLOWED=NO             build
+          xcodebuild -project KZDocuments.xcodeproj -scheme KZDocuments -sdk iphonesimulator -configuration Debug -destination 'generic/platform=iOS Simulator' CODE_SIGNING_ALLOWED=NO build
 
       - name: Validate project
         working-directory: ios/KZDocuments
