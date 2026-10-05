@@ -106,14 +106,18 @@ class MainActivity : AppCompatActivity() {
         rootLayout.addView(nativeEditorToolbar, toolbarLp)
         setContentView(rootLayout)
         showNativeSplash()
-        val html = assets.open("index.html").bufferedReader(Charsets.UTF_8).use { it.readText() }
-        web.loadDataWithBaseURL(
-            "file:///android_asset/",
-            html,
-            "text/html",
-            "UTF-8",
-            null
-        )
+        if (state != null) {
+            web.restoreState(state)
+        } else {
+            val html = assets.open("index.html").bufferedReader(Charsets.UTF_8).use { it.readText() }
+            web.loadDataWithBaseURL(
+                "file:///android_asset/",
+                html,
+                "text/html",
+                "UTF-8",
+                null
+            )
+        }
 
         // Storage Access Framework is requested on demand; no broad permission is required at startup.
         handleFeedbackIntent(intent)
