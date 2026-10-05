@@ -5,7 +5,7 @@ import {Button, Icon, Modal, StatePanel} from './components/ui';
 import {Editor, markdownToHtml} from './components/Editor';
 import {ApiError} from './services/api';
 import {chooseLocalFolder, getStorageSelection, saveStorageSelection, storageLabel, type StorageProvider} from './services/storage';
-import {listIOSFiles, getIOSFile, deleteIOSFile} from './services/iosFiles';
+import {listIOSFiles, getIOSFile, deleteIOSFile, shareIOSFile} from './services/iosFiles';
 import {isIOS} from './iosPwa';
 const nexusLogo = `${import.meta.env.BASE_URL}icons/favicon-nexus.svg?v=2`;
 const NEXUS_WEB_VERSION = String(packageJson.version);
@@ -250,7 +250,7 @@ function App(){
       <div className="sidebar-footer"><strong>KORCZAK TECHNOLOGIES</strong><span>Korczak Nexus</span></div>
     </aside>
     <div className="main-shell">
-      {isIOS&&iosOffline&&<div className="ios-offline-banner" role="status"><Icon name="cloud"/> Você está offline. Arquivos locais continuam disponíveis; alterações online serão retomadas quando a conexão voltar.</div>}
+      {isIOS&&iosOffline&&<div className="ios-offline-banner" role="status"><Icon name="cloud"/> Você está offline. Arquivos locais continuam disponíveis; alterações feitas ao servidor serão enviadas quando a conexão voltar.</div>}
       <header className="topbar">
         <div className="mobile-nexus-header">
           <div className="mobile-nexus-brand"><div className="brand-logo small image-brand"><img src={nexusLogo} alt="" /></div><div><strong>KORCZAK</strong><span>NEXUS</span></div></div>
@@ -300,6 +300,7 @@ function App(){
 <Button variant="secondary" onClick={showHistory}><Icon name="clock"/> <span>Histórico</span></Button>
 <Button variant="secondary" onClick={async()=>{setFolders(await api.folders());setMoveModal(true)}}><Icon name="folderOpen"/> <span>Mover para pasta</span></Button>
 <Button variant="secondary" onClick={async()=>{try{await api.favorite(selected.id,!selected.favorite);setSelected(await api.document(selected.id))}catch(x){setError(x instanceof Error?x.message:'Não foi possível atualizar o favorito.')}}}><Icon name="star"/> <span>{selected.favorite?'Remover favorito':'Adicionar favorito'}</span></Button>
+<Button variant="secondary" onClick={async()=>{try{const file=selected.id.startsWith('ios:')?await getIOSFile(selected.id.slice(4)):new File([selected.content||''],selected.name,{type:selected.document_type==='txt'?'text/plain':'text/plain'});if(!file||!(await shareIOSFile(file)))setError('O compartilhamento não está disponível neste dispositivo.')}catch(x){setError(x instanceof Error?x.message:'Não foi possível compartilhar o documento.')}}}><Icon name="share"/> <span>Compartilhar</span></Button>
 <Button variant="secondary" onClick={async()=>{setPermissions(await api.permissions(selected.id));setView('permissions')}}><Icon name="shield"/> <span>Permissões</span></Button>
 <Button variant="danger" onClick={async()=>{if(!window.confirm('Tem certeza que quer excluir? A pasta será movida para lixeira.'))return;try{await api.deleteDocument(selected.id);setView('trash');await load('trash')}catch(x){setError(x instanceof Error?x.message:'Não foi possível mover o documento para a lixeira.')}}}><Icon name="trash"/> <span>Excluir</span></Button>
 </div><div className="tag-panel"><strong>Etiquetas</strong><div className="tag-list">{(selected.tag_names||[]).map(t=><button key={t} className="tag-chip" onClick={async()=>{await api.removeTag(selected.id,t);setSelected(await api.document(selected.id))}}><span>{t}</span><Icon name="close" size={12}/></button>)}{!(selected.tag_names||[]).length&&<span className="muted">Nenhuma etiqueta aplicada.</span>}</div><form onSubmit={async e=>{e.preventDefault();const f=new FormData(e.currentTarget);const name=String(f.get('tag')||'').trim();if(!name)return;try{if(!tags.some(t=>t.name===name))await api.createTag(name);await api.applyTag(selected.id,name);setTags(await api.tags());setSelected(await api.document(selected.id));e.currentTarget.reset()}catch(x){setError(x instanceof Error?x.message:'Não foi possível aplicar a etiqueta.')}}} className="inline-form"><input name="tag" list="document-tags" placeholder="Adicionar etiqueta"/><datalist id="document-tags">{tags.map(t=><option key={t.id} value={t.name}/>)}</datalist><Button type="submit" variant="secondary">Aplicar</Button></form></div><article className="document-view"><div className="document-meta"><span className="file-type large">{selected.document_type.toUpperCase()}</span><div><strong>{selected.name}</strong><small>Atualizado em {new Date(selected.updated_at).toLocaleString('pt-BR')}</small></div></div><div className="document-content" dangerouslySetInnerHTML={{__html:markdownToHtml(selected.content||'Este documento não possui conteúdo textual.')}} /></article></Section>}
