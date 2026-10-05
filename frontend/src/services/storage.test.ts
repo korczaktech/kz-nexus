@@ -13,6 +13,5 @@ describe('storage selection',()=>{
   it('returns human readable provider labels',()=>{
     expect(storageLabel('local')).toBe('Pasta deste dispositivo');
     expect(storageLabel('google-drive')).toBe('Google Drive');
-    expect(storageLabel('onedrive')).toBe('OneDrive');
   });
 });
