@@ -25,17 +25,8 @@ if ("serviceWorker" in navigator) {
         { scope: import.meta.env.BASE_URL }
       );
 
-      // Safari/Chrome manage the PWA update lifecycle automatically.\n      registration.update();
-
-      registration.addEventListener("updatefound", () => {
-        const worker = registration.installing;
-        if (!worker) return;
-        worker.addEventListener("statechange", () => {
-          if (worker.state === "installed" && navigator.serviceWorker.controller) {
-            window.dispatchEvent(new CustomEvent("kz:nexus-update-available"));
-          }
-        });
-      });
+      // Safari/Chrome manage the PWA update lifecycle automatically.
+      registration.update();
     } catch (error) {
       console.warn("KZ Nexus PWA: não foi possível registrar o Service Worker.", error);
     }
