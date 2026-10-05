@@ -1,11 +1,11 @@
-const CACHE = "kz-nexus-ios-v5";
+const CACHE = "kz-nexus-ios-v6";
 const BASE = new URL("./", self.registration.scope).pathname;
 const SHELL = [
   BASE,
   BASE + "index.html",
   BASE + "manifest.json",
-  BASE + "icons/nexus-icon-192.svg",
-  BASE + "icons/nexus-icon-512.svg"
+  BASE + "icons/nexus-icon-192.png",
+  BASE + "icons/nexus-icon-512.png"
 ];
 
 self.addEventListener("install", event => {
