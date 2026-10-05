@@ -46,7 +46,32 @@ export async function deleteIOSFile(id:string): Promise<void> {
   db.close();
 }
 
+export function hasNativeIOSBridge(): boolean {
+  return Boolean((window as Window & {webkit?: {messageHandlers?: {ios?: {postMessage?: (body: unknown)=>void}}}}).webkit?.messageHandlers?.ios?.postMessage);
+}
+
+async function pickWithNativeIOSBridge(): Promise<File[]> {
+  return new Promise((resolve,reject)=>{
+    const timeout=window.setTimeout(()=>{cleanup();reject(new Error("O seletor de Arquivos do iOS não respondeu."));},60000);
+    const onOpen=(event:Event)=>{
+      const detail=(event as CustomEvent<{name?:string;mime?:string;base64?:string}>).detail;
+      if(!detail?.base64||!detail.name){cleanup();resolve([]);return;}
+      try {
+        const bytes=Uint8Array.from(atob(detail.base64),char=>char.charCodeAt(0));
+        const file=new File([bytes],detail.name,{type:detail.mime||"application/octet-stream"});
+        cacheIOSFile(file).then(()=>{cleanup();resolve([file]);}).catch(error=>{cleanup();reject(error);});
+      } catch(error){cleanup();reject(error);}
+    };
+    const onError=()=>{cleanup();reject(new Error("Não foi possível abrir o arquivo pelo Arquivos do iOS."));};
+    const cleanup=()=>{window.clearTimeout(timeout);window.removeEventListener("ios-document-open",onOpen);window.removeEventListener("ios-document-error",onError);};
+    window.addEventListener("ios-document-open",onOpen,{once:true});
+    window.addEventListener("ios-document-error",onError,{once:true});
+    (window as Window & {webkit?: {messageHandlers?: {ios?: {postMessage?: (body: unknown)=>void}}}}).webkit?.messageHandlers?.ios?.postMessage?.({action:"pickFile"});
+  });
+}
+
 export async function pickIOSFiles(): Promise<File[]> {
+  if(hasNativeIOSBridge()) return pickWithNativeIOSBridge();
   return new Promise((resolve,reject)=>{
     const input=document.createElement("input");
     input.type="file";
