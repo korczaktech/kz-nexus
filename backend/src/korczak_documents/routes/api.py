@@ -7,7 +7,7 @@ from ..models.api import *
 from ..repositories import api as repo
 from ..security import create_session, token_hash, hash_password, require_role, role_allows
 from ..services import api as service
-from ..database.connection import get_database
+from ..database.connection import get_database, get_accounts_database
 
 router = APIRouter()
 
@@ -86,8 +86,9 @@ async def admin_create_user(payload: AdminUserCreateRequest, user=Depends(curren
 async def users(user=Depends(current_user)):
     require_role(user, "manager")
     query = {} if user["role"] == "admin" else {"role": {"$ne": "admin"}}
-    items = await repo.list_users_for_admin(query, limit=1000)
-    return [service.clean_user(item) for item in items]
+    accounts = get_accounts_database()["contas"]
+    items = await accounts.find(query, {"Aplicativos": 0}).sort("Nome", 1).limit(1000).to_list(length=1000)
+    return [service.clean_user(repo._account_to_user(item)) for item in items]
 
 
 @router.patch("/users/{user_id}", response_model=UserResponse)
