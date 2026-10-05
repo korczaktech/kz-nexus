@@ -13,4 +13,11 @@ android{namespace="com.korczak.documents";compileSdk=35
  signingConfigs{create("release"){if(ks!=null)storeFile=file(ks);if(kp!=null)storePassword=kp;if(ka!=null)keyAlias=ka;if(kkp!=null)keyPassword=kkp}}
  buildTypes{debug{isMinifyEnabled=false};release{isMinifyEnabled=false;signingConfig=signingConfigs.getByName("release")}}
 }
-dependencies{implementation("androidx.core:core-ktx:1.15.0");implementation("androidx.appcompat:appcompat:1.7.0");implementation("androidx.documentfile:documentfile:1.0.1")}
+dependencies{
+ implementation("androidx.core:core-ktx:1.15.0")
+ implementation("androidx.appcompat:appcompat:1.7.0")
+ implementation("androidx.documentfile:documentfile:1.0.1")
+ testImplementation("junit:junit:4.13.2")
+ androidTestImplementation("androidx.test.ext:junit:1.2.1")
+ androidTestImplementation("androidx.test:rules:1.6.1")
+}
