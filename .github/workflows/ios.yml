@@ -48,4 +48,4 @@ jobs:
         run: |
           test -f KZDocuments.xcodeproj/project.pbxproj
           test -f KZDocuments.xcodeproj/xcshareddata/xcschemes/KZDocuments.xcscheme
-          test -f KZDocuments/Info.plist
+          test -f Info.plist
