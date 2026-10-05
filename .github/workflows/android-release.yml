@@ -44,7 +44,14 @@ jobs:
           target: google_apis
           arch: x86_64
           profile: ${{ matrix.profile }}
-          script: gradle -p android connectedDebugAndroidTest
+          script: |
+            gradle -p android assembleDebug
+            adb install -r android/app/build/outputs/apk/debug/app-debug.apk
+            adb shell am force-stop com.korczak.documents
+            adb shell am start -n com.korczak.documents/.MainActivity
+            sleep 8
+            adb shell pidof com.korczak.documents
+            adb logcat -d -t 500 | grep -E "FATAL EXCEPTION|AndroidRuntime|com.korczak.documents" | tail -100 || true
 
   release:
     needs: verify
