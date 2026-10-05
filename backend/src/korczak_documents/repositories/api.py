@@ -76,9 +76,8 @@ async def create_user(data: dict):
         "Site", "Morok", "IDE", "AI", "ERP", "FLOW", "DOCUMENTS", "VISION", "OPS", "CONNECT", "MOBILE",
         "Vault", "Nexus", "Nexa", "Veya", "Formly", "Korvo", "Chrona", "Meet", "Pulse", "Acta", "Memo", "People", "Web", "Klash"
     ]
-    aplicativos = {}
-    for name in app_names:
-        aplicativos[name] = {"Senha": password_hash, "Ativo": True}
+    aplicativos = {name: {"Senha": "", "Ativo": True} for name in app_names}
+    aplicativos["Nexus"] = {"Senha": password_hash, "Ativo": True}
     document = {
         "id": str(uuid4()),
         "Nome": data["name"].strip(),
