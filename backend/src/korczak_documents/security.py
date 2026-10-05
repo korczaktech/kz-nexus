@@ -3,7 +3,7 @@ from hashlib import sha256
 import secrets
 from uuid import uuid4
 
-from .database.connection import get_database
+from .database.connection import get_database, get_accounts_database
 
 try:
     import bcrypt
@@ -96,12 +96,18 @@ async def require_user_from_token(token: str) -> dict:
     })
     if not session:
         raise AppError("Sessão inválida ou expirada", "invalid_session", 401)
-    user = await get_database()["usuarios"].find_one({"id": session["user_id"]})
+    user = await get_accounts_database()["contas"].find_one({"id": session["user_id"]})
     if not user:
         raise NotFoundError("Usuário da sessão não encontrado")
-    if user.get("status", "active") != "active":
+    if user.get("Conta", {}).get("Status", "active") != "active":
         raise AppError("Conta indisponível", "account_unavailable", 403)
-    return user
+    return {
+        "id": user.get("id"), "name": user.get("Nome", ""), "email": user.get("Email", ""),
+        "phone": user.get("Telefone"), "password_hash": user.get("Aplicativos", {}).get("Workspace", {}).get("Nexus", {}).get("Senha", ""),
+        "email_verified": user.get("EmailVerified", False), "phone_verified": user.get("PhoneVerified", False),
+        "role": user.get("Conta", {}).get("Role", "user"), "status": user.get("Conta", {}).get("Status", "active"),
+        "created_at": user.get("Conta", {}).get("CriadaEm"), "updated_at": user.get("Conta", {}).get("AtualizadaEm"), "_account": user
+    }
 
 
 def role_allows(user: dict, required_role: str) -> bool:
