@@ -35,6 +35,19 @@ export async function listIOSFiles(): Promise<Array<{id:string;name:string;type:
   return rows.map(({id,name,type,size,lastModified})=>({id,name,type,size,lastModified}));
 }
 
+export async function getIOSFile(id:string): Promise<File | null> {
+  const db=await openDb();
+  const row=await new Promise<any>((resolve,reject)=>{
+    const tx=db.transaction(STORE,"readonly"), req=tx.objectStore(STORE).get(id);
+    req.onsuccess=()=>resolve(req.result||null);
+    req.onerror=()=>reject(req.error);
+  });
+  db.close();
+  return row?.blob instanceof File ? row.blob : row?.blob instanceof Blob
+    ? new File([row.blob], row.name || "arquivo", {type:row.type || row.blob.type || "application/octet-stream", lastModified:row.lastModified || Date.now()})
+    : null;
+}
+
 export async function deleteIOSFile(id:string): Promise<void> {
   const db=await openDb();
   await new Promise<void>((resolve,reject)=>{
