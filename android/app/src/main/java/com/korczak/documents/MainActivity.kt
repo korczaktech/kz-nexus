@@ -8,11 +8,10 @@ import android.content.Context
 import android.print.PrintAttributes
 import android.print.PrintManager
 import android.net.Uri
-import android.net.ConnectivityManager
-import android.net.NetworkCapabilities
 import android.os.Bundle
 import android.os.Environment
-import android.provider.Settings
+import android.net.ConnectivityManager
+import android.net.NetworkCapabilities
 import android.webkit.JavascriptInterface
 import android.webkit.WebChromeClient
 import android.webkit.WebView
@@ -203,3 +202,714 @@ class MainActivity : AppCompatActivity() {
                         "h1" -> "editorCmd('formatBlock','H1')"
                         "h2" -> "editorCmd('formatBlock','H2')"
                         "list" -> "editorCmd('insertUnorderedList')"
+                        "numbers" -> "editorCmd('insertOrderedList')"
+                        "left" -> "editorCmd('justifyLeft')"
+                        "center" -> "editorCmd('justifyCenter')"
+                        "right" -> "editorCmd('justifyRight')"
+                        "justify" -> "editorCmd('justifyFull')"
+                        "indent" -> "editorCmd('indent')"
+                        "outdent" -> "editorCmd('outdent')"
+                        "clear" -> "editorCmd('removeFormat')"
+                        "link" -> "addLink()"
+                        "image" -> "insertImage()"
+                        "table" -> "insertTable()"
+                        "check" -> "insertCheck()"
+                        "quote" -> "insertQuote()"
+                        "layout" -> "layoutPanel()"
+                        "find" -> "findReplace()"
+                        "versions" -> "versionsPanel()"
+                        "stats" -> "stats()"
+                        "export" -> "exportDoc()"
+                        "zoomout" -> "setZoom(ES.zoom-10)"
+                        "zoomin" -> "setZoom(ES.zoom+10)"
+                        "focus" -> "document.body.classList.toggle('nx-focus')"
+                        "reading" -> "document.body.classList.toggle('nx-reading')"
+                        else -> ""
+                    }
+                    if (js.isNotBlank()) web.evaluateJavascript(
+                        "(function(){var p=document.getElementById('page');if(p)p.focus();$js;document.dispatchEvent(new Event('input'))})()",
+                        null
+                    )
+                }
+            }
+        }
+    }
+
+    private fun buildNativeEditorToolbar(): HorizontalScrollView {
+        val row = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+            setPadding(dp(8), dp(6), dp(8), dp(6))
+            background = GradientDrawable().apply {
+                setColor(Color.rgb(6, 19, 33))
+                setStroke(dp(1), Color.rgb(25, 59, 88))
+            }
+        }
+        val buttons = listOf(
+            "↶" to "undo", "↷" to "redo", "B" to "bold", "I" to "italic", "U" to "underline",
+            "S̶" to "strike", "H1" to "h1", "H2" to "h2", "Lista" to "list", "1." to "numbers",
+            "Esq." to "left", "Centro" to "center", "Dir." to "right", "Just." to "justify",
+            "Recuar" to "indent", "Voltar" to "outdent", "Limpar" to "clear",
+            "Link" to "link", "Imagem" to "image", "Tabela" to "table", "Checklist" to "check",
+            "Citação" to "quote", "Layout" to "layout", "Buscar" to "find", "Versões" to "versions",
+            "Stats" to "stats", "− Zoom" to "zoomout", "+ Zoom" to "zoomin", "Foco" to "focus",
+            "Leitura" to "reading", "Salvar" to "save"
+        )
+        buttons.forEach { (label, action) ->
+            val lp = LinearLayout.LayoutParams(-2, -1).apply { marginEnd = dp(6) }
+            row.addView(toolbarButton(label, action, action == "save"), lp)
+        }
+        return HorizontalScrollView(this).apply {
+            isHorizontalScrollBarEnabled = false
+            setBackgroundColor(Color.rgb(6, 19, 33))
+            addView(row, ViewGroup.LayoutParams(-2, -1))
+        }
+    }
+
+    private fun setNativeEditorMode(visible: Boolean) {
+        runOnUiThread {
+            if (!::nativeEditorToolbar.isInitialized) return@runOnUiThread
+            nativeEditorToolbar.visibility = if (visible) View.VISIBLE else View.GONE
+        }
+    }
+
+    // Android storage permissions are requested only when a feature explicitly needs them.
+
+    override fun onNewIntent(intent: Intent?) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        handleFeedbackIntent(intent)
+        handleDocumentIntent(intent)
+        handleShareIntent(intent)
+    }
+
+    private fun handleShareIntent(intent: Intent?) {
+        if (intent?.action != Intent.ACTION_SEND) return
+        val uri = intent.getParcelableExtra<Uri>(Intent.EXTRA_STREAM)
+        val text = intent.getStringExtra(Intent.EXTRA_TEXT)
+        if (uri != null) {
+            try { contentResolver.takePersistableUriPermission(uri, Intent.FLAG_GRANT_READ_URI_PERMISSION) } catch (_: Exception) {}
+            web.postDelayed({
+                val name = DocumentFile.fromSingleUri(this, uri)?.name ?: "Arquivo compartilhado"
+                val js = "window.openExisting && window.openExisting(" + JSONObject.quote(uri.toString()) + "," + JSONObject.quote(name) + ")"
+                web.evaluateJavascript(js, null)
+            }, 650)
+        }
+        if (!text.isNullOrBlank()) {
+            web.postDelayed({
+                web.evaluateJavascript("(window.openCreateFromText&&window.openCreateFromText(" + JSONObject.quote(text) + "))", null)
+            }, 750)
+        }
+    }
+
+    /**
+     * Recebe arquivos enviados pelo seletor "Abrir com..." / "Editar com...".
+     * O Android entrega uma content:// URI com uma permissão temporária de leitura.
+     */
+    private fun handleDocumentIntent(intent: Intent?) {
+        val action = intent?.action ?: return
+        if (action != Intent.ACTION_VIEW && action != Intent.ACTION_EDIT) return
+        val uri = intent.data ?: return
+        if (lastHandledDocumentUri == uri.toString()) return
+        lastHandledDocumentUri = uri.toString()
+
+        try {
+            val document = DocumentFile.fromSingleUri(this, uri)
+            val name = document?.name ?: "Documento"
+            val flags = intent.flags and (Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION)
+            if (flags != 0) {
+                try {
+                    contentResolver.takePersistableUriPermission(uri, flags)
+                } catch (_: Exception) {
+                    // Nem todo provider oferece permissão persistente; a permissão temporária continua válida.
+                }
+            }
+
+            web.postDelayed({
+                val js = "window.openExisting && window.openExisting(" +
+                    JSONObject.quote(uri.toString()) + "," +
+                    JSONObject.quote(name) +
+                    ")"
+                web.evaluateJavascript(js, null)
+            }, 900)
+        } catch (e: Exception) {
+            NexusFeedback.snackbar(this, e.message ?: "Não foi possível abrir o documento.", NexusFeedback.Type.ERROR)
+        }
+    }
+
+    private fun handleFeedbackIntent(intent: Intent?) {
+        val type = intent?.getStringExtra("nexus_feedback_type") ?: return
+        val message = intent.getStringExtra("nexus_feedback_message") ?: return
+        val title = intent.getStringExtra("nexus_feedback_title") ?: "Nexus"
+        when (type) {
+            "success" -> NexusFeedback.toast(this, message, NexusFeedback.Type.SUCCESS)
+            "error" -> NexusFeedback.alert(this, title, message, NexusFeedback.Type.ERROR)
+            "warning" -> NexusFeedback.snackbar(this, message, NexusFeedback.Type.WARNING)
+            else -> NexusFeedback.toast(this, message, NexusFeedback.Type.INFO)
+        }
+        intent.removeExtra("nexus_feedback_type")
+        intent.removeExtra("nexus_feedback_message")
+        intent.removeExtra("nexus_feedback_title")
+    }
+
+    @Suppress("DEPRECATION")
+    override fun onBackPressed() {
+        if (::web.isInitialized) {
+            web.evaluateJavascript("(window.handleBack && window.handleBack())", null)
+        } else {
+            super.onBackPressed()
+        }
+    }
+
+    override fun onSaveInstanceState(outState: Bundle) {
+        super.onSaveInstanceState(outState)
+        if (::web.isInitialized) web.saveState(outState)
+    }
+
+    override fun onTrimMemory(level: Int) {
+        super.onTrimMemory(level)
+        if (level >= android.content.ComponentCallbacks2.TRIM_MEMORY_RUNNING_LOW && ::web.isInitialized) {
+            web.clearHistory()
+            web.clearMatches()
+            web.evaluateJavascript("window.dispatchEvent(new Event('nexusMemoryPressure'))", null)
+        }
+        if (level >= android.content.ComponentCallbacks2.TRIM_MEMORY_COMPLETE && ::web.isInitialized) {
+            web.freeMemory()
+        }
+    }
+
+    private fun publishNetworkState() {
+        if (!::web.isInitialized) return
+        val state = offline.networkState()
+        web.evaluateJavascript("(function(){window.dispatchEvent(new CustomEvent('nexusNetworkState',{detail:" + JSONObject.quote(state.toString()) + "}));})()", null)
+    }
+
+    override fun onResume() {
+        super.onResume()
+        handleDocumentIntent(intent)
+        Updater(this).resumePending()
+        if (::web.isInitialized) {
+            web.postDelayed({ checkForUpdateIfEnabled() }, 1500)
+        }
+        if (::web.isInitialized) {
+            web.postDelayed({ publishNetworkState() }, 250)
+            web.postDelayed({
+                web.evaluateJavascript("window.__nativeStorageRefresh && window.__nativeStorageRefresh()", null)
+            }, 350)
+        }
+    }
+
+    inner class Bridge {
+        @JavascriptInterface
+        fun call(action: String, payload: String, callback: String) {
+            pool.execute {
+                try {
+                    val p = JSONObject(payload)
+                    when (action) {
+                        "networkState" -> respond(callback, offline.networkState())
+                        "offlineQueue" -> respond(callback, offline.queueSnapshot())
+                        "queueWrite" -> {
+                            val id = offline.enqueue(p.optString("uri"), p.optString("name"), p.optString("content"))
+                            respond(callback, JSONObject().put("ok", true).put("id", id))
+                        }
+                        "removeQueuedWrite" -> {
+                            offline.remove(p.optString("id"))
+                            respond(callback, JSONObject().put("ok", true))
+                        }
+
+                        "editorMode" -> {
+                            setNativeEditorMode(p.optBoolean("visible", false))
+                            respond(callback, JSONObject().put("ok", true))
+                        }
+
+                        "session" -> {
+                            val result =
+                                if (session.token != null && session.userJson != null)
+                                    JSONObject().put("ok", true).put("user", JSONObject(session.userJson!!))
+                                else JSONObject().put("ok", false)
+                            respond(callback, result)
+                        }
+
+                        "validateSession" -> {
+                            if (session.token == null) {
+                                respond(callback, JSONObject().put("ok", false).put("error", "Sessão ausente"))
+                            } else {
+                                val response = api.me()
+                                if (response.code in 200..299) {
+                                    try {
+                                        val user = JSONObject(response.body)
+                                        session.userJson = user.toString()
+                                        respond(callback, JSONObject().put("ok", true).put("user", user))
+                                    } catch (_: Exception) {
+                                        respond(callback, JSONObject().put("ok", false).put("error", "Resposta de sessão inválida"))
+                                    }
+                                } else {
+                                    if (response.code == 401) session.clear()
+                                    respond(callback, JSONObject().put("ok", false).put("status", response.code).put("error", api.errorMessage(response)))
+                                }
+                            }
+                        }
+
+                        "appInfo" -> {
+                            val info = packageManager.getPackageInfo(packageName, 0)
+                            respond(
+                                callback,
+                                JSONObject()
+                                    .put("ok", true)
+                                    .put("versionName", info.versionName ?: "—")
+                                    .put("versionCode", if (android.os.Build.VERSION.SDK_INT >= 28) info.longVersionCode else info.versionCode)
+                            )
+                        }
+
+                        "api" -> {
+                            val response = api.request(
+                                p.optString("method", "GET"),
+                                p.optString("path"),
+                                p.optString("body").takeIf { it.isNotEmpty() }
+                            )
+                            if (response.code in 200..299 &&
+                                (p.optString("path") == "/api/v1/auth/login" ||
+                                 p.optString("path") == "/api/v1/auth/register")
+                            ) api.saveSession(response)
+
+                            val data: Any = when {
+                                response.body.isBlank() -> JSONObject()
+                                response.body.trimStart().startsWith("{") -> JSONObject(response.body)
+                                response.body.trimStart().startsWith("[") -> JSONArray(response.body)
+                                else -> response.body
+                            }
+
+                            respond(
+                                callback,
+                                JSONObject()
+                                    .put("ok", response.code in 200..299)
+                                    .put("status", response.code)
+                                    .put("data", data)
+                                    .put("error", if (response.code in 200..299) "" else api.errorMessage(response))
+                            )
+                        }
+
+                        "logout" -> {
+                            api.logout()
+                            session.clear()
+                            respond(callback, JSONObject().put("ok", true))
+                        }
+
+                        "confirmExit" -> runOnUiThread {
+                            NexusFeedback.alert(
+                                this@MainActivity,
+                                "Sair do Nexus",
+                                "Deseja fechar o aplicativo agora?",
+                                NexusFeedback.Type.WARNING,
+                                "Sair",
+                                "Cancelar",
+                                onPositive = {
+                                    finishAndRemoveTask()
+                                }
+                            )
+                            respondJs(callback, JSONObject().put("ok", true))
+                        }
+
+                        "exitApp" -> runOnUiThread {
+                            finishAndRemoveTask()
+                            respondJs(callback, JSONObject().put("ok", true))
+                        }
+
+                        "setSetting" -> {
+                            val key = p.optString("key")
+                            val value = p.optBoolean("value")
+                            getSharedPreferences("nexus_settings", MODE_PRIVATE).edit().putBoolean(key, value).apply()
+                            respond(callback, JSONObject().put("ok", true))
+                        }
+
+                        "storageInfo", "listFiles" -> {
+                            val result = storage.deviceStorage().put("files", storage.listFiles())
+                            respond(callback, JSONObject().put("ok", true).put("label", storage.label()).put("files", storage.listFiles()).put("total", result.optLong("total")).put("available", result.optLong("available")).put("used", result.optLong("used")).put("allFiles", result.optBoolean("allFiles")).put("documentStats", result.optJSONObject("documentStats") ?: JSONObject()))
+                        }
+
+                        "requestStorage" -> runOnUiThread {
+                            pendingCallback = callback
+                            val intent = Intent(Intent.ACTION_OPEN_DOCUMENT_TREE)
+                                .addFlags(
+                                    Intent.FLAG_GRANT_READ_URI_PERMISSION or
+                                    Intent.FLAG_GRANT_WRITE_URI_PERMISSION or
+                                    Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION
+                                )
+                            startActivityForResult(intent, treeRequest)
+                        }
+
+                        "readFile" -> {
+                            try {
+                                val content = storage.read(p.getString("uri"))
+                                respond(callback, JSONObject().put("ok", true).put("content", content))
+                            } catch (error: Exception) {
+                                respond(callback, JSONObject().put("ok", false).put("error", error.message ?: "Não foi possível ler este arquivo."))
+                            }
+                        }
+
+                        "rootFolder" -> {
+                            val root = storage.savedTree()
+                            respond(
+                                callback,
+                                JSONObject()
+                                    .put("ok", root != null)
+                                    .put("uri", root?.toString() ?: "")
+                                    .put("name", storage.label())
+                                    .put("error", if (root != null) "" else "Escolha um armazenamento antes de salvar")
+                            )
+                        }
+
+                        "listFolders" -> {
+                            respond(
+                                callback,
+                                JSONObject().put("ok", true).put(
+                                    "folders",
+                                    storage.listFolders(p.optString("uri").takeIf { it.isNotBlank() })
+                                )
+                            )
+                        }
+
+                        "writeFile" -> {
+                            val folderUri = p.optString("folderUri")
+                            val name = p.optString("name", "Novo documento.kz-nexus")
+                            val content = p.optString("content")
+                            val result = if (folderUri.isNotBlank()) {
+                                storage.saveInFolder(folderUri, name, content)
+                            } else {
+                                storage.write(p.optString("uri"), name, content)
+                            }
+                            if (!result.first && offline.networkState().optBoolean("online").not()) {
+                                val id = offline.enqueue(p.optString("uri"), name, content)
+                                respond(callback, JSONObject().put("ok", true).put("queued", true).put("queueId", id).put("uri", result.second ?: "").put("error", "Sem conexão. Alteração preservada localmente."))
+                            } else {
+                                respond(callback, JSONObject().put("ok", result.first).put("uri", result.second ?: "").put("error", if (result.first) "" else "Não foi possível salvar nesta pasta"))
+                            }
+                        }
+
+                        "createFolder" -> {
+                            val ok = storage.createFolder(p.optString("name", "Nova pasta"))
+                            respond(
+                                callback,
+                                JSONObject().put("ok", ok).put("error", if (ok) "" else "Selecione um armazenamento")
+                            )
+                        }
+
+                        "renameFile" -> {
+                            val ok = storage.rename(p.optString("uri"), p.optString("name", "Arquivo"))
+                            respond(callback, JSONObject().put("ok", ok).put("error", if (ok) "" else "Não foi possível renomear o arquivo"))
+                        }
+
+                        "deleteFile" -> {
+                            val ok = storage.delete(p.optString("uri"))
+                            respond(callback, JSONObject().put("ok", ok).put("error", if (ok) "" else "Não foi possível excluir o arquivo"))
+                        }
+
+                        "trashFile" -> {
+                            respond(callback, storage.trash(p.optString("uri")))
+                        }
+
+                        "listTrash" -> {
+                            respond(callback, JSONObject().put("ok", true).put("files", storage.listTrash()))
+                        }
+
+                        "restoreTrash" -> {
+                            respond(callback, storage.restoreTrash(p.optString("uri")))
+                        }
+
+                        "permanentDeleteTrash" -> {
+                            val ok = storage.permanentDeleteTrash(p.optString("uri"))
+                            respond(callback, JSONObject().put("ok", ok).put("error", if (ok) "" else "Não foi possível excluir definitivamente"))
+                        }
+
+                        "fileInfo" -> {
+                            try { respond(callback, JSONObject().put("ok", true).put("info", storage.fileInfo(p.optString("uri")))) }
+                            catch (e: Exception) { respond(callback, JSONObject().put("ok", false).put("error", e.message ?: "Não foi possível obter informações")) }
+                        }
+
+                        "copyFile" -> {
+                            val result = storage.copy(p.optString("uri"), p.optString("folderUri"), p.optString("name"))
+                            respond(callback, JSONObject().put("ok", result.first).put("uri", result.second ?: "").put("error", if (result.first) "" else "Não foi possível copiar o arquivo"))
+                        }
+
+                        "zipFiles" -> {
+                            val result = storage.zipFiles(p.optJSONArray("uris") ?: JSONArray(), p.optString("folderUri"), p.optString("name", "Nexus-Arquivo"))
+                            respond(callback, JSONObject().put("ok", result.first).put("uri", result.second ?: "").put("error", if (result.first) "" else "Não foi possível criar o ZIP"))
+                        }
+
+                        "shareText" -> runOnUiThread {
+                            val text = p.optString("text")
+                            val send = Intent(Intent.ACTION_SEND).apply {
+                                type = p.optString("mime", "text/plain")
+                                putExtra(Intent.EXTRA_TEXT, text)
+                            }
+                            try {
+                                startActivity(Intent.createChooser(send, p.optString("title", "Compartilhar pelo Nexus")))
+                                respond(callback, JSONObject().put("ok", true))
+                            } catch (e: Exception) {
+                                respond(callback, JSONObject().put("ok", false).put("error", e.message ?: "Nenhum aplicativo de compartilhamento disponível"))
+                            }
+                        }
+
+                        "copyText" -> {
+                            val clipboard = getSystemService(CLIPBOARD_SERVICE) as android.content.ClipboardManager
+                            clipboard.setPrimaryClip(android.content.ClipData.newPlainText("Nexus", p.optString("text")))
+                            respond(callback, JSONObject().put("ok", true))
+                        }
+
+                        "openLocation" -> runOnUiThread {
+                            try {
+                                val uri = Uri.parse(p.optString("uri"))
+                                val intent = Intent(Intent.ACTION_VIEW).apply {
+                                    data = uri
+                                    addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                                }
+                                startActivity(intent)
+                                respond(callback, JSONObject().put("ok", true))
+                            } catch (e: Exception) {
+                                respond(callback, JSONObject().put("ok", false).put("error", e.message ?: "Não foi possível abrir o local"))
+                            }
+                        }
+
+                        "openFile" -> runOnUiThread {
+                            try {
+                                val uri = Uri.parse(p.getString("uri"))
+                                val document = DocumentFile.fromSingleUri(this@MainActivity, uri)
+                                val mime = document?.type?.takeIf { it.isNotBlank() } ?: "*/*"
+                                val intent = Intent(Intent.ACTION_VIEW).apply {
+                                    setDataAndType(uri, mime)
+                                    addCategory(Intent.CATEGORY_DEFAULT)
+                                    addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                                    clipData = android.content.ClipData.newRawUri("Nexus", uri)
+                                }
+                                startActivity(intent)
+                                respond(callback, JSONObject().put("ok", true))
+                            } catch (error: Exception) {
+                                respond(callback, JSONObject().put("ok", false).put("error", error.message ?: "Nenhum aplicativo compatível pode abrir este arquivo."))
+                            }
+                        }
+
+                        "clipboardSet" -> {
+                            val text = p.optString("text")
+                            val clipboard = getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+                            clipboard.setPrimaryClip(ClipData.newPlainText("Korczak Nexus", text))
+                            respond(callback, JSONObject().put("ok", true))
+                        }
+
+                        "clipboardGet" -> {
+                            val clipboard = getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+                            val text = if (clipboard.hasPrimaryClip()) clipboard.primaryClip?.getItemAt(0)?.coerceToText(this@MainActivity)?.toString() ?: "" else ""
+                            respond(callback, JSONObject().put("ok", true).put("text", text))
+                        }
+
+                        "printEditor" -> runOnUiThread {
+                            try {
+                                val printManager = getSystemService(Context.PRINT_SERVICE) as PrintManager
+                                val adapter = web.createPrintDocumentAdapter("Korczak Nexus - " + (p.optString("name").ifBlank { "Documento" }))
+                                val paper = when (p.optString("paper", "A4").uppercase()) {
+                                    "A3" -> PrintAttributes.MediaSize.ISO_A3
+                                    "A5" -> PrintAttributes.MediaSize.ISO_A5
+                                    "LETTER" -> PrintAttributes.MediaSize.NA_LETTER
+                                    "LEGAL" -> PrintAttributes.MediaSize.NA_LEGAL
+                                    else -> PrintAttributes.MediaSize.ISO_A4
+                                }
+                                val landscape = p.optString("orientation", "portrait").equals("landscape", ignoreCase = true)
+                                val builder = PrintAttributes.Builder()
+                                    .setMediaSize(if (landscape) paper.asLandscape() else paper)
+                                    .setMinMargins(PrintAttributes.Margins.NO_MARGINS)
+                                if (android.os.Build.VERSION.SDK_INT >= 23) {
+                                    builder.setColorMode(
+                                        if (p.optBoolean("color", true)) PrintAttributes.COLOR_MODE_COLOR else PrintAttributes.COLOR_MODE_MONOCHROME
+                                    )
+                                    if (p.optBoolean("duplex", false)) {
+                                        builder.setDuplexMode(PrintAttributes.DUPLEX_MODE_LONG_EDGE)
+                                    }
+                                }
+                                printManager.print("Korczak Nexus", adapter, builder.build())
+                                respond(callback, JSONObject().put("ok", true))
+                            } catch (error: Exception) {
+                                respond(callback, JSONObject().put("ok", false).put("error", error.message ?: "Não foi possível abrir a impressão"))
+                            }
+                        }
+
+                        "pickFile" -> runOnUiThread {
+                            pendingFileCallback = callback
+                            val intent = Intent(Intent.ACTION_OPEN_DOCUMENT)
+                                .setType("*/*")
+                                .addCategory(Intent.CATEGORY_OPENABLE)
+                                .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                            startActivityForResult(intent, fileRequest)
+                        }
+
+                        "pickMedia" -> runOnUiThread {
+                            pendingMediaCallback = callback
+                            val mime = p.optString("mime", "*/*").ifBlank { "*/*" }
+                            val intent = Intent(Intent.ACTION_OPEN_DOCUMENT)
+                                .setType(mime)
+                                .addCategory(Intent.CATEGORY_OPENABLE)
+                                .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                            startActivityForResult(intent, mediaRequest)
+                        }
+
+                        "pickStorage" -> runOnUiThread {
+                            pendingCallback = callback
+                            val intent = Intent(Intent.ACTION_OPEN_DOCUMENT_TREE)
+                                .addFlags(
+                                    Intent.FLAG_GRANT_READ_URI_PERMISSION or
+                                    Intent.FLAG_GRANT_WRITE_URI_PERMISSION or
+                                    Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION
+                                )
+                            startActivityForResult(intent, treeRequest)
+                        }
+
+                        "installUpdate" -> {
+                            val url = p.optString("url")
+                            val digest = p.optString("digest")
+                            if (url.isBlank()) {
+                                respond(callback, JSONObject().put("ok", false).put("error", "URL da atualização não encontrada"))
+                            } else {
+                                Updater(this@MainActivity).install(url, digest) { result ->
+                                    val response = when {
+                                        result == "permission_install" -> JSONObject().put("ok", true).put("permission", true)
+                                        result == "installer" -> JSONObject().put("ok", true).put("message", "Instalação entregue ao Android")
+                                        result.startsWith("failed|") -> JSONObject().put("ok", false).put("error", result.removePrefix("failed|"))
+                                        else -> JSONObject().put("ok", false).put("error", "Não foi possível iniciar a atualização")
+                                    }
+                                    respond(callback, response)
+                                }
+                            }
+                        }
+
+                        "checkUpdate" -> Updater(this@MainActivity).check { result ->
+                            when {
+                                result.startsWith("update|") -> {
+                                    val parts = result.split("|", limit = 4)
+                                    respond(
+                                        callback,
+                                        JSONObject()
+                                            .put("ok", true)
+                                            .put("updateAvailable", true)
+                                            .put("version", parts.getOrElse(1) { "" })
+                                            .put("url", parts.getOrElse(2) { "" })
+                                            .put("digest", parts.getOrElse(3) { "" })
+                                            .put("message", "Atualização disponível: " + parts.getOrElse(1) { "" })
+                                    )
+                                }
+                                result == "up_to_date" -> respond(
+                                    callback,
+                                    JSONObject().put("ok", true).put("updateAvailable", false).put("message", "O aplicativo já está atualizado.")
+                                )
+                                result.startsWith("failed|") -> respond(
+                                    callback,
+                                    JSONObject().put("ok", false).put("updateAvailable", false).put("error", result.removePrefix("failed|"))
+                                )
+                                else -> respond(callback, JSONObject().put("ok", false).put("error", "Não foi possível concluir a verificação."))
+                            }
+                        }
+
+                        else -> respond(callback, JSONObject().put("ok", false).put("error", "Ação não suportada"))
+                    }
+                } catch (error: Exception) {
+                    respond(callback, JSONObject().put("ok", false).put("error", error.message ?: "Erro interno"))
+                }
+            }
+        }
+
+        private fun respond(id: String, result: JSONObject) {
+            runOnUiThread {
+                web.evaluateJavascript(
+                    "window.__nativeResult(" +
+                        JSONObject.quote(id) + "," +
+                        JSONObject.quote(result.toString()) +
+                        ")",
+                    null
+                )
+            }
+        }
+    }
+
+    @Suppress("DEPRECATION")
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        super.onActivityResult(requestCode, resultCode, data)
+
+        if (requestCode == mediaRequest) {
+            val callback = pendingMediaCallback
+            pendingMediaCallback = null
+            if (resultCode == Activity.RESULT_OK && data?.data != null) {
+                val uri = data.data!!
+                try {
+                    contentResolver.takePersistableUriPermission(uri, Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                } catch (_: Exception) {}
+                callback?.let {
+                    respondJs(
+                        it,
+                        JSONObject()
+                            .put("ok", true)
+                            .put("uri", uri.toString())
+                            .put("mime", contentResolver.getType(uri) ?: "*/*")
+                    )
+                }
+            } else {
+                callback?.let { respondJs(it, JSONObject().put("ok", false).put("error", "Seleção cancelada")) }
+            }
+            return
+        }
+
+        if (requestCode == fileRequest) {
+            val callback = pendingFileCallback
+            pendingFileCallback = null
+            if (resultCode == Activity.RESULT_OK && data?.data != null) {
+                val ok = storage.importFile(data.data!!)
+                callback?.let {
+                    respondJs(
+                        it,
+                        JSONObject().put("ok", ok).put(
+                            "error",
+                            if (ok) "" else "Não foi possível importar o arquivo"
+                        )
+                    )
+                }
+            } else {
+                callback?.let { respondJs(it, JSONObject().put("ok", false).put("error", "Seleção cancelada")) }
+            }
+            return
+        }
+
+        if (requestCode != treeRequest) return
+
+        val callback = pendingCallback
+        pendingCallback = null
+        if (resultCode == Activity.RESULT_OK && data?.data != null) {
+            val persisted = storage.rememberTree(data.data!!)
+            callback?.let {
+                respondJs(
+                    it,
+                    if (persisted) {
+                        JSONObject().put("ok", true).put("label", storage.label())
+                    } else {
+                        JSONObject().put("ok", false).put("error", "O Android não permitiu manter acesso a esta pasta. Escolha a pasta novamente.")
+                    }
+                )
+            }
+        } else {
+            callback?.let { respondJs(it, JSONObject().put("ok", false).put("error", "Seleção cancelada")) }
+        }
+    }
+
+    private fun respondJs(id: String, result: JSONObject) {
+        web.evaluateJavascript(
+            "window.__nativeResult(" +
+                JSONObject.quote(id) + "," +
+                JSONObject.quote(result.toString()) +
+                ")",
+            null
+        )
+    }
+
+    override fun onDestroy() {
+        pool.shutdownNow()
+        web.removeJavascriptInterface("Android")
+        web.stopLoading()
+        web.destroy()
+        super.onDestroy()
+    }
+}
