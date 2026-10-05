@@ -1,7 +1,7 @@
 {
   "name": "korczak-nexus-desktop",
   "productName": "Korczak Nexus",
-  "version": "0.0.0.293",
+  "version": "0.0.293",
   "description": "Cliente Desktop nativo do Korczak Nexus",
   "private": true,
   "type": "module",
