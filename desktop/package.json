@@ -58,8 +58,7 @@
         "AppImage",
         "deb"
       ],
-      "category": "Office",
-      "desktopName": "KorczakNexus"
+      "category": "Office"
     }
   },
   "author": {
