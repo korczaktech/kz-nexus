@@ -5,7 +5,7 @@ on:
       version:
         description: "Versão Desktop"
         required: true
-        default: "0.0.0.293"
+        default: "0.0.293"
   push:
     tags: ["desktop-v*.*.*"]
 permissions: {contents: write}
