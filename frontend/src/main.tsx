@@ -18,7 +18,7 @@ if ("serviceWorker" in navigator) {
         { scope: import.meta.env.BASE_URL }
       );
 
-      registration.update();
+      // Safari/Chrome manage the PWA update lifecycle automatically.\n      registration.update();
 
       registration.addEventListener("updatefound", () => {
         const worker = registration.installing;
