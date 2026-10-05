@@ -68,8 +68,9 @@ class Updater(private val activity: Activity) {
                 if (android.os.Build.VERSION.SDK_INT >= 26 &&
                     !activity.packageManager.canRequestPackageInstalls()) {
                     activity.getSharedPreferences(prefsName, Activity.MODE_PRIVATE).edit()
-                        .putString("pending_url", url)
+                        putString("pending_url", url)
                         .putString("pending_digest", expected)
+                        .putBoolean("pending_install", true)
                         .apply()
                     activity.runOnUiThread {
                         activity.startActivity(
@@ -134,12 +135,12 @@ class Updater(private val activity: Activity) {
 
     fun resumePending() {
         val prefs = activity.getSharedPreferences(prefsName, Activity.MODE_PRIVATE)
-        val url = prefs.getString("pending_url", null) ?: return
-        val digest = prefs.getString("pending_digest", "") ?: ""
+        if (!prefs.getBoolean("pending_install", false)) return
         if (android.os.Build.VERSION.SDK_INT >= 26 && !activity.packageManager.canRequestPackageInstalls()) return
-        install(url, digest) { result ->
-            if (result == "installer") prefs.edit().clear().apply()
-        }
+        val url = prefs.getString("pending_url", null) ?: return
+        val digest = prefs.getString("pending_digest", "") ?: return
+        prefs.edit().clear().apply()
+        install(url, digest) { }
     }
 
     private fun download(url: String, apk: File) {
