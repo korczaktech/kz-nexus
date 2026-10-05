@@ -102,7 +102,7 @@ F4E60CE66DA549D580B70A92 /* Release */ = {isa = XCBuildConfiguration; buildSetti
  INFOPLIST_FILE = KZDocuments/Info.plist;
  IPHONEOS_DEPLOYMENT_TARGET = 16.0;
  LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks";
- PRODUCT_BUNDLE_IDENTIFIER = com.korczaktech.kzdoc;
+ PRODUCT_BUNDLE_IDENTIFIER = com.korczaktech.nexus;
  PRODUCT_NAME = "$(TARGET_NAME)";
  SWIFT_EMIT_LOC_STRINGS = YES;
  SWIFT_VERSION = 5.0;
