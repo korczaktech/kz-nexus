@@ -121,7 +121,6 @@ class MainActivity : AppCompatActivity() {
         handleFeedbackIntent(intent)
         handleDocumentIntent(intent)
         handleShareIntent(intent)
-        Updater(this).resumePending()
         offline.prune()
 
         // A verificação automática precisa ocorrer depois que o WebView foi iniciado.
