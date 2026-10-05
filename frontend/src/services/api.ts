@@ -10,10 +10,7 @@ export type Notification={id:string;user_id:string;type:string;message:string;re
 export type Group={id:string;owner_id:string;name:string;member_ids:string[];created_at:string;updated_at:string};
 export type Event={id:string;user_id:string|null;actor_id?:string|null;type:string;action?:string;resource?:string;resource_id?:string|null;result?:string;payload:Record<string,unknown>;created_at:string;integrity_hash?:string;integrity_valid?:boolean};
 export class ApiError extends Error{status:number;code?:string;constructor(message:string,status:number,code?:string){super(message);this.name='ApiError';this.status=status;this.code=code}}
-const KEY='korczak_documents_token';const BASE=(import {queueIOSOperation} from './iosSync';
-import {isIOS} from '../iosPwa';
-
-import.meta.env.VITE_API_BASE_URL||'http://127.0.0.1:8000').replace(/\/$/,'');
+const KEY='korczak_documents_token';const BASE=(import.meta.env.VITE_API_BASE_URL||'http://127.0.0.1:8000').replace(/\/$/,'');
 const storage=()=>typeof localStorage!=='undefined'?localStorage:null;
 export const getToken=()=>storage()?.getItem(KEY)||null;
 export const clearToken=()=>storage()?.removeItem(KEY);
