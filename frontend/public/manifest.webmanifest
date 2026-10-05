@@ -4,7 +4,7 @@
   "description": "Korczak Nexus — documentos, editor e armazenamento.",
   "lang": "pt-BR",
   "dir": "ltr",
-  "id": "./",
+  "id": "/kz-nexus/",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
