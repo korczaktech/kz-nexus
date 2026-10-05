@@ -12,6 +12,8 @@ import org.json.JSONObject
 
 class StorageManager(private val context: Context) {
     private val prefs = context.getSharedPreferences("kzdoc_storage", Context.MODE_PRIVATE)
+    private val trashPrefsKey = "trash_entries_v1"
+    private val trashFolderName = ".NexusTrash"
 
     fun savedTree(): Uri? = prefs.getString("tree", null)?.let(Uri::parse)
 
@@ -193,9 +195,138 @@ class StorageManager(private val context: Context) {
         return file.renameTo(safe(name))
     }
 
-    fun delete(uri: String): Boolean {
+    fun trash(uri: String): JSONObject {
+        val source = DocumentFile.fromSingleUri(context, Uri.parse(uri)) ?: return JSONObject().put("ok", false).put("error", "Arquivo não encontrado")
+        if (!source.exists() || source.isDirectory) return JSONObject().put("ok", false).put("error", "Somente arquivos podem ser enviados para a lixeira")
+        val root = savedTree()?.let { DocumentFile.fromTreeUri(context, it) } ?: return JSONObject().put("ok", false).put("error", "Selecione uma pasta do Nexus primeiro")
+        val trash = root.findFile(trashFolderName) ?: root.createDirectory(trashFolderName)
+            ?: return JSONObject().put("ok", false).put("error", "Não foi possível preparar a lixeira")
+        val parent = findParent(root, source.uri)
+            ?: return JSONObject().put("ok", false).put("error", "Não foi possível localizar a pasta original")
+        val originalName = source.name ?: "Arquivo"
+        val trashName = uniqueName(trash, originalName)
+        val target = trash.createFile(source.type ?: mimeFor(originalName), trashName)
+            ?: return JSONObject().put("ok", false).put("error", "Não foi possível mover o arquivo para a lixeira")
+        try {
+            val input = context.contentResolver.openInputStream(source.uri) ?: throw IllegalStateException("Não foi possível ler o arquivo")
+            val output = context.contentResolver.openOutputStream(target.uri) ?: throw IllegalStateException("Não foi possível gravar na lixeira")
+            input.use { i -> output.use { o -> i.copyTo(o) } }
+            if (!source.delete()) {
+                target.delete()
+                return JSONObject().put("ok", false).put("error", "O arquivo foi copiado, mas o original não pôde ser removido")
+            }
+            val entries = readTrashEntries()
+            entries.put(
+                JSONObject()
+                    .put("trashUri", target.uri.toString())
+                    .put("originalParent", treeUriForDocument(parent.uri).toString())
+                    .put("originalName", originalName)
+                    .put("deletedAt", System.currentTimeMillis())
+            )
+            saveTrashEntries(entries)
+            return JSONObject().put("ok", true).put("name", originalName)
+        } catch (e: Exception) {
+            try { target.delete() } catch (_: Exception) {}
+            return JSONObject().put("ok", false).put("error", e.message ?: "Não foi possível mover para a lixeira")
+        }
+    }
+
+    fun listTrash(): JSONArray {
+        val result = JSONArray()
+        val entries = readTrashEntries()
+        for (i in 0 until entries.length()) {
+            val e = entries.optJSONObject(i) ?: continue
+            val uri = e.optString("trashUri")
+            val file = runCatching { DocumentFile.fromSingleUri(context, Uri.parse(uri)) }.getOrNull()
+            if (file?.exists() == true) {
+                result.put(
+                    JSONObject()
+                        .put("name", e.optString("originalName", file.name ?: "Arquivo"))
+                        .put("uri", uri)
+                        .put("deletedAt", e.optLong("deletedAt"))
+                        .put("size", file.length())
+                        .put("mime", file.type ?: mimeFor(file.name))
+                )
+            }
+        }
+        return result
+    }
+
+    fun restoreTrash(uri: String): JSONObject {
+        val entries = readTrashEntries()
+        var found: JSONObject? = null
+        var foundIndex = -1
+        for (i in 0 until entries.length()) {
+            val e = entries.optJSONObject(i) ?: continue
+            if (e.optString("trashUri") == uri) { found = e; foundIndex = i; break }
+        }
+        val entry = found ?: return JSONObject().put("ok", false).put("error", "Item não encontrado na lixeira")
+        val source = DocumentFile.fromSingleUri(context, Uri.parse(uri)) ?: return JSONObject().put("ok", false).put("error", "Arquivo da lixeira não existe")
+        val parent = DocumentFile.fromTreeUri(context, Uri.parse(entry.optString("originalParent")))
+            ?: return JSONObject().put("ok", false).put("error", "A pasta original não está mais disponível")
+        val originalName = entry.optString("originalName", source.name ?: "Arquivo")
+        val target = parent.createFile(source.type ?: mimeFor(originalName), uniqueName(parent, originalName))
+            ?: return JSONObject().put("ok", false).put("error", "Não foi possível restaurar o arquivo")
+        return try {
+            val input = context.contentResolver.openInputStream(source.uri) ?: throw IllegalStateException("Não foi possível ler o item da lixeira")
+            val output = context.contentResolver.openOutputStream(target.uri) ?: throw IllegalStateException("Não foi possível gravar o arquivo restaurado")
+            input.use { i -> output.use { o -> i.copyTo(o) } }
+            if (!source.delete()) {
+                target.delete()
+                throw IllegalStateException("Não foi possível concluir a restauração")
+            }
+            entries.remove(foundIndex)
+            saveTrashEntries(entries)
+            JSONObject().put("ok", true).put("name", target.name ?: originalName)
+        } catch (e: Exception) {
+            try { target.delete() } catch (_: Exception) {}
+            JSONObject().put("ok", false).put("error", e.message ?: "Não foi possível restaurar")
+        }
+    }
+
+    fun permanentDeleteTrash(uri: String): Boolean {
+        val entries = readTrashEntries()
+        var foundIndex = -1
+        for (i in 0 until entries.length()) {
+            if (entries.optJSONObject(i)?.optString("trashUri") == uri) { foundIndex = i; break }
+        }
         val file = DocumentFile.fromSingleUri(context, Uri.parse(uri)) ?: return false
-        return file.delete()
+        val ok = file.delete()
+        if (ok && foundIndex >= 0) {
+            entries.remove(foundIndex)
+            saveTrashEntries(entries)
+        }
+        return ok
+    }
+
+    private fun readTrashEntries(): JSONArray = try {
+        JSONArray(prefs.getString(trashPrefsKey, "[]") ?: "[]")
+    } catch (_: Exception) { JSONArray() }
+
+    private fun saveTrashEntries(entries: JSONArray) {
+        prefs.edit().putString(trashPrefsKey, entries.toString()).apply()
+    }
+
+    private fun findParent(folder: DocumentFile, targetUri: Uri): DocumentFile? {
+        folder.listFiles().forEach { child ->
+            if (child.uri == targetUri) return folder
+            if (child.isDirectory && child.name != trashFolderName) {
+                val found = findParent(child, targetUri)
+                if (found != null) return found
+            }
+        }
+        return null
+    }
+
+    private fun uniqueName(folder: DocumentFile, desired: String): String {
+        val clean = safe(desired)
+        if (folder.findFile(clean) == null) return clean
+        val dot = clean.lastIndexOf('.')
+        val base = if (dot > 0) clean.substring(0, dot) else clean
+        val ext = if (dot > 0) clean.substring(dot) else ""
+        var i = 2
+        while (folder.findFile("$base ($i)$ext") != null) i++
+        return "$base ($i)$ext"
     }
 
     fun copy(uri: String, folderUri: String, name: String): Pair<Boolean, String?> {
