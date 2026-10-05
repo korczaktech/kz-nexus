@@ -685,6 +685,23 @@ class MainActivity : AppCompatActivity() {
                             respond(callback, JSONObject().put("ok", ok).put("error", if (ok) "" else "Não foi possível excluir o arquivo"))
                         }
 
+                        "trashFile" -> {
+                            respond(callback, storage.trash(p.optString("uri")))
+                        }
+
+                        "listTrash" -> {
+                            respond(callback, JSONObject().put("ok", true).put("files", storage.listTrash()))
+                        }
+
+                        "restoreTrash" -> {
+                            respond(callback, storage.restoreTrash(p.optString("uri")))
+                        }
+
+                        "permanentDeleteTrash" -> {
+                            val ok = storage.permanentDeleteTrash(p.optString("uri"))
+                            respond(callback, JSONObject().put("ok", ok).put("error", if (ok) "" else "Não foi possível excluir definitivamente"))
+                        }
+
                         "fileInfo" -> {
                             try { respond(callback, JSONObject().put("ok", true).put("info", storage.fileInfo(p.optString("uri")))) }
                             catch (e: Exception) { respond(callback, JSONObject().put("ok", false).put("error", e.message ?: "Não foi possível obter informações")) }
