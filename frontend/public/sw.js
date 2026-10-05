@@ -2,7 +2,7 @@ const CACHE = "kz-nexus-shell-v3";
 const BASE = new URL("./", self.registration.scope).pathname;
 const SHELL = [
   BASE,
-  BASE + "manifest.webmanifest",
+  BASE + "manifest.json",
   BASE + "icons/nexus-icon-192.svg?v=2",
   BASE + "icons/nexus-icon-512.svg?v=2"
 ];
