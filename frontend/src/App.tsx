@@ -4,9 +4,11 @@ import {api, clearToken, getToken, saveSession, type DocumentItem, type Event, t
 import {Button, Icon, Modal, StatePanel} from './components/ui';
 import {Editor, markdownToHtml} from './components/Editor';
 import {ApiError} from './services/api';
-import {chooseLocalFolder, getStorageSelection, saveStorageSelection, storageLabel, type StorageProvider} from './services/storage';
+import {chooseLocalFolder, getStorageSelection, saveStorageSelection, storageLabel, connectCloudStorage, type StorageProvider} from './services/storage';
+
 import {listIOSFiles, getIOSFile, deleteIOSFile, shareIOSFile} from './services/iosFiles';
 import {isIOS} from './iosPwa';
+import {finishCloudOAuth,getCloudSession,disconnectCloud} from './services/cloudStorage';
 const nexusLogo = `${import.meta.env.BASE_URL}icons/favicon-nexus.svg?v=2`;
 const NEXUS_WEB_VERSION = String(packageJson.version);
 function versionParts(value:string){return value.replace(/^v/i,'').split('.').map(part=>Number.parseInt(part,10)||0)}
@@ -35,18 +37,8 @@ function StoragePicker({onComplete,allowClose=false}:{onComplete:(provider:Stora
         onComplete(provider);
         return;
       }
-      const configured=provider==='google-drive'
-        ?Boolean(import.meta.env.VITE_GOOGLE_CLIENT_ID)
-        :Boolean(import.meta.env.VITE_ONEDRIVE_CLIENT_ID);
-      if(!configured){
-        setError(provider==='google-drive'
-          ?'O Google Drive ainda precisa ser configurado pelo administrador do Korczak Nexus. A opção já está preparada para OAuth.'
-          :'O OneDrive ainda precisa ser configurado pelo administrador do Korczak Nexus. A opção já está preparada para OAuth.');
-        return;
-      }
-      const selection={provider,label:storageLabel(provider),connectedAt:new Date().toISOString()};
-      saveStorageSelection(selection);
-      onComplete(provider);
+await connectCloudStorage(provider);
+      return;
     }catch(e){
       if(e instanceof DOMException&&e.name==='AbortError')return;
       setError(e instanceof Error?e.message:'Não foi possível selecionar este armazenamento.');
@@ -162,6 +154,7 @@ function App(){
 
   useEffect(()=>{document.documentElement.dataset.theme=theme;localStorage.setItem('kz_theme',theme)},[theme]);
   useEffect(()=>{if(!getToken()){setBoot(false);return}api.me().then(setUser).catch(()=>clearToken()).finally(()=>setBoot(false))},[]);
+  useEffect(()=>{finishCloudOAuth().then(provider=>{if(provider){const selection={provider,label:storageLabel(provider),connectedAt:new Date().toISOString()};saveStorageSelection(selection);setStorageSelection(selection);}}).catch(e=>setError(e instanceof Error?e.message:'Não foi possível conectar o armazenamento.'))},[]);
   useEffect(()=>{if(user&&!getStorageSelection())setShowStoragePicker(true)},[user]);
   useEffect(()=>{if(user)load(view)},[user,view]);
   useEffect(()=>{
