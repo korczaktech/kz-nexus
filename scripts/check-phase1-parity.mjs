@@ -6,6 +6,8 @@ const files={
   web:fs.readFileSync(path.join(root,'frontend/src/App.tsx'),'utf8'),
   android:fs.readFileSync(path.join(root,'android/app/src/main/assets/index.html'),'utf8'),
   androidNative:fs.readFileSync(path.join(root,'android/app/src/main/java/com/korczak/documents/MainActivity.kt'),'utf8'),
+  androidStorage:fs.readFileSync(path.join(root,'android/app/src/main/java/com/korczak/documents/StorageManager.kt'),'utf8'),
+  androidManifest:fs.readFileSync(path.join(root,'android/app/src/main/AndroidManifest.xml'),'utf8'),
   ios:fs.readFileSync(path.join(root,'ios/KZDocuments/ContentView.swift'),'utf8')
 };
 const checks=[
@@ -29,6 +31,13 @@ const checks=[
   ['Android: NexusAPI',files.android.includes('>NexusAPI<')],
   ['Android: feedback',files.android.includes('Dar um feedback')],
   ['Android: updates',files.android.includes('Atualizações')],
+  ['Android: native splash',files.androidNative.includes('showNativeSplash') && files.androidNative.includes('hideNativeSplash')],
+  ['Android: system insets',files.androidNative.includes('WindowInsetsCompat.Type.systemBars') && files.android.includes('--nx-native-bottom-inset')],
+  ['Android: back navigation',files.android.includes('function handleBack()') && files.androidNative.includes('window.handleBack')],
+  ['Android: local trash bridge',files.androidNative.includes('"trashFile"') && files.androidNative.includes('"restoreTrash"') && files.androidNative.includes('"permanentDeleteTrash"')],
+  ['Android: persistent trash storage',files.androidStorage.includes('trashEntries') || files.androidStorage.includes('trashPrefsKey')],
+  ['Android: share intent',files.androidNative.includes('ACTION_SEND') && files.androidManifest.includes('android.intent.action.SEND')],
+  ['Android: resize-aware activity',files.androidManifest.includes('android:windowSoftInputMode="adjustResize"')],
   ['iOS: current Nexus URL',files.ios.includes('https://korczaktech.github.io/kz-nexus/')]
 ];
 const failed=checks.filter(([,ok])=>!ok);
