@@ -1,5 +1,4 @@
 COLLECTIONS = (
-    "usuarios",
     "documentos",
     "versoes",
     "pastas",
@@ -12,7 +11,7 @@ COLLECTIONS = (
 
 
 async def ensure_collections(database) -> None:
-    """Create every application collection when it does not exist yet."""
+    """Create only collections owned by the Nexus document service."""
     existing = set(await database.list_collection_names())
     for name in COLLECTIONS:
         if name not in existing:
