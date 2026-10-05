@@ -78,9 +78,23 @@ final class IOSBridge: NSObject, ObservableObject, UIDocumentPickerDelegate {
         guard let root = UIApplication.shared.connectedScenes
             .compactMap({ $0 as? UIWindowScene }).first,
               let presenter = root.keyWindow?.rootViewController else { return }
-
         let controller = UIActivityViewController(activityItems: [url], applicationActivities: nil)
         presenter.present(controller, animated: true)
+    }
+
+    func share(name: String, mime: String, base64: String) {
+        guard let data = Data(base64Encoded: base64) else {
+            webView?.evaluateJavaScript("window.dispatchEvent(new CustomEvent('ios-share-error'));")
+            return
+        }
+        let safeName = name.replacingOccurrences(of: "/", with: "_")
+        let url = FileManager.default.temporaryDirectory.appendingPathComponent(safeName)
+        do {
+            try data.write(to: url, options: .atomic)
+            share(url: url)
+        } catch {
+            webView?.evaluateJavaScript("window.dispatchEvent(new CustomEvent('ios-share-error'));")
+        }
     }
 }
 
@@ -122,7 +136,11 @@ struct WebContainer: UIViewRepresentable {
             case "pickFile":
                 bridge.pickDocument()
             case "share":
-                if let path = body["path"] as? String {
+                if let name = body["name"] as? String,
+                   let mime = body["mime"] as? String,
+                   let base64 = body["base64"] as? String {
+                    bridge.share(name: name, mime: mime, base64: base64)
+                } else if let path = body["path"] as? String {
                     bridge.share(url: URL(fileURLWithPath: path))
                 }
             default:
