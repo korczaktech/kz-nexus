@@ -36,6 +36,10 @@ jobs:
       - name: Validate Phase 1 parity
         run: node scripts/check-phase1-parity.mjs
 
+      - name: Run frontend tests
+        working-directory: frontend
+        run: npm test
+
       - name: Build Vite application
         working-directory: frontend
         env:
