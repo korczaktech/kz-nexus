@@ -249,7 +249,7 @@ function App(){
       <div className="sidebar-footer"><strong>KORCZAK TECHNOLOGIES</strong><span>Korczak Nexus</span></div>
     </aside>
     <div className="main-shell">
-      {isIOS&&iosOffline&&<div className="ios-offline-banner" role="status"><Icon name="cloud"/> Você está offline. Arquivos locais continuam disponíveis; alterações online serão retomadas quando a conexão voltar.</div>
+      {isIOS&&iosOffline&&<div className="ios-offline-banner" role="status"><Icon name="cloud"/> Você está offline. Arquivos locais continuam disponíveis; alterações online serão retomadas quando a conexão voltar.</div>}
       <header className="topbar">
         <div className="mobile-nexus-header">
           <div className="mobile-nexus-brand"><div className="brand-logo small image-brand"><img src={nexusLogo} alt="" /></div><div><strong>KORCZAK</strong><span>NEXUS</span></div></div>
