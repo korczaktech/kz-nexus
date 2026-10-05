@@ -42,11 +42,13 @@ def _canonical_event(event: dict) -> str:
 
 
 async def find_user_by_email(email: str):
-    return await get_accounts_database()["contas"].find_one({"Email": email.lower().strip()})
+    account = await get_accounts_database()["contas"].find_one({"Email": email.lower().strip()})
+    return _account_to_user(account)
 
 
 async def find_user(user_id: str):
-    return await get_accounts_database()["contas"].find_one({"id": user_id})
+    account = await get_accounts_database()["contas"].find_one({"id": user_id})
+    return _account_to_user(account)
 
 
 def _account_to_user(account: dict | None):
