@@ -165,13 +165,15 @@ function App(){
   useEffect(()=>{if(user)load(view)},[user,view]);
   useEffect(()=>{
     if(!isIOS)return;
-    const onRuntime=(event:Event)=>setIosOffline(!((event as CustomEvent<{online:boolean}>).detail?.online));
+    const onRuntime=(event:globalThis.Event)=>setIosOffline(!((event as CustomEvent<{online:boolean}>).detail?.online));
     const loadLocal=()=>listIOSFiles().then(setIosLocalFiles).catch(()=>setIosLocalFiles([]));
     loadLocal();
+    const onFilesChanged=()=>listIOSFiles().then(setIosLocalFiles).catch(()=>setIosLocalFiles([]));
     window.addEventListener('nexusIOSRuntime',onRuntime as EventListener);
+    window.addEventListener('nexusIOSFilesChanged',onFilesChanged as EventListener);
     window.addEventListener('online',()=>setIosOffline(false),{passive:true});
     window.addEventListener('offline',()=>setIosOffline(true),{passive:true});
-    return()=>window.removeEventListener('nexusIOSRuntime',onRuntime as EventListener);
+    return()=>{window.removeEventListener('nexusIOSRuntime',onRuntime as EventListener);window.removeEventListener('nexusIOSFilesChanged',onFilesChanged as EventListener)};
   },[]);
 
   async function load(v:View=view){try{setError('');
