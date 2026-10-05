@@ -33,6 +33,18 @@ export function storageLabel(provider: StorageProvider): string {
 }
 
 export async function chooseLocalFolder(): Promise<StorageSelection | null> {
+  const ios = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+  if (ios) {
+    const {pickIOSFiles} = await import('./iosFiles');
+    const files = await pickIOSFiles();
+    if (!files.length) return null;
+    return {
+      provider: 'local',
+      label: 'Arquivos neste iPhone/iPad',
+      folderName: files.length === 1 ? files[0].name : `${files.length} arquivos selecionados`,
+      connectedAt: new Date().toISOString(),
+    };
+  }
   const picker = (window as Window & {
     showDirectoryPicker?: (options?: { mode?: 'read' | 'readwrite' }) => Promise<{name:string}>;
   }).showDirectoryPicker;
