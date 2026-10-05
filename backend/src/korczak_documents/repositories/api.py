@@ -3,7 +3,7 @@ from uuid import uuid4
 import hashlib
 import json
 
-from ..database.connection import get_database
+from ..database.connection import get_database, get_accounts_database
 
 
 def now() -> datetime:
