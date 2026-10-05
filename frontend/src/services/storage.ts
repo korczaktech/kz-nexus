@@ -61,3 +61,5 @@ export async function chooseLocalFolder(): Promise<StorageSelection | null> {
     connectedAt: new Date().toISOString(),
   };
 }
+
+export async function connectCloudStorage(provider: Exclude<StorageProvider,'local'>){const {connectCloud}=await import('./cloudStorage');return connectCloud(provider)}
