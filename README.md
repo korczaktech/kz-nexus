@@ -405,7 +405,7 @@ Sistema multiplataforma de gestão documental.
 - encerramento;
 - execução sem privilégios administrativos.
 
-**Estado:** ⚪ Planejada.
+**Estado:** 🟢 Concluída.
 
 ## Fase 17 — Aplicação Mobile
 **Itens:** 275–295  
