@@ -58,7 +58,13 @@
         "AppImage",
         "deb"
       ],
-      "category": "Office"
+      "category": "Office",
+      "desktopName": "KorczakNexus"
     }
-  }
+  },
+  "author": {
+    "name": "Korczak Technologies",
+    "email": "korczaktechnology@gmail.com"
+  },
+  "homepage": "https://github.com/korczaktech/kz-nexus"
 }
