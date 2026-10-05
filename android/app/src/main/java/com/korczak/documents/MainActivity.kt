@@ -104,18 +104,18 @@ class MainActivity : AppCompatActivity() {
         rootLayout.addView(nativeEditorToolbar, toolbarLp)
         setContentView(rootLayout)
         showNativeSplash()
-        if (state != null) {
-            web.restoreState(state)
-        } else {
-            val html = assets.open("index.html").bufferedReader(Charsets.UTF_8).use { it.readText() }
-            web.loadDataWithBaseURL(
-                "file:///android_asset/",
-                html,
-                "text/html",
-                "UTF-8",
-                null
-            )
-        }
+        // O estado do WebView não é serializado no savedInstanceState.
+        // O Nexus mantém o estado dos documentos/sessão em seus próprios stores.
+        // Serializar o DOM do editor pode ultrapassar o limite do Bundle do Android
+        // e causar TransactionTooLargeException ao Activity ser recriada.
+        val html = assets.open("index.html").bufferedReader(Charsets.UTF_8).use { it.readText() }
+        web.loadDataWithBaseURL(
+            "file:///android_asset/",
+            html,
+            "text/html",
+            "UTF-8",
+            null
+        )
 
         // Storage Access Framework is requested on demand; no broad permission is required at startup.
         handleFeedbackIntent(intent)
@@ -409,20 +409,16 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    override fun onSaveInstanceState(outState: Bundle) {
-        super.onSaveInstanceState(outState)
-        if (::web.isInitialized) web.saveState(outState)
-    }
-
     override fun onTrimMemory(level: Int) {
         super.onTrimMemory(level)
-        if (level >= android.content.ComponentCallbacks2.TRIM_MEMORY_RUNNING_LOW && ::web.isInitialized) {
-            web.clearHistory()
-            web.clearMatches()
-            web.evaluateJavascript("window.dispatchEvent(new Event('nexusMemoryPressure'))", null)
-        }
-        if (level >= android.content.ComponentCallbacks2.TRIM_MEMORY_COMPLETE && ::web.isInitialized) {
-            web.freeMemory()
+        // Não limpar histórico, matches ou memória do WebView manualmente.
+        // O editor pode estar mantendo DOM, seleção e conteúdo em edição; destruir
+        // essas estruturas sob pressão de memória causa perdas de estado e instabilidade.
+        if (::web.isInitialized && !isFinishing && !isDestroyed) {
+            web.evaluateJavascript(
+                "(function(){if(window.dispatchEvent)window.dispatchEvent(new Event('nexusMemoryPressure'))})()",
+                null
+            )
         }
     }
 
@@ -864,6 +860,7 @@ class MainActivity : AppCompatActivity() {
 
         private fun respond(id: String, result: JSONObject) {
             runOnUiThread {
+                if (!::web.isInitialized || isFinishing || isDestroyed) return@runOnUiThread
                 web.evaluateJavascript(
                     "window.__nativeResult(" +
                         JSONObject.quote(id) + "," +
@@ -944,6 +941,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun respondJs(id: String, result: JSONObject) {
+        if (!::web.isInitialized || isFinishing || isDestroyed) return
         web.evaluateJavascript(
             "window.__nativeResult(" +
                 JSONObject.quote(id) + "," +
@@ -954,10 +952,14 @@ class MainActivity : AppCompatActivity() {
     }
 
     override fun onDestroy() {
+        // Cancela callbacks agendados no WebView antes de destruí-lo.
+        if (::web.isInitialized) {
+            web.removeCallbacksAndMessages(null)
+            web.removeJavascriptInterface("Android")
+            web.stopLoading()
+            web.destroy()
+        }
         pool.shutdownNow()
-        web.removeJavascriptInterface("Android")
-        web.stopLoading()
-        web.destroy()
         super.onDestroy()
     }
 }
