@@ -5,6 +5,7 @@ const root=process.cwd();
 const files={
   web:fs.readFileSync(path.join(root,'frontend/src/App.tsx'),'utf8'),
   android:fs.readFileSync(path.join(root,'android/app/src/main/assets/index.html'),'utf8'),
+  androidNative:fs.readFileSync(path.join(root,'android/app/src/main/java/com/korczak/documents/MainActivity.kt'),'utf8'),
   ios:fs.readFileSync(path.join(root,'ios/KZDocuments/ContentView.swift'),'utf8')
 };
 const checks=[
@@ -22,12 +23,9 @@ const checks=[
   ['Web: NexusAPI',files.web.includes('NexusAPI')],
   ['Web: feedback',files.web.includes("api.feedback(")],
   ['Web: updates',files.web.includes("releases/latest")],
-  ['Android: parity center',files.android.includes("NEXUS_PHASE1_PARITY_CENTER")],
-  ['Android: users',files.android.includes("/api/v1/users")],
-  ['Android: groups',files.android.includes("/api/v1/groups")],
-  ['Android: permissions',files.android.includes("/api/v1/permissions/")],
-  ['Android: audit',files.android.includes("/api/v1/audit")],
-  ['Android: advanced search',files.android.includes("/api/v1/search?")],
+  ['Android: generic NexusAPI bridge',files.android.includes("native('api'")],
+  ['Android: native API transport',files.androidNative.includes('"api" ->') && files.androidNative.includes('api.request(')],
+  ['Android: management API transport',files.androidNative.includes('response.code in 200..299')],
   ['Android: NexusAPI',files.android.includes('>NexusAPI<')],
   ['Android: feedback',files.android.includes('Dar um feedback')],
   ['Android: updates',files.android.includes('Atualizações')],
