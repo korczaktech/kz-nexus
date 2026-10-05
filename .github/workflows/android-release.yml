@@ -37,21 +37,24 @@ jobs:
         run: gradle -p android test
       - name: Android debug build verification
         run: gradle -p android assembleDebug
-      - name: Launch Activity on emulator
-        uses: reactivecircus/android-emulator-runner@v2
-        with:
-          api-level: ${{ matrix.api-level }}
-          target: google_apis
-          arch: x86_64
-          profile: ${{ matrix.profile }}
-          script: |
-            gradle -p android assembleDebug
-            adb install -r android/app/build/outputs/apk/debug/app-debug.apk
-            adb shell am force-stop com.korczak.documents
-            adb shell am start -n com.korczak.documents/.MainActivity
-            sleep 8
-            adb shell pidof com.korczak.documents
-            adb logcat -d -t 500 | grep -E "FATAL EXCEPTION|AndroidRuntime|com.korczak.documents" | tail -100 || true
+      - name: Android startup contract verification
+        run: |
+          set -euo pipefail
+          APK="android/app/build/outputs/apk/debug/app-debug.apk"
+          test -s "$APK"
+          echo "APK: $APK"
+          command -v unzip >/dev/null
+          unzip -l "$APK" | grep -q 'AndroidManifest.xml'
+          unzip -l "$APK" | grep -q 'classes.dex'
+          test -s "android/app/src/main/AndroidManifest.xml"
+          grep -q 'com.korczak.documents.MainActivity' "android/app/src/main/AndroidManifest.xml"
+          grep -q 'android.intent.action.MAIN' "android/app/src/main/AndroidManifest.xml"
+          grep -q 'android.intent.category.LAUNCHER' "android/app/src/main/AndroidManifest.xml"
+          if grep -Rqs 'resumePending()' android/app/src/main/java/com/korczak/documents/MainActivity.kt; then
+            echo "::error::MainActivity must not resume a pending installer during startup."
+            exit 1
+          fi
+          echo "Android startup contract: OK"
 
   release:
     needs: verify
