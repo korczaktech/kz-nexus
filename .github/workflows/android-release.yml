@@ -39,7 +39,7 @@ jobs:
         run: gradle -p android assembleDebug
 
   release:
-    needs: verify:
+    needs: verify
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
