@@ -11,6 +11,8 @@ function openDb(): Promise<IDBDatabase> {
   });
 }
 
+function notifyIOSFilesChanged(){ window.dispatchEvent(new CustomEvent("nexusIOSFilesChanged")); }
+
 export async function cacheIOSFile(file: File): Promise<string> {
   const id=`${Date.now()}-${crypto.randomUUID()}`;
   const db=await openDb();
@@ -21,6 +23,7 @@ export async function cacheIOSFile(file: File): Promise<string> {
     tx.onerror=()=>reject(tx.error||new Error("Não foi possível guardar o arquivo no dispositivo."));
   });
   db.close();
+  notifyIOSFilesChanged();
   return id;
 }
 
