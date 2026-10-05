@@ -5,7 +5,8 @@ import {Button, Icon, Modal, StatePanel} from './components/ui';
 import {Editor, markdownToHtml} from './components/Editor';
 import {ApiError} from './services/api';
 import {chooseLocalFolder, getStorageSelection, saveStorageSelection, storageLabel, type StorageProvider} from './services/storage';
-import {isIOS, listIOSFiles, getIOSFile, deleteIOSFile} from './services/iosFiles';
+import {listIOSFiles, getIOSFile, deleteIOSFile} from './services/iosFiles';
+import {isIOS} from './iosPwa';
 const nexusLogo = `${import.meta.env.BASE_URL}icons/favicon-nexus.svg?v=2`;
 const NEXUS_WEB_VERSION = String(packageJson.version);
 function versionParts(value:string){return value.replace(/^v/i,'').split('.').map(part=>Number.parseInt(part,10)||0)}
