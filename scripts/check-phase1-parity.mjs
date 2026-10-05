@@ -8,6 +8,7 @@ const files={
   androidNative:fs.readFileSync(path.join(root,'android/app/src/main/java/com/korczak/documents/MainActivity.kt'),'utf8'),
   androidStorage:fs.readFileSync(path.join(root,'android/app/src/main/java/com/korczak/documents/StorageManager.kt'),'utf8'),
   androidManifest:fs.readFileSync(path.join(root,'android/app/src/main/AndroidManifest.xml'),'utf8'),
+  androidUpdater:fs.readFileSync(path.join(root,'android/app/src/main/java/com/korczak/documents/Updater.kt'),'utf8'),
   ios:fs.readFileSync(path.join(root,'ios/KZDocuments/ContentView.swift'),'utf8')
 };
 const checks=[
@@ -31,6 +32,7 @@ const checks=[
   ['Android: NexusAPI',files.android.includes('>NexusAPI<')],
   ['Android: feedback',files.android.includes('Dar um feedback')],
   ['Android: updates',files.android.includes('Atualizações')],
+  ['Android: updater integrity',files.androidUpdater.includes('MessageDigest') && files.androidUpdater.includes('/releases/download/') && files.androidUpdater.includes('sha256')],
   ['Android: native splash',files.androidNative.includes('showNativeSplash') && files.androidNative.includes('hideNativeSplash')],
   ['Android: system insets',files.androidNative.includes('WindowInsetsCompat.Type.systemBars') && files.android.includes('--nx-native-bottom-inset')],
   ['Android: back navigation',files.android.includes('function handleBack()') && files.androidNative.includes('window.handleBack')],
