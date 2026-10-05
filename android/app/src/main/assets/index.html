@@ -491,7 +491,7 @@ window.nxP1Search=async()=>{const q=new URLSearchParams();const term=$('nxP1Q').
 function inject(){const cards=[...document.querySelectorAll('.menu-card')],anchor=cards.find(x=>x.textContent.includes('NexusAPI'));if(!anchor||document.getElementById('nxP1ManagementCard'))return;const b=document.createElement('button');b.id='nxP1ManagementCard';b.className='menu-card';b.innerHTML='<span class="mi">▦</span><span><b>Administração e pesquisa</b><small>Usuários, grupos, permissões, auditoria e pesquisa avançada.</small></span>';b.onclick=nxP1Open;anchor.parentNode.insertBefore(b,anchor)}
 setTimeout(inject,500);setInterval(inject,1500);
 })();
-</script>
+<\/script>
 </body></html>';
   const root=await native('rootFolder');
   if(root.ok){
