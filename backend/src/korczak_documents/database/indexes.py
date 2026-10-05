@@ -3,7 +3,6 @@ from pymongo import ASCENDING, DESCENDING
 from .collections import COLLECTIONS
 
 INDEX_DEFINITIONS = {
-    "usuarios": [("email", ASCENDING)],
     "documentos": [("owner_id", ASCENDING), ("updated_at", DESCENDING)],
     "versoes": [("document_id", ASCENDING), ("version_number", DESCENDING)],
     "pastas": [("owner_id", ASCENDING), ("parent_id", ASCENDING)],
@@ -62,12 +61,6 @@ async def ensure_indexes(database) -> None:
             name=f"{collection_name}_lookup",
         )
 
-    await _ensure_index(
-        database["usuarios"],
-        "email",
-        name="user_email_unique",
-        unique=True,
-    )
     await _ensure_index(
         database["etiquetas"],
         [("owner_id", ASCENDING), ("name", ASCENDING)],
