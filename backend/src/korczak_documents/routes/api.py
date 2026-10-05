@@ -86,7 +86,7 @@ async def admin_create_user(payload: AdminUserCreateRequest, user=Depends(curren
 async def users(user=Depends(current_user)):
     require_role(user, "manager")
     query = {} if user["role"] == "admin" else {"role": {"$ne": "admin"}}
-    items = await get_database()["usuarios"].find(query, {"password_hash": 0}).sort("name", 1).to_list(length=1000)
+    items = await repo.list_users_for_admin(query, limit=1000)
     return [service.clean_user(item) for item in items]
 
 
