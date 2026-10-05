@@ -8,6 +8,8 @@ import android.content.Context
 import android.print.PrintAttributes
 import android.print.PrintManager
 import android.net.Uri
+import android.net.ConnectivityManager
+import android.net.NetworkCapabilities
 import android.os.Bundle
 import android.os.Environment
 import android.provider.Settings
@@ -53,6 +55,7 @@ class MainActivity : AppCompatActivity() {
     private var nativeSplash: View? = null
     private var updateCheckInFlight = false
     private var lastPromptedUpdateVersion: String? = null
+    private val offline = OfflineStore(this)
 
     override fun onCreate(state: Bundle?) {
         super.onCreate(state)
@@ -117,6 +120,7 @@ class MainActivity : AppCompatActivity() {
         handleDocumentIntent(intent)
         handleShareIntent(intent)
         Updater(this).resumePending()
+        offline.prune()
 
         // A verificação automática precisa ocorrer depois que o WebView foi iniciado.
         // Fazemos uma tentativa inicial e uma segunda tentativa curta para recuperar
@@ -458,6 +462,11 @@ class MainActivity : AppCompatActivity() {
                                 }
                             }
                         }
+
+                        "networkState" -> respond(callback, offline.networkState())
+                        "offlineQueue" -> respond(callback, offline.queueSnapshot())
+                        "queueWrite" -> { val id=offline.enqueue(p.optString("uri"),p.optString("name"),p.optString("content")); respond(callback,JSONObject().put("ok",true).put("id",id)) }
+                        "removeQueuedWrite" -> { offline.remove(p.optString("id")); respond(callback,JSONObject().put("ok",true)) }
 
                         "appInfo" -> {
                             val info = packageManager.getPackageInfo(packageName, 0)
