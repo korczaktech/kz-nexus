@@ -3,7 +3,7 @@ const BASE = new URL("./", self.registration.scope).pathname;
 const SHELL = [
   BASE,
   BASE + "index.html",
-  BASE + "manifest.webmanifest",
+  BASE + "manifest.json",
   BASE + "icons/nexus-icon-192.svg",
   BASE + "icons/nexus-icon-512.svg"
 ];
