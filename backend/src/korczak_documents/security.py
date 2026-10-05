@@ -103,7 +103,7 @@ async def require_user_from_token(token: str) -> dict:
         raise AppError("Conta indisponível", "account_unavailable", 403)
     return {
         "id": user.get("id"), "name": user.get("Nome", ""), "email": user.get("Email", ""),
-        "phone": user.get("Telefone"), "password_hash": user.get("Aplicativos", {}).get("Workspace", {}).get("Nexus", {}).get("Senha", ""),
+        "phone": user.get("Telefone"), "password_hash": user.get("Aplicativos", {}).get("Nexus", {}).get("Senha", ""),
         "email_verified": user.get("EmailVerified", False), "phone_verified": user.get("PhoneVerified", False),
         "role": user.get("Conta", {}).get("Role", "user"), "status": user.get("Conta", {}).get("Status", "active"),
         "created_at": user.get("Conta", {}).get("CriadaEm"), "updated_at": user.get("Conta", {}).get("AtualizadaEm"), "_account": user
