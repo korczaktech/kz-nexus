@@ -56,7 +56,8 @@ class OfflineStore(private val context: Context) {
             val now = System.currentTimeMillis()
             val q = readQueue()
             for (i in q.length() - 1 downTo 0) {
-                val item = q.optJSONObject(i) ?: run {
+                val item = q.optJSONObject(i)
+                if (item == null) {
                     q.remove(i)
                     continue
                 }
