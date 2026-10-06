@@ -69,8 +69,12 @@ class MainActivity : AppCompatActivity() {
         web = WebView(this).apply {
             settings.javaScriptEnabled = true
             settings.domStorageEnabled = true
-            if (WebViewFeature.isFeatureSupported(WebViewFeature.ALGORITHMIC_DARKENING)) {
-                WebSettingsCompat.setAlgorithmicDarkeningAllowed(settings, false)
+            try {
+                if (WebViewFeature.isFeatureSupported(WebViewFeature.ALGORITHMIC_DARKENING)) {
+                    WebSettingsCompat.setAlgorithmicDarkeningAllowed(settings, false)
+                }
+            } catch (error: Throwable) {
+                android.util.Log.w("KorczakNexus", "Não foi possível configurar darkening do WebView", error)
             }
             settings.allowFileAccess = true
             settings.allowContentAccess = true
@@ -85,6 +89,24 @@ class MainActivity : AppCompatActivity() {
                     syncSystemInsets()
                     publishNetworkState()
                     view?.postDelayed({ hideNativeSplash() }, 420)
+                }
+
+                override fun onRenderProcessGone(view: WebView, detail: android.webkit.RenderProcessGoneDetail): Boolean {
+                    android.util.Log.e(
+                        "KorczakNexus",
+                        "WebView renderer encerrado; didCrash=${detail.didCrash()}"
+                    )
+                    runOnUiThread {
+                        if (isFinishing || isDestroyed) return@runOnUiThread
+                        try {
+                            rootLayout.removeView(view)
+                            view.removeJavascriptInterface("Android")
+                            view.stopLoading()
+                            view.destroy()
+                        } catch (_: Exception) {}
+                        createWebViewAndLoad()
+                    }
+                    return true
                 }
             }
             webChromeClient = WebChromeClient()
@@ -114,17 +136,8 @@ class MainActivity : AppCompatActivity() {
         // O Nexus mantém o estado dos documentos/sessão em seus próprios stores.
         // Serializar o DOM do editor pode ultrapassar o limite do Bundle do Android
         // e causar TransactionTooLargeException ao Activity ser recriada.
-        val html = assets.open("index.html").bufferedReader(Charsets.UTF_8).use { it.readText() }
-        WebViewCompat.getCurrentWebViewPackage(this)?.let { pkg ->
-            android.util.Log.i("KorczakNexus", "WebView provider: ${pkg.packageName} ${pkg.versionName}")
-        }
-        web.loadDataWithBaseURL(
-            "file:///android_asset/",
-            html,
-            "text/html",
-            "UTF-8",
-            null
-        )
+        logWebViewProvider()
+        loadNexusAsset()
 
         // Storage Access Framework is requested on demand; no broad permission is required at startup.
         handleFeedbackIntent(intent)
@@ -139,6 +152,58 @@ class MainActivity : AppCompatActivity() {
         web.postDelayed({ hideNativeSplash() }, 6000)
     }
 
+
+    private fun logWebViewProvider() {
+        try {
+            WebViewCompat.getCurrentWebViewPackage(this)?.let { pkg ->
+                android.util.Log.i("KorczakNexus", "WebView provider: ${pkg.packageName} ${pkg.versionName}")
+            }
+        } catch (error: Throwable) {
+            android.util.Log.w("KorczakNexus", "Não foi possível identificar o provider do WebView", error)
+        }
+    }
+
+    private fun loadNexusAsset() {
+        if (!::web.isInitialized) return
+        try {
+            web.loadUrl("file:///android_asset/index.html")
+        } catch (error: Throwable) {
+            android.util.Log.e("KorczakNexus", "Falha ao carregar o shell local do Nexus", error)
+            hideNativeSplash()
+        }
+    }
+
+    private fun createWebViewAndLoad() {
+        web = WebView(this).apply {
+            settings.javaScriptEnabled = true
+            settings.domStorageEnabled = true
+            settings.allowFileAccess = true
+            settings.allowContentAccess = true
+            settings.allowFileAccessFromFileURLs = false
+            settings.allowUniversalAccessFromFileURLs = false
+            settings.builtInZoomControls = false
+            settings.displayZoomControls = false
+            if (android.os.Build.VERSION.SDK_INT >= 26) settings.safeBrowsingEnabled = true
+            webViewClient = object : WebViewClient() {
+                override fun onPageFinished(view: WebView?, url: String?) {
+                    super.onPageFinished(view, url)
+                    syncSystemInsets()
+                    publishNetworkState()
+                    view?.postDelayed({ hideNativeSplash() }, 420)
+                }
+                override fun onRenderProcessGone(view: WebView, detail: android.webkit.RenderProcessGoneDetail): Boolean {
+                    android.util.Log.e("KorczakNexus", "WebView renderer encerrou durante recuperação; didCrash=${detail.didCrash()}")
+                    if (!isFinishing && !isDestroyed) runOnUiThread { createWebViewAndLoad() }
+                    return true
+                }
+            }
+            webChromeClient = WebChromeClient()
+            addJavascriptInterface(Bridge(), "Android")
+        }
+        rootLayout.addView(web, 0, FrameLayout.LayoutParams(-1, -1))
+        logWebViewProvider()
+        loadNexusAsset()
+    }
 
     private fun checkForUpdateIfEnabled() {
         if (updateCheckInFlight || isFinishing || isDestroyed) return
