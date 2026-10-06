@@ -127,13 +127,13 @@ jobs:
           emulator-options: -no-window -no-audio -no-boot-anim -gpu swiftshader_indirect
           script: |
             set -o pipefail
-            gradle -p android connectedReleaseAndroidTest --no-daemon --stacktrace -PreleaseVersion="${{ needs.prepare.outputs.version }}" -PreleaseCode="${{ needs.prepare.outputs.version_code }}" 2>&1 | tee "$RUNNER_TEMP/android-test.log"
+            gradle -p android connectedReleaseAndroidTest --no-daemon --stacktrace -PreleaseVersion="${{ needs.prepare.outputs.version }}" -PreleaseCode="${{ needs.prepare.outputs.version_code }}" 2>&1 | tee "android-test.log"
       - name: Upload Android test diagnostics
         if: failure()
         uses: actions/upload-artifact@v4
         with:
           name: android-test-diagnostics
-          path: ${{ runner.temp }}/android-test.log
+          path: android-test.log
           if-no-files-found: warn
 
   desktop:
