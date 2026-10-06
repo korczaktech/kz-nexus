@@ -142,8 +142,15 @@ jobs:
           test -f "release-assets/Korczak-HUB-Nexus-${{ needs.prepare.outputs.version }}.dmg"
           test -f "release-assets/Korczak-HUB-Nexus-${{ needs.prepare.outputs.version }}.exe"
       - name: Publish GitHub Release
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          set -euo pipefail
-          gh release create "${{ needs.prepare.outputs.tag }}"             release-assets/Korczak-HUB-Nexus-${{ needs.prepare.outputs.version }}.apk             release-assets/Korczak-HUB-Nexus-${{ needs.prepare.outputs.version }}.deb             release-assets/Korczak-HUB-Nexus-${{ needs.prepare.outputs.version }}.dmg             release-assets/Korczak-HUB-Nexus-${{ needs.prepare.outputs.version }}.exe             --repo "$GITHUB_REPOSITORY"             --title "Korczak HUB Nexus ${{ needs.prepare.outputs.version }}"             --generate-notes
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ needs.prepare.outputs.tag }
+          name: Korczak HUB Nexus ${{ needs.prepare.outputs.version }
+          generate_release_notes: true
+          fail_on_unmatched_files: true
+          files: |
+            release-assets/Korczak-HUB-Nexus-${{ needs.prepare.outputs.version }.apk
+            release-assets/Korczak-HUB-Nexus-${{ needs.prepare.outputs.version }.deb
+            release-assets/Korczak-HUB-Nexus-${{ needs.prepare.outputs.version }.dmg
+            release-assets/Korczak-HUB-Nexus-${{ needs.prepare.outputs.version }.exe
+
