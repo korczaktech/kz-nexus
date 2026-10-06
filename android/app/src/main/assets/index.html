@@ -670,7 +670,6 @@ async function refresh(){
     const r=await native('listFiles');
     if(!r.ok){console.warn('Falha ao listar arquivos:',r.error);return}
     renderFiles(r.files||[]);
-    await Promise.allSettled([refreshStorage(),checkStorageStatus()]);
   }catch(e){console.error('Falha ao atualizar a interface de arquivos:',e)}
 }
 let nexusFilesCache=[];
@@ -1177,10 +1176,18 @@ syncNexusVisualViewport();
   try{
     loadPageSettings();
     applyPageSettings();
+
+    // Render the actual Nexus shell first. Storage statistics are deliberately
+    // deferred so a slow SAF provider can never block the first screen.
     await refresh();
-    await checkStorageStatus();
     await loadAbout();
     await bootstrapAuth();
+
+    // Storage is informational and must not gate login/UI startup.
+    setTimeout(()=>{
+      Promise.allSettled([refreshStorage(),checkStorageStatus()])
+        .catch(e=>console.warn('Falha ao atualizar informações de armazenamento:',e));
+    },250);
   }catch(e){
     console.error('Falha no bootstrap do Nexus:',e);
     const auth=$('authScreen');
