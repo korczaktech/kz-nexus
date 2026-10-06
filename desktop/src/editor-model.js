@@ -23,7 +23,7 @@ export function normalizeDocumentModel(input={}){
     content:{html},
     metadata:{
       createdAt:input.metadata?.createdAt||new Date().toISOString(),
-      updatedAt:new Date().toISOString()
+      updatedAt:input.metadata?.updatedAt||input.updated_at||new Date().toISOString()
     },
     version:Number(input.version)||VERSION
   };
