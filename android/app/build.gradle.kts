@@ -9,7 +9,14 @@ android{namespace="com.korczak.documents";compileSdk=35
  buildFeatures{buildConfig=true}
  compileOptions{sourceCompatibility=JavaVersion.VERSION_17;targetCompatibility=JavaVersion.VERSION_17}
  kotlinOptions{jvmTarget="17"}
- defaultConfig{applicationId="com.korczak.documents";minSdk=26;targetSdk=35;versionCode=releaseCode;versionName=releaseVersion}
+ defaultConfig{
+  applicationId="com.korczak.documents"
+  minSdk=26
+  targetSdk=35
+  versionCode=releaseCode
+  versionName=releaseVersion
+  testInstrumentationRunner="androidx.test.runner.AndroidJUnitRunner"
+}
  signingConfigs{create("release"){if(ks!=null)storeFile=file(ks);if(kp!=null)storePassword=kp;if(ka!=null)keyAlias=ka;if(kkp!=null)keyPassword=kkp}}
  buildTypes{debug{isMinifyEnabled=false};release{isMinifyEnabled=false;signingConfig=signingConfigs.getByName("release")}}
 }
