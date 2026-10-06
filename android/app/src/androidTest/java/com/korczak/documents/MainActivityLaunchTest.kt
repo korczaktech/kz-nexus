@@ -65,8 +65,8 @@ class MainActivityLaunchTest {
         val value = result.get()
         assertNotNull(value)
         assertTrue("O shell local não carregou: $value", value.contains("appassets.androidplatform.net"))
-        assertTrue("A bridge nativa Android não foi exposta: $value", value.contains(""android":true"))
-        assertTrue("O documento HTML não carregou: $value", value.contains(""html":true"))
-        assertTrue("O body não carregou: $value", value.contains(""body":true"))
+        assertTrue("A bridge nativa Android não foi exposta: $value", value.contains("\"android\":true"))
+        assertTrue("O documento HTML não carregou: $value", value.contains("\"html\":true"))
+        assertTrue("O body não carregou: $value", value.contains("\"body\":true"))
     }
 }
