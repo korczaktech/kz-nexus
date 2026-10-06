@@ -287,8 +287,30 @@ body{min-height:100dvh;}
 let currentUri="",currentName="",templateKind="blank",toastTimer=null,editorToolsInitialized=false;
 const $=id=>document.getElementById(id);
 function toast(s){clearTimeout(toastTimer);$('toast').textContent=s;$('toast').classList.add('show');toastTimer=setTimeout(()=>$('toast').classList.remove('show'),2400)}
-function native(action,payload={}){return new Promise(resolve=>{const id='c'+Date.now()+Math.random().toString(16).slice(2);window.__pending=window.__pending||{};window.__pending[id]=resolve;if(window.Android)Android.call(action,JSON.stringify(payload),id);else{delete window.__pending[id];resolve({ok:false,error:'Recursos Android indisponíveis'})}})}
-window.__nativeResult=(id,json)=>{const r=window.__pending&&window.__pending[id];if(r){delete window.__pending[id];try{r(JSON.parse(json))}catch(e){r({ok:false,error:'Resposta inválida'})}}}
+function native(action,payload={}){
+  return new Promise(resolve=>{
+    const id='c'+Date.now()+Math.random().toString(16).slice(2);
+    window.__pending=window.__pending||{};
+    let settled=false;
+    const finish=value=>{if(settled)return;settled=true;clearTimeout(timer);delete window.__pending[id];resolve(value)};
+    const timer=setTimeout(()=>finish({ok:false,error:'O Android não respondeu a tempo à operação: '+action}),20000);
+    window.__pending[id]=finish;
+    try{
+      if(window.Android&&typeof Android.call==='function') Android.call(action,JSON.stringify(payload),id);
+      else finish({ok:false,error:'Recursos Android indisponíveis'});
+    }catch(e){finish({ok:false,error:e&&e.message?e.message:'Falha ao chamar o Android'})}
+  })
+}
+window.__nativeResult=(id,json)=>{
+  const r=window.__pending&&window.__pending[id];
+  if(r){try{r(JSON.parse(json))}catch(e){r({ok:false,error:'Resposta inválida do Android'})}}
+}
+window.addEventListener('error',e=>{
+  console.error('Nexus startup/runtime error:',e.message,e.filename,e.lineno);
+});
+window.addEventListener('unhandledrejection',e=>{
+  console.error('Nexus unhandled promise rejection:',e.reason);
+});
 const NEXUS_FEATURES=["Editor de texto rico","Negrito persistente","Itálico persistente","Sublinhado","Tachado","Sobrescrito","Subscrito","Títulos H1–H6","Parágrafos","Citações","Blocos de código","Listas numeradas","Listas com marcadores","Listas de tarefas","Recuo de parágrafo","Alinhamento à esquerda","Alinhamento central","Alinhamento à direita","Texto justificado","Escolha de fonte","Tamanho da fonte","Cor do texto","Cor de destaque","Inserção de links","Remoção de links","Linha horizontal","Inserção de data","Inserção de hora","Símbolos","Caracteres especiais","Emojis","Substituição de texto","Contador de palavras","Contador de caracteres","Contador de páginas","Desfazer","Refazer","Histórico de alterações","Salvamento automático","Indicador de salvamento","Recuperação automática","Rascunhos","Histórico de versões","Comparação de versões","Restauração de versões","Duplicação de documentos","Renomeação rápida","Modelos","Favoritos de documentos","Documentos recentes","TXT","Markdown","HTML","CSS","JavaScript","TypeScript","JSON","XML","CSV","YAML","TOML","INI","RTF","DOC","DOCX","ODT","PDF","KORCZAK NEXUS","Exportação de texto","Exportação de documento","Cabeçalho","Rodapé","Numeração de páginas","Margens","Retrato","Paisagem","A4","A3","Carta","Sumário","Notas de rodapé","Notas de fim","Quebra de página","Quebra de seção","Colunas","Tabelas","Mesclar células","Dividir células","Bordas de tabela","Imagens","Redimensionar imagens","Alinhar imagens","Legendas","Texto alternativo","Formas","Caixas de texto","Diagramas","Equações","Código destacado","Markdown visual","Navegador de arquivos","Pastas","Subpastas","Criar pasta","Renomear arquivo","Excluir arquivo","Mover arquivo","Copiar arquivo","Duplicar arquivo","Lixeira","Pesquisa de arquivos","Filtros","Ordenar por nome","Ordenar por tamanho","Ordenar por data","Ordenar por tipo","Lista","Grade","Favoritos","Fixados","Tags","Cores de pastas","Informações do arquivo","Compartilhar","Seleção múltipla","Operações em lote","ZIP","Extração ZIP","Pesquisa global","Pesquisa no documento","Pesquisa por palavra","Pesquisa por frase","Pesquisa por extensão","Pesquisa por tamanho","Pesquisa por data","Pesquisa por pasta","Pesquisa por tag","Filtros combinados","Destaque de resultados","Próximo resultado","Histórico de pesquisas","Pesquisas salvas","Busca instantânea","Tags pessoais","Pastas inteligentes","Favoritos globais","Recentes","Fixados","Compartilhados","Offline","Sincronização","Categorias","Atalhos","Dashboard","Indicadores","Estatísticas","Arquivos por categoria","Ordenação personalizada","PIN","Biometria","Bloqueio automático","Pasta protegida","Documento protegido","Criptografia local","Cofre local","Ocultar arquivo","Temporários","Limpeza","Sessões","Registro de atividades","Histórico de acesso","Confirmação de exclusão","Confirmação de operações","Provedor de armazenamento Android","Google Drive via provedor","OneDrive via provedor","Dropbox via provedor","Pasta sincronizada","Backup automático local","Backup manual","Restauração de backup","Backup criptografado","Sincronização seletiva","Compartilhar documento","Compartilhar pasta","Link público","Link privado","Somente leitura","Edição","Comentários","Menções","Atividade","Controle de versões","Convites","Notificações de alteração","Bloqueio de edição","Exportação colaborativa","Painel de atividades","Salvar como","Imprimir"].map((name,i)=>({id:i+1,name}));
 const EDITOR_CONTEXTS={
 arquivo:[
@@ -643,7 +665,14 @@ function humanSize(n){if(!n)return'0 B';let i=0,u=['B','KB','MB','GB','TB'];whil
 function cleanName(n){return String(n||'Arquivo').replace(/\.kz-nexus$/i,'')}
 function esc(s){return String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]))}
 function icon(n){const e=(String(n).split('.').pop()||'').toLowerCase();if(e==='pdf')return'▤';if(['doc','docx','docm','dot','dotx','dotm','odt','ott','fodt','wps','pages'].includes(e))return'▱';if(['txt','text','log','md','markdown','rtf','csv','json','yaml','yml','toml','ini','conf','properties','css','js','mjs','cjs','ts','tsx','jsx','html','htm','xml','kz-nexus'].includes(e))return'▤';if(['xls','xlsx','csv'].includes(e))return'▦';return'□'}
-async function refresh(){const r=await native('listFiles');if(!r.ok)return;renderFiles(r.files||[]);refreshStorage();checkStorageStatus()}
+async function refresh(){
+  try{
+    const r=await native('listFiles');
+    if(!r.ok){console.warn('Falha ao listar arquivos:',r.error);return}
+    renderFiles(r.files||[]);
+    await Promise.allSettled([refreshStorage(),checkStorageStatus()]);
+  }catch(e){console.error('Falha ao atualizar a interface de arquivos:',e)}
+}
 let nexusFilesCache=[];
 const nexusMetaKey='nexus_file_meta_v1';
 function nexusFileMeta(){try{return JSON.parse(localStorage.getItem(nexusMetaKey)||'{}')}catch(e){return{}}}
@@ -1144,7 +1173,23 @@ window.addEventListener('resize',syncNexusVisualViewport,{passive:true});
 window.visualViewport?.addEventListener('resize',syncNexusVisualViewport,{passive:true});
 window.visualViewport?.addEventListener('scroll',syncNexusVisualViewport,{passive:true});
 syncNexusVisualViewport();
-loadPageSettings();applyPageSettings();refresh();checkStorageStatus();loadAbout();bootstrapAuth();
+(async function bootNexus(){
+  try{
+    loadPageSettings();
+    applyPageSettings();
+    await refresh();
+    await checkStorageStatus();
+    await loadAbout();
+    await bootstrapAuth();
+  }catch(e){
+    console.error('Falha no bootstrap do Nexus:',e);
+    const auth=$('authScreen');
+    if(auth)auth.classList.add('show');
+    toast('O Nexus abriu, mas encontrou um erro ao preparar alguns recursos.');
+  }finally{
+    document.body.classList.remove('nx-booting');
+  }
+})();
 </script>
 </body>
 </html>
