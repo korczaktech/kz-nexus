@@ -1,6 +1,6 @@
 import {app,BrowserWindow,dialog,ipcMain,Menu,shell} from "electron";import http from "node:http";import crypto from "node:crypto";import fs from "node:fs/promises";import path from "node:path";import {fileURLToPath} from "node:url";
 const __dirname=path.dirname(fileURLToPath(import.meta.url));
-if(process.platform==="linux"){app.disableHardwareAcceleration();app.commandLine.appendSwitch("disable-gpu");app.commandLine.appendSwitch("disable-gpu-compositing");}const API_BASE="https://kzdoc.onrender.com";const RELEASES="https://api.github.com/repos/korczaktech/kz-nexus/releases?per_page=30";let mainWindow;let driveSession=null;let driveServer=null;
+if(process.platform==="linux"){process.env.LIBGL_ALWAYS_SOFTWARE="1";process.env.MESA_LOADER_DRIVER_OVERRIDE="llvmpipe";app.disableHardwareAcceleration();app.commandLine.appendSwitch("disable-gpu");app.commandLine.appendSwitch("disable-gpu-compositing");app.commandLine.appendSwitch("disable-gpu-rasterization");app.commandLine.appendSwitch("use-gl","swiftshader");app.commandLine.appendSwitch("use-angle","swiftshader");}const API_BASE="https://kzdoc.onrender.com";const RELEASES="https://api.github.com/repos/korczaktech/kz-nexus/releases?per_page=30";let mainWindow;let driveSession=null;let driveServer=null;
 
 function b64url(v){return Buffer.from(v).toString("base64url")}
 function pkce(){const verifier=b64url(crypto.randomBytes(32));return{verifier,challenge:b64url(crypto.createHash("sha256").update(verifier).digest())}}
