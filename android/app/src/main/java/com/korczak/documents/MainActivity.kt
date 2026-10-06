@@ -246,14 +246,33 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    private fun logWebViewProvider() {
-        try {
-            WebViewCompat.getCurrentWebViewPackage(this)?.let { pkg ->
-                android.util.Log.i("KorczakNexus", "WebView provider: ${pkg.packageName} ${pkg.versionName}")
+    /**
+     * AndroidX WebKit is only the compatibility API layer. The Chromium engine
+     * itself comes from the WebView provider installed on the device.
+     *
+     * Never hard-code or bundle an old Chromium/WebView version here. We always
+     * use the provider selected by Android and expose its exact package/version
+     * in the startup log and diagnostic UI.
+     */
+    private fun webViewProviderInfo(): String {
+        return try {
+            val pkg = WebViewCompat.getCurrentWebViewPackage(this)
+            if (pkg == null) {
+                "Provider do WebView não encontrado. Instale/ative o Android System WebView ou Chrome."
+            } else {
+                val packageName = pkg.packageName ?: "desconhecido"
+                val versionName = pkg.versionName ?: "desconhecida"
+                "WebView: " + packageName + " " + versionName
             }
         } catch (error: Throwable) {
-            android.util.Log.w("KorczakNexus", "Não foi possível identificar o provider do WebView", error)
+            android.util.Log.w("KorczakNexus", "Falha ao consultar o provider do WebView", error)
+            "Não foi possível consultar o provider do WebView."
         }
+    }
+
+    private fun logWebViewProvider() {
+        val info = webViewProviderInfo()
+        android.util.Log.i("KorczakNexus", info)
     }
 
     private fun loadNexusAsset() {
