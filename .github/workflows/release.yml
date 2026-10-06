@@ -144,13 +144,29 @@ jobs:
       - name: Publish GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: ${{ needs.prepare.outputs.tag }
-          name: Korczak HUB Nexus ${{ needs.prepare.outputs.version }
+          tag_name: ${{ needs.prepare.outputs.tag }}
+          name: Korczak HUB Nexus ${{ needs.prepare.outputs.version }}
           generate_release_notes: true
           fail_on_unmatched_files: true
           files: |
-            release-assets/Korczak-HUB-Nexus-${{ needs.prepare.outputs.version }.apk
-            release-assets/Korczak-HUB-Nexus-${{ needs.prepare.outputs.version }.deb
-            release-assets/Korczak-HUB-Nexus-${{ needs.prepare.outputs.version }.dmg
-            release-assets/Korczak-HUB-Nexus-${{ needs.prepare.outputs.version }.exe
+            release-assets/Korczak-HUB-Nexus-${{ needs.prepare.outputs.version }}.apk
+            release-assets/Korczak-HUB-Nexus-${{ needs.prepare.outputs.version }}.deb
+            release-assets/Korczak-HUB-Nexus-${{ needs.prepare.outputs.version }}.dmg
+            release-assets/Korczak-HUB-Nexus-${{ needs.prepare.outputs.version }}.exe
 
+
+      - name: Publish Android updater manifest
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          APK="Korczak-HUB-Nexus-${{ needs.prepare.outputs.version }}.apk"
+          sha256="$(sha256sum "release-assets/$APK" | awk '{print $1}')"
+          printf '%s\\n' '{' '  "version": "'"${{ needs.prepare.outputs.version }}"'",' '  "url": "https://github.com/'"$GITHUB_REPOSITORY"'/releases/download/v'"${{ needs.prepare.outputs.version }}"'/'"$APK"'",' '  "sha256": "'"$sha256"'"' '}' > update.json
+          content="$(base64 -w 0 update.json)"
+          existing="$(gh api "repos/$GITHUB_REPOSITORY/contents/update.json?ref=updates" --jq '.sha')"
+          gh api --method PUT "repos/$GITHUB_REPOSITORY/contents/update.json" \\
+            -f message="chore(updater): publicar ${{ needs.prepare.outputs.version }}" \\
+            -f content="$content" \\
+            -f branch="updates" \\
+            -f sha="$existing"
