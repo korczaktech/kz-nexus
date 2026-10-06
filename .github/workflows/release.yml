@@ -21,6 +21,7 @@ jobs:
       version: ${{ steps.version.outputs.version }}
       tag: ${{ steps.version.outputs.tag }}
       desktop_version: ${{ steps.version.outputs.desktop_version }}
+      version_code: ${{ steps.version.outputs.version_code }}
     steps:
       - uses: actions/checkout@v4
       - name: Resolver versão
@@ -66,11 +67,11 @@ jobs:
         run: echo "$KEYSTORE_BASE64" | base64 --decode > "$RUNNER_TEMP/kzdoc-release.jks"
       - name: Build APK
         env:
-          ANDROID_KEYSTORE_FILE: ${{ runner.temp }}}/kzdoc-release.jks
+          ANDROID_KEYSTORE_FILE: ${{ runner.temp }}/kzdoc-release.jks
           ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
           ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
           ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
-        run: gradle -p android assembleRelease --no-daemon --parallel -PreleaseVersion="${{ needs.prepare.outputs.version }}" -PreleaseCode="${ needs.prepare.outputs.version_code }"
+        run: gradle -p android assembleRelease --no-daemon --parallel -PreleaseVersion="${{ needs.prepare.outputs.version }}" -PreleaseCode="${{ needs.prepare.outputs.version_code }}"
       - name: Rename APK
         run: |
           mkdir -p release-assets
@@ -145,4 +146,4 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
-          gh release create "${ needs.prepare.outputs.tag }"             release-assets/Korczak-HUB-Nexus-${{ needs.prepare.outputs.version }}.apk             release-assets/Korczak-HUB-Nexus-${{ needs.prepare.outputs.version }}.deb             release-assets/Korczak-HUB-Nexus-${{ needs.prepare.outputs.version }}.dmg             release-assets/Korczak-HUB-Nexus-${{ needs.prepare.outputs.version }}.exe             --repo "$GITHUB_REPOSITORY"             --title "Korczak HUB Nexus ${{ needs.prepare.outputs.version }}"             --generate-notes
+          gh release create "${{ needs.prepare.outputs.tag }}"             release-assets/Korczak-HUB-Nexus-${{ needs.prepare.outputs.version }}.apk             release-assets/Korczak-HUB-Nexus-${{ needs.prepare.outputs.version }}.deb             release-assets/Korczak-HUB-Nexus-${{ needs.prepare.outputs.version }}.dmg             release-assets/Korczak-HUB-Nexus-${{ needs.prepare.outputs.version }}.exe             --repo "$GITHUB_REPOSITORY"             --title "Korczak HUB Nexus ${{ needs.prepare.outputs.version }}"             --generate-notes
