@@ -9,7 +9,7 @@ from ..security import create_session, token_hash, hash_password, require_role, 
 from ..services import api as service
 from ..database.connection import get_database, get_accounts_database
 
-router = APIRouter()
+router = APIRouter()\n\n\n@router.get("/config/public")\nasync def public_config():\n    from ..config.settings import get_settings\n    return {"google_client_id": get_settings().google_client_id.strip()}
 
 
 def without_mongo_id(item: dict) -> dict:
