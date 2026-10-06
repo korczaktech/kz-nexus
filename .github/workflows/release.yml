@@ -83,7 +83,8 @@ jobs:
 
   android-test:
     needs: prepare
-    runs-on: macos-13
+    # Android emulator runs on the Linux hosted runner; macOS 13 was retired and could leave this job queued.
+    runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
