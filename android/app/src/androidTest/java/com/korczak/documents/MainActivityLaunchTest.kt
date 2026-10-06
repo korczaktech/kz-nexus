@@ -22,7 +22,9 @@ class MainActivityLaunchTest {
         assertNotNull(activity)
         assertNotNull(activity.findViewById<android.view.View>(android.R.id.content))
 
-        SystemClock.sleep(3500)
+        SystemClock.sleep(5000)
+
+        assertTrue("A Activity foi encerrada durante o startup", !activity.isFinishing && !activity.isDestroyed)
 
         val webView = AtomicReference<WebView?>()
         rule.runOnUiThread {
@@ -64,6 +66,7 @@ class MainActivityLaunchTest {
         assertTrue("O WebView não respondeu ao teste de startup", latch.await(5, TimeUnit.SECONDS))
         val value = result.get()
         assertNotNull(value)
+        assertTrue("A Activity foi encerrada antes do shell responder", !activity.isFinishing && !activity.isDestroyed)
         assertTrue("O shell local não carregou: $value", value.contains("appassets.androidplatform.net"))
         assertTrue("A bridge nativa Android não foi exposta: $value", value.contains("\"android\":true"))
         assertTrue("O documento HTML não carregou: $value", value.contains("\"html\":true"))
