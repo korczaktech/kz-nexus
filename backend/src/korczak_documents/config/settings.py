@@ -12,11 +12,9 @@ class Settings(BaseSettings):
     mongodb_database: str = "KZDocs"
     mongodb_accounts_database: str = "Contas"
     mongodb_server_selection_timeout_ms: int = 3000
-    model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", extra="ignore", case_sensitive=False)
+    google_client_id: str = ""
+    model_config = SettingsConfigDict(env_file=".env",env_file_encoding="utf-8",extra="ignore",case_sensitive=False)
     @property
-    def is_production(self) -> bool:
-        return self.app_env.lower() == "production"
-
+    def is_production(self)->bool:return self.app_env.lower()=="production"
 @lru_cache
-def get_settings() -> Settings:
-    return Settings()
+def get_settings()->Settings:return Settings()
