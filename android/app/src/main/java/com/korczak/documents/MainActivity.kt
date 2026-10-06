@@ -11,6 +11,7 @@ import android.net.Uri
 import android.os.Bundle
 import android.os.Environment
 import android.webkit.JavascriptInterface
+import android.webkit.ConsoleMessage
 import android.webkit.WebChromeClient
 import android.webkit.WebView
 import android.webkit.WebViewClient
@@ -32,6 +33,7 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.webkit.WebSettingsCompat
 import androidx.webkit.WebViewCompat
 import androidx.webkit.WebViewFeature
+import androidx.webkit.WebViewAssetLoader
 import androidx.documentfile.provider.DocumentFile
 import org.json.JSONArray
 import org.json.JSONObject
@@ -55,10 +57,27 @@ class MainActivity : AppCompatActivity() {
     private var nativeSplash: View? = null
     private var updateCheckInFlight = false
     private var lastPromptedUpdateVersion: String? = null
+    private var rendererRecoveryAttempts = 0
+    private var startupFailed = false
     private val offline by lazy { OfflineStore(this) }
+    private val mainHandler = android.os.Handler(android.os.Looper.getMainLooper())
+    private val assetLoader by lazy {
+        WebViewAssetLoader.Builder()
+            .addPathHandler("/assets/", WebViewAssetLoader.AssetsPathHandler(this))
+            .build()
+    }
 
     override fun onCreate(state: Bundle?) {
         super.onCreate(state)
+        try {
+            initializeActivity(state)
+        } catch (error: Throwable) {
+            android.util.Log.e("KorczakNexus", "Falha fatal durante a inicialização da Activity", error)
+            showStartupFailure(error)
+        }
+    }
+
+    private fun initializeActivity(state: Bundle?) {
         window.statusBarColor = Color.rgb(3, 9, 20)
         window.navigationBarColor = Color.rgb(3, 9, 20)
         window.setSoftInputMode(android.view.WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE)
@@ -66,28 +85,65 @@ class MainActivity : AppCompatActivity() {
         api = ApiClient(session)
         storage = StorageManager(this)
 
-        web = WebView(this).apply {
-            // Evita falhas do compositor/GPU do aparelho durante o primeiro frame.
-            setLayerType(View.LAYER_TYPE_SOFTWARE, null)
+        rootLayout = FrameLayout(this).apply { setBackgroundColor(Color.rgb(3, 9, 20)) }
+        nativeEditorToolbar = buildNativeEditorToolbar()
+        nativeEditorToolbar.visibility = View.GONE
+        val toolbarLp = FrameLayout.LayoutParams(-1, dp(58)).apply {
+            gravity = Gravity.BOTTOM
+            bottomMargin = dp(78)
+        }
+        rootLayout.addView(nativeEditorToolbar, toolbarLp)
+        web = createConfiguredWebView()
+        rootLayout.addView(web, 0, FrameLayout.LayoutParams(-1, -1))
+        ViewCompat.setOnApplyWindowInsetsListener(rootLayout) { _, insets ->
+            val bars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
+            if (::web.isInitialized) web.setPadding(0, bars.top, 0, bars.bottom)
+            nativeSplash?.setPadding(0, bars.top, 0, bars.bottom)
+            syncSystemInsets()
+            insets
+        }
+        setContentView(rootLayout)
+        showNativeSplash()
+        logWebViewProvider()
+        loadNexusAsset()
+        runCatching { handleFeedbackIntent(intent) }
+        runCatching { handleDocumentIntent(intent) }
+        runCatching { handleShareIntent(intent) }
+        runCatching { offline.prune() }
+        mainHandler.postDelayed({ checkForUpdateIfEnabled() }, 3500)
+        mainHandler.postDelayed({ hideNativeSplash() }, 10000)
+    }
+
+    private fun createConfiguredWebView(): WebView {
+        return WebView(this).apply {
             settings.javaScriptEnabled = true
             settings.domStorageEnabled = true
-            try {
-                if (WebViewFeature.isFeatureSupported(WebViewFeature.ALGORITHMIC_DARKENING)) {
-                    WebSettingsCompat.setAlgorithmicDarkeningAllowed(settings, false)
-                }
-            } catch (error: Throwable) {
-                android.util.Log.w("KorczakNexus", "Não foi possível configurar darkening do WebView", error)
-            }
-            settings.allowFileAccess = true
+            settings.allowFileAccess = false
             settings.allowContentAccess = true
             settings.allowFileAccessFromFileURLs = false
             settings.allowUniversalAccessFromFileURLs = false
             settings.builtInZoomControls = false
             settings.displayZoomControls = false
+            settings.loadsImagesAutomatically = true
+            settings.mediaPlaybackRequiresUserGesture = true
             if (android.os.Build.VERSION.SDK_INT >= 26) settings.safeBrowsingEnabled = true
+            runCatching {
+                if (WebViewFeature.isFeatureSupported(WebViewFeature.ALGORITHMIC_DARKENING)) {
+                    WebSettingsCompat.setAlgorithmicDarkeningAllowed(settings, false)
+                }
+            }
             webViewClient = object : WebViewClient() {
+                override fun shouldInterceptRequest(view: WebView, request: android.webkit.WebResourceRequest): android.webkit.WebResourceResponse? =
+                    assetLoader.shouldInterceptRequest(request.url)
+
+                override fun onPageStarted(view: WebView?, url: String?, favicon: android.graphics.Bitmap?) {
+                    super.onPageStarted(view, url, favicon)
+                    android.util.Log.i("KorczakNexus", "Nexus iniciou carregamento: " + url)
+                }
+
                 override fun onPageFinished(view: WebView?, url: String?) {
                     super.onPageFinished(view, url)
+                    rendererRecoveryAttempts = 0
                     syncSystemInsets()
                     publishNetworkState()
                     view?.postDelayed({ hideNativeSplash() }, 420)
@@ -96,74 +152,94 @@ class MainActivity : AppCompatActivity() {
                 override fun onReceivedError(view: WebView, request: android.webkit.WebResourceRequest, error: android.webkit.WebResourceError) {
                     super.onReceivedError(view, request, error)
                     if (request.isForMainFrame) {
-                        android.util.Log.e(
-                            "KorczakNexus",
-                            "Falha ao carregar Nexus: ${error.errorCode} ${error.description}"
-                        )
+                        android.util.Log.e("KorczakNexus", "Falha ao carregar Nexus: " + error.errorCode + " " + error.description)
+                        showStartupFailureIfNeeded("O Nexus não conseguiu carregar sua interface. Código " + error.errorCode + ".")
                     }
                 }
 
                 override fun onRenderProcessGone(view: WebView, detail: android.webkit.RenderProcessGoneDetail): Boolean {
-                    android.util.Log.e(
-                        "KorczakNexus",
-                        "WebView renderer encerrado; didCrash=${detail.didCrash()}"
-                    )
+                    android.util.Log.e("KorczakNexus", "WebView renderer encerrado; didCrash=" + detail.didCrash() + ", prioridade=" + detail.rendererPriorityAtExit())
+                    if (isFinishing || isDestroyed) return true
                     runOnUiThread {
-                        if (isFinishing || isDestroyed) return@runOnUiThread
-                        try {
-                            rootLayout.removeView(view)
-                            view.removeJavascriptInterface("Android")
-                            view.stopLoading()
-                            view.destroy()
-                        } catch (_: Exception) {}
-                        createWebViewAndLoad()
+                        rendererRecoveryAttempts++
+                        if (rendererRecoveryAttempts > 2) {
+                            showStartupFailure("O componente WebView do Android encerrou repetidamente. Atualize o Android System WebView/Chrome e tente novamente.")
+                        } else {
+                            recreateWebView()
+                        }
                     }
                     return true
                 }
             }
-            webChromeClient = WebChromeClient()
+            webChromeClient = object : WebChromeClient() {
+                override fun onConsoleMessage(message: ConsoleMessage): Boolean {
+                    android.util.Log.d("KorczakNexusJS", message.messageLevel().name + ": " + message.message() + " @" + message.sourceId() + ":" + message.lineNumber())
+                    return true
+                }
+            }
             addJavascriptInterface(Bridge(), "Android")
         }
-        rootLayout = FrameLayout(this).apply {
-            setBackgroundColor(Color.rgb(3, 9, 20))
-            addView(web, FrameLayout.LayoutParams(-1, -1))
-        }
-        ViewCompat.setOnApplyWindowInsetsListener(rootLayout) { _, insets ->
-            val bars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
-            web.setPadding(0, bars.top, 0, bars.bottom)
-            nativeSplash?.setPadding(0, bars.top, 0, bars.bottom)
-            syncSystemInsets()
-            insets
-        }
-        nativeEditorToolbar = buildNativeEditorToolbar()
-        nativeEditorToolbar.visibility = View.GONE
-        val toolbarLp = FrameLayout.LayoutParams(-1, dp(58)).apply {
-            gravity = Gravity.BOTTOM
-            bottomMargin = dp(78)
-        }
-        rootLayout.addView(nativeEditorToolbar, toolbarLp)
-        setContentView(rootLayout)
-        showNativeSplash()
-        // O estado do WebView não é serializado no savedInstanceState.
-        // O Nexus mantém o estado dos documentos/sessão em seus próprios stores.
-        // Serializar o DOM do editor pode ultrapassar o limite do Bundle do Android
-        // e causar TransactionTooLargeException ao Activity ser recriada.
-        logWebViewProvider()
-        loadNexusAsset()
-
-        // Storage Access Framework is requested on demand; no broad permission is required at startup.
-        handleFeedbackIntent(intent)
-        handleDocumentIntent(intent)
-        handleShareIntent(intent)
-        offline.prune()
-
-        // A verificação automática precisa ocorrer depois que o WebView foi iniciado.
-        // Fazemos uma tentativa inicial e uma segunda tentativa curta para recuperar
-        // falhas transitórias de rede sem exigir que o usuário abra "Atualizações".
-        web.postDelayed({ checkForUpdateIfEnabled() }, 1600)
-        web.postDelayed({ hideNativeSplash() }, 6000)
     }
 
+    private fun recreateWebView() {
+        if (isFinishing || isDestroyed) return
+        val old = if (::web.isInitialized) web else null
+        runCatching {
+            old?.let {
+                rootLayout.removeView(it)
+                it.removeJavascriptInterface("Android")
+                it.stopLoading()
+                it.destroy()
+            }
+        }
+        web = createConfiguredWebView()
+        rootLayout.addView(web, 0, FrameLayout.LayoutParams(-1, -1))
+        logWebViewProvider()
+        loadNexusAsset()
+    }
+
+    private fun showStartupFailureIfNeeded(message: String) {
+        if (nativeSplash != null && !startupFailed) showStartupFailure(message)
+    }
+
+    private fun showStartupFailure(error: Throwable) {
+        showStartupFailure(error.message ?: error.javaClass.simpleName)
+    }
+
+    private fun showStartupFailure(message: String) {
+        if (startupFailed) return
+        startupFailed = true
+        mainHandler.removeCallbacksAndMessages(null)
+        val view = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            gravity = Gravity.CENTER
+            setPadding(dp(28), dp(24), dp(28), dp(24))
+            setBackgroundColor(Color.rgb(3, 9, 20))
+        }
+        view.addView(TextView(this).apply {
+            text = "Não foi possível iniciar o Nexus"
+            textSize = 20f
+            gravity = Gravity.CENTER
+            setTextColor(Color.WHITE)
+        })
+        view.addView(TextView(this).apply {
+            text = "O aplicativo encontrou um erro durante a inicialização. Nenhum dado foi apagado.\n\n" + message.take(500)
+            textSize = 13f
+            gravity = Gravity.CENTER
+            setTextColor(Color.LTGRAY)
+            setPadding(0, dp(14), 0, dp(18))
+        })
+        view.addView(Button(this).apply {
+            text = "Tentar novamente"
+            setOnClickListener { recreate() }
+        }, LinearLayout.LayoutParams(-2, -2))
+        if (::rootLayout.isInitialized) {
+            rootLayout.removeAllViews()
+            rootLayout.addView(view, FrameLayout.LayoutParams(-1, -1))
+        } else {
+            setContentView(view)
+        }
+    }
 
     private fun logWebViewProvider() {
         try {
@@ -177,46 +253,15 @@ class MainActivity : AppCompatActivity() {
 
     private fun loadNexusAsset() {
         if (!::web.isInitialized) return
-        try {
-            web.loadUrl("file:///android_asset/index.html")
-        } catch (error: Throwable) {
-            android.util.Log.e("KorczakNexus", "Falha ao carregar o shell local do Nexus", error)
-            hideNativeSplash()
+        runCatching {
+            web.loadUrl("https://appassets.androidplatform.net/assets/index.html")
+        }.onFailure {
+            android.util.Log.e("KorczakNexus", "Falha ao carregar o shell local do Nexus", it)
+            showStartupFailure(it)
         }
     }
 
-    private fun createWebViewAndLoad() {
-        web = WebView(this).apply {
-            setLayerType(View.LAYER_TYPE_SOFTWARE, null)
-            settings.javaScriptEnabled = true
-            settings.domStorageEnabled = true
-            settings.allowFileAccess = true
-            settings.allowContentAccess = true
-            settings.allowFileAccessFromFileURLs = false
-            settings.allowUniversalAccessFromFileURLs = false
-            settings.builtInZoomControls = false
-            settings.displayZoomControls = false
-            if (android.os.Build.VERSION.SDK_INT >= 26) settings.safeBrowsingEnabled = true
-            webViewClient = object : WebViewClient() {
-                override fun onPageFinished(view: WebView?, url: String?) {
-                    super.onPageFinished(view, url)
-                    syncSystemInsets()
-                    publishNetworkState()
-                    view?.postDelayed({ hideNativeSplash() }, 420)
-                }
-                override fun onRenderProcessGone(view: WebView, detail: android.webkit.RenderProcessGoneDetail): Boolean {
-                    android.util.Log.e("KorczakNexus", "WebView renderer encerrou durante recuperação; didCrash=${detail.didCrash()}")
-                    if (!isFinishing && !isDestroyed) runOnUiThread { createWebViewAndLoad() }
-                    return true
-                }
-            }
-            webChromeClient = WebChromeClient()
-            addJavascriptInterface(Bridge(), "Android")
-        }
-        rootLayout.addView(web, 0, FrameLayout.LayoutParams(-1, -1))
-        logWebViewProvider()
-        loadNexusAsset()
-    }
+    private fun createWebViewAndLoad() = recreateWebView()
 
     private fun checkForUpdateIfEnabled() {
         if (updateCheckInFlight || isFinishing || isDestroyed) return
