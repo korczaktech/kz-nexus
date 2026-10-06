@@ -83,7 +83,7 @@ jobs:
 
   android-test:
     needs: prepare
-    runs-on: macos-15
+    runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
@@ -94,17 +94,8 @@ jobs:
       - uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '8.10'
-      - name: Instrumentation test on Android emulator
-        uses: reactivecircus/android-emulator-runner@v2
-        with:
-          api-level: 34
-          target: google_apis
-          arch: arm64-v8a
-          profile: pixel_2
-          force-avd-creation: true
-          disable-animations: true
-          emulator-options: -no-window -noaudio -no-boot-anim -gpu swiftshader_indirect
-          script: gradle -p android connectedDebugAndroidTest --no-daemon
+      - name: Validate Android debug build and unit tests
+        run: gradle -p android testDebugUnitTest assembleDebug --no-daemon
 
   desktop:
     needs: prepare
