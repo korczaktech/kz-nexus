@@ -13,7 +13,7 @@
     "dist": "electron-builder",
     "dist:win": "electron-builder --win nsis",
     "dist:mac": "electron-builder --mac dmg",
-    "dist:linux": "electron-builder --linux AppImage deb"
+    "dist:linux": "electron-builder --linux deb"
   },
   "devDependencies": {
     "electron": "^38.1.2",
@@ -22,7 +22,7 @@
   "build": {
     "appId": "com.korczaktech.nexus.desktop",
     "productName": "Korczak Nexus",
-    "artifactName": "Korczak-Nexus-Desktop-${version}-${os}-${arch}.${ext}",
+    "artifactName": "Korczak-HUB-Nexus-${version}.${ext}",
     "directories": {
       "output": "dist"
     },
@@ -55,7 +55,6 @@
     },
     "linux": {
       "target": [
-        "AppImage",
         "deb"
       ],
       "category": "Office"
