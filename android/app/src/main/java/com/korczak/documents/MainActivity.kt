@@ -103,14 +103,6 @@ class MainActivity : AppCompatActivity() {
                     }
                 }
 
-                override fun onConsoleMessage(message: android.webkit.ConsoleMessage): Boolean {
-                    android.util.Log.d(
-                        "KorczakNexus",
-                        "JS ${message.messageLevel()}: ${message.message()} @${message.lineNumber()} ${message.sourceId()}"
-                    )
-                    return true
-                }
-
                 override fun onRenderProcessGone(view: WebView, detail: android.webkit.RenderProcessGoneDetail): Boolean {
                     android.util.Log.e(
                         "KorczakNexus",
