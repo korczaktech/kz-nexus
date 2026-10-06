@@ -58,6 +58,9 @@ class MainActivity : AppCompatActivity() {
     private var updateCheckInFlight = false
     private var lastPromptedUpdateVersion: String? = null
     private var rendererRecoveryAttempts = 0
+    private val rendererRecoveryReset = Runnable {
+        rendererRecoveryAttempts = 0
+    }
     private var startupFailed = false
     private val offline by lazy { OfflineStore(this) }
     private val mainHandler = android.os.Handler(android.os.Looper.getMainLooper())
@@ -143,7 +146,8 @@ class MainActivity : AppCompatActivity() {
 
                 override fun onPageFinished(view: WebView?, url: String?) {
                     super.onPageFinished(view, url)
-                    rendererRecoveryAttempts = 0
+                    mainHandler.removeCallbacks(rendererRecoveryReset)
+                    mainHandler.postDelayed(rendererRecoveryReset, 10_000)
                     syncSystemInsets()
                     publishNetworkState()
                     view?.postDelayed({ hideNativeSplash() }, 420)
@@ -162,6 +166,7 @@ class MainActivity : AppCompatActivity() {
                     if (isFinishing || isDestroyed) return true
                     runOnUiThread {
                         rendererRecoveryAttempts++
+                        mainHandler.removeCallbacks(rendererRecoveryReset)
                         if (rendererRecoveryAttempts > 2) {
                             showStartupFailure("O componente WebView do Android encerrou repetidamente. Atualize o Android System WebView/Chrome e tente novamente.")
                         } else {
@@ -1084,6 +1089,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     override fun onDestroy() {
+        mainHandler.removeCallbacks(rendererRecoveryReset)
         mainHandler.removeCallbacksAndMessages(null)
         // Cancela callbacks agendados no WebView antes de destruí-lo.
         if (::web.isInitialized) {
