@@ -42,20 +42,33 @@ class StorageManager(private val context: Context) {
 
     fun listFiles(): JSONArray {
         val a = JSONArray()
-        val root = savedTree()?.let { DocumentFile.fromTreeUri(context, it) } ?: return a
-        collectFiles(root, "", a)
+        val root = try {
+            savedTree()?.let { DocumentFile.fromTreeUri(context, it) }
+        } catch (error: Throwable) {
+            android.util.Log.w("KorczakNexus", "URI de armazenamento inválida", error)
+            null
+        } ?: return a
+        runCatching { collectFiles(root, "", a, 0) }
+            .onFailure { android.util.Log.e("KorczakNexus", "Falha ao listar armazenamento Nexus", it) }
         return a
     }
 
-    private fun collectFiles(folder: DocumentFile, relativePath: String, out: JSONArray) {
-        folder.listFiles()
-            .sortedWith(compareBy<DocumentFile> { !it.isDirectory }.thenBy { (it.name ?: "").lowercase() })
+    private fun collectFiles(folder: DocumentFile, relativePath: String, out: JSONArray, depth: Int) {
+        if (depth > 24 || out.length() >= 5000) return
+        val children = try {
+            folder.listFiles().toList()
+        } catch (error: Throwable) {
+            android.util.Log.w("KorczakNexus", "Não foi possível ler uma pasta do armazenamento", error)
+            return
+        }
+        children.sortedWith(compareBy<DocumentFile> { !it.isDirectory }.thenBy { (it.name ?: "").lowercase() })
             .forEach { f ->
+                if (out.length() >= 5000) return@forEach
                 val name = f.name ?: "Arquivo"
                 if (f.isDirectory && name == trashFolderName) return@forEach
                 val path = if (relativePath.isBlank()) name else "$relativePath/$name"
                 if (f.isDirectory) {
-                    collectFiles(f, path, out)
+                    collectFiles(f, path, out, depth + 1)
                 } else {
                     val mime = f.type ?: mimeFor(name)
                     out.put(
