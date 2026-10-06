@@ -411,6 +411,15 @@ class StorageManager(private val context: Context) {
         return true to target.toString()
     }
 
+    /**
+     * Returns cheap device-level storage information.
+     *
+     * This method is called while the Android shell is starting. It must never
+     * recursively scan external storage here: that operation can be extremely
+     * expensive on devices with many files and can make WebView startup look
+     * like an application crash. Detailed document statistics remain available
+     * through the explicit storage screen when the user requests them.
+     */
     fun deviceStorage(): JSONObject {
         val stat = StatFs(Environment.getDataDirectory().path)
         val total = stat.totalBytes
@@ -420,7 +429,15 @@ class StorageManager(private val context: Context) {
             .put("available", available)
             .put("used", total - available)
             .put("allFiles", if (android.os.Build.VERSION.SDK_INT >= 30) Environment.isExternalStorageManager() else true)
-            .put("documentStats", documentStats())
+            .put(
+                "documentStats",
+                JSONObject()
+                    .put("total", 0)
+                    .put("bytes", 0)
+                    .put("byExtension", JSONObject())
+                    .put("scope", "Contagem detalhada disponível na tela de armazenamento")
+                    .put("deferred", true)
+            )
     }
 
     private fun documentStats(): JSONObject {
