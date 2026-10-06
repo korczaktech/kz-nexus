@@ -1,14 +1,15 @@
-name: KZ Nexus Release
+name: Korczak HUB Nexus Release
 
 on:
   push:
+    branches: [main]
     tags: ['v*.*.*']
   workflow_dispatch:
     inputs:
       version:
-        description: 'Versão (ex.: 0.1.0)'
-        required: true
-        default: '0.1.0'
+        description: 'Versão do release (ex.: 0.0.0.294)'
+        required: false
+        default: ''
 
 permissions:
   contents: write
@@ -17,80 +18,130 @@ jobs:
   prepare:
     runs-on: ubuntu-latest
     outputs:
-      version: ${{ steps.version.outputs.version }}
-      tag: ${{ steps.version.outputs.tag }}
+      version: ${ steps.version.outputs.version }
+      tag: ${ steps.version.outputs.tag }
+      desktop_version: ${ steps.version.outputs.desktop_version }
     steps:
       - uses: actions/checkout@v4
-      - name: Resolve release version
+      - name: Resolver versão
         id: version
+        env:
+          GH_TOKEN: ${ github.token }
+          INPUT_VERSION: ${ inputs.version }
         shell: bash
         run: |
-          set -e
+          set -euo pipefail
           if [ "$GITHUB_REF_TYPE" = "tag" ]; then
             VERSION="${GITHUB_REF_NAME#v}"
+          elif [ -n "$INPUT_VERSION" ]; then
+            VERSION="$INPUT_VERSION"
           else
-            VERSION="${{ inputs.version }}"
+            latest="$(gh release list --repo "$GITHUB_REPOSITORY" --limit 100 --json tagName --jq '.[].tagName' | grep -E '^v0\.0\.0\.[0-9]+$' | sed 's/^v0\.0\.0\.//' | sort -n | tail -1 || true)"
+            latest="${latest:-293}"
+            VERSION="0.0.${latest}" 
+            VERSION="0.0.0.$((latest + 1))"
           fi
-          [[ "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+([.-][0-9A-Za-z.-]+)?$ ]] || { echo "Versão inválida: $VERSION"; exit 1; }
+          [[ "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$ ]] || { echo "Versão inválida: $VERSION"; exit 1; }
+          DESKTOP_VERSION="0.0.$(echo "$VERSION" | awk -F. '{print $4}')"
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
           echo "tag=v$VERSION" >> "$GITHUB_OUTPUT"
+          echo "desktop_version=$DESKTOP_VERSION" >> "$GITHUB_OUTPUT"
 
   android:
     needs: prepare
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Find Gradle project
-        id: gradle
-        shell: bash
-        run: |
-          set -e
-          WRAPPER=$(find . -type f -name gradlew -print -quit)
-          test -n "$WRAPPER" || { echo 'Android Gradle wrapper não encontrado.'; exit 1; }
-          chmod +x "$WRAPPER"
-          echo "wrapper=$WRAPPER" >> "$GITHUB_OUTPUT"
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: '17'
       - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.10'
+      - name: Decode release keystore
+        env:
+          KEYSTORE_BASE64: ${ secrets.ANDROID_KEYSTORE_BASE64 }
+        run: echo "$KEYSTORE_BASE64" | base64 --decode > "$RUNNER_TEMP/kzdoc-release.jks"
       - name: Build APK
+        env:
+          ANDROID_KEYSTORE_FILE: ${ runner.temp }}/kzdoc-release.jks
+          ANDROID_KEYSTORE_PASSWORD: ${ secrets.ANDROID_KEYSTORE_PASSWORD }
+          ANDROID_KEY_ALIAS: ${ secrets.ANDROID_KEY_ALIAS }
+          ANDROID_KEY_PASSWORD: ${ secrets.ANDROID_KEY_PASSWORD }
+        run: gradle -p android assembleRelease --no-daemon --parallel -PreleaseVersion="${ needs.prepare.outputs.version }" -PreleaseCode="${ needs.prepare.outputs.version##*. }"
+      - name: Rename APK
         run: |
-          cd "$(dirname '${{ steps.gradle.outputs.wrapper }}')"
-          ./gradlew --no-daemon assembleRelease
-      - name: Prepare APK
-        run: |
-          set -e
-          APK=$(find . -type f -path '*/build/outputs/apk/release/*.apk' -print -quit)
-          test -n "$APK"
           mkdir -p release-assets
-          cp "$APK" "release-assets/KZ-Nexus-Android-v${{ needs.prepare.outputs.version }}.apk"
+          cp android/app/build/outputs/apk/release/app-release.apk "release-assets/Korczak-HUB-Nexus-${ needs.prepare.outputs.version }.apk"
       - uses: actions/upload-artifact@v4
         with:
-          name: KZ-Nexus-Android
+          name: nexus-android
           path: release-assets/*.apk
 
-  release:
-    needs: [prepare, android]
+  desktop:
+    needs: prepare
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+            command: npm run dist:win
+            ext: exe
+          - os: macos-15
+            command: npm run dist:mac
+            ext: dmg
+          - os: ubuntu-24.04
+            command: npm run dist:linux
+            ext: deb
+    runs-on: ${ matrix.os }
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - working-directory: desktop
+        run: npm install
+      - name: Set desktop version
+        working-directory: desktop
+        shell: bash
+        run: npm version "${ needs.prepare.outputs.desktop_version }" --no-git-tag-version
+      - name: Build Desktop
+        working-directory: desktop
+        run: ${ matrix.command }
+      - name: Normalize release filename
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p release-assets
+          file="$(find desktop/dist -maxdepth 1 -type f -name '*.'${ matrix.ext } -print -quit)"
+          test -n "$file"
+          cp "$file" "release-assets/Korczak-HUB-Nexus-${ needs.prepare.outputs.version }.${ matrix.ext }"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: nexus-desktop-${ matrix.ext }
+          path: release-assets/*
+
+  publish:
+    needs: [prepare, android, desktop]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/download-artifact@v4
         with:
-          name: KZ-Nexus-Android
+          pattern: nexus-*
           path: release-assets
-      - name: Publish release
-        uses: softprops/action-gh-release@v2
-        with:
-          tag_name: ${{ needs.prepare.outputs.tag }}
-          name: KZ Nexus v${{ needs.prepare.outputs.version }}
-          generate_release_notes: true
-          body: |
-            ## KZ Nexus v${{ needs.prepare.outputs.version }}
-
-            ### Downloads
-            - **Android:** APK pronto para instalação.
-            - **iPhone/iPad:** use o KZ Nexus diretamente no Safari e adicione à Tela de Início como app.
-
-            ### PWA
-            O KZ Nexus para iOS é distribuído como Web App/PWA. Não exige App Store, Apple Developer Program, IPA, Mac ou instalação de arquivo.
-          files: release-assets/*
+          merge-multiple: true
+      - name: Validate release assets
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -f "release-assets/Korczak-HUB-Nexus-${ needs.prepare.outputs.version }.apk"
+          test -f "release-assets/Korczak-HUB-Nexus-${ needs.prepare.outputs.version }.deb"
+          test -f "release-assets/Korczak-HUB-Nexus-${ needs.prepare.outputs.version }.dmg"
+          test -f "release-assets/Korczak-HUB-Nexus-${ needs.prepare.outputs.version }.exe"
+      - name: Publish GitHub Release
+        env:
+          GH_TOKEN: ${ github.token }
+        run: |
+          set -euo pipefail
+          gh release create "${ needs.prepare.outputs.tag }"             release-assets/Korczak-HUB-Nexus-${ needs.prepare.outputs.version }.apk             release-assets/Korczak-HUB-Nexus-${ needs.prepare.outputs.version }.deb             release-assets/Korczak-HUB-Nexus-${ needs.prepare.outputs.version }.dmg             release-assets/Korczak-HUB-Nexus-${ needs.prepare.outputs.version }.exe             --repo "$GITHUB_REPOSITORY"             --title "Korczak HUB Nexus ${ needs.prepare.outputs.version }"             --generate-notes
