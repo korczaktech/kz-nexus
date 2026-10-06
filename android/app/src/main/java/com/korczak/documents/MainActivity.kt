@@ -29,6 +29,9 @@ import androidx.core.content.ContextCompat
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.appcompat.app.AppCompatActivity
+import androidx.webkit.WebSettingsCompat
+import androidx.webkit.WebViewCompat
+import androidx.webkit.WebViewFeature
 import androidx.documentfile.provider.DocumentFile
 import org.json.JSONArray
 import org.json.JSONObject
@@ -66,6 +69,9 @@ class MainActivity : AppCompatActivity() {
         web = WebView(this).apply {
             settings.javaScriptEnabled = true
             settings.domStorageEnabled = true
+            if (WebViewFeature.isFeatureSupported(WebViewFeature.ALGORITHMIC_DARKENING)) {
+                WebSettingsCompat.setAlgorithmicDarkeningAllowed(settings, false)
+            }
             settings.allowFileAccess = true
             settings.allowContentAccess = true
             settings.allowFileAccessFromFileURLs = false
@@ -109,6 +115,9 @@ class MainActivity : AppCompatActivity() {
         // Serializar o DOM do editor pode ultrapassar o limite do Bundle do Android
         // e causar TransactionTooLargeException ao Activity ser recriada.
         val html = assets.open("index.html").bufferedReader(Charsets.UTF_8).use { it.readText() }
+        WebViewCompat.getCurrentWebViewPackage(this)?.let { pkg ->
+            android.util.Log.i("KorczakNexus", "WebView provider: ${pkg.packageName} ${pkg.versionName}")
+        }
         web.loadDataWithBaseURL(
             "file:///android_asset/",
             html,
