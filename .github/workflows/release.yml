@@ -101,10 +101,9 @@ jobs:
           target: google_apis
           arch: x86_64
           profile: pixel_2
-          emulator-options: -no-window -noaudio -no-boot-anim -gpu swiftshader_indirect
           force-avd-creation: true
           disable-animations: true
-          emulator-options: -no-window -noaudio -no-boot-anim
+          emulator-options: -no-window -noaudio -no-boot-anim -gpu swiftshader_indirect
           script: gradle -p android connectedDebugAndroidTest --no-daemon
 
   desktop:
