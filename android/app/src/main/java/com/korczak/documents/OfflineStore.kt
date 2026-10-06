@@ -52,15 +52,29 @@ class OfflineStore(private val context: Context) {
     fun cachedDocument(uri: String): JSONObject? = readCache().optJSONObject(uri)
 
     fun prune() {
-        val now=System.currentTimeMillis()
-        val q=readQueue()
-        for(i in q.length()-1 downTo 0) {
-            val age=now-q.optJSONObject(i)?.optLong("createdAt",now)!!
-            if(age > 7L*24*60*60*1000) q.remove(i)
+        runCatching {
+            val now = System.currentTimeMillis()
+            val q = readQueue()
+            for (i in q.length() - 1 downTo 0) {
+                val item = q.optJSONObject(i) ?: run {
+                    q.remove(i)
+                    continue
+                }
+                val createdAt = item.optLong("createdAt", now).takeIf { it > 0L } ?: now
+                val age = (now - createdAt).coerceAtLeast(0L)
+                if (age > 7L * 24 * 60 * 60 * 1000) q.remove(i)
+            }
+            prefs.edit().putString(queueKey, q.toString()).apply()
+        }.onFailure {
+            android.util.Log.e("KorczakNexus", "Falha ao limpar fila offline; estado será preservado", it)
         }
-        prefs.edit().putString(queueKey,q.toString()).apply()
     }
 
-    private fun readQueue(): JSONArray = runCatching { JSONArray(prefs.getString(queueKey,"[]") ?: "[]") }.getOrElse { JSONArray() }
+    private fun readQueue(): JSONArray = runCatching {
+        JSONArray(prefs.getString(queueKey, "[]") ?: "[]")
+    }.getOrElse {
+        android.util.Log.w("KorczakNexus", "Fila offline inválida; iniciando fila vazia", it)
+        JSONArray()
+    }
     private fun readCache(): JSONObject = runCatching { JSONObject(prefs.getString(cacheKey,"{}") ?: "{}") }.getOrElse { JSONObject() }
 }
