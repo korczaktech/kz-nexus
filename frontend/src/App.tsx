@@ -90,7 +90,7 @@ function Auth({done}:{done:(u:User)=>void}){
     <form onSubmit={submit}>
       {!recovery&&register&&<label>Nome<input value={form.name} onChange={e=>setForm({...form,name:e.target.value})} required/></label>}
       <label>E-mail<input type="email" value={form.email} onChange={e=>setForm({...form,email:e.target.value})} required/></label>
-      {!recovery&&<label>Senha<input type="password" value={form.password} onChange={e=>setForm({...form,password:e.target.value})} minLength={12} required/></label>}
+      {!recovery&&<label>Senha<input type="password" value={form.password} onChange={e=>setForm({...form,password:e.target.value})} minLength={register?12:undefined} required/></label>}
       <Button>{recovery?'Enviar recuperação':register?'Criar conta':'Entrar'}</Button>
     </form>
     <div className="auth-links"><button className="text-button" onClick={()=>setRecovery(!recovery)}>{recovery?'Voltar':'Recuperar acesso'}</button><button className="text-button" onClick={()=>{setRecovery(false);setRegister(!register)}}>{register?'Já tenho conta':'Criar conta'}</button></div>
