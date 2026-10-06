@@ -108,6 +108,11 @@ jobs:
         env:
           KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
         run: echo "$KEYSTORE_BASE64" | base64 --decode > "$RUNNER_TEMP/kzdoc-release.jks"
+      - name: Enable KVM for Android emulator
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
       - name: Run release instrumentation tests on Android emulator
         uses: reactivecircus/android-emulator-runner@v2
         env:
@@ -117,9 +122,9 @@ jobs:
           ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
         with:
           api-level: 30
-          target: default
+          target: google_apis
           arch: x86_64
-          profile: Nexus 5X
+          profile: pixel_5
           cores: 2
           ram-size: 4096M
           heap-size: 512M
