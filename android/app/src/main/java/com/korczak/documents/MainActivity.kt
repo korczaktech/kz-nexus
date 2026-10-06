@@ -67,6 +67,8 @@ class MainActivity : AppCompatActivity() {
         storage = StorageManager(this)
 
         web = WebView(this).apply {
+            // Evita falhas do compositor/GPU do aparelho durante o primeiro frame.
+            setLayerType(View.LAYER_TYPE_SOFTWARE, null)
             settings.javaScriptEnabled = true
             settings.domStorageEnabled = true
             try {
@@ -89,6 +91,24 @@ class MainActivity : AppCompatActivity() {
                     syncSystemInsets()
                     publishNetworkState()
                     view?.postDelayed({ hideNativeSplash() }, 420)
+                }
+
+                override fun onReceivedError(view: WebView, request: android.webkit.WebResourceRequest, error: android.webkit.WebResourceError) {
+                    super.onReceivedError(view, request, error)
+                    if (request.isForMainFrame) {
+                        android.util.Log.e(
+                            "KorczakNexus",
+                            "Falha ao carregar Nexus: ${error.errorCode} ${error.description}"
+                        )
+                    }
+                }
+
+                override fun onConsoleMessage(message: android.webkit.ConsoleMessage): Boolean {
+                    android.util.Log.d(
+                        "KorczakNexus",
+                        "JS ${message.messageLevel()}: ${message.message()} @${message.lineNumber()} ${message.sourceId()}"
+                    )
+                    return true
                 }
 
                 override fun onRenderProcessGone(view: WebView, detail: android.webkit.RenderProcessGoneDetail): Boolean {
@@ -175,6 +195,7 @@ class MainActivity : AppCompatActivity() {
 
     private fun createWebViewAndLoad() {
         web = WebView(this).apply {
+            setLayerType(View.LAYER_TYPE_SOFTWARE, null)
             settings.javaScriptEnabled = true
             settings.domStorageEnabled = true
             settings.allowFileAccess = true
