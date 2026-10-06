@@ -1,5 +1,6 @@
 import {app,BrowserWindow,dialog,ipcMain,Menu,shell} from "electron";import http from "node:http";import crypto from "node:crypto";import fs from "node:fs/promises";import path from "node:path";import {fileURLToPath} from "node:url";
-const __dirname=path.dirname(fileURLToPath(import.meta.url));const API_BASE="https://kzdoc.onrender.com";const RELEASES="https://api.github.com/repos/korczaktech/kz-nexus/releases?per_page=30";let mainWindow;let driveSession=null;let driveServer=null;
+const __dirname=path.dirname(fileURLToPath(import.meta.url));
+if(process.platform==="linux"){app.disableHardwareAcceleration();app.commandLine.appendSwitch("disable-gpu");app.commandLine.appendSwitch("disable-gpu-compositing");}const API_BASE="https://kzdoc.onrender.com";const RELEASES="https://api.github.com/repos/korczaktech/kz-nexus/releases?per_page=30";let mainWindow;let driveSession=null;let driveServer=null;
 
 function b64url(v){return Buffer.from(v).toString("base64url")}
 function pkce(){const verifier=b64url(crypto.randomBytes(32));return{verifier,challenge:b64url(crypto.createHash("sha256").update(verifier).digest())}}
