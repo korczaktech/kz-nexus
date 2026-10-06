@@ -71,7 +71,16 @@ jobs:
           ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
           ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
           ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
-        run: gradle -p android assembleRelease --no-daemon --parallel -PreleaseVersion="${{ needs.prepare.outputs.version }}" -PreleaseCode="${{ needs.prepare.outputs.version_code }}"
+        run: |
+          set -o pipefail
+          gradle -p android assembleRelease --no-daemon --parallel --stacktrace -PreleaseVersion="${{ needs.prepare.outputs.version }}" -PreleaseCode="${{ needs.prepare.outputs.version_code }}" 2>&1 | tee "$RUNNER_TEMP/android-build.log"
+      - name: Upload Android build diagnostics
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-build-diagnostics
+          path: ${{ runner.temp }}/android-build.log
+          if-no-files-found: warn
       - name: Rename APK
         run: |
           mkdir -p release-assets
