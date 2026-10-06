@@ -168,7 +168,7 @@ class MainActivity : AppCompatActivity() {
                         rendererRecoveryAttempts++
                         mainHandler.removeCallbacks(rendererRecoveryReset)
                         if (rendererRecoveryAttempts > 2) {
-                            showStartupFailure("O componente WebView do Android encerrou repetidamente. Atualize o Android System WebView/Chrome e tente novamente.")
+                            showStartupFailure("O componente WebView do Android encerrou repetidamente. O provider atual é incompatível ou está desatualizado. Atualize o Android System WebView/Chrome e tente novamente.")
                         } else {
                             recreateWebView()
                         }
@@ -211,6 +211,26 @@ class MainActivity : AppCompatActivity() {
         showStartupFailure(error.message ?: error.javaClass.simpleName)
     }
 
+    private fun openWebViewUpdate() {
+        val intents = listOf(
+            Intent(Intent.ACTION_VIEW, Uri.parse("market://details?id=com.google.android.webview")),
+            Intent(Intent.ACTION_VIEW, Uri.parse("market://details?id=com.android.chrome")),
+            Intent(Intent.ACTION_VIEW, Uri.parse("https://play.google.com/store/apps/details?id=com.google.android.webview"))
+        )
+        for (intent in intents) {
+            try {
+                startActivity(intent)
+                return
+            } catch (_: Exception) {}
+        }
+        NexusFeedback.alert(
+            this,
+            "Atualização do WebView",
+            "Abra a Play Store e atualize o Android System WebView ou o Google Chrome para a versão mais recente.",
+            NexusFeedback.Type.INFO
+        )
+    }
+
     private fun showStartupFailure(message: String) {
         if (startupFailed) return
         startupFailed = true
@@ -228,12 +248,16 @@ class MainActivity : AppCompatActivity() {
             setTextColor(Color.WHITE)
         })
         view.addView(TextView(this).apply {
-            text = "O aplicativo encontrou um erro durante a inicialização. Nenhum dado foi apagado.\n\n" + message.take(500)
+            text = "O aplicativo encontrou um erro durante a inicialização. Nenhum dado foi apagado.\n\n" + message.take(500) + "\n\n" + webViewProviderInfo()
             textSize = 13f
             gravity = Gravity.CENTER
             setTextColor(Color.LTGRAY)
             setPadding(0, dp(14), 0, dp(18))
         })
+        view.addView(Button(this).apply {
+            text = "Atualizar WebView"
+            setOnClickListener { openWebViewUpdate() }
+        }, LinearLayout.LayoutParams(-2, -2))
         view.addView(Button(this).apply {
             text = "Tentar novamente"
             setOnClickListener { recreate() }
