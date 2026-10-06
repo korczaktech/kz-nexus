@@ -1084,6 +1084,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     override fun onDestroy() {
+        mainHandler.removeCallbacksAndMessages(null)
         // Cancela callbacks agendados no WebView antes de destruí-lo.
         if (::web.isInitialized) {
             web.removeJavascriptInterface("Android")
