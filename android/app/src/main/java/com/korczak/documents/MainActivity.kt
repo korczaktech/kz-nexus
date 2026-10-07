@@ -644,7 +644,7 @@ class MainActivity : AppCompatActivity() {
         b.addView(label("Mais", 30f, text, true))
         b.addView(label("Conta, recursos e configurações do aplicativo.", 13f, muted), lp(top = 4))
         val profile = card().horizontal().apply { setPadding(dp(16), dp(16), dp(16), dp(16)); setOnClickListener { showProfile() } }
-        profile.addView(TextView(this).apply { text = "KT"; textSize = 17f; gravity = Gravity.CENTER; setTextColor(text); background = rounded(Color.rgb(12, 22, 48), 50).apply { setStroke(dp(1), Color.rgb(31, 53, 104)) } }, LinearLayout.LayoutParams(dp(52), dp(52)))
+        profile.addView(TextView(this).apply { text = "KT"; textSize = 17f; gravity = Gravity.CENTER; setTextColor(this@MainActivity.text); background = rounded(Color.rgb(12, 22, 48), 50).apply { setStroke(dp(1), Color.rgb(31, 53, 104)) } }, LinearLayout.LayoutParams(dp(52), dp(52)))
         val p = LinearLayout(this).vertical()
         p.addView(label("Korczak Tech", 17f, text, true)); p.addView(label("Plano pessoal", 13f, muted), lp(top = 3))
         profile.addView(p, LinearLayout.LayoutParams(0, -2, 1f).apply { leftMargin = dp(15) })
