@@ -108,10 +108,10 @@ class Updater(private val activity: Activity) {
                         }
                     }
 
-                    val callback = Intent(activity, UpdateReceiver::class.java).apply {
+                    val callback = Intent(activity, UpdateInstallActivity::class.java).apply {
                         action = "com.korczak.documents.UPDATE_RESULT"
                         setPackage(activity.packageName)
-                        component = android.content.ComponentName(activity, UpdateReceiver::class.java)
+                        component = android.content.ComponentName(activity, UpdateInstallActivity::class.java)
                     }
                     // Replace any PendingIntent left by an older updater version.
                     // PackageInstaller needs to be able to fill the result intent with
@@ -120,7 +120,7 @@ class Updater(private val activity: Activity) {
                         if (android.os.Build.VERSION.SDK_INT >= 31) PendingIntent.FLAG_MUTABLE
                         else if (android.os.Build.VERSION.SDK_INT >= 23) PendingIntent.FLAG_IMMUTABLE
                         else 0
-                    val pending = PendingIntent.getBroadcast(activity, 7401, callback, flags)
+                    val pending = PendingIntent.getActivity(activity, 7401, callback, flags)
                     session.commit(pending.intentSender)
                     committed = true
                 } finally {
