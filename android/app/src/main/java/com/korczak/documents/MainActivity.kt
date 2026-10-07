@@ -554,7 +554,7 @@ class MainActivity : AppCompatActivity() {
 
     private fun renderEditor(id:String?,name:String?,inlineContent:String?){
         currentDocumentId=id;currentDocumentUri=null
-        val scroll=ScrollView(this).apply{fillViewport=true}
+        val scroll=ScrollView(this).apply{isFillViewport=true}
         val b=LinearLayout(this).vertical().apply{setPadding(dp(18),dp(18),dp(18),dp(24))}
         val head=LinearLayout(this).horizontal().apply{gravity=Gravity.CENTER_VERTICAL}
         head.addView(label(if(name.isNullOrBlank())"EDITOR"else"DOCUMENTO",11f,blue,true),LinearLayout.LayoutParams(0,-2,1f))
