@@ -7,6 +7,8 @@ import android.net.Uri
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
+import android.os.Environment
+import android.os.StatFs
 import android.view.Gravity
 import android.view.View
 import android.view.ViewGroup
@@ -16,6 +18,7 @@ import androidx.core.view.WindowCompat
 import org.json.JSONArray
 import org.json.JSONObject
 import java.util.concurrent.Executors
+import java.util.Locale
 
 /**
  * Korczak Nexus Android — native implementation.
@@ -42,16 +45,16 @@ class MainActivity : AppCompatActivity() {
     private var selectedTab = "home"
     private var registering = false
 
-    private val bg = Color.rgb(3, 9, 20)
-    private val panel = Color.rgb(7, 22, 38)
-    private val panel2 = Color.rgb(9, 29, 48)
-    private val line = Color.rgb(27, 63, 91)
-    private val blue = Color.rgb(41, 156, 255)
-    private val cyan = Color.rgb(83, 200, 255)
-    private val text = Color.rgb(238, 247, 255)
-    private val muted = Color.rgb(143, 168, 192)
-    private val green = Color.rgb(49, 214, 164)
-    private val red = Color.rgb(255, 111, 125)
+    private val bg = Color.rgb(6, 10, 20)
+    private val panel = Color.rgb(12, 18, 32)
+    private val panel2 = Color.rgb(18, 27, 48)
+    private val line = Color.rgb(23, 35, 63)
+    private val blue = Color.rgb(47, 107, 255)
+    private val cyan = Color.rgb(91, 140, 255)
+    private val text = Color.rgb(234, 240, 255)
+    private val muted = Color.rgb(135, 148, 179)
+    private val green = Color.rgb(61, 214, 160)
+    private val red = Color.rgb(224, 85, 111)
 
     override fun onCreate(state: Bundle?) {
         super.onCreate(state)
@@ -125,9 +128,9 @@ class MainActivity : AppCompatActivity() {
 
     override fun onResume() {
         super.onResume()
-        if (::session.isInitialized && !session.token.isNullOrBlank()) {
+        if (::session.isInitialized) {
             Updater(this).resumePending()
-            main.postDelayed({ checkForUpdate() }, 1200)
+            main.postDelayed({ checkForUpdate() }, 900)
         }
     }
 
@@ -408,26 +411,44 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun buildTopBar(): View {
-        val bar = LinearLayout(this).horizontal().apply { gravity=Gravity.CENTER_VERTICAL; setPadding(dp(18),dp(10),dp(16),dp(10)); setBackgroundColor(bg) }
-        val logo=ImageView(this).apply{setImageResource(R.drawable.ic_kz);scaleType=ImageView.ScaleType.CENTER_INSIDE;contentDescription="Korczak Nexus"}
-        bar.addView(logo,LinearLayout.LayoutParams(dp(50),dp(50)))
+        val bar=LinearLayout(this).horizontal().apply{gravity=Gravity.CENTER_VERTICAL;setPadding(dp(20),dp(12),dp(20),0);setBackgroundColor(bg)}
+        bar.addView(NexusMarkView(this),LinearLayout.LayoutParams(dp(40),dp(40)))
         val brand=LinearLayout(this).vertical()
-        brand.addView(label("KORCZAK",16f,text,true))
-        brand.addView(label("NEXUS",13f,blue,true).apply{letterSpacing=.18f})
-        bar.addView(brand,LinearLayout.LayoutParams(0,-2,1f).apply{leftMargin=dp(8)})
-        bar.addView(iconButton("♧").apply{textSize=26f;background=android.graphics.drawable.ColorDrawable(Color.TRANSPARENT);setOnClickListener{showNotifications()}},LinearLayout.LayoutParams(dp(48),dp(48)))
-        bar.addView(TextView(this).apply{text="KT";textSize=12f;gravity=Gravity.CENTER;setTextColor(this@MainActivity.text);background=rounded(Color.rgb(8,18,38),50).apply{setStroke(dp(1),Color.rgb(35,76,150))};setOnClickListener{showProfile()}},LinearLayout.LayoutParams(dp(50),dp(50)))
+        brand.addView(label("KORCZAK",16f,text,true).apply{letterSpacing=.10f})
+        brand.addView(label("NEXUS",13f,cyan).apply{letterSpacing=.20f})
+        bar.addView(brand,LinearLayout.LayoutParams(0,-2,1f).apply{leftMargin=dp(10)})
+        val bell=FrameLayout(this)
+        bell.addView(NexusIconView(this,NexusIcon.BELL,Color.rgb(199,211,242)),FrameLayout.LayoutParams(dp(38),dp(38)))
+        bell.addView(View(this).apply{background=rounded(blue,50)},FrameLayout.LayoutParams(dp(8),dp(8),Gravity.TOP or Gravity.END).apply{topMargin=dp(7);rightMargin=dp(6)})
+        bell.setOnClickListener{showNotifications()}
+        bar.addView(bell,LinearLayout.LayoutParams(dp(38),dp(38)).apply{rightMargin=dp(12)})
+        bar.addView(TextView(this).apply{text="KT";textSize=13f;gravity=Gravity.CENTER;setTextColor(Color.rgb(199,211,242));background=rounded(Color.rgb(12,22,48),50).apply{setStroke(dp(1),Color.rgb(31,53,104))};setOnClickListener{showProfile()}},LinearLayout.LayoutParams(dp(38),dp(38)))
         return bar
     }
 
     private fun buildBottomBar(): FrameLayout {
-        val wrap=FrameLayout(this).apply{setBackgroundColor(Color.rgb(5,12,25))}
-        val bar=LinearLayout(this).horizontal().apply{gravity=Gravity.CENTER;setPadding(dp(8),dp(7),dp(8),dp(8))}
-        listOf("home" to "⌂\nInício","files" to "▱\nArquivos","models" to "▦\nModelos","more" to "•••\nMais").forEach{(id,caption)->
-            bar.addView(TextView(this).apply{text=caption;gravity=Gravity.CENTER;textSize=11f;setTextColor(if(id==selectedTab)blue else muted);background=rounded(if(id==selectedTab)Color.rgb(9,36,78)else Color.TRANSPARENT,20);setOnClickListener{navigate(id)}},LinearLayout.LayoutParams(0,dp(58),1f).apply{leftMargin=dp(3);rightMargin=dp(3)})
+        val wrap=FrameLayout(this).apply{setBackgroundColor(Color.rgb(10,15,28))}
+        val bar=LinearLayout(this).horizontal().apply{gravity=Gravity.CENTER_VERTICAL;setPadding(dp(6),dp(10),dp(6),dp(10));setBackgroundColor(Color.rgb(10,15,28))}
+        fun item(id:String,icon:NexusIcon,title:String):View{
+            val active=id==selectedTab
+            val h=LinearLayout(this).vertical().apply{gravity=Gravity.CENTER;setOnClickListener{navigate(id)}}
+            val pill=FrameLayout(this).apply{background=rounded(if(active)Color.argb(51,47,107,255)else Color.TRANSPARENT,15)}
+            pill.addView(NexusIconView(this,icon,if(active)cyan else muted),FrameLayout.LayoutParams(dp(54),dp(30),Gravity.CENTER))
+            h.addView(pill,LinearLayout.LayoutParams(dp(54),dp(30)))
+            h.addView(label(title,11f,if(active)cyan else muted).apply{gravity=Gravity.CENTER},LinearLayout.LayoutParams(-1,dp(24)))
+            return h
         }
+        bar.addView(item("home",NexusIcon.HOME,"Início"),LinearLayout.LayoutParams(0,-1,1f))
+        bar.addView(item("files",NexusIcon.FOLDER,"Arquivos"),LinearLayout.LayoutParams(0,-1,1f))
+        bar.addView(View(this),LinearLayout.LayoutParams(0,-1,1f))
+        bar.addView(item("models",NexusIcon.GRID,"Modelos"),LinearLayout.LayoutParams(0,-1,1f))
+        bar.addView(item("more",NexusIcon.DOTS,"Mais"),LinearLayout.LayoutParams(0,-1,1f))
         wrap.addView(bar,FrameLayout.LayoutParams(-1,-1))
-        wrap.addView(TextView(this).apply{text="+";textSize=38f;gravity=Gravity.CENTER;setTextColor(Color.WHITE);background=rounded(Color.rgb(49,103,255),50).apply{setStroke(dp(2),Color.rgb(4,20,45))};elevation=dp(8).toFloat();setOnClickListener{showCreateDocument()}},FrameLayout.LayoutParams(dp(64),dp(64),Gravity.CENTER).apply{topMargin=dp(-25)})
+        val outer=FrameLayout(this).apply{background=rounded(bg,50).apply{setStroke(dp(1),Color.rgb(31,53,104))};elevation=dp(6).toFloat();setOnClickListener{showCreateDocument()}}
+        val inner=FrameLayout(this).apply{background=rounded(blue,50)}
+        inner.addView(NexusIconView(this,NexusIcon.PLUS,Color.WHITE),FrameLayout.LayoutParams(dp(22),dp(22),Gravity.CENTER))
+        outer.addView(inner,FrameLayout.LayoutParams(dp(54),dp(54),Gravity.CENTER))
+        wrap.addView(outer,FrameLayout.LayoutParams(dp(68),dp(68),Gravity.TOP or Gravity.CENTER_HORIZONTAL).apply{topMargin=dp(-28)})
         return wrap
     }
 
@@ -439,40 +460,93 @@ class MainActivity : AppCompatActivity() {
 
     private fun renderHome(){
         val scroll=ScrollView(this).apply{overScrollMode=View.OVER_SCROLL_NEVER}
-        val box=LinearLayout(this).vertical().apply{setPadding(dp(18),dp(10),dp(18),dp(24))}
-        val hero=card().apply{setPadding(dp(26),dp(22),dp(22),dp(24))}
-        hero.addView(label("Bem-vindo, Korczak Tech",16f,blue))
-        hero.addView(label("Seus documentos,\nsempre com você.",30f,text,true).apply{setPadding(0,dp(10),0,dp(12));setLineSpacing(0f,1.02f)})
-        hero.addView(label("Escreva, organize e compartilhe de\nforma simples, rápida e segura.",15f,muted))
-        box.addView(hero)
+        val box=LinearLayout(this).vertical().apply{setPadding(dp(20),0,dp(20),dp(150))}
+        val hero=FrameLayout(this).apply{background=rounded(panel,22).apply{setStroke(dp(1),line)}}
+        val copy=LinearLayout(this).vertical().apply{setPadding(dp(18),dp(22),0,0)}
+        copy.addView(label("Bem-vindo, Korczak Tech",12f,cyan))
+        copy.addView(label("Seus documentos,",24f,text,true))
+        copy.addView(label("sempre com você.",24f,Color.rgb(79,131,255),true))
+        copy.addView(label("Escreva, organize e compartilhe de forma simples,\nrápida e segura.",12f,Color.rgb(154,167,199)).apply{setPadding(0,dp(10),0,0)})
+        hero.addView(copy,FrameLayout.LayoutParams(dp(210),-1))
+        hero.addView(NexusOrbView(this),FrameLayout.LayoutParams(dp(190),dp(150),Gravity.CENTER_VERTICAL or Gravity.END))
+        box.addView(hero,LinearLayout.LayoutParams(-1,dp(178)).apply{topMargin=dp(18)})
+
         val actions=LinearLayout(this).horizontal().apply{gravity=Gravity.CENTER}
-        listOf(Triple("＋","Novo\ndocumento",blue),Triple("↥","Importar",Color.rgb(169,112,255)),Triple("♧","Compartilhar",green),Triple("□","Pastas",Color.rgb(235,167,40))).forEach{(ico,title,color)->
-            val q=LinearLayout(this).vertical().apply{gravity=Gravity.CENTER;background=rounded(panel,22);setOnClickListener{when(title.replace("\n"," ")){ "Novo documento"->showCreateDocument();"Importar"->chooseStorage();"Compartilhar"->showShare();"Pastas"->navigate("folders")}}}
-            q.addView(TextView(this).apply{text=ico;textSize=28f;gravity=Gravity.CENTER;setTextColor(color);background=rounded(Color.rgb(10,29,62),50)},LinearLayout.LayoutParams(dp(52),dp(52)).apply{topMargin=dp(12)})
-            q.addView(label(title,13f,text,true).apply{gravity=Gravity.CENTER;setPadding(0,dp(8),0,dp(11))})
-            actions.addView(q,LinearLayout.LayoutParams(0,dp(146),1f).apply{leftMargin=dp(4);rightMargin=dp(4)})
+        data class A(val title:String,val icon:NexusIcon,val tint:Int,val base:Int)
+        listOf(
+            A("Novo\ndocumento",NexusIcon.PAGE_PLUS,cyan,blue),
+            A("Importar",NexusIcon.UPLOAD,Color.rgb(169,139,255),Color.rgb(123,47,247)),
+            A("Compartilhar",NexusIcon.PEOPLE,green,Color.rgb(32,178,122)),
+            A("Pastas",NexusIcon.FOLDER,Color.rgb(245,182,66),Color.rgb(245,166,35))
+        ).forEach{a->
+            val q=LinearLayout(this).vertical().apply{
+                gravity=Gravity.CENTER;background=rounded(panel,18).apply{setStroke(dp(1),line)}
+                setOnClickListener{when(a.title.replace("\n"," ")){
+                    "Novo documento"->showCreateDocument()
+                    "Importar"->chooseStorage()
+                    "Compartilhar"->showShare()
+                    "Pastas"->navigate("folders")
+                }}
+            }
+            val ib=FrameLayout(this).apply{background=rounded(Color.argb(42,Color.red(a.base),Color.green(a.base),Color.blue(a.base)),50).apply{setStroke(dp(1),Color.argb(110,Color.red(a.base),Color.green(a.base),Color.blue(a.base)))}}
+            ib.addView(NexusIconView(this,a.icon,a.tint),FrameLayout.LayoutParams(dp(42),dp(42),Gravity.CENTER))
+            q.addView(ib,LinearLayout.LayoutParams(dp(42),dp(42)))
+            q.addView(label(a.title,12f,text).apply{gravity=Gravity.CENTER;setLineSpacing(0f,.95f)},LinearLayout.LayoutParams(-1,dp(32)).apply{topMargin=dp(8)})
+            actions.addView(q,LinearLayout.LayoutParams(0,dp(96),1f).apply{leftMargin=dp(5);rightMargin=dp(5);topMargin=dp(14)})
         }
-        box.addView(actions,lp(top=20))
-        val st=card().horizontal().apply{gravity=Gravity.CENTER_VERTICAL;setPadding(dp(18),dp(15),dp(14),dp(15));setOnClickListener{navigate("storage")}}
-        st.addView(TextView(this).apply{text="42%";textSize=18f;gravity=Gravity.CENTER;setTextColor(this@MainActivity.text);setTypeface(null,Typeface.BOLD);background=rounded(Color.rgb(8,25,52),60).apply{setStroke(dp(8),blue)}},LinearLayout.LayoutParams(dp(86),dp(86)))
-        val stText=LinearLayout(this).vertical();stText.addView(label("Armazenamento",21f,text,true));stText.addView(label("42 GB de 100 GB no aparelho",15f,muted),lp(top=3))
-        stText.addView(ProgressBar(this,null,android.R.attr.progressBarStyleHorizontal).apply{max=100;progress=42;progressTintList=android.content.res.ColorStateList.valueOf(blue);progressBackgroundTintList=android.content.res.ColorStateList.valueOf(Color.rgb(18,34,70))},LinearLayout.LayoutParams(-1,dp(6)).apply{topMargin=dp(12)})
-        stText.addView(label("Documentos do Nexus: 3,2 GB",14f,muted).apply{setPadding(0,dp(8),0,0)})
-        st.addView(stText,LinearLayout.LayoutParams(0,-2,1f).apply{leftMargin=dp(14)});st.addView(label("›",34f,muted))
-        box.addView(st,lp(top=18))
-        val recent=card().apply{setPadding(0,dp(8),0,0)}
-        val rh=LinearLayout(this).horizontal().apply{gravity=Gravity.CENTER_VERTICAL;setPadding(dp(18),dp(8),dp(18),dp(8))}
-        rh.addView(label("◷",24f,blue,true));rh.addView(label("Documentos recentes",21f,text,true),LinearLayout.LayoutParams(0,-2,1f).apply{leftMargin=dp(10)})
-        rh.addView(TextView(this).apply{text="Ver todos";textSize=14f;setTextColor(blue);setOnClickListener{navigate("files")}})
-        recent.addView(rh)
-        listOf("DOCX" to "Relatorio_Setembro.docx" to "2,4 MB · Hoje, 14:32","PDF" to "Plano_Estrategico.pdf" to "1,8 MB · Hoje, 09:18","DOCX" to "Ata_Reuniao_Produto.docx" to "312 KB · Ontem, 15:37","DOCX" to "Proposta_Atlas.docx" to "846 KB · Ontem, 08:21").forEach{d->
-            val ext=d.first.first;val name=d.first.second;val meta=d.second
-            val row=LinearLayout(this).horizontal().apply{gravity=Gravity.CENTER_VERTICAL;setPadding(dp(18),dp(12),dp(12),dp(12));setOnClickListener{showDocumentActions(name)}}
-            row.addView(TextView(this).apply{text=ext;textSize=11f;gravity=Gravity.CENTER;setTextColor(Color.WHITE);background=rounded(if(ext=="PDF")Color.rgb(239,70,82)else Color.rgb(48,105,242),14)},LinearLayout.LayoutParams(dp(60),dp(60)))
-            val tx=LinearLayout(this).vertical();tx.addView(label(name,16f,text));tx.addView(label(meta,12f,muted),lp(top=5))
-            row.addView(tx,LinearLayout.LayoutParams(0,-2,1f).apply{leftMargin=dp(12)});row.addView(label("›",30f,muted));recent.addView(row,lp(top=1))
+        box.addView(actions)
+
+        val st=StatFs(Environment.getDataDirectory().path);val total=st.blockCountLong*st.blockSizeLong;val free=st.availableBlocksLong*st.blockSizeLong;val used=(total-free).coerceAtLeast(0L)
+        val pct=if(total>0)((used.toDouble()/total.toDouble())*100.0).toInt().coerceIn(0,100)else 0
+        val storageCard=LinearLayout(this).horizontal().apply{gravity=Gravity.CENTER_VERTICAL;background=rounded(panel,20).apply{setStroke(dp(1),line)};setPadding(dp(18),dp(16),dp(16),dp(16))}
+        storageCard.addView(NexusStorageRingView(this,pct),LinearLayout.LayoutParams(dp(66),dp(66)))
+        val stText=LinearLayout(this).vertical().apply{setPadding(dp(16),0,0,0)}
+        stText.addView(label("Armazenamento",15f,text,true))
+        stText.addView(label(String.format(Locale.forLanguageTag("pt-BR"),"%.1f GB de %.1f GB no aparelho",used/1e9,total/1e9),13f,muted))
+        val track=FrameLayout(this).apply{background=rounded(line,4)}
+        val fill=View(this).apply{background=rounded(blue,4)}
+        track.addView(fill,FrameLayout.LayoutParams(0,dp(6)))
+        track.post{fill.layoutParams=FrameLayout.LayoutParams((track.width*pct/100f).toInt().coerceAtLeast(if(pct>0)dp(2)else 0),dp(6))}
+        stText.addView(track,LinearLayout.LayoutParams(-1,dp(6)).apply{topMargin=dp(12)})
+        storageCard.addView(stText,LinearLayout.LayoutParams(0,-2,1f))
+        storageCard.addView(NexusIconView(this,NexusIcon.CHEVRON,muted,14),LinearLayout.LayoutParams(dp(14),dp(14)).apply{leftMargin=dp(10)})
+        box.addView(storageCard,LinearLayout.LayoutParams(-1,-2).apply{topMargin=dp(14)})
+
+        val recent=LinearLayout(this).vertical().apply{background=rounded(panel,20).apply{setStroke(dp(1),line)}}
+        val head=LinearLayout(this).horizontal().apply{gravity=Gravity.CENTER_VERTICAL;setPadding(dp(18),dp(16),dp(18),dp(12))}
+        head.addView(NexusIconView(this,NexusIcon.CLOCK,cyan,20),LinearLayout.LayoutParams(dp(20),dp(20)))
+        head.addView(label("Documentos recentes",16f,text,true),LinearLayout.LayoutParams(0,-2,1f).apply{leftMargin=dp(10)})
+        head.addView(label("Ver todos",13f,cyan).apply{setOnClickListener{navigate("files")}})
+        recent.addView(head)
+        listOf(Triple("DOCX","Relatorio_Setembro.docx","2,4 MB · Hoje, 14:32"),Triple("PDF","Plano_Estrategico.pdf","1,8 MB · Hoje, 09:18"),Triple("DOCX","Ata_Reuniao_Produto.docx","312 KB · Ontem, 15:37"),Triple("DOCX","Proposta_Atlas.docx","846 KB · Ontem, 08:21")).forEach{d->
+            recent.addView(View(this).apply{setBackgroundColor(Color.rgb(19,28,51))},LinearLayout.LayoutParams(-1,dp(1)))
+            val row=LinearLayout(this).horizontal().apply{gravity=Gravity.CENTER_VERTICAL;setPadding(dp(18),dp(12),dp(18),dp(12));setOnClickListener{navigate("files")}}
+            row.addView(extBadgeExact(d.first),LinearLayout.LayoutParams(dp(40),dp(40)))
+            val info=LinearLayout(this).vertical();info.addView(label(d.second,15f,text).apply{maxLines=1;ellipsize=android.text.TextUtils.TruncateAt.END});info.addView(label(d.third,12f,muted))
+            row.addView(info,LinearLayout.LayoutParams(0,-2,1f).apply{leftMargin=dp(14)})
+            row.addView(NexusIconView(this,NexusIcon.CHEVRON,muted,14),LinearLayout.LayoutParams(dp(14),dp(14)))
+            recent.addView(row,LinearLayout.LayoutParams(-1,-2))
         }
-        box.addView(recent,lp(top=18));scroll.addView(box);content.addView(scroll)
+        box.addView(recent,LinearLayout.LayoutParams(-1,-2).apply{topMargin=dp(14)})
+
+        val infoRow=LinearLayout(this).horizontal()
+        infoRow.addView(infoCardExact("Segurança","Ativa","Documentos protegidos com criptografia",NexusIcon.SHIELD){navigate("more")},LinearLayout.LayoutParams(0,-2,1f).apply{rightMargin=dp(6);topMargin=dp(14)})
+        infoRow.addView(infoCardExact("Backup","Ativado","Última sincronização: hoje, 14:20",NexusIcon.CLOUD){navigate("more")},LinearLayout.LayoutParams(0,-2,1f).apply{leftMargin=dp(6);topMargin=dp(14)})
+        box.addView(infoRow)
+        scroll.addView(box,FrameLayout.LayoutParams(-1,-1));content.addView(scroll)
+    }
+
+    private fun extBadgeExact(ext:String):View=TextView(this).apply{
+        text=ext;textSize=10f;gravity=Gravity.CENTER;setTypeface(Typeface.DEFAULT,Typeface.BOLD);setTextColor(Color.WHITE)
+        background=rounded(when(ext){"DOCX"->Color.rgb(59,123,255);"PDF"->Color.rgb(217,58,64);else->Color.rgb(70,83,122)},12)
+    }
+
+    private fun infoCardExact(title:String,status:String,desc:String,icon:NexusIcon,onClick:()->Unit):View{
+        val row=LinearLayout(this).horizontal().apply{background=rounded(panel,18).apply{setStroke(dp(1),line)};setPadding(dp(14),dp(14),dp(10),dp(14));setOnClickListener{onClick()}}
+        val circle=FrameLayout(this).apply{background=rounded(Color.argb(38,47,107,255),50).apply{setStroke(dp(1),Color.argb(128,47,107,255))}}
+        circle.addView(NexusIconView(this,icon,cyan),FrameLayout.LayoutParams(dp(20),dp(20),Gravity.CENTER));row.addView(circle,LinearLayout.LayoutParams(dp(38),dp(38)))
+        val col=LinearLayout(this).vertical();col.addView(label(title,14f,text,true));col.addView(label("● $status",12f,green));col.addView(label(desc,11f,muted).apply{setPadding(0,dp(4),0,0)});row.addView(col,LinearLayout.LayoutParams(0,-2,1f).apply{leftMargin=dp(12)})
+        return row
     }
 
     private fun renderFiles(){
