@@ -476,43 +476,66 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun renderFiles(){
-        val s=ScrollView(this).apply{overScrollMode=View.OVER_SCROLL_NEVER}
-        val b=LinearLayout(this).vertical().apply{setPadding(dp(18),dp(18),dp(18),dp(24))}
-        b.addView(label("DOCUMENTOS",11f,blue,true));b.addView(label("Arquivos",28f,text,true),lp(top=4))
-        val search=input("Pesquisar documentos").apply{isSingleLine=true}
-        b.addView(search,lp(top=16))
-        val actions=LinearLayout(this).horizontal()
-        actions.addView(button("＋ Novo documento",true).apply{setOnClickListener{showCreateDocument()}},LinearLayout.LayoutParams(0,dp(48),1f))
-        actions.addView(button("＋ Pasta",false).apply{setOnClickListener{showCreateFolder()}},LinearLayout.LayoutParams(0,dp(48),1f).apply{leftMargin=dp(8)})
-        b.addView(actions,lp(top=10))
-        val list=LinearLayout(this).vertical()
-        b.addView(list,lp(top=18))
-        fun fill(q:String=""){
-            executor.execute{
-                val r=if(q.isBlank())api.documents()else api.search(q)
-                main.post{
+        val s = ScrollView(this).apply { overScrollMode = View.OVER_SCROLL_NEVER }
+        val b = LinearLayout(this).vertical().apply { setPadding(dp(20), dp(20), dp(20), dp(120)) }
+        b.addView(label("Arquivos", 30f, text, true))
+        val tabs = LinearLayout(this).horizontal()
+        listOf("Tudo", "Meus", "Compartilhados", "Favoritos").forEachIndexed { index, t ->
+            tabs.addView(TextView(this).apply {
+                text = t; textSize = 13f; setTextColor(if (index == 0) cyan else muted)
+                setPadding(dp(4), dp(10), dp(18), dp(10))
+            }, LinearLayout.LayoutParams(-2, dp(42)))
+        }
+        b.addView(tabs)
+        b.addView(View(this).apply { setBackgroundColor(line) }, LinearLayout.LayoutParams(-1, dp(1)))
+        val search = input("Pesquisar documentos").apply { isSingleLine = true }
+        b.addView(search, lp(top = 14))
+        val actions = LinearLayout(this).horizontal()
+        actions.addView(button("＋ Novo documento", true).apply { setOnClickListener { showCreateDocument() } }, LinearLayout.LayoutParams(0, dp(46), 1f))
+        actions.addView(button("＋ Pasta", false).apply { setOnClickListener { showCreateFolder() } }, LinearLayout.LayoutParams(0, dp(46), 1f).apply { leftMargin = dp(8) })
+        b.addView(actions, lp(top = 10))
+        val list = LinearLayout(this).vertical()
+        b.addView(label("Mais recentes primeiro", 12f, muted).apply { setPadding(0, dp(16), 0, dp(4)) })
+        b.addView(list)
+        fun fill(q: String = "") {
+            executor.execute {
+                val r = if (q.isBlank()) api.documents() else api.search(q)
+                main.post {
                     list.removeAllViews()
-                    val a=if(r.code in 200..299)extractArray(r.body)else JSONArray()
-                    if(a.length()==0)list.addView(label(if(q.isBlank())"Nenhum documento encontrado."else"Nenhum resultado para \"$q\".",14f,muted).apply{setPadding(0,dp(20),0,0)})
-                    for(i in 0 until a.length()){
-                        val o=a.optJSONObject(i)?:continue
-                        val id=o.optString("id",o.optString("_id"))
-                        val name=o.optString("name","Documento")
-                        val meta=o.optString("updated_at",o.optString("created_at","Documento Nexus"))
-                        val row=actionCard(name,meta){
-                            if(id.isNotBlank())executor.execute{val d=api.document(id);main.post{val obj=extractObject(d.body);openRemoteDocument(id,name,obj?.optString("content","")?:"")}}
-                            else showDocumentActions(name)
+                    val a = if (r.code in 200..299) extractArray(r.body) else JSONArray()
+                    if (a.length() == 0) list.addView(label(if (q.isBlank()) "Nenhum documento encontrado." else "Nenhum resultado para \"$q\".", 14f, muted).apply { setPadding(0, dp(20), 0, 0) })
+                    for (i in 0 until a.length()) {
+                        val o = a.optJSONObject(i) ?: continue
+                        val id = o.optString("id", o.optString("_id"))
+                        val name = o.optString("name", "Documento")
+                        val meta = o.optString("updated_at", o.optString("created_at", "Documento Nexus"))
+                        val ext = name.substringAfterLast('.', "").uppercase().ifBlank { "DOC" }
+                        val row = LinearLayout(this).horizontal().apply {
+                            gravity = Gravity.CENTER_VERTICAL; setPadding(dp(2), dp(10), dp(2), dp(10))
+                            setOnClickListener {
+                                if (id.isNotBlank()) executor.execute {
+                                    val d = api.document(id)
+                                    main.post { val obj = extractObject(d.body); openRemoteDocument(id, name, obj?.optString("content", "") ?: "") }
+                                } else showDocumentActions(name)
+                            }
                         }
-                        list.addView(row,lp(top=8))
+                        row.addView(TextView(this).apply {
+                            text = ext; textSize = 9f; gravity = Gravity.CENTER; setTextColor(Color.WHITE)
+                            background = rounded(if (ext == "PDF") Color.rgb(220, 58, 64) else Color.rgb(30, 79, 216), 11)
+                        }, LinearLayout.LayoutParams(dp(40), dp(40)))
+                        val tx = LinearLayout(this).vertical()
+                        tx.addView(label(name, 14f, text)); tx.addView(label(meta, 11f, muted), lp(top = 3))
+                        row.addView(tx, LinearLayout.LayoutParams(0, -2, 1f).apply { leftMargin = dp(14) })
+                        row.addView(label("›", 20f, muted))
+                        list.addView(row); list.addView(View(this).apply { setBackgroundColor(line) }, LinearLayout.LayoutParams(-1, dp(1)))
                     }
-                    if(r.code !in 200..299 && a.length()==0)list.addView(label(api.errorMessage(r),12f,red).apply{setPadding(0,dp(12),0,0)})
+                    if (r.code !in 200..299 && a.length() == 0) list.addView(label(api.errorMessage(r), 12f, red).apply { setPadding(0, dp(12), 0, 0) })
                 }
             }
         }
-        search.setOnEditorActionListener{_,_,_->fill(search.text.toString().trim());true}
-        search.setOnFocusChangeListener{v,f->v.animate().scaleX(if(f)1.01f else 1f).scaleY(if(f)1.01f else 1f).setDuration(120).start()}
+        search.setOnEditorActionListener { _, _, _ -> fill(search.text.toString().trim()); true }
         fill()
-        s.addView(b);content.addView(s)
+        s.addView(b); content.addView(s)
     }
 
     private fun addDocumentItems(box: LinearLayout, items: JSONArray, local: Boolean) {
@@ -616,27 +639,44 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun renderMore(){
-        val s=ScrollView(this).apply{overScrollMode=View.OVER_SCROLL_NEVER}
-        val b=LinearLayout(this).vertical().apply{setPadding(dp(18),dp(18),dp(18),dp(24))}
-        b.addView(label("MAIS",11f,blue,true));b.addView(label("Nexus",28f,text,true),lp(top=4))
-        b.addView(label("Conta, recursos e configurações do aplicativo.",13f,muted),lp(top=6))
+        val s = ScrollView(this).apply { overScrollMode = View.OVER_SCROLL_NEVER }
+        val b = LinearLayout(this).vertical().apply { setPadding(dp(20), dp(22), dp(20), dp(120)) }
+        b.addView(label("Mais", 30f, text, true))
+        b.addView(label("Conta, recursos e configurações do aplicativo.", 13f, muted), lp(top = 4))
+        val profile = card().horizontal().apply { setPadding(dp(16), dp(16), dp(16), dp(16)); setOnClickListener { showProfile() } }
+        profile.addView(TextView(this).apply { text = "KT"; textSize = 17f; gravity = Gravity.CENTER; setTextColor(text); background = rounded(Color.rgb(12, 22, 48), 50).apply { setStroke(dp(1), Color.rgb(31, 53, 104)) } }, LinearLayout.LayoutParams(dp(52), dp(52)))
+        val p = LinearLayout(this).vertical()
+        p.addView(label("Korczak Tech", 17f, text, true)); p.addView(label("Plano pessoal", 13f, muted), lp(top = 3))
+        profile.addView(p, LinearLayout.LayoutParams(0, -2, 1f).apply { leftMargin = dp(15) })
+        b.addView(profile, lp(top = 18))
         listOf(
-            Triple("Meu perfil","Dados da sua conta","profile"),
-            Triple("Meu plano","Plano Free e recursos","plan"),
-            Triple("Armazenamento","Pasta e serviços conectados","storage"),
-            Triple("Favoritos","Documentos marcados","favorites"),
-            Triple("Histórico","Atividades recentes","history"),
-            Triple("Lixeira","Documentos removidos","trash"),
-            Triple("Configurações","Preferências do Nexus","settings"),
-            Triple("Sobre o Nexus","NexusAPI e versão","about"),
-            Triple("Atualizações","Verificar nova versão","update"),
-            Triple("Sair","Encerrar a sessão","logout")
-        ).forEach{(t,z,id)->
-            b.addView(actionCard(t,z){
-                when(id){"profile"->showProfile();"plan"->navigate("plan");"storage"->navigate("storage");"favorites"->navigate("favorites");"history"->navigate("history");"trash"->navigate("trash");"settings"->navigate("settings");"about"->showAbout();"update"->checkForUpdate(true);"logout"->logout()}
-            },lp(top=9))
+            Triple("Meu perfil", "Dados da sua conta", "profile"),
+            Triple("Meu plano", "Plano Free e recursos", "plan"),
+            Triple("Armazenamento", "Pasta e serviços conectados", "storage"),
+            Triple("Favoritos", "Documentos marcados", "favorites"),
+            Triple("Histórico", "Atividades recentes", "history"),
+            Triple("Lixeira", "Documentos removidos", "trash"),
+            Triple("Configurações", "Preferências do Nexus", "settings"),
+            Triple("Sobre o Nexus", "NexusAPI e versão", "about"),
+            Triple("Atualizações", "Verificar nova versão", "update")
+        ).forEach { (t, sub, id) ->
+            val row = LinearLayout(this).horizontal().apply {
+                gravity = Gravity.CENTER_VERTICAL; setPadding(dp(2), dp(16), dp(2), dp(16))
+                setOnClickListener {
+                    when (id) {
+                        "profile" -> showProfile(); "plan" -> navigate("plan"); "storage" -> navigate("storage")
+                        "favorites" -> navigate("favorites"); "history" -> navigate("history"); "trash" -> navigate("trash")
+                        "settings" -> navigate("settings"); "about" -> showAbout(); "update" -> checkForUpdate(true)
+                    }
+                }
+            }
+            val tx = LinearLayout(this).vertical()
+            tx.addView(label(t, 16f, text)); tx.addView(label(sub, 12f, muted), lp(top = 3))
+            row.addView(tx, LinearLayout.LayoutParams(0, -2, 1f)); row.addView(label("›", 20f, muted))
+            b.addView(row); b.addView(View(this).apply { setBackgroundColor(Color.rgb(17, 26, 48)) }, LinearLayout.LayoutParams(-1, dp(1)))
         }
-        s.addView(b);content.addView(s)
+        b.addView(TextView(this).apply { text = "Sair da conta"; textSize = 16f; setTextColor(Color.rgb(224, 85, 111)); setPadding(0, dp(20), 0, dp(20)); setOnClickListener { logout() } })
+        s.addView(b); content.addView(s)
     }
 
     private fun showProfile() {
