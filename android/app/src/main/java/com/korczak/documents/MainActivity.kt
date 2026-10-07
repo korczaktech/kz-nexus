@@ -71,6 +71,7 @@ class MainActivity : AppCompatActivity() {
 
                 if (session.token.isNullOrBlank()) showAuth() else showApp()
                 handleIntent(intent)
+                main.postDelayed({ checkForUpdate() }, 900)
             } catch (error: Throwable) {
                 android.util.Log.e("KorczakNexus", "Falha durante a inicialização nativa", error)
                 showStartupFailure(error)
