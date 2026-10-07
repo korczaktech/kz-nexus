@@ -25,16 +25,18 @@ internal class NexusMarkView(context: Context) : View(context) {
 internal class NexusOrbView(context: Context) : View(context) {
     private val d = resources.displayMetrics.density
     override fun onDraw(c: Canvas) {
-        val scale=height/(150f*d); val cx=width/2f; val cy=height/2f; val p=Paint(Paint.ANTI_ALIAS_FLAG)
-        fun glow(col:Int,a:Int,x:Float,y:Float,r:Float){p.shader=RadialGradient(x*scale,y*scale,r*scale,intArrayOf(Color.argb(a,Color.red(col),Color.green(col),Color.blue(col)),Color.TRANSPARENT),null,Shader.TileMode.CLAMP);c.drawCircle(x*scale,y*scale,r*scale,p)}
+        val scale=min(width/(180f*d),height/(150f*d)); val ox=(width-180f*d*scale)/2f; val oy=(height-150f*d*scale)/2f; val cx=ox+90f*d*scale; val cy=oy+75f*d*scale; val p=Paint(Paint.ANTI_ALIAS_FLAG)
+        fun X(v:Float)=ox+v*d*scale
+        fun Y(v:Float)=oy+v*d*scale
+        fun glow(col:Int,a:Int,x:Float,y:Float,r:Float){p.shader=RadialGradient(X(x),Y(y),r*d*scale,intArrayOf(Color.argb(a,Color.red(col),Color.green(col),Color.blue(col)),Color.TRANSPARENT),null,Shader.TileMode.CLAMP);c.drawCircle(X(x),Y(y),r*d*scale,p)}
         glow(Color.rgb(47,107,255),115,95f,75f,62f); glow(Color.rgb(123,47,247),128,80f,90f,34f); glow(Color.rgb(209,22,63),102,112f,58f,30f)
-        p.shader=null;p.style=Paint.Style.STROKE;p.strokeWidth=1.2f*scale;p.color=Color.argb(128,91,140,255)
-        c.save();c.rotate(-24f,cx,cy);c.drawOval(cx-88*scale,cy-26*scale,cx+88*scale,cy+26*scale,p);c.restore()
-        p.color=Color.argb(77,91,140,255);c.save();c.rotate(32f,cx,cy);c.drawOval(cx-80*scale,cy-22*scale,cx+80*scale,cy+22*scale,p);c.restore()
-        p.color=Color.argb(115,91,140,255);c.drawCircle(cx,cy,40*scale,p)
-        p.color=Color.rgb(79,131,255);p.strokeWidth=9*scale;p.strokeCap=Paint.Cap.ROUND;p.strokeJoin=Paint.Join.ROUND
-        val n=Path();n.moveTo(77*scale,98*scale);n.lineTo(77*scale,52*scale);n.lineTo(113*scale,98*scale);n.lineTo(113*scale,52*scale);c.drawPath(n,p)
-        p.style=Paint.Style.FILL;c.drawCircle(170*scale,40*scale,4*scale,p)
+        p.shader=null;p.style=Paint.Style.STROKE;p.strokeWidth=1.2f*d*scale;p.color=Color.argb(128,91,140,255)
+        c.save();c.rotate(-24f,cx,cy);c.drawOval(cx-88*d*scale,cy-26*d*scale,cx+88*d*scale,cy+26*d*scale,p);c.restore()
+        p.color=Color.argb(77,91,140,255);c.save();c.rotate(32f,cx,cy);c.drawOval(cx-80*d*scale,cy-22*d*scale,cx+80*d*scale,cy+22*d*scale,p);c.restore()
+        p.color=Color.argb(115,91,140,255);c.drawCircle(cx,cy,40*d*scale,p)
+        p.color=Color.rgb(79,131,255);p.strokeWidth=9*d*scale;p.strokeCap=Paint.Cap.ROUND;p.strokeJoin=Paint.Join.ROUND
+        val n=Path();n.moveTo(X(77f),Y(98f));n.lineTo(X(77f),Y(52f));n.lineTo(X(113f),Y(98f));n.lineTo(X(113f),Y(52f));c.drawPath(n,p)
+        p.style=Paint.Style.FILL;c.drawCircle(X(170f),Y(40f),4*d*scale,p)
     }
 }
 
