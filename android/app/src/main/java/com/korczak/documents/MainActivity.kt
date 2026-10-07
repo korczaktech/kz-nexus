@@ -408,107 +408,71 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun buildTopBar(): View {
-        val bar = LinearLayout(this).horizontal().apply {
-            gravity = Gravity.CENTER_VERTICAL
-            setPadding(dp(18), dp(10), dp(14), dp(10))
-            background = rounded(Color.rgb(6, 17, 30), 0)
-        }
-        val logo = ImageView(this).apply { setImageResource(R.drawable.ic_kz); scaleType = ImageView.ScaleType.CENTER_INSIDE }
-        bar.addView(logo, LinearLayout.LayoutParams(dp(46), dp(46)))
-        val title = LinearLayout(this).vertical()
-        title.addView(label("Korczak Nexus", 16f, text, true))
-        title.addView(label("DOCUMENTOS • ANDROID NATIVO", 9f, blue, true))
-        bar.addView(title, LinearLayout.LayoutParams(0, -2, 1f).apply { leftMargin = dp(9) })
-        val online = TextView(this).apply {
-            text = "●"
-            textSize = 13f
-            setTextColor(green)
-            gravity = Gravity.CENTER
-            setPadding(dp(8), 0, dp(8), 0)
-        }
-        bar.addView(online, LinearLayout.LayoutParams(dp(36), -1))
-        val more = iconButton("⋮")
-        more.setOnClickListener { navigate("more") }
-        bar.addView(more, LinearLayout.LayoutParams(dp(44), dp(44)))
+        val bar = LinearLayout(this).horizontal().apply { gravity=Gravity.CENTER_VERTICAL; setPadding(dp(18),dp(10),dp(16),dp(10)); setBackgroundColor(bg) }
+        val logo=ImageView(this).apply{setImageResource(R.drawable.ic_kz);scaleType=ImageView.ScaleType.CENTER_INSIDE;contentDescription="Korczak Nexus"}
+        bar.addView(logo,LinearLayout.LayoutParams(dp(50),dp(50)))
+        val brand=LinearLayout(this).vertical()
+        brand.addView(label("KORCZAK",16f,text,true))
+        brand.addView(label("NEXUS",13f,blue,true).apply{letterSpacing=.18f})
+        bar.addView(brand,LinearLayout.LayoutParams(0,-2,1f).apply{leftMargin=dp(8)})
+        bar.addView(iconButton("♧").apply{textSize=26f;background=android.graphics.drawable.ColorDrawable(Color.TRANSPARENT);setOnClickListener{showNotifications()}},LinearLayout.LayoutParams(dp(48),dp(48)))
+        bar.addView(TextView(this).apply{text="KT";textSize=12f;gravity=Gravity.CENTER;setTextColor(text);background=rounded(Color.rgb(8,18,38),50).apply{setStroke(dp(1),Color.rgb(35,76,150))};setOnClickListener{showProfile()}},LinearLayout.LayoutParams(dp(50),dp(50)))
         return bar
     }
 
     private fun buildBottomBar(): LinearLayout {
-        val bar = LinearLayout(this).horizontal().apply {
-            gravity = Gravity.CENTER
-            setPadding(dp(7), dp(7), dp(7), dp(8))
-            background = rounded(Color.rgb(6, 17, 30), 0)
+        val wrap=FrameLayout(this).apply{setBackgroundColor(Color.rgb(5,12,25))}
+        val bar=LinearLayout(this).horizontal().apply{gravity=Gravity.CENTER;setPadding(dp(8),dp(7),dp(8),dp(8))}
+        listOf("home" to "⌂\nInício","files" to "▱\nArquivos","models" to "▦\nModelos","more" to "•••\nMais").forEach{(id,caption)->
+            bar.addView(TextView(this).apply{text=caption;gravity=Gravity.CENTER;textSize=11f;setTextColor(if(id==selectedTab)blue else muted);background=rounded(if(id==selectedTab)Color.rgb(9,36,78)else Color.TRANSPARENT,20);setOnClickListener{navigate(id)}},LinearLayout.LayoutParams(0,dp(58),1f).apply{leftMargin=dp(3);rightMargin=dp(3)})
         }
-        val tabs = listOf("home" to "⌂\nInício", "files" to "▤\nArquivos", "editor" to "✎\nEditor", "more" to "⋯\nMais")
-        tabs.forEach { (id, caption) ->
-            val b = TextView(this).apply {
-                text = caption
-                gravity = Gravity.CENTER
-                textSize = 11f
-                setTypeface(null, Typeface.BOLD)
-                setTextColor(if (id == selectedTab) cyan else muted)
-                background = rounded(if (id == selectedTab) Color.rgb(10, 43, 69) else Color.TRANSPARENT, 13)
-                setPadding(0, dp(4), 0, dp(2))
-                setOnClickListener { navigate(id) }
-            }
-            bar.addView(b, LinearLayout.LayoutParams(0, -1, 1f).apply { leftMargin = dp(3); rightMargin = dp(3) })
-        }
-        return bar
+        wrap.addView(bar,FrameLayout.LayoutParams(-1,-1))
+        wrap.addView(TextView(this).apply{text="+";textSize=38f;gravity=Gravity.CENTER;setTextColor(Color.WHITE);background=rounded(Color.rgb(49,103,255),50).apply{setStroke(dp(2),Color.rgb(4,20,45))};elevation=dp(8).toFloat();setOnClickListener{showCreateDocument()}},FrameLayout.LayoutParams(dp(64),dp(64),Gravity.CENTER).apply{topMargin=dp(-25)})
+        return wrap
     }
 
-    private fun navigate(page: String) {
-        selectedTab = page
-        content.removeAllViews()
-        when (page) {
-            "home" -> renderHome()
-            "files" -> renderFiles()
-            "editor" -> renderEditor(null, null, null)
-            else -> renderMore()
-        }
-        val old = root.getChildAt(root.childCount - 1)
-        root.removeView(old)
-        bottom = buildBottomBar()
-        root.addView(bottom, LinearLayout.LayoutParams(-1, dp(70)))
+    private fun navigate(page:String){
+        selectedTab=page;content.removeAllViews()
+        when(page){"home"->renderHome();"files"->renderFiles();"models"->renderModels();"editor"->renderEditor(null,null,null);"more"->renderMore();"storage"->renderStoragePage();"folders"->renderFolders();"history"->renderHistory();"settings"->renderSettings();"plan"->renderPlan();"trash"->renderTrashPage();"favorites"->renderFavoritesPage();else->renderHome()}
+        root.removeViewAt(root.childCount-1);bottom=buildBottomBar();root.addView(bottom,LinearLayout.LayoutParams(-1,dp(70)))
     }
 
-    private fun renderHome() {
-        val scroll = ScrollView(this)
-        val box = LinearLayout(this).vertical().apply { setPadding(dp(18), dp(18), dp(18), dp(24)) }
-        box.addView(card().apply {
-            addView(label("SEU ESPAÇO DE DOCUMENTOS", 10f, cyan, true))
-            addView(label("Tudo organizado em um só lugar.", 28f, text, true).apply { setPadding(0, dp(8), 0, dp(7)) })
-            addView(label("Editor, arquivos, armazenamento e sincronização com a NexusAPI.", 13f, muted))
-            addView(button("Criar documento", true).apply { setOnClickListener { renderEditor(null, null, null) } }, lp(top = 18))
-        }, lp())
-        val actions = LinearLayout(this).horizontal()
-        actions.addView(actionCard("Arquivos", "Acesse seus documentos") { navigate("files") }, LinearLayout.LayoutParams(0, dp(112), 1f).apply { rightMargin = dp(6) })
-        actions.addView(actionCard("Editor", "Crie e edite") { renderEditor(null, null, null) }, LinearLayout.LayoutParams(0, dp(112), 1f).apply { leftMargin = dp(6) })
-        box.addView(actions, lp(top = 12))
-
-        val storageCard = card()
-        storageCard.addView(label("ARMAZENAMENTO", 10f, cyan, true))
-        val storageName = label(storage.label(), 15f, text, true)
-        storageCard.addView(storageName, lp(top = 7))
-        storageCard.addView(label("Escolha uma pasta do dispositivo para manter seus arquivos locais.", 11f, muted), lp(top = 4))
-        val storageActions = LinearLayout(this).horizontal()
-        storageActions.addView(button("Selecionar pasta", true).apply {
-            setOnClickListener { chooseStorage() }
-        }, LinearLayout.LayoutParams(0, dp(44), 1f).apply { rightMargin = dp(5); topMargin = dp(12) })
-        storageActions.addView(button("Atualizar", false).apply {
-            setOnClickListener { navigate("home") }
-        }, LinearLayout.LayoutParams(0, dp(44), 1f).apply { leftMargin = dp(5); topMargin = dp(12) })
-        storageCard.addView(storageActions)
-        box.addView(storageCard, lp(top = 12))
-
-        val net = offlineState()
-        val status = card()
-        status.addView(label("STATUS", 10f, cyan, true))
-        status.addView(label(if (net) "Conectado à internet" else "Modo offline", 15f, if (net) green else Color.rgb(241,189,90), true), lp(top = 7))
-        status.addView(label("As alterações locais podem continuar sem conexão.", 11f, muted), lp(top = 4))
-        box.addView(status, lp(top = 12))
-
-        scroll.addView(box)
-        content.addView(scroll)
+    private fun renderHome(){
+        val scroll=ScrollView(this).apply{overScrollMode=View.OVER_SCROLL_NEVER}
+        val box=LinearLayout(this).vertical().apply{setPadding(dp(18),dp(10),dp(18),dp(24))}
+        val hero=card().apply{setPadding(dp(26),dp(22),dp(22),dp(24))}
+        hero.addView(label("Bem-vindo, Korczak Tech",16f,blue))
+        hero.addView(label("Seus documentos,\nsempre com você.",30f,text,true).apply{setPadding(0,dp(10),0,dp(12));setLineSpacing(0f,1.02f)})
+        hero.addView(label("Escreva, organize e compartilhe de\nforma simples, rápida e segura.",15f,muted))
+        box.addView(hero)
+        val actions=LinearLayout(this).horizontal().apply{gravity=Gravity.CENTER}
+        listOf(Triple("＋","Novo\ndocumento",blue),Triple("↥","Importar",Color.rgb(169,112,255)),Triple("♧","Compartilhar",green),Triple("□","Pastas",Color.rgb(235,167,40))).forEach{(ico,title,color)->
+            val q=LinearLayout(this).vertical().apply{gravity=Gravity.CENTER;background=rounded(panel,22);setOnClickListener{when(title.replace("\n"," ")){ "Novo documento"->showCreateDocument();"Importar"->chooseStorage();"Compartilhar"->showShare();"Pastas"->navigate("folders")}}}
+            q.addView(TextView(this).apply{text=ico;textSize=28f;gravity=Gravity.CENTER;setTextColor(color);background=rounded(Color.rgb(10,29,62),50)},LinearLayout.LayoutParams(dp(52),dp(52)).apply{topMargin=dp(12)})
+            q.addView(label(title,13f,text,true).apply{gravity=Gravity.CENTER;setPadding(0,dp(8),0,dp(11))})
+            actions.addView(q,LinearLayout.LayoutParams(0,dp(146),1f).apply{leftMargin=dp(4);rightMargin=dp(4)})
+        }
+        box.addView(actions,lp(top=20))
+        val st=card().horizontal().apply{gravity=Gravity.CENTER_VERTICAL;setPadding(dp(18),dp(15),dp(14),dp(15));setOnClickListener{navigate("storage")}}
+        st.addView(TextView(this).apply{text="42%";textSize=18f;gravity=Gravity.CENTER;setTextColor(text);setTypeface(null,Typeface.BOLD);background=rounded(Color.rgb(8,25,52),60).apply{setStroke(dp(8),blue)}},LinearLayout.LayoutParams(dp(86),dp(86)))
+        val stText=LinearLayout(this).vertical();stText.addView(label("Armazenamento",21f,text,true));stText.addView(label("42 GB de 100 GB no aparelho",15f,muted),lp(top=3))
+        stText.addView(ProgressBar(this,null,android.R.attr.progressBarStyleHorizontal).apply{max=100;progress=42;progressTintList=android.content.res.ColorStateList.valueOf(blue);progressBackgroundTintList=android.content.res.ColorStateList.valueOf(Color.rgb(18,34,70))},LinearLayout.LayoutParams(-1,dp(6)).apply{topMargin=dp(12)})
+        stText.addView(label("Documentos do Nexus: 3,2 GB",14f,muted).apply{setPadding(0,dp(8),0,0)})
+        st.addView(stText,LinearLayout.LayoutParams(0,-2,1f).apply{leftMargin=dp(14)});st.addView(label("›",34f,muted))
+        box.addView(st,lp(top=18))
+        val recent=card().apply{setPadding(0,dp(8),0,0)}
+        val rh=LinearLayout(this).horizontal().apply{gravity=Gravity.CENTER_VERTICAL;setPadding(dp(18),dp(8),dp(18),dp(8))}
+        rh.addView(label("◷",24f,blue,true));rh.addView(label("Documentos recentes",21f,text,true),LinearLayout.LayoutParams(0,-2,1f).apply{leftMargin=dp(10)})
+        rh.addView(TextView(this).apply{text="Ver todos";textSize=14f;setTextColor(blue);setOnClickListener{navigate("files")}})
+        recent.addView(rh)
+        listOf("DOCX" to "Relatorio_Setembro.docx" to "2,4 MB · Hoje, 14:32","PDF" to "Plano_Estrategico.pdf" to "1,8 MB · Hoje, 09:18","DOCX" to "Ata_Reuniao_Produto.docx" to "312 KB · Ontem, 15:37","DOCX" to "Proposta_Atlas.docx" to "846 KB · Ontem, 08:21").forEach{d->
+            val ext=d.first.first;val name=d.first.second;val meta=d.second
+            val row=LinearLayout(this).horizontal().apply{gravity=Gravity.CENTER_VERTICAL;setPadding(dp(18),dp(12),dp(12),dp(12));setOnClickListener{showDocumentActions(name)}}
+            row.addView(TextView(this).apply{text=ext;textSize=11f;gravity=Gravity.CENTER;setTextColor(Color.WHITE);background=rounded(if(ext=="PDF")Color.rgb(239,70,82)else Color.rgb(48,105,242),14)},LinearLayout.LayoutParams(dp(60),dp(60)))
+            val tx=LinearLayout(this).vertical();tx.addView(label(name,16f,text));tx.addView(label(meta,12f,muted),lp(top=5))
+            row.addView(tx,LinearLayout.LayoutParams(0,-2,1f).apply{leftMargin=dp(12)});row.addView(label("›",30f,muted));recent.addView(row,lp(top=1))
+        }
+        box.addView(recent,lp(top=18));scroll.addView(box);content.addView(scroll);loadHomeDocuments()
     }
 
     private fun renderFiles() {
@@ -863,6 +827,84 @@ class MainActivity : AppCompatActivity() {
             else -> root
         }
     }.getOrNull()
+
+    private fun renderModels(){
+        val s=ScrollView(this);val b=LinearLayout(this).vertical().apply{setPadding(dp(18),dp(18),dp(18),dp(24))}
+        b.addView(label("MODELOS",11f,blue,true));b.addView(label("Modelos de documento",28f,text,true),lp(top=4))
+        b.addView(label("Comece com uma estrutura pronta e personalize o conteúdo.",13f,muted),lp(top=6))
+        listOf("Relatório","Ata de reunião","Proposta comercial","Plano estratégico","Documento em branco").forEach{t->
+            b.addView(actionCard(t,"Modelo pronto para editar"){showCreateDocument(t)})
+        }
+        s.addView(b);content.addView(s)
+    }
+    private fun renderStoragePage(){
+        val s=ScrollView(this);val b=LinearLayout(this).vertical().apply{setPadding(dp(18),dp(18),dp(18),dp(24))}
+        b.addView(label("ARMAZENAMENTO",11f,blue,true));b.addView(label("Seu armazenamento",28f,text,true),lp(top=4))
+        b.addView(label("Escolha onde seus arquivos ficam disponíveis no Nexus.",13f,muted),lp(top=6))
+        b.addView(card().apply{addView(label("Dispositivo",18f,text,true));addView(label("42 GB de 100 GB utilizados",13f,muted),lp(top=5));addView(label("Documentos do Nexus: 3,2 GB",13f,muted),lp(top=10))},lp(top=18))
+        b.addView(actionCard("Selecionar pasta","Usar uma pasta do dispositivo"){chooseStorage()})
+        b.addView(actionCard("OneDrive","Conexão de armazenamento"){showComingSoon("OneDrive")})
+        b.addView(actionCard("Google Drive","Conexão de armazenamento"){showComingSoon("Google Drive")})
+        s.addView(b);content.addView(s)
+    }
+    private fun renderFolders(){
+        val s=ScrollView(this);val b=LinearLayout(this).vertical().apply{setPadding(dp(18),dp(18),dp(18),dp(24))}
+        b.addView(label("ARQUIVOS",11f,blue,true));b.addView(label("Pastas",28f,text,true),lp(top=4))
+        b.addView(actionCard("Nova pasta","Criar uma pasta para organizar documentos"){showCreateFolder()})
+        b.addView(actionCard("Pasta do dispositivo","Abrir armazenamento selecionado"){chooseStorage()},lp(top=8))
+        executor.execute{val r=api.folders();main.post{if(r.code in 200..299){extractArray(r.body).let{a->for(i in 0 until a.length()){val o=a.optJSONObject(i)?:continue;b.addView(actionCard(o.optString("name","Pasta"),"Pasta Nexus"){showComingSoon(o.optString("name"))},lp(top=8))}}}}}
+        s.addView(b);content.addView(s)
+    }
+    private fun renderHistory(){
+        val s=ScrollView(this);val b=LinearLayout(this).vertical().apply{setPadding(dp(18),dp(18),dp(18),dp(24))}
+        b.addView(label("ATIVIDADE",11f,blue,true));b.addView(label("Histórico",28f,text,true),lp(top=4))
+        b.addView(label("Acompanhe as alterações feitas nesta sessão.",13f,muted),lp(top=6))
+        listOf("Documento criado","Documento editado","Arquivo importado","Sessão iniciada").forEachIndexed{i,t->b.addView(actionCard(t,if(i==0)"Hoje · agora" else "Atividade recente"){showComingSoon(t)})}
+        s.addView(b);content.addView(s)
+    }
+    private fun renderSettings(){
+        val s=ScrollView(this);val b=LinearLayout(this).vertical().apply{setPadding(dp(18),dp(18),dp(18),dp(24))}
+        b.addView(label("CONFIGURAÇÕES",11f,blue,true));b.addView(label("Preferências",28f,text,true),lp(top=4))
+        listOf("Conta e segurança" to "Sessão, senha e acesso","Notificações" to "Alertas do Nexus","Armazenamento" to "Pasta e serviços conectados","Sobre o aplicativo" to "NexusAPI e versão").forEach{(a,z)->b.addView(actionCard(a,z){when(a){"Conta e segurança"->showProfile();"Armazenamento"->renderStoragePage();"Sobre o aplicativo"->showAbout();else->showComingSoon(a)}})}
+        s.addView(b);content.addView(s)
+    }
+    private fun renderPlan(){
+        val s=ScrollView(this);val b=LinearLayout(this).vertical().apply{setPadding(dp(18),dp(18),dp(18),dp(24))}
+        b.addView(label("MEU PLANO",11f,blue,true));b.addView(label("Plano Free",28f,text,true),lp(top=4))
+        b.addView(card().apply{addView(label("Free",22f,text,true));addView(label("Plano atual",12f,green,true),lp(top=5));addView(label("Armazenamento e recursos essenciais do Nexus.",14f,muted),lp(top=10))},lp(top=18))
+        b.addView(actionCard("Conhecer planos","Compare opções disponíveis"){showComingSoon("Planos")});s.addView(b);content.addView(s)
+    }
+    private fun renderTrashPage(){renderRemoteCollection("Lixeira","trash","Nenhum documento na lixeira.")}
+    private fun renderFavoritesPage(){renderRemoteCollection("Favoritos","favorites","Nenhum favorito ainda.")}
+    private fun renderRemoteCollection(title:String,kind:String,empty:String){
+        val s=ScrollView(this);val b=LinearLayout(this).vertical().apply{setPadding(dp(18),dp(18),dp(18),dp(24))}
+        b.addView(label(kind.uppercase(),11f,blue,true));b.addView(label(title,28f,text,true),lp(top=4))
+        b.addView(label(if(kind=="trash")"Documentos que você removeu ficam aqui."else"Documentos que você marcou para acesso rápido.",13f,muted),lp(top=6))
+        executor.execute{val r=if(kind=="trash")api.trash()else api.favorites();main.post{val a=if(r.code in 200..299)extractArray(r.body)else JSONArray();if(a.length()==0)b.addView(label(empty,14f,muted).apply{setPadding(0,dp(28),0,0)})else for(i in 0 until a.length()){val o=a.optJSONObject(i)?:continue;b.addView(actionCard(o.optString("name","Documento"),"Abrir documento"){showDocumentActions(o.optString("name","Documento"))},lp(top=8))}}}
+        s.addView(b);content.addView(s)
+    }
+    private fun showCreateDocument(model:String=""){
+        val title=EditText(this).apply{hint=if(model.isBlank())"Nome do documento"else"$model · título";setTextColor(text);setHintTextColor(muted);isSingleLine=true;background=rounded(panel2,12);setPadding(dp(14),0,dp(14),0)}
+        val body=EditText(this).apply{hint="Comece a escrever…";setTextColor(text);setHintTextColor(muted);gravity=Gravity.TOP;background=rounded(panel2,12);setPadding(dp(14),dp(14),dp(14),dp(14));minLines=7}
+        val box=LinearLayout(this).vertical().apply{setPadding(dp(2),dp(4),dp(2),0);addView(title,lp());addView(body,lp(top=10))}
+        android.app.AlertDialog.Builder(this).setTitle("Novo documento").setView(box).setNegativeButton("Cancelar",null).setPositiveButton("Criar"){_,_->createRemoteDocument(title.text.toString().trim().ifBlank{"Novo documento"},body.text.toString())}.show()
+    }
+    private fun createRemoteDocument(name:String,body:String){
+        executor.execute{val r=api.createDocument(name,"document",body);main.post{if(r.code in 200..299){NexusFeedback.toast(this,"Documento criado.",NexusFeedback.Type.SUCCESS);navigate("files")}else NexusFeedback.alert(this,"Não foi possível criar",api.errorMessage(r),NexusFeedback.Type.ERROR)}}
+    }
+    private fun showCreateFolder(){
+        val e=EditText(this).apply{hint="Nome da pasta";setTextColor(text);setHintTextColor(muted);isSingleLine=true}
+        android.app.AlertDialog.Builder(this).setTitle("Nova pasta").setView(e).setNegativeButton("Cancelar",null).setPositiveButton("Criar"){_,_->executor.execute{val r=api.createFolder(e.text.toString().trim());main.post{NexusFeedback.toast(this,if(r.code in 200..299)"Pasta criada."else api.errorMessage(r),if(r.code in 200..299)NexusFeedback.Type.SUCCESS else NexusFeedback.Type.ERROR)}}}.show()
+    }
+    private fun showShare(){NexusFeedback.alert(this,"Compartilhar","Escolha um documento nos Arquivos para compartilhar.",NexusFeedback.Type.INFO)}
+    private fun showNotifications(){NexusFeedback.alert(this,"Notificações","Você está em dia.\nNenhuma notificação nova.",NexusFeedback.Type.INFO)}
+    private fun showComingSoon(name:String){NexusFeedback.toast(this,"$name ficará disponível nesta etapa.",NexusFeedback.Type.INFO)}
+    private fun showDocumentActions(name:String){
+        android.app.AlertDialog.Builder(this).setTitle(name).setItems(arrayOf("Abrir","Editar","Compartilhar","Favoritar","Mover para a lixeira")){_,which->when(which){0->showComingSoon("Abrir");1->navigate("editor");2->showShare();3->showComingSoon("Favoritos");4->confirmTrash(name)}}.show()
+    }
+    private fun confirmTrash(name:String){
+        NexusFeedback.alert(this,"Mover para a lixeira","Deseja mover "$name" para a lixeira?",NexusFeedback.Type.WARNING,"Mover","Cancelar",onPositive={showComingSoon("Lixeira")})
+    }
 
     private fun card(): LinearLayout = LinearLayout(this).vertical().apply {
         background = rounded(panel, 18)
