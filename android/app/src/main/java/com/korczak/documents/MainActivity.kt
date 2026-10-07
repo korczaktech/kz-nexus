@@ -312,6 +312,20 @@ class MainActivity : AppCompatActivity() {
         field.setOnFocusChangeListener { view, focused ->
             val color = if (focused) Color.rgb(15, 68, 103) else Color.rgb(5, 17, 29)
             view.background = rounded(color, 13)
+            view.animate()
+                .scaleX(if (focused) 1.012f else 1f)
+                .scaleY(if (focused) 1.012f else 1f)
+                .setDuration(130L)
+                .start()
+        }
+        field.setOnTouchListener { view, event ->
+            if (event.action == android.view.MotionEvent.ACTION_DOWN) {
+                view.animate().scaleX(0.985f).scaleY(0.985f).setDuration(70L).start()
+            } else if (event.action == android.view.MotionEvent.ACTION_UP ||
+                       event.action == android.view.MotionEvent.ACTION_CANCEL) {
+                view.animate().scaleX(1.012f).scaleY(1.012f).setDuration(110L).start()
+            }
+            false
         }
         return field
     }
