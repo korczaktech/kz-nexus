@@ -36,6 +36,8 @@ class ApiClient(private val session: SessionStore) {
     fun trash()=request("GET","/api/v1/trash")
     fun search(q:String)=request("GET","/api/v1/search?q="+URLEncoder.encode(q,"UTF-8")+"&page=1&page_size=50")
     fun createDocument(n:String,t:String,c:String)=request("POST","/api/v1/documents",JSONObject().put("name",n).put("document_type",t).put("content",c).toString())
+    fun updateDocument(id:String,n:String,c:String)=request("PUT","/api/v1/documents/"+id,JSONObject().put("name",n).put("content",c).toString())
+    fun document(id:String)=request("GET","/api/v1/documents/"+id)
     fun createFolder(n:String)=request("POST","/api/v1/folders",JSONObject().put("name",n).toString())
     fun deleteDocument(id:String)=request("DELETE","/api/v1/documents/"+id)
     fun restoreDocument(id:String)=request("POST","/api/v1/documents/"+id+"/restore","{}")
