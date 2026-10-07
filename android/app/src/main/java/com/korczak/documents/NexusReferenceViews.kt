@@ -55,7 +55,23 @@ internal class NexusStorageRingView(context: Context, private val pct: Int) : Vi
 internal class NexusIconView(context: Context, private val icon:NexusIcon, private val color:Int, private val sizeDp:Int=22) : View(context) {
     private val d=resources.displayMetrics.density
     override fun onDraw(c:Canvas){
-        val target=sizeDp*d;val u=min(width,height).coerceAtMost(target)/24f;val p=Paint(Paint.ANTI_ALIAS_FLAG);p.style=Paint.Style.STROKE;p.strokeWidth=1.7f*u;p.strokeCap=Paint.Cap.ROUND;p.strokeJoin=Paint.Join.ROUND;p.color=color
+        val target=sizeDp*d
+        val u=min(width,height).coerceAtMost(target)/24f
+        val iconSize=24f*u
+        val ox=(width-iconSize)/2f
+        val oy=(height-iconSize)/2f
+        val p=Paint(Paint.ANTI_ALIAS_FLAG)
+        p.style=Paint.Style.STROKE
+        p.strokeWidth=1.7f*u
+        p.strokeCap=Paint.Cap.ROUND
+        p.strokeJoin=Paint.Join.ROUND
+        p.color=color
+        c.save()
+        // Every icon is drawn inside a centered 24dp coordinate box. This prevents
+        // icons from drifting to the top-left or escaping their button when the
+        // parent View is larger than the requested icon size.
+        c.translate(ox,oy)
+        c.clipRect(0f,0f,iconSize,iconSize)
         fun path(block:Path.()->Unit)=c.drawPath(Path().apply(block),p)
         fun mv(x:Float,y:Float)=x*u to y*u
         when(icon){
@@ -73,5 +89,6 @@ internal class NexusIconView(context: Context, private val icon:NexusIcon, priva
             NexusIcon.BELL->{path{moveTo(6*u,17*u);lineTo(6*u,11*u);quadTo(6*u,4*u,18*u,4*u);quadTo(18*u,11*u,18*u,17*u);lineTo(19.5f*u,19*u);lineTo(4.5f*u,19*u);close();moveTo(10*u,21*u);lineTo(14*u,21*u)}}
             NexusIcon.PLUS->{path{moveTo(12*u,4*u);lineTo(12*u,20*u);moveTo(4*u,12*u);lineTo(20*u,12*u)}}
         }
+        c.restore()
     }
 }
