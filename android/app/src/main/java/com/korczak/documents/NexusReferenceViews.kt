@@ -53,7 +53,7 @@ internal class NexusStorageRingView(context: Context, private val pct: Int) : Vi
 internal class NexusIconView(context: Context, private val icon:NexusIcon, private val color:Int, private val sizeDp:Int=22) : View(context) {
     private val d=resources.displayMetrics.density
     override fun onDraw(c:Canvas){
-        val u=min(width,height)/24f;val p=Paint(Paint.ANTI_ALIAS_FLAG);p.style=Paint.Style.STROKE;p.strokeWidth=1.9f*u;p.strokeCap=Paint.Cap.ROUND;p.strokeJoin=Paint.Join.ROUND;p.color=color
+        val target=sizeDp*d;val u=min(width,height).coerceAtMost(target)/24f;val p=Paint(Paint.ANTI_ALIAS_FLAG);p.style=Paint.Style.STROKE;p.strokeWidth=1.7f*u;p.strokeCap=Paint.Cap.ROUND;p.strokeJoin=Paint.Join.ROUND;p.color=color
         fun path(block:Path.()->Unit)=c.drawPath(Path().apply(block),p)
         fun mv(x:Float,y:Float)=x*u to y*u
         when(icon){
