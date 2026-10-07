@@ -1,1146 +1,731 @@
 package com.korczak.documents
 
-import android.app.Activity
 import android.content.Intent
-import android.content.ClipData
-import android.content.ClipboardManager
-import android.content.Context
-import android.print.PrintAttributes
-import android.print.PrintManager
+import android.graphics.Color
+import android.graphics.Typeface
 import android.net.Uri
 import android.os.Bundle
-import android.os.Environment
-import android.webkit.JavascriptInterface
-import android.webkit.ConsoleMessage
-import android.webkit.WebChromeClient
-import android.webkit.WebView
-import android.webkit.WebViewClient
-import android.graphics.Color
-import android.graphics.drawable.GradientDrawable
+import android.os.Handler
+import android.os.Looper
 import android.view.Gravity
 import android.view.View
 import android.view.ViewGroup
-import android.widget.Button
-import android.widget.HorizontalScrollView
-import android.widget.LinearLayout
-import android.widget.FrameLayout
-import android.widget.ImageView
-import android.widget.TextView
-import androidx.core.content.ContextCompat
-import androidx.core.view.ViewCompat
-import androidx.core.view.WindowInsetsCompat
+import android.widget.*
 import androidx.appcompat.app.AppCompatActivity
-import androidx.webkit.WebSettingsCompat
-import androidx.webkit.WebViewCompat
-import androidx.webkit.WebViewFeature
-import androidx.webkit.WebViewAssetLoader
-import androidx.documentfile.provider.DocumentFile
+import androidx.core.view.WindowCompat
 import org.json.JSONArray
 import org.json.JSONObject
 import java.util.concurrent.Executors
 
+/**
+ * Korczak Nexus Android — native implementation.
+ *
+ * This Activity deliberately contains no WebView, HTML, CSS or JavaScript.
+ * Android uses native Views, Kotlin and the existing native API/storage layers.
+ * iOS/PWA and Desktop remain independent implementations.
+ */
 class MainActivity : AppCompatActivity() {
-    private lateinit var web: WebView
-    private lateinit var rootLayout: FrameLayout
-    private lateinit var nativeEditorToolbar: HorizontalScrollView
+    private lateinit var root: LinearLayout
+    private lateinit var content: FrameLayout
+    private lateinit var bottom: LinearLayout
     private lateinit var session: SessionStore
     private lateinit var api: ApiClient
     private lateinit var storage: StorageManager
-    private val pool = Executors.newCachedThreadPool()
-    private val treeRequest = 7001
-    private val fileRequest = 7002
-    private val mediaRequest = 7003
-    private var pendingFileCallback: String? = null
-    private var pendingMediaCallback: String? = null
-    private var pendingCallback: String? = null
-    private var lastHandledDocumentUri: String? = null
-    private var nativeSplash: View? = null
-    private var updateCheckInFlight = false
-    private var lastPromptedUpdateVersion: String? = null
-    private var rendererRecoveryAttempts = 0
-    private val rendererRecoveryReset = Runnable {
-        rendererRecoveryAttempts = 0
-    }
-    private var startupFailed = false
-    private val offline by lazy { OfflineStore(this) }
-    private val mainHandler = android.os.Handler(android.os.Looper.getMainLooper())
-    private val assetLoader by lazy {
-        WebViewAssetLoader.Builder()
-            .addPathHandler("/assets/", WebViewAssetLoader.AssetsPathHandler(this))
-            .build()
-    }
+    private val executor = Executors.newCachedThreadPool()
+    private val main = Handler(Looper.getMainLooper())
+
+    private var currentDocumentId: String? = null
+    private var currentDocumentUri: String? = null
+    private var editorTitle: EditText? = null
+    private var editorBody: EditText? = null
+    private var editorStatus: TextView? = null
+    private var selectedTab = "home"
+    private var registering = false
+
+    private val bg = Color.rgb(3, 9, 20)
+    private val panel = Color.rgb(7, 22, 38)
+    private val panel2 = Color.rgb(9, 29, 48)
+    private val line = Color.rgb(27, 63, 91)
+    private val blue = Color.rgb(41, 156, 255)
+    private val cyan = Color.rgb(83, 200, 255)
+    private val text = Color.rgb(238, 247, 255)
+    private val muted = Color.rgb(143, 168, 192)
+    private val green = Color.rgb(49, 214, 164)
+    private val red = Color.rgb(255, 111, 125)
 
     override fun onCreate(state: Bundle?) {
         super.onCreate(state)
-        try {
-            initializeActivity(state)
-        } catch (error: Throwable) {
-            android.util.Log.e("KorczakNexus", "Falha fatal durante a inicialização da Activity", error)
-            showStartupFailure(error)
-        }
-    }
+        WindowCompat.setDecorFitsSystemWindows(this, true)
+        window.statusBarColor = bg
+        window.navigationBarColor = bg
 
-    private fun initializeActivity(state: Bundle?) {
-        window.statusBarColor = Color.rgb(3, 9, 20)
-        window.navigationBarColor = Color.rgb(3, 9, 20)
-        window.setSoftInputMode(android.view.WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE)
         session = SessionStore(this)
         api = ApiClient(session)
         storage = StorageManager(this)
 
-        rootLayout = FrameLayout(this).apply { setBackgroundColor(Color.rgb(3, 9, 20)) }
-        nativeEditorToolbar = buildNativeEditorToolbar()
-        nativeEditorToolbar.visibility = View.GONE
-        val toolbarLp = FrameLayout.LayoutParams(-1, dp(58)).apply {
-            gravity = Gravity.BOTTOM
-            bottomMargin = dp(78)
-        }
-        rootLayout.addView(nativeEditorToolbar, toolbarLp)
-        web = createConfiguredWebView()
-        rootLayout.addView(web, 0, FrameLayout.LayoutParams(-1, -1))
-        ViewCompat.setOnApplyWindowInsetsListener(rootLayout) { _, insets ->
-            val bars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
-            if (::web.isInitialized) web.setPadding(0, bars.top, 0, bars.bottom)
-            nativeSplash?.setPadding(0, bars.top, 0, bars.bottom)
-            syncSystemInsets()
-            insets
-        }
-        setContentView(rootLayout)
-        showNativeSplash()
-        logWebViewProvider()
-        loadNexusAsset()
-        runCatching { handleFeedbackIntent(intent) }
-        runCatching { handleDocumentIntent(intent) }
-        runCatching { handleShareIntent(intent) }
-        runCatching { offline.prune() }
-        mainHandler.postDelayed({ checkForUpdateIfEnabled() }, 3500)
-        mainHandler.postDelayed({ hideNativeSplash() }, 10000)
-    }
-
-    private fun createConfiguredWebView(): WebView {
-        return WebView(this).apply {
-            settings.javaScriptEnabled = true
-            settings.domStorageEnabled = true
-            settings.allowFileAccess = false
-            settings.allowContentAccess = true
-            settings.allowFileAccessFromFileURLs = false
-            settings.allowUniversalAccessFromFileURLs = false
-            settings.builtInZoomControls = false
-            settings.displayZoomControls = false
-            settings.loadsImagesAutomatically = true
-            settings.mediaPlaybackRequiresUserGesture = true
-            if (android.os.Build.VERSION.SDK_INT >= 26) settings.safeBrowsingEnabled = true
-            runCatching {
-                if (WebViewFeature.isFeatureSupported(WebViewFeature.ALGORITHMIC_DARKENING)) {
-                    WebSettingsCompat.setAlgorithmicDarkeningAllowed(settings, false)
-                }
-            }
-            webViewClient = object : WebViewClient() {
-                override fun shouldInterceptRequest(view: WebView, request: android.webkit.WebResourceRequest): android.webkit.WebResourceResponse? =
-                    assetLoader.shouldInterceptRequest(request.url)
-
-                override fun onPageStarted(view: WebView?, url: String?, favicon: android.graphics.Bitmap?) {
-                    super.onPageStarted(view, url, favicon)
-                    android.util.Log.i("KorczakNexus", "Nexus iniciou carregamento: " + url)
-                }
-
-                override fun onPageFinished(view: WebView?, url: String?) {
-                    super.onPageFinished(view, url)
-                    mainHandler.removeCallbacks(rendererRecoveryReset)
-                    mainHandler.postDelayed(rendererRecoveryReset, 10_000)
-                    syncSystemInsets()
-                    publishNetworkState()
-                    view?.postDelayed({ hideNativeSplash() }, 420)
-                }
-
-                override fun onReceivedError(view: WebView, request: android.webkit.WebResourceRequest, error: android.webkit.WebResourceError) {
-                    super.onReceivedError(view, request, error)
-                    if (request.isForMainFrame) {
-                        android.util.Log.e("KorczakNexus", "Falha ao carregar Nexus: " + error.errorCode + " " + error.description)
-                        showStartupFailureIfNeeded("O Nexus não conseguiu carregar sua interface. Código " + error.errorCode + ".")
-                    }
-                }
-
-                override fun onRenderProcessGone(view: WebView, detail: android.webkit.RenderProcessGoneDetail): Boolean {
-                    android.util.Log.e("KorczakNexus", "WebView renderer encerrado; didCrash=" + detail.didCrash() + ", prioridade=" + detail.rendererPriorityAtExit())
-                    if (isFinishing || isDestroyed) return true
-                    runOnUiThread {
-                        rendererRecoveryAttempts++
-                        mainHandler.removeCallbacks(rendererRecoveryReset)
-                        if (rendererRecoveryAttempts > 2) {
-                            showStartupFailure("O componente WebView do Android encerrou repetidamente. O provider atual é incompatível ou está desatualizado. Atualize o Android System WebView/Chrome e tente novamente.")
-                        } else {
-                            recreateWebView()
-                        }
-                    }
-                    return true
-                }
-            }
-            webChromeClient = object : WebChromeClient() {
-                override fun onConsoleMessage(message: ConsoleMessage): Boolean {
-                    android.util.Log.d("KorczakNexusJS", message.messageLevel().name + ": " + message.message() + " @" + message.sourceId() + ":" + message.lineNumber())
-                    return true
-                }
-            }
-            addJavascriptInterface(Bridge(), "Android")
-        }
-    }
-
-    private fun recreateWebView() {
-        if (isFinishing || isDestroyed) return
-        val old = if (::web.isInitialized) web else null
-        runCatching {
-            old?.let {
-                rootLayout.removeView(it)
-                it.removeJavascriptInterface("Android")
-                it.stopLoading()
-                it.destroy()
-            }
-        }
-        web = createConfiguredWebView()
-        rootLayout.addView(web, 0, FrameLayout.LayoutParams(-1, -1))
-        logWebViewProvider()
-        loadNexusAsset()
-    }
-
-    private fun showStartupFailureIfNeeded(message: String) {
-        if (nativeSplash != null && !startupFailed) showStartupFailure(message)
-    }
-
-    private fun showStartupFailure(error: Throwable) {
-        showStartupFailure(error.message ?: error.javaClass.simpleName)
-    }
-
-    private fun openWebViewUpdate() {
-        val intents = listOf(
-            Intent(Intent.ACTION_VIEW, Uri.parse("market://details?id=com.google.android.webview")),
-            Intent(Intent.ACTION_VIEW, Uri.parse("market://details?id=com.android.chrome")),
-            Intent(Intent.ACTION_VIEW, Uri.parse("https://play.google.com/store/apps/details?id=com.google.android.webview"))
-        )
-        for (intent in intents) {
-            try {
-                startActivity(intent)
-                return
-            } catch (_: Exception) {}
-        }
-        NexusFeedback.alert(
-            this,
-            "Atualização do WebView",
-            "Abra a Play Store e atualize o Android System WebView ou o Google Chrome para a versão mais recente.",
-            NexusFeedback.Type.INFO
-        )
-    }
-
-    private fun showStartupFailure(message: String) {
-        if (startupFailed) return
-        startupFailed = true
-        mainHandler.removeCallbacksAndMessages(null)
-        val view = LinearLayout(this).apply {
-            orientation = LinearLayout.VERTICAL
-            gravity = Gravity.CENTER
-            setPadding(dp(28), dp(24), dp(28), dp(24))
-            setBackgroundColor(Color.rgb(3, 9, 20))
-        }
-        view.addView(TextView(this).apply {
-            text = "Não foi possível iniciar o Nexus"
-            textSize = 20f
-            gravity = Gravity.CENTER
-            setTextColor(Color.WHITE)
-        })
-        view.addView(TextView(this).apply {
-            text = "O aplicativo encontrou um erro durante a inicialização. Nenhum dado foi apagado.\n\n" + message.take(500) + "\n\n" + webViewProviderInfo()
-            textSize = 13f
-            gravity = Gravity.CENTER
-            setTextColor(Color.LTGRAY)
-            setPadding(0, dp(14), 0, dp(18))
-        })
-        view.addView(Button(this).apply {
-            text = "Atualizar WebView"
-            setOnClickListener { openWebViewUpdate() }
-        }, LinearLayout.LayoutParams(-2, -2))
-        view.addView(Button(this).apply {
-            text = "Tentar novamente"
-            setOnClickListener { recreate() }
-        }, LinearLayout.LayoutParams(-2, -2))
-        if (::rootLayout.isInitialized) {
-            rootLayout.removeAllViews()
-            rootLayout.addView(view, FrameLayout.LayoutParams(-1, -1))
+        if (session.token.isNullOrBlank()) {
+            showAuth()
         } else {
-            setContentView(view)
+            showApp()
         }
-    }
-
-    /**
-     * AndroidX WebKit is only the compatibility API layer. The Chromium engine
-     * itself comes from the WebView provider installed on the device.
-     *
-     * Never hard-code or bundle an old Chromium/WebView version here. We always
-     * use the provider selected by Android and expose its exact package/version
-     * in the startup log and diagnostic UI.
-     */
-    private fun webViewProviderInfo(): String {
-        return try {
-            val pkg = WebViewCompat.getCurrentWebViewPackage(this)
-            if (pkg == null) {
-                "Provider do WebView não encontrado. Instale/ative o Android System WebView ou Chrome."
-            } else {
-                val packageName = pkg.packageName ?: "desconhecido"
-                val versionName = pkg.versionName ?: "desconhecida"
-                "WebView: " + packageName + " " + versionName
-            }
-        } catch (error: Throwable) {
-            android.util.Log.w("KorczakNexus", "Falha ao consultar o provider do WebView", error)
-            "Não foi possível consultar o provider do WebView."
-        }
-    }
-
-    private fun logWebViewProvider() {
-        val info = webViewProviderInfo()
-        android.util.Log.i("KorczakNexus", info)
-    }
-
-    private fun loadNexusAsset() {
-        if (!::web.isInitialized) return
-        runCatching {
-            web.loadUrl("https://appassets.androidplatform.net/assets/index.html")
-        }.onFailure {
-            android.util.Log.e("KorczakNexus", "Falha ao carregar o shell local do Nexus", it)
-            showStartupFailure(it)
-        }
-    }
-
-    private fun createWebViewAndLoad() = recreateWebView()
-
-    private fun checkForUpdateIfEnabled() {
-        if (updateCheckInFlight || isFinishing || isDestroyed) return
-        val prefs = getSharedPreferences("nexus_settings", MODE_PRIVATE)
-        if (!prefs.getBoolean("autoUpdate", true)) return
-        updateCheckInFlight = true
-        Updater(this).check { result ->
-            updateCheckInFlight = false
-            if (!result.startsWith("update|")) return@check
-            val parts = result.split("|", limit = 4)
-            if (parts.getOrElse(1) { "" } == lastPromptedUpdateVersion) return@check
-            lastPromptedUpdateVersion = parts.getOrElse(1) { "" }
-            runOnUiThread {
-                NexusFeedback.alert(
-                    this,
-                    "Atualização disponível",
-                    "Korczak Nexus " + parts.getOrElse(1) { "" } + " está disponível. Deseja instalar?",
-                    NexusFeedback.Type.INFO,
-                    "Instalar",
-                    "Depois",
-                    onPositive = {
-                        Updater(this).install(parts.getOrElse(2) { "" }, parts.getOrElse(3) { "" }) { status ->
-                            if (status.startsWith("failed|")) {
-                                runOnUiThread {
-                                    NexusFeedback.alert(
-                                        this,
-                                        "Falha na atualização",
-                                        status.removePrefix("failed|"),
-                                        NexusFeedback.Type.ERROR
-                                    )
-                                }
-                            }
-                        }
-                    }
-                )
-            }
-        }
-    }
-
-    private fun dp(value: Int): Int = (value * resources.displayMetrics.density).toInt().coerceAtLeast(1)
-
-    private fun toolbarButton(label: String, action: String, accent: Boolean = false): Button {
-        return Button(this).apply {
-            text = label
-            isAllCaps = false
-            textSize = 12f
-            setTextColor(Color.WHITE)
-            minWidth = dp(if (label.length > 7) 82 else 52)
-            minimumHeight = dp(46)
-            setPadding(dp(10), 0, dp(10), 0)
-            background = GradientDrawable().apply {
-                cornerRadius = dp(11).toFloat()
-                setStroke(dp(1), if (accent) Color.rgb(24, 139, 229) else Color.rgb(35, 77, 107))
-                setColor(if (accent) Color.rgb(8, 93, 177) else Color.rgb(9, 31, 49))
-            }
-            setOnClickListener {
-                if (action == "save") {
-                    web.evaluateJavascript("window.saveEditor && window.saveEditor()", null)
-                } else {
-                    val js = when (action) {
-                        "undo" -> "undo()"
-                        "redo" -> "redo()"
-                        "bold" -> "editorCmd('bold')"
-                        "italic" -> "editorCmd('italic')"
-                        "underline" -> "editorCmd('underline')"
-                        "strike" -> "editorCmd('strikeThrough')"
-                        "h1" -> "editorCmd('formatBlock','H1')"
-                        "h2" -> "editorCmd('formatBlock','H2')"
-                        "list" -> "editorCmd('insertUnorderedList')"
-                        "numbers" -> "editorCmd('insertOrderedList')"
-                        "left" -> "editorCmd('justifyLeft')"
-                        "center" -> "editorCmd('justifyCenter')"
-                        "right" -> "editorCmd('justifyRight')"
-                        "justify" -> "editorCmd('justifyFull')"
-                        "indent" -> "editorCmd('indent')"
-                        "outdent" -> "editorCmd('outdent')"
-                        "clear" -> "editorCmd('removeFormat')"
-                        "link" -> "addLink()"
-                        "image" -> "insertImage()"
-                        "table" -> "insertTable()"
-                        "check" -> "insertCheck()"
-                        "quote" -> "insertQuote()"
-                        "layout" -> "layoutPanel()"
-                        "find" -> "findReplace()"
-                        "versions" -> "versionsPanel()"
-                        "stats" -> "stats()"
-                        "export" -> "exportDoc()"
-                        "zoomout" -> "setZoom(ES.zoom-10)"
-                        "zoomin" -> "setZoom(ES.zoom+10)"
-                        "focus" -> "document.body.classList.toggle('nx-focus')"
-                        "reading" -> "document.body.classList.toggle('nx-reading')"
-                        else -> ""
-                    }
-                    if (js.isNotBlank()) web.evaluateJavascript(
-                        "(function(){var p=document.getElementById('page');if(p)p.focus();$js;document.dispatchEvent(new Event('input'))})()",
-                        null
-                    )
-                }
-            }
-        }
-    }
-
-    private fun buildNativeEditorToolbar(): HorizontalScrollView {
-        val row = LinearLayout(this).apply {
-            orientation = LinearLayout.HORIZONTAL
-            gravity = Gravity.CENTER_VERTICAL
-            setPadding(dp(8), dp(6), dp(8), dp(6))
-            background = GradientDrawable().apply {
-                setColor(Color.rgb(6, 19, 33))
-                setStroke(dp(1), Color.rgb(25, 59, 88))
-            }
-        }
-        val buttons = listOf(
-            "↶" to "undo", "↷" to "redo", "B" to "bold", "I" to "italic", "U" to "underline",
-            "S̶" to "strike", "H1" to "h1", "H2" to "h2", "Lista" to "list", "1." to "numbers",
-            "Esq." to "left", "Centro" to "center", "Dir." to "right", "Just." to "justify",
-            "Recuar" to "indent", "Voltar" to "outdent", "Limpar" to "clear",
-            "Link" to "link", "Imagem" to "image", "Tabela" to "table", "Checklist" to "check",
-            "Citação" to "quote", "Layout" to "layout", "Buscar" to "find", "Versões" to "versions",
-            "Stats" to "stats", "− Zoom" to "zoomout", "+ Zoom" to "zoomin", "Foco" to "focus",
-            "Leitura" to "reading", "Salvar" to "save"
-        )
-        buttons.forEach { (label, action) ->
-            val lp = LinearLayout.LayoutParams(-2, -1).apply { marginEnd = dp(6) }
-            row.addView(toolbarButton(label, action, action == "save"), lp)
-        }
-        return HorizontalScrollView(this).apply {
-            isHorizontalScrollBarEnabled = false
-            setBackgroundColor(Color.rgb(6, 19, 33))
-            addView(row, ViewGroup.LayoutParams(-2, -1))
-        }
-    }
-
-    private fun setNativeEditorMode(visible: Boolean) {
-        runOnUiThread {
-            if (!::nativeEditorToolbar.isInitialized) return@runOnUiThread
-            nativeEditorToolbar.visibility = if (visible) View.VISIBLE else View.GONE
-        }
-    }
-
-    // Android storage permissions are requested only when a feature explicitly needs them.
-
-    private fun showNativeSplash() {
-        if (nativeSplash != null) return
-        val root = LinearLayout(this).apply {
-            orientation = LinearLayout.VERTICAL
-            gravity = Gravity.CENTER
-            setPadding(dp(24), 0, dp(24), 0)
-            setBackgroundColor(Color.rgb(3, 9, 20))
-        }
-        val icon = ImageView(this).apply {
-            setImageDrawable(ContextCompat.getDrawable(this@MainActivity, R.drawable.ic_kz))
-            scaleType = ImageView.ScaleType.CENTER_INSIDE
-        }
-        root.addView(icon, LinearLayout.LayoutParams(dp(108), dp(108)))
-        root.addView(TextView(this).apply {
-            text = "KORCZAK NEXUS"
-            textSize = 17f
-            gravity = Gravity.CENTER
-            setTextColor(Color.WHITE)
-            letterSpacing = 0.16f
-            setPadding(0, dp(14), 0, 0)
-        }, LinearLayout.LayoutParams(-1, -2))
-        root.addView(TextView(this).apply {
-            text = "DOCUMENTS"
-            textSize = 10f
-            gravity = Gravity.CENTER
-            setTextColor(Color.rgb(83, 200, 255))
-            letterSpacing = 0.38f
-            setPadding(0, dp(4), 0, 0)
-        }, LinearLayout.LayoutParams(-1, -2))
-        nativeSplash = root
-        rootLayout.addView(root, FrameLayout.LayoutParams(-1, -1))
-    }
-
-    private fun hideNativeSplash() {
-        val splash = nativeSplash ?: return
-        nativeSplash = null
-        splash.animate().alpha(0f).setDuration(180).withEndAction {
-            rootLayout.removeView(splash)
-        }.start()
-    }
-
-    private fun syncSystemInsets() {
-        if (!::web.isInitialized) return
-        val top = web.paddingTop
-        val bottom = web.paddingBottom
-        val js = "(function(){document.documentElement.style.setProperty('--nx-native-top-inset','" +
-            top + "px');document.documentElement.style.setProperty('--nx-native-bottom-inset','" +
-            bottom + "px');})();"
-        web.evaluateJavascript(js, null)
+        handleIntent(intent)
     }
 
     override fun onNewIntent(intent: Intent?) {
         super.onNewIntent(intent)
         setIntent(intent)
-        handleFeedbackIntent(intent)
-        handleDocumentIntent(intent)
-        handleShareIntent(intent)
-    }
-
-    private fun handleShareIntent(intent: Intent?) {
-        if (intent?.action != Intent.ACTION_SEND) return
-        val uri = intent.getParcelableExtra<Uri>(Intent.EXTRA_STREAM)
-        val text = intent.getStringExtra(Intent.EXTRA_TEXT)
-        if (uri != null) {
-            try { contentResolver.takePersistableUriPermission(uri, Intent.FLAG_GRANT_READ_URI_PERMISSION) } catch (_: Exception) {}
-            web.postDelayed({
-                val name = DocumentFile.fromSingleUri(this, uri)?.name ?: "Arquivo compartilhado"
-                val js = "window.openExisting && window.openExisting(" + JSONObject.quote(uri.toString()) + "," + JSONObject.quote(name) + ")"
-                web.evaluateJavascript(js, null)
-            }, 650)
-        }
-        if (!text.isNullOrBlank()) {
-            web.postDelayed({
-                web.evaluateJavascript("(window.openCreateFromText&&window.openCreateFromText(" + JSONObject.quote(text) + "))", null)
-            }, 750)
-        }
-    }
-
-    /**
-     * Recebe arquivos enviados pelo seletor "Abrir com..." / "Editar com...".
-     * O Android entrega uma content:// URI com uma permissão temporária de leitura.
-     */
-    private fun handleDocumentIntent(intent: Intent?) {
-        val action = intent?.action ?: return
-        if (action != Intent.ACTION_VIEW && action != Intent.ACTION_EDIT) return
-        val uri = intent.data ?: return
-        if (lastHandledDocumentUri == uri.toString()) return
-        lastHandledDocumentUri = uri.toString()
-
-        try {
-            val document = DocumentFile.fromSingleUri(this, uri)
-            val name = document?.name ?: "Documento"
-            val flags = intent.flags and (Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION)
-            if (flags != 0) {
-                try {
-                    contentResolver.takePersistableUriPermission(uri, flags)
-                } catch (_: Exception) {
-                    // Nem todo provider oferece permissão persistente; a permissão temporária continua válida.
-                }
-            }
-
-            web.postDelayed({
-                val js = "window.openExisting && window.openExisting(" +
-                    JSONObject.quote(uri.toString()) + "," +
-                    JSONObject.quote(name) +
-                    ")"
-                web.evaluateJavascript(js, null)
-            }, 900)
-        } catch (e: Exception) {
-            NexusFeedback.snackbar(this, e.message ?: "Não foi possível abrir o documento.", NexusFeedback.Type.ERROR)
-        }
-    }
-
-    private fun handleFeedbackIntent(intent: Intent?) {
-        val type = intent?.getStringExtra("nexus_feedback_type") ?: return
-        val message = intent.getStringExtra("nexus_feedback_message") ?: return
-        val title = intent.getStringExtra("nexus_feedback_title") ?: "Nexus"
-        when (type) {
-            "success" -> NexusFeedback.toast(this, message, NexusFeedback.Type.SUCCESS)
-            "error" -> NexusFeedback.alert(this, title, message, NexusFeedback.Type.ERROR)
-            "warning" -> NexusFeedback.snackbar(this, message, NexusFeedback.Type.WARNING)
-            else -> NexusFeedback.toast(this, message, NexusFeedback.Type.INFO)
-        }
-        intent.removeExtra("nexus_feedback_type")
-        intent.removeExtra("nexus_feedback_message")
-        intent.removeExtra("nexus_feedback_title")
-    }
-
-    @Suppress("DEPRECATION")
-    override fun onBackPressed() {
-        if (::web.isInitialized) {
-            web.evaluateJavascript("(window.handleBack && window.handleBack())", null)
-        } else {
-            super.onBackPressed()
-        }
-    }
-
-    override fun onTrimMemory(level: Int) {
-        super.onTrimMemory(level)
-        // Não limpar histórico, matches ou memória do WebView manualmente.
-        // O editor pode estar mantendo DOM, seleção e conteúdo em edição; destruir
-        // essas estruturas sob pressão de memória causa perdas de estado e instabilidade.
-        if (::web.isInitialized && !isFinishing && !isDestroyed) {
-            web.evaluateJavascript(
-                "(function(){if(window.dispatchEvent)window.dispatchEvent(new Event('nexusMemoryPressure'))})()",
-                null
-            )
-        }
-    }
-
-    private fun publishNetworkState() {
-        if (!::web.isInitialized) return
-        val state = offline.networkState()
-        web.evaluateJavascript("(function(){window.dispatchEvent(new CustomEvent('nexusNetworkState',{detail:" + JSONObject.quote(state.toString()) + "}));})()", null)
+        handleIntent(intent)
     }
 
     override fun onResume() {
         super.onResume()
-        handleDocumentIntent(intent)
-        handleShareIntent(intent)
-        if (::web.isInitialized) {
-            web.postDelayed({ checkForUpdateIfEnabled() }, 1500)
-        }
-        if (::web.isInitialized) {
-            web.postDelayed({ publishNetworkState() }, 250)
-            web.postDelayed({
-                web.evaluateJavascript("window.__nativeStorageRefresh && window.__nativeStorageRefresh()", null)
-            }, 350)
+        if (::session.isInitialized && !session.token.isNullOrBlank()) {
+            Updater(this).resumePending()
+            main.postDelayed({ checkForUpdate() }, 1200)
         }
     }
 
-    inner class Bridge {
-        @JavascriptInterface
-        fun call(action: String, payload: String, callback: String) {
-            pool.execute {
-                try {
-                    val p = JSONObject(payload)
-                    when (action) {
-                        "networkState" -> respond(callback, offline.networkState())
-                        "offlineQueue" -> respond(callback, offline.queueSnapshot())
-                        "queueWrite" -> {
-                            val id = offline.enqueue(p.optString("uri"), p.optString("name"), p.optString("content"))
-                            respond(callback, JSONObject().put("ok", true).put("id", id))
-                        }
-                        "removeQueuedWrite" -> {
-                            offline.remove(p.optString("id"))
-                            respond(callback, JSONObject().put("ok", true))
-                        }
+    private fun handleIntent(intent: Intent?) {
+        intent ?: return
+        when (intent.action) {
+            Intent.ACTION_SEND, Intent.ACTION_VIEW, Intent.ACTION_EDIT -> {
+                val uri = intent.data ?: intent.getParcelableExtra(Intent.EXTRA_STREAM)
+                if (uri != null && session.token != null) {
+                    main.postDelayed({ openExternalDocument(uri) }, 500)
+                }
+            }
+        }
+    }
 
-                        "editorMode" -> {
-                            setNativeEditorMode(p.optBoolean("visible", false))
-                            respond(callback, JSONObject().put("ok", true))
-                        }
+    private fun showAuth() {
+        root = LinearLayout(this).vertical().apply {
+            setBackgroundColor(bg)
+            gravity = Gravity.CENTER
+            setPadding(dp(24), dp(28), dp(24), dp(28))
+        }
+        val scroll = ScrollView(this)
+        val card = LinearLayout(this).vertical().apply {
+            gravity = Gravity.CENTER_HORIZONTAL
+            background = rounded(panel, 24)
+            setPadding(dp(24), dp(28), dp(24), dp(26))
+        }
+        val logo = ImageView(this).apply {
+            setImageResource(com.korczak.documents.R.drawable.ic_kz)
+            scaleType = ImageView.ScaleType.CENTER_INSIDE
+        }
+        card.addView(logo, LinearLayout.LayoutParams(dp(76), dp(76)).apply { bottomMargin = dp(10) })
+        card.addView(label("KORCZAK NEXUS", 20f, text, true).apply { gravity = Gravity.CENTER })
+        card.addView(label(if (registering) "Crie sua conta" else "Entre no seu espaço", 13f, muted).apply {
+            gravity = Gravity.CENTER
+            setPadding(0, dp(6), 0, dp(20))
+        })
 
-                        "session" -> {
-                            val result =
-                                if (session.token != null && session.userJson != null)
-                                    JSONObject().put("ok", true).put("user", JSONObject(session.userJson!!))
-                                else JSONObject().put("ok", false)
-                            respond(callback, result)
-                        }
+        val name = input("Nome completo")
+        name.visibility = if (registering) View.VISIBLE else View.GONE
+        val email = input("E-mail")
+        val password = input("Senha").apply { inputType = 0x00000081 }
+        card.addView(name, lp())
+        card.addView(email, lp())
+        card.addView(password, lp())
 
-                        "validateSession" -> {
-                            if (session.token == null) {
-                                respond(callback, JSONObject().put("ok", false).put("error", "Sessão ausente"))
-                            } else {
-                                val response = api.me()
-                                if (response.code in 200..299) {
-                                    try {
-                                        val user = JSONObject(response.body)
-                                        session.userJson = user.toString()
-                                        respond(callback, JSONObject().put("ok", true).put("user", user))
-                                    } catch (_: Exception) {
-                                        respond(callback, JSONObject().put("ok", false).put("error", "Resposta de sessão inválida"))
-                                    }
-                                } else {
-                                    if (response.code == 401) session.clear()
-                                    respond(callback, JSONObject().put("ok", false).put("status", response.code).put("error", api.errorMessage(response)))
-                                }
+        val submit = button(if (registering) "Criar conta" else "Entrar", true)
+        card.addView(submit, lp(top = 8))
+        val toggle = button(if (registering) "Já tenho uma conta" else "Criar uma conta", false)
+        card.addView(toggle, lp(top = 8))
+        val offline = label("Armazenamento local funciona sem conta após selecionar uma pasta.", 11f, muted).apply {
+            gravity = Gravity.CENTER
+            setPadding(dp(8), dp(18), dp(8), 0)
+        }
+        card.addView(offline, lp())
+
+        toggle.setOnClickListener {
+            registering = !registering
+            showAuth()
+        }
+        submit.setOnClickListener {
+            val e = email.text.toString().trim()
+            val p = password.text.toString()
+            if (e.isBlank() || p.isBlank() || (registering && name.text.toString().trim().isBlank())) {
+                NexusFeedback.toast(this, "Preencha os campos obrigatórios.", NexusFeedback.Type.WARNING)
+                return@setOnClickListener
+            }
+            submit.isEnabled = false
+            submit.text = if (registering) "Criando..." else "Entrando..."
+            executor.execute {
+                val result = if (registering) {
+                    api.register(name.text.toString().trim(), e, p)
+                } else {
+                    api.login(e, p)
+                }
+                main.post {
+                    submit.isEnabled = true
+                    submit.text = if (registering) "Criar conta" else "Entrar"
+                    if (result.code in 200..299) {
+                        try {
+                            if (!registering) api.saveSession(result)
+                            else {
+                                val login = api.login(e, p)
+                                if (login.code !in 200..299) throw IllegalStateException("Conta criada. Faça login para continuar.")
+                                api.saveSession(login)
                             }
+                            showApp()
+                        } catch (err: Exception) {
+                            NexusFeedback.alert(this, "Não foi possível entrar", err.message ?: "Resposta inválida da API", NexusFeedback.Type.ERROR)
                         }
-
-                        "appInfo" -> {
-                            val info = packageManager.getPackageInfo(packageName, 0)
-                            respond(
-                                callback,
-                                JSONObject()
-                                    .put("ok", true)
-                                    .put("versionName", info.versionName ?: "—")
-                                    .put("versionCode", if (android.os.Build.VERSION.SDK_INT >= 28) info.longVersionCode else info.versionCode)
-                            )
-                        }
-
-                        "api" -> {
-                            val response = api.request(
-                                p.optString("method", "GET"),
-                                p.optString("path"),
-                                p.optString("body").takeIf { it.isNotEmpty() }
-                            )
-                            if (response.code in 200..299 &&
-                                (p.optString("path") == "/api/v1/auth/login" ||
-                                 p.optString("path") == "/api/v1/auth/register")
-                            ) api.saveSession(response)
-
-                            val data: Any = when {
-                                response.body.isBlank() -> JSONObject()
-                                response.body.trimStart().startsWith("{") -> JSONObject(response.body)
-                                response.body.trimStart().startsWith("[") -> JSONArray(response.body)
-                                else -> response.body
-                            }
-
-                            respond(
-                                callback,
-                                JSONObject()
-                                    .put("ok", response.code in 200..299)
-                                    .put("status", response.code)
-                                    .put("data", data)
-                                    .put("error", if (response.code in 200..299) "" else api.errorMessage(response))
-                            )
-                        }
-
-                        "logout" -> {
-                            api.logout()
-                            session.clear()
-                            respond(callback, JSONObject().put("ok", true))
-                        }
-
-                        "confirmExit" -> runOnUiThread {
-                            NexusFeedback.alert(
-                                this@MainActivity,
-                                "Sair do Nexus",
-                                "Deseja fechar o aplicativo agora?",
-                                NexusFeedback.Type.WARNING,
-                                "Sair",
-                                "Cancelar",
-                                onPositive = {
-                                    finishAndRemoveTask()
-                                }
-                            )
-                            respondJs(callback, JSONObject().put("ok", true))
-                        }
-
-                        "exitApp" -> runOnUiThread {
-                            finishAndRemoveTask()
-                            respondJs(callback, JSONObject().put("ok", true))
-                        }
-
-                        "setSetting" -> {
-                            val key = p.optString("key")
-                            val value = p.optBoolean("value")
-                            getSharedPreferences("nexus_settings", MODE_PRIVATE).edit().putBoolean(key, value).apply()
-                            respond(callback, JSONObject().put("ok", true))
-                        }
-
-                        "storageInfo", "listFiles" -> {
-                            val result = storage.deviceStorage().put("files", storage.listFiles())
-                            respond(callback, JSONObject().put("ok", true).put("label", storage.label()).put("files", storage.listFiles()).put("total", result.optLong("total")).put("available", result.optLong("available")).put("used", result.optLong("used")).put("allFiles", result.optBoolean("allFiles")).put("documentStats", result.optJSONObject("documentStats") ?: JSONObject()))
-                        }
-
-                        "requestStorage" -> runOnUiThread {
-                            pendingCallback = callback
-                            val intent = Intent(Intent.ACTION_OPEN_DOCUMENT_TREE)
-                                .addFlags(
-                                    Intent.FLAG_GRANT_READ_URI_PERMISSION or
-                                    Intent.FLAG_GRANT_WRITE_URI_PERMISSION or
-                                    Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION
-                                )
-                            startActivityForResult(intent, treeRequest)
-                        }
-
-                        "readFile" -> {
-                            try {
-                                val content = storage.read(p.getString("uri"))
-                                respond(callback, JSONObject().put("ok", true).put("content", content))
-                            } catch (error: Exception) {
-                                respond(callback, JSONObject().put("ok", false).put("error", error.message ?: "Não foi possível ler este arquivo."))
-                            }
-                        }
-
-                        "rootFolder" -> {
-                            val root = storage.savedTree()
-                            respond(
-                                callback,
-                                JSONObject()
-                                    .put("ok", root != null)
-                                    .put("uri", root?.toString() ?: "")
-                                    .put("name", storage.label())
-                                    .put("error", if (root != null) "" else "Escolha um armazenamento antes de salvar")
-                            )
-                        }
-
-                        "listFolders" -> {
-                            respond(
-                                callback,
-                                JSONObject().put("ok", true).put(
-                                    "folders",
-                                    storage.listFolders(p.optString("uri").takeIf { it.isNotBlank() })
-                                )
-                            )
-                        }
-
-                        "writeFile" -> {
-                            val folderUri = p.optString("folderUri")
-                            val name = p.optString("name", "Novo documento.kz-nexus")
-                            val content = p.optString("content")
-                            val result = if (folderUri.isNotBlank()) {
-                                storage.saveInFolder(folderUri, name, content)
-                            } else {
-                                storage.write(p.optString("uri"), name, content)
-                            }
-                            if (!result.first && !offline.networkState().optBoolean("online")) {
-                                val id = offline.enqueue(p.optString("uri"), name, content)
-                                respond(callback, JSONObject().put("ok", true).put("queued", true).put("queueId", id).put("uri", result.second ?: "").put("error", "Sem conexão. Alteração preservada localmente."))
-                            } else {
-                                respond(callback, JSONObject().put("ok", result.first).put("uri", result.second ?: "").put("error", if (result.first) "" else "Não foi possível salvar nesta pasta"))
-                            }
-                        }
-
-                        "createFolder" -> {
-                            val ok = storage.createFolder(p.optString("name", "Nova pasta"))
-                            respond(
-                                callback,
-                                JSONObject().put("ok", ok).put("error", if (ok) "" else "Selecione um armazenamento")
-                            )
-                        }
-
-                        "renameFile" -> {
-                            val ok = storage.rename(p.optString("uri"), p.optString("name", "Arquivo"))
-                            respond(callback, JSONObject().put("ok", ok).put("error", if (ok) "" else "Não foi possível renomear o arquivo"))
-                        }
-
-                        "deleteFile" -> {
-                            val ok = storage.delete(p.optString("uri"))
-                            respond(callback, JSONObject().put("ok", ok).put("error", if (ok) "" else "Não foi possível excluir o arquivo"))
-                        }
-
-                        "trashFile" -> {
-                            respond(callback, storage.trash(p.optString("uri")))
-                        }
-
-                        "listTrash" -> {
-                            respond(callback, JSONObject().put("ok", true).put("files", storage.listTrash()))
-                        }
-
-                        "restoreTrash" -> {
-                            respond(callback, storage.restoreTrash(p.optString("uri")))
-                        }
-
-                        "permanentDeleteTrash" -> {
-                            val ok = storage.permanentDeleteTrash(p.optString("uri"))
-                            respond(callback, JSONObject().put("ok", ok).put("error", if (ok) "" else "Não foi possível excluir definitivamente"))
-                        }
-
-                        "fileInfo" -> {
-                            try { respond(callback, JSONObject().put("ok", true).put("info", storage.fileInfo(p.optString("uri")))) }
-                            catch (e: Exception) { respond(callback, JSONObject().put("ok", false).put("error", e.message ?: "Não foi possível obter informações")) }
-                        }
-
-                        "copyFile" -> {
-                            val result = storage.copy(p.optString("uri"), p.optString("folderUri"), p.optString("name"))
-                            respond(callback, JSONObject().put("ok", result.first).put("uri", result.second ?: "").put("error", if (result.first) "" else "Não foi possível copiar o arquivo"))
-                        }
-
-                        "zipFiles" -> {
-                            val result = storage.zipFiles(p.optJSONArray("uris") ?: JSONArray(), p.optString("folderUri"), p.optString("name", "Nexus-Arquivo"))
-                            respond(callback, JSONObject().put("ok", result.first).put("uri", result.second ?: "").put("error", if (result.first) "" else "Não foi possível criar o ZIP"))
-                        }
-
-                        "shareText" -> runOnUiThread {
-                            val text = p.optString("text")
-                            val send = Intent(Intent.ACTION_SEND).apply {
-                                type = p.optString("mime", "text/plain")
-                                putExtra(Intent.EXTRA_TEXT, text)
-                            }
-                            try {
-                                startActivity(Intent.createChooser(send, p.optString("title", "Compartilhar pelo Nexus")))
-                                respond(callback, JSONObject().put("ok", true))
-                            } catch (e: Exception) {
-                                respond(callback, JSONObject().put("ok", false).put("error", e.message ?: "Nenhum aplicativo de compartilhamento disponível"))
-                            }
-                        }
-
-                        "copyText" -> {
-                            val clipboard = getSystemService(CLIPBOARD_SERVICE) as android.content.ClipboardManager
-                            clipboard.setPrimaryClip(android.content.ClipData.newPlainText("Nexus", p.optString("text")))
-                            respond(callback, JSONObject().put("ok", true))
-                        }
-
-                        "openLocation" -> runOnUiThread {
-                            try {
-                                val uri = Uri.parse(p.optString("uri"))
-                                val intent = Intent(Intent.ACTION_VIEW).apply {
-                                    data = uri
-                                    addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-                                }
-                                startActivity(intent)
-                                respond(callback, JSONObject().put("ok", true))
-                            } catch (e: Exception) {
-                                respond(callback, JSONObject().put("ok", false).put("error", e.message ?: "Não foi possível abrir o local"))
-                            }
-                        }
-
-                        "openFile" -> runOnUiThread {
-                            try {
-                                val uri = Uri.parse(p.getString("uri"))
-                                val document = DocumentFile.fromSingleUri(this@MainActivity, uri)
-                                val mime = document?.type?.takeIf { it.isNotBlank() } ?: "*/*"
-                                val intent = Intent(Intent.ACTION_VIEW).apply {
-                                    setDataAndType(uri, mime)
-                                    addCategory(Intent.CATEGORY_DEFAULT)
-                                    addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-                                    clipData = android.content.ClipData.newRawUri("Nexus", uri)
-                                }
-                                startActivity(intent)
-                                respond(callback, JSONObject().put("ok", true))
-                            } catch (error: Exception) {
-                                respond(callback, JSONObject().put("ok", false).put("error", error.message ?: "Nenhum aplicativo compatível pode abrir este arquivo."))
-                            }
-                        }
-
-                        "clipboardSet" -> {
-                            val text = p.optString("text")
-                            val clipboard = getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-                            clipboard.setPrimaryClip(ClipData.newPlainText("Korczak Nexus", text))
-                            respond(callback, JSONObject().put("ok", true))
-                        }
-
-                        "clipboardGet" -> {
-                            val clipboard = getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-                            val text = if (clipboard.hasPrimaryClip()) clipboard.primaryClip?.getItemAt(0)?.coerceToText(this@MainActivity)?.toString() ?: "" else ""
-                            respond(callback, JSONObject().put("ok", true).put("text", text))
-                        }
-
-                        "printEditor" -> runOnUiThread {
-                            try {
-                                val printManager = getSystemService(Context.PRINT_SERVICE) as PrintManager
-                                val adapter = web.createPrintDocumentAdapter("Korczak Nexus - " + (p.optString("name").ifBlank { "Documento" }))
-                                val paper = when (p.optString("paper", "A4").uppercase()) {
-                                    "A3" -> PrintAttributes.MediaSize.ISO_A3
-                                    "A5" -> PrintAttributes.MediaSize.ISO_A5
-                                    "LETTER" -> PrintAttributes.MediaSize.NA_LETTER
-                                    "LEGAL" -> PrintAttributes.MediaSize.NA_LEGAL
-                                    else -> PrintAttributes.MediaSize.ISO_A4
-                                }
-                                val landscape = p.optString("orientation", "portrait").equals("landscape", ignoreCase = true)
-                                val builder = PrintAttributes.Builder()
-                                    .setMediaSize(if (landscape) paper.asLandscape() else paper)
-                                    .setMinMargins(PrintAttributes.Margins.NO_MARGINS)
-                                if (android.os.Build.VERSION.SDK_INT >= 23) {
-                                    builder.setColorMode(
-                                        if (p.optBoolean("color", true)) PrintAttributes.COLOR_MODE_COLOR else PrintAttributes.COLOR_MODE_MONOCHROME
-                                    )
-                                    if (p.optBoolean("duplex", false)) {
-                                        builder.setDuplexMode(PrintAttributes.DUPLEX_MODE_LONG_EDGE)
-                                    }
-                                }
-                                printManager.print("Korczak Nexus", adapter, builder.build())
-                                respond(callback, JSONObject().put("ok", true))
-                            } catch (error: Exception) {
-                                respond(callback, JSONObject().put("ok", false).put("error", error.message ?: "Não foi possível abrir a impressão"))
-                            }
-                        }
-
-                        "pickFile" -> runOnUiThread {
-                            pendingFileCallback = callback
-                            val intent = Intent(Intent.ACTION_OPEN_DOCUMENT)
-                                .setType("*/*")
-                                .addCategory(Intent.CATEGORY_OPENABLE)
-                                .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-                            startActivityForResult(intent, fileRequest)
-                        }
-
-                        "pickMedia" -> runOnUiThread {
-                            pendingMediaCallback = callback
-                            val mime = p.optString("mime", "*/*").ifBlank { "*/*" }
-                            val intent = Intent(Intent.ACTION_OPEN_DOCUMENT)
-                                .setType(mime)
-                                .addCategory(Intent.CATEGORY_OPENABLE)
-                                .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-                            startActivityForResult(intent, mediaRequest)
-                        }
-
-                        "pickStorage" -> runOnUiThread {
-                            pendingCallback = callback
-                            val intent = Intent(Intent.ACTION_OPEN_DOCUMENT_TREE)
-                                .addFlags(
-                                    Intent.FLAG_GRANT_READ_URI_PERMISSION or
-                                    Intent.FLAG_GRANT_WRITE_URI_PERMISSION or
-                                    Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION
-                                )
-                            startActivityForResult(intent, treeRequest)
-                        }
-
-                        "installUpdate" -> {
-                            val url = p.optString("url")
-                            val digest = p.optString("digest")
-                            if (url.isBlank()) {
-                                respond(callback, JSONObject().put("ok", false).put("error", "URL da atualização não encontrada"))
-                            } else {
-                                Updater(this@MainActivity).install(url, digest) { result ->
-                                    val response = when {
-                                        result == "permission_install" -> JSONObject().put("ok", true).put("permission", true)
-                                        result == "installer" -> JSONObject().put("ok", true).put("message", "Instalação entregue ao Android")
-                                        result.startsWith("failed|") -> JSONObject().put("ok", false).put("error", result.removePrefix("failed|"))
-                                        else -> JSONObject().put("ok", false).put("error", "Não foi possível iniciar a atualização")
-                                    }
-                                    respond(callback, response)
-                                }
-                            }
-                        }
-
-                        "checkUpdate" -> Updater(this@MainActivity).check { result ->
-                            when {
-                                result.startsWith("update|") -> {
-                                    val parts = result.split("|", limit = 4)
-                                    respond(
-                                        callback,
-                                        JSONObject()
-                                            .put("ok", true)
-                                            .put("updateAvailable", true)
-                                            .put("version", parts.getOrElse(1) { "" })
-                                            .put("url", parts.getOrElse(2) { "" })
-                                            .put("digest", parts.getOrElse(3) { "" })
-                                            .put("message", "Atualização disponível: " + parts.getOrElse(1) { "" })
-                                    )
-                                }
-                                result == "up_to_date" -> respond(
-                                    callback,
-                                    JSONObject().put("ok", true).put("updateAvailable", false).put("message", "O aplicativo já está atualizado.")
-                                )
-                                result.startsWith("failed|") -> respond(
-                                    callback,
-                                    JSONObject().put("ok", false).put("updateAvailable", false).put("error", result.removePrefix("failed|"))
-                                )
-                                else -> respond(callback, JSONObject().put("ok", false).put("error", "Não foi possível concluir a verificação."))
-                            }
-                        }
-
-                        else -> respond(callback, JSONObject().put("ok", false).put("error", "Ação não suportada"))
+                    } else {
+                        NexusFeedback.alert(this, if (registering) "Não foi possível criar a conta" else "Não foi possível entrar", api.errorMessage(result), NexusFeedback.Type.ERROR)
                     }
-                } catch (error: Exception) {
-                    respond(callback, JSONObject().put("ok", false).put("error", error.message ?: "Erro interno"))
                 }
             }
         }
 
-        private fun respond(id: String, result: JSONObject) {
-            runOnUiThread {
-                if (!::web.isInitialized || isFinishing || isDestroyed) return@runOnUiThread
-                web.evaluateJavascript(
-                    "window.__nativeResult(" +
-                        JSONObject.quote(id) + "," +
-                        JSONObject.quote(result.toString()) +
-                        ")",
-                    null
-                )
+        scroll.addView(card, ScrollView.LayoutParams(-1, -2))
+        root.addView(scroll, LinearLayout.LayoutParams(-1, -2).apply { gravity = Gravity.CENTER })
+        setContentView(root)
+    }
+
+    private fun showApp() {
+        root = LinearLayout(this).vertical().apply { setBackgroundColor(bg) }
+        root.addView(buildTopBar(), LinearLayout.LayoutParams(-1, dp(72)))
+        content = FrameLayout(this).apply { setBackgroundColor(bg) }
+        root.addView(content, LinearLayout.LayoutParams(-1, 0, 1f))
+        bottom = buildBottomBar()
+        root.addView(bottom, LinearLayout.LayoutParams(-1, dp(70)))
+        setContentView(root)
+        navigate("home")
+    }
+
+    private fun buildTopBar(): View {
+        val bar = LinearLayout(this).horizontal().apply {
+            gravity = Gravity.CENTER_VERTICAL
+            setPadding(dp(18), dp(10), dp(14), dp(10))
+            background = rounded(Color.rgb(6, 17, 30), 0)
+        }
+        val logo = ImageView(this).apply { setImageResource(R.drawable.ic_kz); scaleType = ImageView.ScaleType.CENTER_INSIDE }
+        bar.addView(logo, LinearLayout.LayoutParams(dp(46), dp(46)))
+        val title = LinearLayout(this).vertical()
+        title.addView(label("Korczak Nexus", 16f, text, true))
+        title.addView(label("DOCUMENTOS • ANDROID NATIVO", 9f, blue, true))
+        bar.addView(title, LinearLayout.LayoutParams(0, -2, 1f).apply { leftMargin = dp(9) })
+        val online = TextView(this).apply {
+            text = "●"
+            textSize = 13f
+            setTextColor(green)
+            gravity = Gravity.CENTER
+            setPadding(dp(8), 0, dp(8), 0)
+        }
+        bar.addView(online, LinearLayout.LayoutParams(dp(36), -1))
+        val more = iconButton("⋮")
+        more.setOnClickListener { navigate("more") }
+        bar.addView(more, LinearLayout.LayoutParams(dp(44), dp(44)))
+        return bar
+    }
+
+    private fun buildBottomBar(): LinearLayout {
+        val bar = LinearLayout(this).horizontal().apply {
+            gravity = Gravity.CENTER
+            setPadding(dp(7), dp(7), dp(7), dp(8))
+            background = rounded(Color.rgb(6, 17, 30), 0)
+        }
+        val tabs = listOf("home" to "⌂\nInício", "files" to "▤\nArquivos", "editor" to "✎\nEditor", "more" to "⋯\nMais")
+        tabs.forEach { (id, caption) ->
+            val b = TextView(this).apply {
+                text = caption
+                gravity = Gravity.CENTER
+                textSize = 11f
+                setTypeface(null, Typeface.BOLD)
+                setTextColor(if (id == selectedTab) cyan else muted)
+                background = rounded(if (id == selectedTab) Color.rgb(10, 43, 69) else Color.TRANSPARENT, 13)
+                setPadding(0, dp(4), 0, dp(2))
+                setOnClickListener { navigate(id) }
+            }
+            bar.addView(b, LinearLayout.LayoutParams(0, -1, 1f).apply { leftMargin = dp(3); rightMargin = dp(3) })
+        }
+        return bar
+    }
+
+    private fun navigate(page: String) {
+        selectedTab = page
+        content.removeAllViews()
+        when (page) {
+            "home" -> renderHome()
+            "files" -> renderFiles()
+            "editor" -> renderEditor(null, null, null)
+            else -> renderMore()
+        }
+        val old = root.getChildAt(root.childCount - 1)
+        root.removeView(old)
+        bottom = buildBottomBar()
+        root.addView(bottom, LinearLayout.LayoutParams(-1, dp(70)))
+    }
+
+    private fun renderHome() {
+        val scroll = ScrollView(this)
+        val box = LinearLayout(this).vertical().apply { setPadding(dp(18), dp(18), dp(18), dp(24)) }
+        box.addView(card().apply {
+            addView(label("SEU ESPAÇO DE DOCUMENTOS", 10f, cyan, true))
+            addView(label("Tudo organizado em um só lugar.", 28f, text, true).apply { setPadding(0, dp(8), 0, dp(7)) })
+            addView(label("Editor, arquivos, armazenamento e sincronização com a NexusAPI.", 13f, muted))
+            addView(button("Criar documento", true).apply { setOnClickListener { renderEditor(null, null, null) } }, lp(top = 18))
+        }, lp())
+        val actions = LinearLayout(this).horizontal()
+        actions.addView(actionCard("Arquivos", "Acesse seus documentos") { navigate("files") }, LinearLayout.LayoutParams(0, dp(112), 1f).apply { rightMargin = dp(6) })
+        actions.addView(actionCard("Editor", "Crie e edite") { renderEditor(null, null, null) }, LinearLayout.LayoutParams(0, dp(112), 1f).apply { leftMargin = dp(6) })
+        box.addView(actions, lp(top = 12))
+
+        val storageCard = card()
+        storageCard.addView(label("ARMAZENAMENTO", 10f, cyan, true))
+        val storageName = label(storage.label(), 15f, text, true)
+        storageCard.addView(storageName, lp(top = 7))
+        storageCard.addView(label("Escolha uma pasta do dispositivo para manter seus arquivos locais.", 11f, muted), lp(top = 4))
+        val storageActions = LinearLayout(this).horizontal()
+        storageActions.addView(button("Selecionar pasta", true).apply {
+            setOnClickListener { chooseStorage() }
+        }, LinearLayout.LayoutParams(0, dp(44), 1f).apply { rightMargin = dp(5); topMargin = dp(12) })
+        storageActions.addView(button("Atualizar", false).apply {
+            setOnClickListener { navigate("home") }
+        }, LinearLayout.LayoutParams(0, dp(44), 1f).apply { leftMargin = dp(5); topMargin = dp(12) })
+        storageCard.addView(storageActions)
+        box.addView(storageCard, lp(top = 12))
+
+        val net = offlineState()
+        val status = card()
+        status.addView(label("STATUS", 10f, cyan, true))
+        status.addView(label(if (net) "Conectado à internet" else "Modo offline", 15f, if (net) green else Color.rgb(241,189,90), true), lp(top = 7))
+        status.addView(label("As alterações locais podem continuar sem conexão.", 11f, muted), lp(top = 4))
+        box.addView(status, lp(top = 12))
+
+        scroll.addView(box)
+        content.addView(scroll)
+    }
+
+    private fun renderFiles() {
+        val scroll = ScrollView(this)
+        val box = LinearLayout(this).vertical().apply { setPadding(dp(18), dp(18), dp(18), dp(28)) }
+        val head = LinearLayout(this).horizontal()
+        val h = LinearLayout(this).vertical()
+        h.addView(label("ARQUIVOS", 10f, cyan, true))
+        h.addView(label("Seus documentos", 26f, text, true), lp(top = 4))
+        head.addView(h, LinearLayout.LayoutParams(0, -2, 1f))
+        head.addView(button("+ Novo", true).apply { setOnClickListener { renderEditor(null, null, null) } }, LinearLayout.LayoutParams(dp(100), dp(44)))
+        box.addView(head)
+
+        val progress = ProgressBar(this).apply { isIndeterminate = true }
+        box.addView(progress, lp(top = 16))
+        scroll.addView(box)
+        content.addView(scroll)
+
+        executor.execute {
+            val apiResult = if (!session.token.isNullOrBlank()) api.documents() else ApiResult(0, "[]")
+            val local = storage.listFiles()
+            main.post {
+                progress.visibility = View.GONE
+                if (apiResult.code in 200..299) {
+                    addDocumentItems(box, extractArray(apiResult.body), false)
+                } else if (local.length() == 0) {
+                    box.addView(label("Não foi possível carregar os documentos.", 13f, muted), lp(top = 20))
+                    box.addView(button("Tentar novamente", false).apply { setOnClickListener { renderFiles() } }, lp(top = 10))
+                }
+                if (local.length() > 0) {
+                    box.addView(label("ARQUIVOS DO DISPOSITIVO", 10f, cyan, true), lp(top = 22))
+                    addDocumentItems(box, local, true)
+                }
             }
         }
     }
 
-    @Suppress("DEPRECATION")
+    private fun addDocumentItems(box: LinearLayout, items: JSONArray, local: Boolean) {
+        if (items.length() == 0) {
+            box.addView(label(if (local) "Nenhum arquivo local encontrado." else "Nenhum documento encontrado.", 12f, muted), lp(top = 18))
+            return
+        }
+        for (i in 0 until items.length()) {
+            val o = items.optJSONObject(i) ?: continue
+            val name = o.optString("name", o.optString("title", "Documento"))
+            val id = o.optString("id", "")
+            val uri = o.optString("uri", "")
+            val mime = o.optString("mime", "Documento")
+            val item = LinearLayout(this).horizontal().apply {
+                gravity = Gravity.CENTER_VERTICAL
+                background = rounded(panel, 16)
+                setPadding(dp(14), dp(12), dp(10), dp(12))
+            }
+            val ico = TextView(this).apply {
+                text = if (name.lowercase().endsWith(".pdf")) "PDF" else "N"
+                textSize = 11f
+                gravity = Gravity.CENTER
+                setTextColor(cyan)
+                background = rounded(Color.rgb(10, 55, 88), 11)
+            }
+            item.addView(ico, LinearLayout.LayoutParams(dp(46), dp(46)))
+            val info = LinearLayout(this).vertical()
+            info.addView(label(name, 13f, text, true))
+            info.addView(label(if (local) mime else "NexusAPI • documento", 10f, muted), lp(top = 4))
+            item.addView(info, LinearLayout.LayoutParams(0, -2, 1f).apply { leftMargin = dp(12) })
+            val open = iconButton("›")
+            open.setOnClickListener {
+                if (local) openLocalFile(uri, name) else openRemoteDocument(id, name, o.optString("content", ""))
+            }
+            item.addView(open, LinearLayout.LayoutParams(dp(42), dp(42)))
+            box.addView(item, lp(top = 8))
+        }
+    }
+
+    private fun renderEditor(id: String?, name: String?, body: String?) {
+        currentDocumentId = id
+        currentDocumentUri = null
+        val box = LinearLayout(this).vertical().apply { setPadding(dp(14), dp(12), dp(14), dp(18)) }
+        val header = LinearLayout(this).horizontal()
+        header.addView(button("‹ Voltar", false).apply { setOnClickListener { navigate("home") } }, LinearLayout.LayoutParams(dp(100), dp(44)))
+        val status = TextView(this).apply { text = "Novo documento"; gravity = Gravity.CENTER_VERTICAL; setTextColor(muted); textSize = 11f }
+        editorStatus = status
+        header.addView(status, LinearLayout.LayoutParams(0, dp(44), 1f).apply { leftMargin = dp(8) })
+        header.addView(button("Salvar", true).apply { setOnClickListener { saveEditor() } }, LinearLayout.LayoutParams(dp(100), dp(44)))
+        box.addView(header)
+
+        val title = input("Nome do documento").apply { setText(name ?: "Documento sem título"); textSize = 17f; setSingleLine(true) }
+        editorTitle = title
+        box.addView(title, lp(top = 12))
+        val bodyInput = EditText(this).apply {
+            hint = "Comece a escrever..."
+            setText(body ?: "")
+            setTextColor(text)
+            setHintTextColor(muted)
+            textSize = 16f
+            gravity = Gravity.TOP or Gravity.START
+            setPadding(dp(14), dp(14), dp(14), dp(14))
+            background = rounded(panel, 16)
+            minLines = 16
+            isSingleLine = false
+        }
+        editorBody = bodyInput
+        box.addView(bodyInput, LinearLayout.LayoutParams(-1, 0, 1f).apply { topMargin = dp(12) })
+
+        val tools = LinearLayout(this).horizontal()
+        listOf("B", "I", "Título", "Lista", "Limpar").forEach { t ->
+            tools.addView(button(t, false).apply {
+                setOnClickListener {
+                    when (t) {
+                        "B" -> wrapSelection("**")
+                        "I" -> wrapSelection("_")
+                        "Título" -> insertAtCursor("# ")
+                        "Lista" -> insertAtCursor("• ")
+                        "Limpar" -> bodyInput.setSelection(bodyInput.text.length)
+                    }
+                }
+            }, LinearLayout.LayoutParams(0, dp(42), 1f).apply { leftMargin = dp(3); rightMargin = dp(3) })
+        }
+        box.addView(tools, lp(top = 8))
+        content.addView(box)
+        if (id != null && body.isNullOrBlank()) {
+            editorStatus?.text = "Carregando documento..."
+            executor.execute {
+                val r = api.document(id)
+                main.post {
+                    if (r.code in 200..299) {
+                        val o = extractObject(r.body)
+                        editorTitle?.setText(o?.optString("name", name ?: "Documento") ?: name ?: "Documento")
+                        editorBody?.setText(o?.optString("content", "") ?: "")
+                        editorStatus?.text = "Pronto"
+                    } else editorStatus?.text = "Não foi possível carregar"
+                }
+            }
+        }
+    }
+
+    private fun saveEditor() {
+        val title = editorTitle?.text?.toString()?.trim().orEmpty().ifBlank { "Documento sem título" }
+        val body = editorBody?.text?.toString().orEmpty()
+        editorStatus?.text = "Salvando..."
+        executor.execute {
+            val result = if (!currentDocumentId.isNullOrBlank()) {
+                api.updateDocument(currentDocumentId!!, title, body)
+            } else {
+                api.createDocument(title, "text", body)
+            }
+            val local = if (storage.hasTree()) storage.write(currentDocumentUri ?: "", title, body) else false to null
+            main.post {
+                if (result.code in 200..299 || local.first) {
+                    editorStatus?.text = "Salvo"
+                    NexusFeedback.toast(this, "Documento salvo.", NexusFeedback.Type.SUCCESS)
+                    if (currentDocumentId.isNullOrBlank() && result.code in 200..299) {
+                        extractObject(result.body)?.optString("id")?.takeIf { it.isNotBlank() }?.let { currentDocumentId = it }
+                    }
+                } else {
+                    OfflineStore(this).enqueue(currentDocumentUri ?: "", title, body)
+                    editorStatus?.text = "Salvo na fila offline"
+                    NexusFeedback.toast(this, "Sem conexão. A alteração foi mantida localmente.", NexusFeedback.Type.WARNING)
+                }
+            }
+        }
+    }
+
+    private fun renderMore() {
+        val scroll = ScrollView(this)
+        val box = LinearLayout(this).vertical().apply { setPadding(dp(18), dp(18), dp(18), dp(28)) }
+        box.addView(label("MAIS", 10f, cyan, true))
+        box.addView(label("Nexus", 28f, text, true), lp(top = 4))
+        val cards = listOf(
+            "Meu perfil" to "Conta e informações pessoais",
+            "Armazenamento" to "Pasta local e arquivos do dispositivo",
+            "Lixeira" to "Documentos enviados para a lixeira",
+            "Favoritos" to "Documentos marcados como favoritos",
+            "Sobre o Nexus" to "Versão e informações do aplicativo",
+            "Atualizações" to "Verificar uma nova versão",
+            "Sair" to "Encerrar a sessão atual"
+        )
+        cards.forEach { (title, subtitle) ->
+            val c = card().horizontal().apply { gravity = Gravity.CENTER_VERTICAL }
+            val t = LinearLayout(this).vertical()
+            t.addView(label(title, 14f, text, true))
+            t.addView(label(subtitle, 10f, muted), lp(top = 4))
+            c.addView(t, LinearLayout.LayoutParams(0, -2, 1f))
+            c.addView(iconButton("›"))
+            c.setOnClickListener {
+                when (title) {
+                    "Meu perfil" -> showProfile()
+                    "Armazenamento" -> showStorage()
+                    "Lixeira" -> showTrash()
+                    "Favoritos" -> showFavorites()
+                    "Sobre o Nexus" -> showAbout()
+                    "Atualizações" -> checkForUpdate(true)
+                    "Sair" -> logout()
+                }
+            }
+            box.addView(c, lp(top = 9))
+        }
+        scroll.addView(box)
+        content.addView(scroll)
+    }
+
+    private fun showProfile() {
+        val user = runCatching { JSONObject(session.userJson ?: "{}") }.getOrDefault(JSONObject())
+        NexusFeedback.alert(this, "Meu perfil", "Nome: " + user.optString("name", "—") + "\nE-mail: " + user.optString("email", "—") + "\n\nSessão protegida pelo Nexus.", NexusFeedback.Type.INFO)
+    }
+
+    private fun showStorage() {
+        val info = storage.deviceStorage()
+        NexusFeedback.alert(this, "Armazenamento", "Pasta: " + storage.label() + "\n\nEspaço total: " + bytes(info.optLong("total")) + "\nDisponível: " + bytes(info.optLong("available")), NexusFeedback.Type.INFO)
+    }
+
+    private fun showAbout() {
+        NexusFeedback.alert(this, "Sobre o Nexus", "API: NexusAPI\nVersão da API: v1.0.0\nVersão do Nexus: v" + BuildConfig.VERSION_NAME + "\nAplicativo Android: On-Line\nAplicativo Desktop: Independente\n\nKorczak Nexus — editor e gerenciamento de documentos para Android nativo.", NexusFeedback.Type.INFO)
+    }
+
+    private fun showTrash() {
+        executor.execute {
+            val r = api.trash()
+            main.post {
+                if (r.code in 200..299) {
+                    val a = extractArray(r.body)
+                    val names = buildString { for (i in 0 until a.length()) names.append("• ").append(a.optJSONObject(i)?.optString("name", "Documento")).append("\n") }
+                    NexusFeedback.alert(this, "Lixeira", names.ifBlank { "A lixeira está vazia." }, NexusFeedback.Type.INFO)
+                } else NexusFeedback.alert(this, "Lixeira", api.errorMessage(r), NexusFeedback.Type.ERROR)
+            }
+        }
+    }
+
+    private fun showFavorites() {
+        executor.execute {
+            val r = api.favorites()
+            main.post {
+                if (r.code in 200..299) {
+                    val a = extractArray(r.body)
+                    val names = buildString { for (i in 0 until a.length()) names.append("• ").append(a.optJSONObject(i)?.optString("name", "Documento")).append("\n") }
+                    NexusFeedback.alert(this, "Favoritos", names.ifBlank { "Nenhum favorito." }, NexusFeedback.Type.INFO)
+                } else NexusFeedback.alert(this, "Favoritos", api.errorMessage(r), NexusFeedback.Type.ERROR)
+            }
+        }
+    }
+
+    private fun logout() {
+        NexusFeedback.alert(this, "Sair", "Deseja encerrar sua sessão?", NexusFeedback.Type.WARNING, "Sair", "Cancelar",
+            onPositive = {
+                executor.execute { api.logout() }
+                session.clear()
+                main.post { showAuth() }
+            })
+    }
+
+    private fun chooseStorage() {
+        startActivityForResult(Intent(Intent.ACTION_OPEN_DOCUMENT_TREE).apply {
+            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION or Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION)
+        }, 8101)
+    }
+
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         super.onActivityResult(requestCode, resultCode, data)
+        if (requestCode == 8101 && resultCode == RESULT_OK) {
+            data?.data?.let {
+                if (storage.rememberTree(it)) {
+                    NexusFeedback.toast(this, "Armazenamento selecionado.", NexusFeedback.Type.SUCCESS)
+                    navigate("home")
+                } else NexusFeedback.toast(this, "Não foi possível conceder acesso à pasta.", NexusFeedback.Type.ERROR)
+            }
+        }
+    }
 
-        if (requestCode == mediaRequest) {
-            val callback = pendingMediaCallback
-            pendingMediaCallback = null
-            if (resultCode == Activity.RESULT_OK && data?.data != null) {
-                val uri = data.data!!
-                try {
-                    contentResolver.takePersistableUriPermission(uri, Intent.FLAG_GRANT_READ_URI_PERMISSION)
-                } catch (_: Exception) {}
-                callback?.let {
-                    respondJs(
-                        it,
-                        JSONObject()
-                            .put("ok", true)
-                            .put("uri", uri.toString())
-                            .put("mime", contentResolver.getType(uri) ?: "*/*")
-                    )
+    private fun openRemoteDocument(id: String, name: String, inlineContent: String) {
+        if (inlineContent.isNotBlank()) renderEditor(id, name, inlineContent)
+        else renderEditor(id, name, null)
+    }
+
+    private fun openLocalFile(uri: String, name: String) {
+        executor.execute {
+            try {
+                val content = storage.read(uri)
+                main.post {
+                    currentDocumentUri = uri
+                    renderEditor(null, name, content)
                 }
-            } else {
-                callback?.let { respondJs(it, JSONObject().put("ok", false).put("error", "Seleção cancelada")) }
+            } catch (e: Exception) {
+                main.post { NexusFeedback.toast(this, e.message ?: "Não foi possível abrir o arquivo.", NexusFeedback.Type.ERROR) }
             }
-            return
         }
+    }
 
-        if (requestCode == fileRequest) {
-            val callback = pendingFileCallback
-            pendingFileCallback = null
-            if (resultCode == Activity.RESULT_OK && data?.data != null) {
-                val ok = storage.importFile(data.data!!)
-                callback?.let {
-                    respondJs(
-                        it,
-                        JSONObject().put("ok", ok).put(
-                            "error",
-                            if (ok) "" else "Não foi possível importar o arquivo"
-                        )
-                    )
+    private fun openExternalDocument(uri: Uri) {
+        executor.execute {
+            try {
+                contentResolver.takePersistableUriPermission(uri, Intent.FLAG_GRANT_READ_URI_PERMISSION)
+            } catch (_: Exception) {}
+            val content = runCatching { contentResolver.openInputStream(uri)?.bufferedReader()?.use { it.readText() } ?: "" }.getOrDefault("")
+            main.post {
+                currentDocumentUri = uri.toString()
+                renderEditor(null, uri.lastPathSegment ?: "Documento", content)
+            }
+        }
+    }
+
+    private fun checkForUpdate(showNoUpdate: Boolean = false) {
+        Updater(this).check { result ->
+            when {
+                result == "up_to_date" && showNoUpdate -> NexusFeedback.toast(this, "Você já está na versão mais recente.", NexusFeedback.Type.SUCCESS)
+                result.startsWith("update|") -> {
+                    val p = result.split("|", limit = 4)
+                    NexusFeedback.alert(this, "Atualização disponível", "Korczak Nexus " + p.getOrElse(1) { "" } + " está disponível.", NexusFeedback.Type.INFO, "Atualizar", "Depois",
+                        onPositive = { Updater(this).install(p.getOrElse(2) { "" }, p.getOrElse(3) { "" }) { } })
                 }
-            } else {
-                callback?.let { respondJs(it, JSONObject().put("ok", false).put("error", "Seleção cancelada")) }
+                result.startsWith("failed|") && showNoUpdate -> NexusFeedback.toast(this, result.removePrefix("failed|"), NexusFeedback.Type.ERROR)
             }
-            return
-        }
-
-        if (requestCode != treeRequest) return
-
-        val callback = pendingCallback
-        pendingCallback = null
-        if (resultCode == Activity.RESULT_OK && data?.data != null) {
-            val persisted = storage.rememberTree(data.data!!)
-            callback?.let {
-                respondJs(
-                    it,
-                    if (persisted) {
-                        JSONObject().put("ok", true).put("label", storage.label())
-                    } else {
-                        JSONObject().put("ok", false).put("error", "O Android não permitiu manter acesso a esta pasta. Escolha a pasta novamente.")
-                    }
-                )
-            }
-        } else {
-            callback?.let { respondJs(it, JSONObject().put("ok", false).put("error", "Seleção cancelada")) }
         }
     }
 
-    private fun respondJs(id: String, result: JSONObject) {
-        if (!::web.isInitialized || isFinishing || isDestroyed) return
-        web.evaluateJavascript(
-            "window.__nativeResult(" +
-                JSONObject.quote(id) + "," +
-                JSONObject.quote(result.toString()) +
-                ")",
-            null
-        )
+    private fun offlineState(): Boolean = OfflineStore(this).networkState().optBoolean("online", false)
+
+    private fun wrapSelection(marker: String) {
+        val e = editorBody ?: return
+        val s = e.selectionStart.coerceAtLeast(0)
+        val f = e.selectionEnd.coerceAtLeast(s)
+        e.text.replace(s, f, marker + e.text.substring(s, f) + marker)
+        e.setSelection(s + marker.length, f + marker.length)
     }
 
-    override fun onDestroy() {
-        mainHandler.removeCallbacks(rendererRecoveryReset)
-        mainHandler.removeCallbacksAndMessages(null)
-        // Cancela callbacks agendados no WebView antes de destruí-lo.
-        if (::web.isInitialized) {
-            web.removeJavascriptInterface("Android")
-            web.stopLoading()
-            web.destroy()
-        }
-        pool.shutdownNow()
-        super.onDestroy()
+    private fun insertAtCursor(value: String) {
+        val e = editorBody ?: return
+        val p = e.selectionStart.coerceAtLeast(0)
+        e.text.insert(p, value)
+        e.setSelection(p + value.length)
     }
+
+    private fun extractArray(body: String): JSONArray {
+        return runCatching {
+            val trimmed = body.trim()
+            if (trimmed.startsWith("[")) return@runCatching JSONArray(trimmed)
+            val root = JSONObject(trimmed)
+            listOf("documents", "items", "data", "results", "favorites", "trash").firstNotNullOfOrNull { key ->
+                when (val v = root.opt(key)) {
+                    is JSONArray -> v
+                    is JSONObject -> listOf("documents", "items", "results").firstNotNullOfOrNull { v.optJSONArray(it) }
+                    else -> null
+                }
+            } ?: JSONArray()
+        }.getOrDefault(JSONArray())
+    }
+
+    private fun extractObject(body: String): JSONObject? = runCatching {
+        val root = JSONObject(body)
+        when {
+            root.opt("document") is JSONObject -> root.getJSONObject("document")
+            root.opt("data") is JSONObject -> root.getJSONObject("data")
+            else -> root
+        }
+    }.getOrNull()
+
+    private fun card(): LinearLayout = LinearLayout(this).vertical().apply {
+        background = rounded(panel, 18)
+        setPadding(dp(17), dp(17), dp(17), dp(17))
+    }
+
+    private fun actionCard(title: String, subtitle: String, click: () -> Unit): LinearLayout = card().apply {
+        addView(label(title, 15f, text, true))
+        addView(label(subtitle, 10f, muted), lp(top = 7))
+        setOnClickListener { click() }
+    }
+
+    private fun label(value: String, size: Float, color: Int, bold: Boolean = false): TextView =
+        TextView(this).apply {
+            text = value
+            textSize = size
+            setTextColor(color)
+            if (bold) setTypeface(Typeface.create("sans-serif", Typeface.BOLD))
+        }
+
+    private fun input(hintText: String): EditText = EditText(this).apply {
+        hint = hintText
+        setHintTextColor(muted)
+        setTextColor(text)
+        textSize = 14f
+        singleLine = true
+        setPadding(dp(14), 0, dp(14), 0)
+        background = rounded(Color.rgb(5, 17, 29), 12)
+    }
+
+    private fun button(title: String, primary: Boolean): Button = Button(this).apply {
+        text = title
+        isAllCaps = false
+        textSize = 12f
+        setTypeface(Typeface.create("sans-serif-medium", Typeface.NORMAL))
+        setTextColor(Color.WHITE)
+        stateListAnimator = null
+        background = rounded(if (primary) Color.rgb(11, 111, 199) else Color.rgb(9, 31, 49), 11)
+        minHeight = dp(44)
+        minimumHeight = dp(44)
+    }
+
+    private fun iconButton(symbol: String): TextView = TextView(this).apply {
+        text = symbol
+        textSize = 24f
+        gravity = Gravity.CENTER
+        setTextColor(text)
+        background = rounded(Color.rgb(9, 31, 49), 12)
+    }
+
+    private fun rounded(color: Int, radius: Int): android.graphics.drawable.GradientDrawable =
+        android.graphics.drawable.GradientDrawable().apply {
+            setColor(color)
+            setStroke(dp(1), line)
+            cornerRadius = dp(radius).toFloat()
+        }
+
+    private fun LinearLayout.vertical(): LinearLayout {
+        orientation = LinearLayout.VERTICAL
+        return this
+    }
+
+    private fun LinearLayout.horizontal(): LinearLayout {
+        orientation = LinearLayout.HORIZONTAL
+        return this
+    }
+
+    private fun lp(top: Int = 0): LinearLayout.LayoutParams = LinearLayout.LayoutParams(-1, -2).apply { topMargin = dp(top) }
+    private fun bytes(v: Long): String {
+        if (v <= 0) return "0 B"
+        val units = arrayOf("B", "KB", "MB", "GB", "TB")
+        var n = v.toDouble()
+        var i = 0
+        while (n >= 1024 && i < units.lastIndex) { n /= 1024; i++ }
+        return "%.1f %s".format(n, units[i])
+    }
+    private fun dp(v: Int): Int = (v * resources.displayMetrics.density).toInt().coerceAtLeast(1)
 }
