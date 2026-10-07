@@ -55,7 +55,7 @@ class MainActivity : AppCompatActivity() {
 
     override fun onCreate(state: Bundle?) {
         super.onCreate(state)
-        WindowCompat.setDecorFitsSystemWindows(this, true)
+        WindowCompat.setDecorFitsSystemWindows(window, true)
         window.statusBarColor = bg
         window.navigationBarColor = bg
 
@@ -518,7 +518,7 @@ class MainActivity : AppCompatActivity() {
             main.post {
                 if (r.code in 200..299) {
                     val a = extractArray(r.body)
-                    val names = buildString { for (i in 0 until a.length()) names.append("• ").append(a.optJSONObject(i)?.optString("name", "Documento")).append("\n") }
+                    val names = buildString { for (i in 0 until a.length()) append("• ").append(a.optJSONObject(i)?.optString("name", "Documento")).append("\n") }
                     NexusFeedback.alert(this, "Lixeira", names.ifBlank { "A lixeira está vazia." }, NexusFeedback.Type.INFO)
                 } else NexusFeedback.alert(this, "Lixeira", api.errorMessage(r), NexusFeedback.Type.ERROR)
             }
@@ -676,7 +676,7 @@ class MainActivity : AppCompatActivity() {
         setHintTextColor(muted)
         setTextColor(this@MainActivity.text)
         textSize = 14f
-        singleLine = true
+        isSingleLine = true
         setPadding(dp(14), 0, dp(14), 0)
         background = rounded(Color.rgb(5, 17, 29), 12)
     }
