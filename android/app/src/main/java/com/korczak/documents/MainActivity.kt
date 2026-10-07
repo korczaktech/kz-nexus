@@ -27,7 +27,7 @@ import java.util.concurrent.Executors
 class MainActivity : AppCompatActivity() {
     private lateinit var root: LinearLayout
     private lateinit var content: FrameLayout
-    private lateinit var bottom: LinearLayout
+    private lateinit var bottom: View
     private lateinit var session: SessionStore
     private lateinit var api: ApiClient
     private lateinit var storage: StorageManager
@@ -416,11 +416,11 @@ class MainActivity : AppCompatActivity() {
         brand.addView(label("NEXUS",13f,blue,true).apply{letterSpacing=.18f})
         bar.addView(brand,LinearLayout.LayoutParams(0,-2,1f).apply{leftMargin=dp(8)})
         bar.addView(iconButton("♧").apply{textSize=26f;background=android.graphics.drawable.ColorDrawable(Color.TRANSPARENT);setOnClickListener{showNotifications()}},LinearLayout.LayoutParams(dp(48),dp(48)))
-        bar.addView(TextView(this).apply{text="KT";textSize=12f;gravity=Gravity.CENTER;setTextColor(text);background=rounded(Color.rgb(8,18,38),50).apply{setStroke(dp(1),Color.rgb(35,76,150))};setOnClickListener{showProfile()}},LinearLayout.LayoutParams(dp(50),dp(50)))
+        bar.addView(TextView(this).apply{text="KT";textSize=12f;gravity=Gravity.CENTER;setTextColor(this@MainActivity.text);background=rounded(Color.rgb(8,18,38),50).apply{setStroke(dp(1),Color.rgb(35,76,150))};setOnClickListener{showProfile()}},LinearLayout.LayoutParams(dp(50),dp(50)))
         return bar
     }
 
-    private fun buildBottomBar(): LinearLayout {
+    private fun buildBottomBar(): FrameLayout {
         val wrap=FrameLayout(this).apply{setBackgroundColor(Color.rgb(5,12,25))}
         val bar=LinearLayout(this).horizontal().apply{gravity=Gravity.CENTER;setPadding(dp(8),dp(7),dp(8),dp(8))}
         listOf("home" to "⌂\nInício","files" to "▱\nArquivos","models" to "▦\nModelos","more" to "•••\nMais").forEach{(id,caption)->
@@ -454,7 +454,7 @@ class MainActivity : AppCompatActivity() {
         }
         box.addView(actions,lp(top=20))
         val st=card().horizontal().apply{gravity=Gravity.CENTER_VERTICAL;setPadding(dp(18),dp(15),dp(14),dp(15));setOnClickListener{navigate("storage")}}
-        st.addView(TextView(this).apply{text="42%";textSize=18f;gravity=Gravity.CENTER;setTextColor(text);setTypeface(null,Typeface.BOLD);background=rounded(Color.rgb(8,25,52),60).apply{setStroke(dp(8),blue)}},LinearLayout.LayoutParams(dp(86),dp(86)))
+        st.addView(TextView(this).apply{text="42%";textSize=18f;gravity=Gravity.CENTER;setTextColor(this@MainActivity.text);setTypeface(null,Typeface.BOLD);background=rounded(Color.rgb(8,25,52),60).apply{setStroke(dp(8),blue)}},LinearLayout.LayoutParams(dp(86),dp(86)))
         val stText=LinearLayout(this).vertical();stText.addView(label("Armazenamento",21f,text,true));stText.addView(label("42 GB de 100 GB no aparelho",15f,muted),lp(top=3))
         stText.addView(ProgressBar(this,null,android.R.attr.progressBarStyleHorizontal).apply{max=100;progress=42;progressTintList=android.content.res.ColorStateList.valueOf(blue);progressBackgroundTintList=android.content.res.ColorStateList.valueOf(Color.rgb(18,34,70))},LinearLayout.LayoutParams(-1,dp(6)).apply{topMargin=dp(12)})
         stText.addView(label("Documentos do Nexus: 3,2 GB",14f,muted).apply{setPadding(0,dp(8),0,0)})
@@ -472,7 +472,7 @@ class MainActivity : AppCompatActivity() {
             val tx=LinearLayout(this).vertical();tx.addView(label(name,16f,text));tx.addView(label(meta,12f,muted),lp(top=5))
             row.addView(tx,LinearLayout.LayoutParams(0,-2,1f).apply{leftMargin=dp(12)});row.addView(label("›",30f,muted));recent.addView(row,lp(top=1))
         }
-        box.addView(recent,lp(top=18));scroll.addView(box);content.addView(scroll);loadHomeDocuments()
+        box.addView(recent,lp(top=18));scroll.addView(box);content.addView(scroll)
     }
 
     private fun renderFiles(){
@@ -493,7 +493,7 @@ class MainActivity : AppCompatActivity() {
                 main.post{
                     list.removeAllViews()
                     val a=if(r.code in 200..299)extractArray(r.body)else JSONArray()
-                    if(a.length()==0)list.addView(label(if(q.isBlank())"Nenhum documento encontrado."else"Nenhum resultado para "$q".",14f,muted).apply{setPadding(0,dp(20),0,0)})
+                    if(a.length()==0)list.addView(label(if(q.isBlank())"Nenhum documento encontrado."else"Nenhum resultado para \"$q\".",14f,muted).apply{setPadding(0,dp(20),0,0)})
                     for(i in 0 until a.length()){
                         val o=a.optJSONObject(i)?:continue
                         val id=o.optString("id",o.optString("_id"))
@@ -561,13 +561,13 @@ class MainActivity : AppCompatActivity() {
         head.addView(button("Salvar",true).apply{setOnClickListener{saveCurrentEditor()}},LinearLayout.LayoutParams(dp(92),dp(44)))
         b.addView(head)
         val title=input("Nome do documento").apply{setText(name?:"Novo documento");isSingleLine=true}
-        val body=EditText(this).apply{hint="Escreva seu documento…";setHintTextColor(muted);setTextColor(text);textSize=16f;gravity=Gravity.TOP;minLines=18;setPadding(dp(16),dp(16),dp(16),dp(16));background=rounded(panel,16)}
+        val body=EditText(this).apply{hint="Escreva seu documento…";setHintTextColor(muted);setTextColor(this@MainActivity.text);textSize=16f;gravity=Gravity.TOP;minLines=18;setPadding(dp(16),dp(16),dp(16),dp(16));background=rounded(panel,16)}
         if(inlineContent!=null)body.setText(inlineContent)
         editorTitle=title;editorBody=body
         b.addView(title,lp(top=16))
         val toolbar=LinearLayout(this).horizontal().apply{setPadding(0,dp(10),0,dp(10))}
         listOf("B" to "bold","I" to "italic","U" to "underline","•" to "list").forEach{(t,cmd)->
-            toolbar.addView(TextView(this).apply{text=t;textSize=15f;gravity=Gravity.CENTER;setTextColor(text);background=rounded(panel2,10);setOnClickListener{when(cmd){"bold"->wrapSelection("**");"italic"->wrapSelection("_");"underline"->wrapSelection("__");"list"->insertAtCursor("\n• ")} }},LinearLayout.LayoutParams(dp(44),dp(40)).apply{rightMargin=dp(7)})
+            toolbar.addView(TextView(this).apply{text=t;textSize=15f;gravity=Gravity.CENTER;setTextColor(this@MainActivity.text);background=rounded(panel2,10);setOnClickListener{when(cmd){"bold"->wrapSelection("**");"italic"->wrapSelection("_");"underline"->wrapSelection("__");"list"->insertAtCursor("\n• ")} }},LinearLayout.LayoutParams(dp(44),dp(40)).apply{rightMargin=dp(7)})
         }
         b.addView(toolbar);b.addView(body,lp())
         editorStatus=label("Pronto para editar.",11f,muted).apply{setPadding(0,dp(9),0,0)}
@@ -849,8 +849,8 @@ class MainActivity : AppCompatActivity() {
         s.addView(b);content.addView(s)
     }
     private fun showCreateDocument(model:String=""){
-        val title=EditText(this).apply{hint=if(model.isBlank())"Nome do documento"else"$model · título";setTextColor(text);setHintTextColor(muted);isSingleLine=true;background=rounded(panel2,12);setPadding(dp(14),0,dp(14),0)}
-        val body=EditText(this).apply{hint="Comece a escrever…";setTextColor(text);setHintTextColor(muted);gravity=Gravity.TOP;background=rounded(panel2,12);setPadding(dp(14),dp(14),dp(14),dp(14));minLines=7}
+        val title=EditText(this).apply{hint=if(model.isBlank())"Nome do documento"else"$model · título";setTextColor(this@MainActivity.text);setHintTextColor(muted);isSingleLine=true;background=rounded(panel2,12);setPadding(dp(14),0,dp(14),0)}
+        val body=EditText(this).apply{hint="Comece a escrever…";setTextColor(this@MainActivity.text);setHintTextColor(muted);gravity=Gravity.TOP;background=rounded(panel2,12);setPadding(dp(14),dp(14),dp(14),dp(14));minLines=7}
         val box=LinearLayout(this).vertical().apply{setPadding(dp(2),dp(4),dp(2),0);addView(title,lp());addView(body,lp(top=10))}
         android.app.AlertDialog.Builder(this).setTitle("Novo documento").setView(box).setNegativeButton("Cancelar",null).setPositiveButton("Criar"){_,_->createRemoteDocument(title.text.toString().trim().ifBlank{"Novo documento"},body.text.toString())}.show()
     }
@@ -858,7 +858,7 @@ class MainActivity : AppCompatActivity() {
         executor.execute{val r=api.createDocument(name,"document",body);main.post{if(r.code in 200..299){NexusFeedback.toast(this,"Documento criado.",NexusFeedback.Type.SUCCESS);navigate("files")}else NexusFeedback.alert(this,"Não foi possível criar",api.errorMessage(r),NexusFeedback.Type.ERROR)}}
     }
     private fun showCreateFolder(){
-        val e=EditText(this).apply{hint="Nome da pasta";setTextColor(text);setHintTextColor(muted);isSingleLine=true}
+        val e=EditText(this).apply{hint="Nome da pasta";setTextColor(this@MainActivity.text);setHintTextColor(muted);isSingleLine=true}
         android.app.AlertDialog.Builder(this).setTitle("Nova pasta").setView(e).setNegativeButton("Cancelar",null).setPositiveButton("Criar"){_,_->executor.execute{val r=api.createFolder(e.text.toString().trim());main.post{NexusFeedback.toast(this,if(r.code in 200..299)"Pasta criada."else api.errorMessage(r),if(r.code in 200..299)NexusFeedback.Type.SUCCESS else NexusFeedback.Type.ERROR)}}}.show()
     }
     private fun showShare(){NexusFeedback.alert(this,"Compartilhar","Escolha um documento nos Arquivos para compartilhar.",NexusFeedback.Type.INFO)}
@@ -868,7 +868,7 @@ class MainActivity : AppCompatActivity() {
         android.app.AlertDialog.Builder(this).setTitle(name).setItems(arrayOf("Abrir","Editar","Compartilhar","Favoritar","Mover para a lixeira")){_,which->when(which){0->showComingSoon("Abrir");1->navigate("editor");2->showShare();3->showComingSoon("Favoritos");4->confirmTrash(name)}}.show()
     }
     private fun confirmTrash(name:String){
-        NexusFeedback.alert(this,"Mover para a lixeira","Deseja mover "$name" para a lixeira?",NexusFeedback.Type.WARNING,"Mover","Cancelar",onPositive={showComingSoon("Lixeira")})
+        NexusFeedback.alert(this,"Mover para a lixeira","Deseja mover \"$name\" para a lixeira?",NexusFeedback.Type.WARNING,"Mover","Cancelar",onPositive={showComingSoon("Lixeira")})
     }
 
     private fun card(): LinearLayout = LinearLayout(this).vertical().apply {
