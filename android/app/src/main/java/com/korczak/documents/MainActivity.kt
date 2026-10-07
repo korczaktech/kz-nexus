@@ -462,14 +462,19 @@ class MainActivity : AppCompatActivity() {
     private fun renderHome(){
         val scroll=ScrollView(this).apply{overScrollMode=View.OVER_SCROLL_NEVER}
         val box=LinearLayout(this).vertical().apply{setPadding(dp(20),0,dp(20),dp(150))}
-        val hero=FrameLayout(this).apply{background=rounded(panel,22).apply{setStroke(dp(1),line)}}
-        val copy=LinearLayout(this).vertical().apply{setPadding(dp(18),dp(22),0,0)}
+        val hero=LinearLayout(this).horizontal().apply{
+            gravity=Gravity.CENTER_VERTICAL
+            background=rounded(panel,22).apply{setStroke(dp(1),line)}
+            setPadding(dp(18),dp(16),dp(12),dp(16))
+            clipChildren=true
+        }
+        val copy=LinearLayout(this).vertical().apply{gravity=Gravity.CENTER_VERTICAL}
         copy.addView(label("Bem-vindo, Korczak Tech",12f,cyan))
-        copy.addView(label("Seus documentos,",24f,text,true))
-        copy.addView(label("sempre com você.",24f,Color.rgb(79,131,255),true))
-        copy.addView(label("Escreva, organize e compartilhe de forma simples,\nrápida e segura.",12f,Color.rgb(154,167,199)).apply{setPadding(0,dp(10),0,0)})
-        hero.addView(copy,FrameLayout.LayoutParams(dp(210),-1))
-        hero.addView(NexusOrbView(this),FrameLayout.LayoutParams(dp(190),dp(150),Gravity.CENTER_VERTICAL or Gravity.END))
+        copy.addView(label("Seus documentos,",21f,text,true).apply{maxLines=1;ellipsize=android.text.TextUtils.TruncateAt.END})
+        copy.addView(label("sempre com você.",21f,Color.rgb(79,131,255),true).apply{maxLines=1})
+        copy.addView(label("Escreva, organize e compartilhe de forma simples,\nrápida e segura.",11f,Color.rgb(154,167,199)).apply{setPadding(0,dp(9),0,0);maxLines=2})
+        hero.addView(copy,LinearLayout.LayoutParams(0,-1,0.64f))
+        hero.addView(NexusOrbView(this),LinearLayout.LayoutParams(0,-1,0.36f))
         box.addView(hero,LinearLayout.LayoutParams(-1,dp(178)).apply{topMargin=dp(18)})
 
         val actions=LinearLayout(this).horizontal().apply{gravity=Gravity.CENTER}
