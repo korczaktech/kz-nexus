@@ -475,39 +475,44 @@ class MainActivity : AppCompatActivity() {
         box.addView(recent,lp(top=18));scroll.addView(box);content.addView(scroll);loadHomeDocuments()
     }
 
-    private fun renderFiles() {
-        val scroll = ScrollView(this)
-        val box = LinearLayout(this).vertical().apply { setPadding(dp(18), dp(18), dp(18), dp(28)) }
-        val head = LinearLayout(this).horizontal()
-        val h = LinearLayout(this).vertical()
-        h.addView(label("ARQUIVOS", 10f, cyan, true))
-        h.addView(label("Seus documentos", 26f, text, true), lp(top = 4))
-        head.addView(h, LinearLayout.LayoutParams(0, -2, 1f))
-        head.addView(button("+ Novo", true).apply { setOnClickListener { renderEditor(null, null, null) } }, LinearLayout.LayoutParams(dp(100), dp(44)))
-        box.addView(head)
-
-        val progress = ProgressBar(this).apply { isIndeterminate = true }
-        box.addView(progress, lp(top = 16))
-        scroll.addView(box)
-        content.addView(scroll)
-
-        executor.execute {
-            val apiResult = if (!session.token.isNullOrBlank()) api.documents() else ApiResult(0, "[]")
-            val local = storage.listFiles()
-            main.post {
-                progress.visibility = View.GONE
-                if (apiResult.code in 200..299) {
-                    addDocumentItems(box, extractArray(apiResult.body), false)
-                } else if (local.length() == 0) {
-                    box.addView(label("Não foi possível carregar os documentos.", 13f, muted), lp(top = 20))
-                    box.addView(button("Tentar novamente", false).apply { setOnClickListener { renderFiles() } }, lp(top = 10))
-                }
-                if (local.length() > 0) {
-                    box.addView(label("ARQUIVOS DO DISPOSITIVO", 10f, cyan, true), lp(top = 22))
-                    addDocumentItems(box, local, true)
+    private fun renderFiles(){
+        val s=ScrollView(this).apply{overScrollMode=View.OVER_SCROLL_NEVER}
+        val b=LinearLayout(this).vertical().apply{setPadding(dp(18),dp(18),dp(18),dp(24))}
+        b.addView(label("DOCUMENTOS",11f,blue,true));b.addView(label("Arquivos",28f,text,true),lp(top=4))
+        val search=input("Pesquisar documentos").apply{isSingleLine=true}
+        b.addView(search,lp(top=16))
+        val actions=LinearLayout(this).horizontal()
+        actions.addView(button("＋ Novo documento",true).apply{setOnClickListener{showCreateDocument()}},LinearLayout.LayoutParams(0,dp(48),1f))
+        actions.addView(button("＋ Pasta",false).apply{setOnClickListener{showCreateFolder()}},LinearLayout.LayoutParams(0,dp(48),1f).apply{leftMargin=dp(8)})
+        b.addView(actions,lp(top=10))
+        val list=LinearLayout(this).vertical()
+        b.addView(list,lp(top=18))
+        fun fill(q:String=""){
+            executor.execute{
+                val r=if(q.isBlank())api.documents()else api.search(q)
+                main.post{
+                    list.removeAllViews()
+                    val a=if(r.code in 200..299)extractArray(r.body)else JSONArray()
+                    if(a.length()==0)list.addView(label(if(q.isBlank())"Nenhum documento encontrado."else"Nenhum resultado para "$q".",14f,muted).apply{setPadding(0,dp(20),0,0)})
+                    for(i in 0 until a.length()){
+                        val o=a.optJSONObject(i)?:continue
+                        val id=o.optString("id",o.optString("_id"))
+                        val name=o.optString("name","Documento")
+                        val meta=o.optString("updated_at",o.optString("created_at","Documento Nexus"))
+                        val row=actionCard(name,meta){
+                            if(id.isNotBlank())executor.execute{val d=api.document(id);main.post{val obj=extractObject(d.body);openRemoteDocument(id,name,obj?.optString("content","")?:"")}}
+                            else showDocumentActions(name)
+                        }
+                        list.addView(row,lp(top=8))
+                    }
+                    if(r.code !in 200..299 && a.length()==0)list.addView(label(api.errorMessage(r),12f,red).apply{setPadding(0,dp(12),0,0)})
                 }
             }
         }
+        search.setOnEditorActionListener{_,_,_->fill(search.text.toString().trim());true}
+        search.setOnFocusChangeListener{v,f->v.animate().scaleX(if(f)1.01f else 1f).scaleY(if(f)1.01f else 1f).setDuration(120).start()}
+        fill()
+        s.addView(b);content.addView(s)
     }
 
     private fun addDocumentItems(box: LinearLayout, items: JSONArray, local: Boolean) {
@@ -547,65 +552,39 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    private fun renderEditor(id: String?, name: String?, body: String?) {
-        currentDocumentId = id
-        currentDocumentUri = null
-        val box = LinearLayout(this).vertical().apply { setPadding(dp(14), dp(12), dp(14), dp(18)) }
-        val header = LinearLayout(this).horizontal()
-        header.addView(button("‹ Voltar", false).apply { setOnClickListener { navigate("home") } }, LinearLayout.LayoutParams(dp(100), dp(44)))
-        val status = TextView(this).apply { text = "Novo documento"; gravity = Gravity.CENTER_VERTICAL; setTextColor(muted); textSize = 11f }
-        editorStatus = status
-        header.addView(status, LinearLayout.LayoutParams(0, dp(44), 1f).apply { leftMargin = dp(8) })
-        header.addView(button("Salvar", true).apply { setOnClickListener { saveEditor() } }, LinearLayout.LayoutParams(dp(100), dp(44)))
-        box.addView(header)
-
-        val title = input("Nome do documento").apply { setText(name ?: "Documento sem título"); textSize = 17f; setSingleLine(true) }
-        editorTitle = title
-        box.addView(title, lp(top = 12))
-        val bodyInput = EditText(this).apply {
-            hint = "Comece a escrever..."
-            setText(body ?: "")
-            setTextColor(this@MainActivity.text)
-            setHintTextColor(muted)
-            textSize = 16f
-            gravity = Gravity.TOP or Gravity.START
-            setPadding(dp(14), dp(14), dp(14), dp(14))
-            background = rounded(panel, 16)
-            minLines = 16
-            isSingleLine = false
+    private fun renderEditor(id:String?,name:String?,inlineContent:String?){
+        currentDocumentId=id;currentDocumentUri=null
+        val scroll=ScrollView(this).apply{fillViewport=true}
+        val b=LinearLayout(this).vertical().apply{setPadding(dp(18),dp(18),dp(18),dp(24))}
+        val head=LinearLayout(this).horizontal().apply{gravity=Gravity.CENTER_VERTICAL}
+        head.addView(label(if(name.isNullOrBlank())"EDITOR"else"DOCUMENTO",11f,blue,true),LinearLayout.LayoutParams(0,-2,1f))
+        head.addView(button("Salvar",true).apply{setOnClickListener{saveCurrentEditor()}},LinearLayout.LayoutParams(dp(92),dp(44)))
+        b.addView(head)
+        val title=input("Nome do documento").apply{setText(name?:"Novo documento");isSingleLine=true}
+        val body=EditText(this).apply{hint="Escreva seu documento…";setHintTextColor(muted);setTextColor(text);textSize=16f;gravity=Gravity.TOP;minLines=18;setPadding(dp(16),dp(16),dp(16),dp(16));background=rounded(panel,16)}
+        if(inlineContent!=null)body.setText(inlineContent)
+        editorTitle=title;editorBody=body
+        b.addView(title,lp(top=16))
+        val toolbar=LinearLayout(this).horizontal().apply{setPadding(0,dp(10),0,dp(10))}
+        listOf("B" to "bold","I" to "italic","U" to "underline","•" to "list").forEach{(t,cmd)->
+            toolbar.addView(TextView(this).apply{text=t;textSize=15f;gravity=Gravity.CENTER;setTextColor(text);background=rounded(panel2,10);setOnClickListener{when(cmd){"bold"->wrapSelection("**");"italic"->wrapSelection("_");"underline"->wrapSelection("__");"list"->insertAtCursor("\n• ")} }},LinearLayout.LayoutParams(dp(44),dp(40)).apply{rightMargin=dp(7)})
         }
-        editorBody = bodyInput
-        box.addView(bodyInput, LinearLayout.LayoutParams(-1, 0, 1f).apply { topMargin = dp(12) })
-
-        val tools = LinearLayout(this).horizontal()
-        listOf("B", "I", "Título", "Lista", "Limpar").forEach { t ->
-            tools.addView(button(t, false).apply {
-                setOnClickListener {
-                    when (t) {
-                        "B" -> wrapSelection("**")
-                        "I" -> wrapSelection("_")
-                        "Título" -> insertAtCursor("# ")
-                        "Lista" -> insertAtCursor("• ")
-                        "Limpar" -> bodyInput.setSelection(bodyInput.text.length)
-                    }
-                }
-            }, LinearLayout.LayoutParams(0, dp(42), 1f).apply { leftMargin = dp(3); rightMargin = dp(3) })
-        }
-        box.addView(tools, lp(top = 8))
-        content.addView(box)
-        if (id != null && body.isNullOrBlank()) {
-            editorStatus?.text = "Carregando documento..."
-            executor.execute {
-                val r = api.document(id)
-                main.post {
-                    if (r.code in 200..299) {
-                        val o = extractObject(r.body)
-                        editorTitle?.setText(o?.optString("name", name ?: "Documento") ?: name ?: "Documento")
-                        editorBody?.setText(o?.optString("content", "") ?: "")
-                        editorStatus?.text = "Pronto"
-                    } else editorStatus?.text = "Não foi possível carregar"
-                }
+        b.addView(toolbar);b.addView(body,lp())
+        editorStatus=label("Pronto para editar.",11f,muted).apply{setPadding(0,dp(9),0,0)}
+        b.addView(editorStatus!!)
+        scroll.addView(b);content.addView(scroll)
+    }
+    private fun saveCurrentEditor(){
+        val title=editorTitle?.text?.toString()?.trim().orEmpty().ifBlank{"Novo documento"}
+        val body=editorBody?.text?.toString().orEmpty()
+        val id=currentDocumentId
+        editorStatus?.text="Salvando…"
+        executor.execute{
+            val r=if(!id.isNullOrBlank())api.updateDocument(id,title,body)else{
+                val uri=currentDocumentUri
+                if(uri!=null){val ok=storage.write(uri,title,body);ApiResult(if(ok.first)200 else 500,"")}else api.createDocument(title,"document",body)
             }
+            main.post{if(r.code in 200..299){editorStatus?.text="Salvo agora";NexusFeedback.toast(this,"Documento salvo.",NexusFeedback.Type.SUCCESS)}else{editorStatus?.text="Não foi possível salvar";NexusFeedback.toast(this,api.errorMessage(r),NexusFeedback.Type.ERROR)}}
         }
     }
 
@@ -636,42 +615,28 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    private fun renderMore() {
-        val scroll = ScrollView(this)
-        val box = LinearLayout(this).vertical().apply { setPadding(dp(18), dp(18), dp(18), dp(28)) }
-        box.addView(label("MAIS", 10f, cyan, true))
-        box.addView(label("Nexus", 28f, text, true), lp(top = 4))
-        val cards = listOf(
-            "Meu perfil" to "Conta e informações pessoais",
-            "Armazenamento" to "Pasta local e arquivos do dispositivo",
-            "Lixeira" to "Documentos enviados para a lixeira",
-            "Favoritos" to "Documentos marcados como favoritos",
-            "Sobre o Nexus" to "Versão e informações do aplicativo",
-            "Atualizações" to "Verificar uma nova versão",
-            "Sair" to "Encerrar a sessão atual"
-        )
-        cards.forEach { (title, subtitle) ->
-            val c = card().horizontal().apply { gravity = Gravity.CENTER_VERTICAL }
-            val t = LinearLayout(this).vertical()
-            t.addView(label(title, 14f, text, true))
-            t.addView(label(subtitle, 10f, muted), lp(top = 4))
-            c.addView(t, LinearLayout.LayoutParams(0, -2, 1f))
-            c.addView(iconButton("›"))
-            c.setOnClickListener {
-                when (title) {
-                    "Meu perfil" -> showProfile()
-                    "Armazenamento" -> showStorage()
-                    "Lixeira" -> showTrash()
-                    "Favoritos" -> showFavorites()
-                    "Sobre o Nexus" -> showAbout()
-                    "Atualizações" -> checkForUpdate(true)
-                    "Sair" -> logout()
-                }
-            }
-            box.addView(c, lp(top = 9))
+    private fun renderMore(){
+        val s=ScrollView(this).apply{overScrollMode=View.OVER_SCROLL_NEVER}
+        val b=LinearLayout(this).vertical().apply{setPadding(dp(18),dp(18),dp(18),dp(24))}
+        b.addView(label("MAIS",11f,blue,true));b.addView(label("Nexus",28f,text,true),lp(top=4))
+        b.addView(label("Conta, recursos e configurações do aplicativo.",13f,muted),lp(top=6))
+        listOf(
+            Triple("Meu perfil","Dados da sua conta","profile"),
+            Triple("Meu plano","Plano Free e recursos","plan"),
+            Triple("Armazenamento","Pasta e serviços conectados","storage"),
+            Triple("Favoritos","Documentos marcados","favorites"),
+            Triple("Histórico","Atividades recentes","history"),
+            Triple("Lixeira","Documentos removidos","trash"),
+            Triple("Configurações","Preferências do Nexus","settings"),
+            Triple("Sobre o Nexus","NexusAPI e versão","about"),
+            Triple("Atualizações","Verificar nova versão","update"),
+            Triple("Sair","Encerrar a sessão","logout")
+        ).forEach{(t,z,id)->
+            b.addView(actionCard(t,z){
+                when(id){"profile"->showProfile();"plan"->navigate("plan");"storage"->navigate("storage");"favorites"->navigate("favorites");"history"->navigate("history");"trash"->navigate("trash");"settings"->navigate("settings");"about"->showAbout();"update"->checkForUpdate(true);"logout"->logout()}
+            },lp(top=9))
         }
-        scroll.addView(box)
-        content.addView(scroll)
+        s.addView(b);content.addView(s)
     }
 
     private fun showProfile() {
