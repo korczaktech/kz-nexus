@@ -179,7 +179,7 @@ class MainActivity : AppCompatActivity() {
             }
         }
 
-        scroll.addView(card, ScrollView.LayoutParams(-1, -2))
+        scroll.addView(card, FrameLayout.LayoutParams(-1, -2))
         root.addView(scroll, LinearLayout.LayoutParams(-1, -2).apply { gravity = Gravity.CENTER })
         setContentView(root)
     }
