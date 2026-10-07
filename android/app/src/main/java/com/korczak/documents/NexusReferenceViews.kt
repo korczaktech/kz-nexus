@@ -56,7 +56,7 @@ internal class NexusIconView(context: Context, private val icon:NexusIcon, priva
     private val d=resources.displayMetrics.density
     override fun onDraw(c:Canvas){
         val target=sizeDp*d
-        val u=min(width,height).coerceAtMost(target)/24f
+        val u=min(width,height).toFloat().coerceAtMost(target)/24f
         val iconSize=24f*u
         val ox=(width-iconSize)/2f
         val oy=(height-iconSize)/2f
