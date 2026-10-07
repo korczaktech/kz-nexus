@@ -55,20 +55,66 @@ class MainActivity : AppCompatActivity() {
 
     override fun onCreate(state: Bundle?) {
         super.onCreate(state)
-        WindowCompat.setDecorFitsSystemWindows(window, true)
+        showStartupSplash()
         window.statusBarColor = bg
         window.navigationBarColor = bg
 
-        session = SessionStore(this)
-        api = ApiClient(session)
-        storage = StorageManager(this)
+        main.postDelayed({
+            try {
+                WindowCompat.setDecorFitsSystemWindows(window, true)
+                session = SessionStore(this)
+                api = ApiClient(session)
+                storage = StorageManager(this)
 
-        if (session.token.isNullOrBlank()) {
-            showAuth()
-        } else {
-            showApp()
+                if (session.token.isNullOrBlank()) showAuth() else showApp()
+                handleIntent(intent)
+            } catch (error: Throwable) {
+                android.util.Log.e("KorczakNexus", "Falha durante a inicialização nativa", error)
+                showStartupFailure(error)
+            }
+        }, 180L)
+    }
+
+    private fun showStartupSplash() {
+        val splash = FrameLayout(this).apply { setBackgroundColor(bg) }
+        val center = LinearLayout(this).vertical().apply { gravity = Gravity.CENTER }
+        val logo = ImageView(this).apply {
+            setImageResource(R.drawable.ic_kz)
+            scaleType = ImageView.ScaleType.CENTER_INSIDE
+            contentDescription = "Korczak Nexus"
         }
-        handleIntent(intent)
+        center.addView(logo, LinearLayout.LayoutParams(dp(104), dp(104)))
+        center.addView(label("Korczak Nexus", 25f, text, true).apply {
+            gravity = Gravity.CENTER
+            setPadding(0, dp(16), 0, 0)
+        })
+        center.addView(label("Inicializando…", 11f, muted).apply {
+            gravity = Gravity.CENTER
+            setPadding(0, dp(7), 0, 0)
+        })
+        splash.addView(center, FrameLayout.LayoutParams(-1, -1))
+        setContentView(splash)
+    }
+
+    private fun showStartupFailure(error: Throwable) {
+        val page = LinearLayout(this).vertical().apply {
+            gravity = Gravity.CENTER
+            setPadding(dp(28), dp(28), dp(28), dp(28))
+            setBackgroundColor(bg)
+        }
+        page.addView(label("Korczak Nexus", 25f, text, true).apply { gravity = Gravity.CENTER })
+        page.addView(label("Não foi possível iniciar o aplicativo.", 15f, red, true).apply {
+            gravity = Gravity.CENTER
+            setPadding(0, dp(16), 0, 0)
+        })
+        page.addView(label("O erro foi registrado localmente para diagnóstico.", 11f, muted).apply {
+            gravity = Gravity.CENTER
+            setPadding(0, dp(8), 0, dp(20))
+        })
+        page.addView(button("Tentar novamente", true).apply {
+            setOnClickListener { recreate() }
+        }, LinearLayout.LayoutParams(-1, dp(48)))
+        setContentView(page)
     }
 
     override fun onNewIntent(intent: Intent?) {
