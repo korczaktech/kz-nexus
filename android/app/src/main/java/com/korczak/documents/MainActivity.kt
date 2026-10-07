@@ -101,88 +101,234 @@ class MainActivity : AppCompatActivity() {
         root = LinearLayout(this).vertical().apply {
             setBackgroundColor(bg)
             gravity = Gravity.CENTER
-            setPadding(dp(24), dp(28), dp(24), dp(28))
+            setPadding(dp(26), dp(24), dp(26), dp(24))
         }
-        val scroll = ScrollView(this)
-        val card = LinearLayout(this).vertical().apply {
+
+        val scroll = ScrollView(this).apply {
+            isFillViewport = true
+            overScrollMode = View.OVER_SCROLL_NEVER
+        }
+
+        val page = LinearLayout(this).vertical().apply {
             gravity = Gravity.CENTER_HORIZONTAL
-            background = rounded(panel, 24)
-            setPadding(dp(24), dp(28), dp(24), dp(26))
+            setPadding(dp(2), dp(30), dp(2), dp(30))
         }
+
+        // Brand mark: the existing Nexus VectorDrawable is the native Android
+        // equivalent of the SVG logo and remains crisp at every density.
         val logo = ImageView(this).apply {
-            setImageResource(com.korczak.documents.R.drawable.ic_kz)
+            setImageResource(R.drawable.ic_kz)
             scaleType = ImageView.ScaleType.CENTER_INSIDE
+            contentDescription = "Korczak Nexus"
         }
-        card.addView(logo, LinearLayout.LayoutParams(dp(76), dp(76)).apply { bottomMargin = dp(10) })
-        card.addView(label("KORCZAK NEXUS", 20f, text, true).apply { gravity = Gravity.CENTER })
-        card.addView(label(if (registering) "Crie sua conta" else "Entre no seu espaço", 13f, muted).apply {
-            gravity = Gravity.CENTER
-            setPadding(0, dp(6), 0, dp(20))
+        page.addView(logo, LinearLayout.LayoutParams(dp(88), dp(88)).apply {
+            bottomMargin = dp(20)
         })
 
-        val name = input("Nome completo")
-        name.visibility = if (registering) View.VISIBLE else View.GONE
-        val email = input("E-mail")
-        val password = input("Senha").apply { inputType = 0x00000081 }
-        card.addView(name, lp())
-        card.addView(email, lp())
-        card.addView(password, lp())
-
-        val submit = button(if (registering) "Criar conta" else "Entrar", true)
-        card.addView(submit, lp(top = 8))
-        val toggle = button(if (registering) "Já tenho uma conta" else "Criar uma conta", false)
-        card.addView(toggle, lp(top = 8))
-        val offline = label("Armazenamento local funciona sem conta após selecionar uma pasta.", 11f, muted).apply {
+        page.addView(label("Korczak Nexus", 27f, text, true).apply {
             gravity = Gravity.CENTER
-            setPadding(dp(8), dp(18), dp(8), 0)
-        }
-        card.addView(offline, lp())
+        })
+        page.addView(label(
+            if (registering) "Crie sua conta e comece a organizar seus documentos."
+            else "Seus documentos. Seu espaço. Do seu jeito.",
+            13f, muted
+        ).apply {
+            gravity = Gravity.CENTER
+            setPadding(dp(18), dp(8), dp(18), dp(28))
+        })
 
+        val form = LinearLayout(this).vertical().apply {
+            background = rounded(Color.rgb(6, 18, 31), 20)
+            setPadding(dp(20), dp(20), dp(20), dp(20))
+        }
+
+        val name = authInput("Nome completo", "N")
+        name.visibility = if (registering) View.VISIBLE else View.GONE
+        val email = authInput("E-mail", "@")
+        val password = authInput("Senha", "•").apply {
+            inputType = 0x00000081
+        }
+
+        if (registering) form.addView(name, authLp())
+        form.addView(email, authLp())
+        form.addView(password, authLp(top = 12))
+
+        val forgot = TextView(this).apply {
+            text = "Esqueci a senha"
+            textSize = 12f
+            setTextColor(cyan)
+            gravity = Gravity.END
+            setPadding(0, dp(12), dp(2), dp(2))
+            isClickable = true
+            isFocusable = true
+            setOnClickListener { showPasswordRecovery() }
+        }
+        if (!registering) form.addView(forgot, authLp())
+
+        val submit = authButton(if (registering) "Criar conta" else "Entrar", true)
+        form.addView(submit, authLp(top = 18))
+
+        val divider = LinearLayout(this).horizontal().apply {
+            gravity = Gravity.CENTER_VERTICAL
+        }
+        val dividerLineLeft = View(this).apply { setBackgroundColor(line) }
+        val dividerText = label("ou", 11f, muted).apply {
+            gravity = Gravity.CENTER
+            setPadding(dp(10), 0, dp(10), 0)
+        }
+        val dividerLineRight = View(this).apply { setBackgroundColor(line) }
+        divider.addView(dividerLineLeft, LinearLayout.LayoutParams(0, dp(1), 1f))
+        divider.addView(dividerText, LinearLayout.LayoutParams(-2, dp(28)))
+        divider.addView(dividerLineRight, LinearLayout.LayoutParams(0, dp(1), 1f))
+        form.addView(divider, authLp(top = 8))
+
+        val toggle = authButton(
+            if (registering) "Voltar para entrar" else "Criar uma conta",
+            false
+        )
+        form.addView(toggle, authLp())
         toggle.setOnClickListener {
             registering = !registering
             showAuth()
         }
+
+        page.addView(form, LinearLayout.LayoutParams(-1, -2))
+
+        page.addView(label(
+            if (registering) "Ao criar uma conta, você poderá sincronizar seus documentos com a NexusAPI."
+            else "Acesso protegido. O Nexus mantém sua sessão neste dispositivo.",
+            10f, muted
+        ).apply {
+            gravity = Gravity.CENTER
+            setPadding(dp(20), dp(18), dp(20), 0)
+        })
+
+        scroll.addView(page, FrameLayout.LayoutParams(-1, -2))
+        root.addView(scroll, LinearLayout.LayoutParams(-1, 0, 1f))
+        setContentView(root)
+
         submit.setOnClickListener {
             val e = email.text.toString().trim()
             val p = password.text.toString()
-            if (e.isBlank() || p.isBlank() || (registering && name.text.toString().trim().isBlank())) {
+            val n = name.text.toString().trim()
+            if (e.isBlank() || p.isBlank() || (registering && n.isBlank())) {
                 NexusFeedback.toast(this, "Preencha os campos obrigatórios.", NexusFeedback.Type.WARNING)
                 return@setOnClickListener
             }
             submit.isEnabled = false
-            submit.text = if (registering) "Criando..." else "Entrando..."
+            submit.text = if (registering) "Criando conta…" else "Entrando…"
+
             executor.execute {
-                val result = if (registering) {
-                    api.register(name.text.toString().trim(), e, p)
-                } else {
-                    api.login(e, p)
-                }
+                val result = if (registering) api.register(n, e, p) else api.login(e, p)
                 main.post {
                     submit.isEnabled = true
                     submit.text = if (registering) "Criar conta" else "Entrar"
                     if (result.code in 200..299) {
                         try {
-                            if (!registering) api.saveSession(result)
-                            else {
+                            if (!registering) {
+                                api.saveSession(result)
+                            } else {
                                 val login = api.login(e, p)
-                                if (login.code !in 200..299) throw IllegalStateException("Conta criada. Faça login para continuar.")
+                                if (login.code !in 200..299) {
+                                    throw IllegalStateException("Conta criada. Faça login para continuar.")
+                                }
                                 api.saveSession(login)
                             }
                             showApp()
                         } catch (err: Exception) {
-                            NexusFeedback.alert(this, "Não foi possível entrar", err.message ?: "Resposta inválida da API", NexusFeedback.Type.ERROR)
+                            NexusFeedback.alert(
+                                this,
+                                "Não foi possível entrar",
+                                err.message ?: "Resposta inválida da API",
+                                NexusFeedback.Type.ERROR
+                            )
                         }
                     } else {
-                        NexusFeedback.alert(this, if (registering) "Não foi possível criar a conta" else "Não foi possível entrar", api.errorMessage(result), NexusFeedback.Type.ERROR)
+                        NexusFeedback.alert(
+                            this,
+                            if (registering) "Não foi possível criar a conta" else "Não foi possível entrar",
+                            api.errorMessage(result),
+                            NexusFeedback.Type.ERROR
+                        )
                     }
                 }
             }
         }
-
-        scroll.addView(card, FrameLayout.LayoutParams(-1, -2))
-        root.addView(scroll, LinearLayout.LayoutParams(-1, -2).apply { gravity = Gravity.CENTER })
-        setContentView(root)
     }
+
+    private fun showPasswordRecovery() {
+        val email = EditText(this).apply {
+            hint = "seu@email.com"
+            textSize = 14f
+            setTextColor(text)
+            setHintTextColor(muted)
+            setSingleLine(true)
+            setPadding(dp(14), 0, dp(14), 0)
+            background = rounded(Color.rgb(5, 17, 29), 12)
+        }
+
+        val box = LinearLayout(this).vertical().apply {
+            addView(label("Informe o e-mail usado na sua conta.", 12f, muted), lp())
+            addView(email, lp(top = 12))
+        }
+
+        NexusFeedback.alert(
+            this,
+            "Recuperar acesso",
+            "Digite seu e-mail para iniciar a recuperação da senha.",
+            NexusFeedback.Type.INFO,
+            "Continuar",
+            "Cancelar",
+            onPositive = {
+                if (email.text.toString().trim().isBlank()) {
+                    NexusFeedback.toast(this, "Informe seu e-mail.", NexusFeedback.Type.WARNING)
+                } else {
+                    NexusFeedback.toast(
+                        this,
+                        "Solicitação preparada para recuperação de acesso.",
+                        NexusFeedback.Type.INFO
+                    )
+                }
+            }
+        )
+    }
+
+    private fun authInput(hintText: String, mark: String): EditText {
+        val field = EditText(this).apply {
+            hint = hintText
+            setHintTextColor(muted)
+            setTextColor(this@MainActivity.text)
+            textSize = 14f
+            isSingleLine = true
+            setPadding(dp(14), 0, dp(14), 0)
+            background = rounded(Color.rgb(5, 17, 29), 13)
+        }
+        field.setOnFocusChangeListener { view, focused ->
+            val color = if (focused) Color.rgb(15, 68, 103) else Color.rgb(5, 17, 29)
+            view.background = rounded(color, 13)
+        }
+        return field
+    }
+
+    private fun authButton(title: String, primary: Boolean): Button = Button(this).apply {
+        text = title
+        isAllCaps = false
+        textSize = 13f
+        setTypeface(Typeface.create("sans-serif-medium", Typeface.NORMAL))
+        setTextColor(if (primary) Color.WHITE else cyan)
+        stateListAnimator = null
+        background = rounded(
+            if (primary) Color.rgb(12, 119, 205) else Color.rgb(8, 28, 45),
+            13
+        )
+        minHeight = dp(50)
+        minimumHeight = dp(50)
+        setPadding(dp(16), 0, dp(16), 0)
+    }
+
+    private fun authLp(top: Int = 0): LinearLayout.LayoutParams =
+        LinearLayout.LayoutParams(-1, dp(54)).apply { topMargin = dp(top) }
+
 
     private fun showApp() {
         root = LinearLayout(this).vertical().apply { setBackgroundColor(bg) }
