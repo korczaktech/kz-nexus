@@ -531,7 +531,7 @@ class MainActivity : AppCompatActivity() {
             main.post {
                 if (r.code in 200..299) {
                     val a = extractArray(r.body)
-                    val names = buildString { for (i in 0 until a.length()) names.append("• ").append(a.optJSONObject(i)?.optString("name", "Documento")).append("\n") }
+                    val names = buildString { for (i in 0 until a.length()) append("• ").append(a.optJSONObject(i)?.optString("name", "Documento")).append("\n") }
                     NexusFeedback.alert(this, "Favoritos", names.ifBlank { "Nenhum favorito." }, NexusFeedback.Type.INFO)
                 } else NexusFeedback.alert(this, "Favoritos", api.errorMessage(r), NexusFeedback.Type.ERROR)
             }
