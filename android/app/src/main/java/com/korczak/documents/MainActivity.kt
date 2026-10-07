@@ -389,7 +389,7 @@ class MainActivity : AppCompatActivity() {
         val bodyInput = EditText(this).apply {
             hint = "Comece a escrever..."
             setText(body ?: "")
-            setTextColor(text)
+            setTextColor(this@MainActivity.text)
             setHintTextColor(muted)
             textSize = 16f
             gravity = Gravity.TOP or Gravity.START
@@ -674,7 +674,7 @@ class MainActivity : AppCompatActivity() {
     private fun input(hintText: String): EditText = EditText(this).apply {
         hint = hintText
         setHintTextColor(muted)
-        setTextColor(text)
+        setTextColor(this@MainActivity.text)
         textSize = 14f
         singleLine = true
         setPadding(dp(14), 0, dp(14), 0)
@@ -697,7 +697,7 @@ class MainActivity : AppCompatActivity() {
         text = symbol
         textSize = 24f
         gravity = Gravity.CENTER
-        setTextColor(text)
+        setTextColor(this@MainActivity.text)
         background = rounded(Color.rgb(9, 31, 49), 12)
     }
 
