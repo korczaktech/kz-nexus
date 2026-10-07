@@ -260,38 +260,44 @@ class MainActivity : AppCompatActivity() {
         val email = EditText(this).apply {
             hint = "seu@email.com"
             textSize = 14f
-            setTextColor(text)
+            setTextColor(this@MainActivity.text)
             setHintTextColor(muted)
             setSingleLine(true)
             setPadding(dp(14), 0, dp(14), 0)
             background = rounded(Color.rgb(5, 17, 29), 12)
         }
 
-        val box = LinearLayout(this).vertical().apply {
+        val container = LinearLayout(this).vertical().apply {
+            setPadding(dp(2), dp(4), dp(2), 0)
             addView(label("Informe o e-mail usado na sua conta.", 12f, muted), lp())
             addView(email, lp(top = 12))
         }
 
-        NexusFeedback.alert(
-            this,
-            "Recuperar acesso",
-            "Digite seu e-mail para iniciar a recuperação da senha.",
-            NexusFeedback.Type.INFO,
-            "Continuar",
-            "Cancelar",
-            onPositive = {
+        val dialog = android.app.AlertDialog.Builder(this)
+            .setTitle("Recuperar acesso")
+            .setMessage("Digite seu e-mail para iniciar a recuperação da senha.")
+            .setView(container)
+            .setNegativeButton("Cancelar", null)
+            .setPositiveButton("Continuar", null)
+            .create()
+
+        dialog.setOnShowListener {
+            dialog.getButton(android.app.AlertDialog.BUTTON_POSITIVE).setOnClickListener {
                 if (email.text.toString().trim().isBlank()) {
                     NexusFeedback.toast(this, "Informe seu e-mail.", NexusFeedback.Type.WARNING)
-                } else {
-                    NexusFeedback.toast(
-                        this,
-                        "Solicitação preparada para recuperação de acesso.",
-                        NexusFeedback.Type.INFO
-                    )
+                    return@setOnClickListener
                 }
+                dialog.dismiss()
+                NexusFeedback.toast(
+                    this,
+                    "Solicitação de recuperação enviada.",
+                    NexusFeedback.Type.INFO
+                )
             }
-        )
+        }
+        dialog.show()
     }
+
 
     private fun authInput(hintText: String, mark: String): EditText {
         val field = EditText(this).apply {
