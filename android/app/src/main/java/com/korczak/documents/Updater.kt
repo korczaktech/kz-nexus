@@ -110,8 +110,13 @@ class Updater(private val activity: Activity) {
 
                     val callback = Intent(activity, UpdateReceiver::class.java).apply {
                         action = "com.korczak.documents.UPDATE_RESULT"
+                        setPackage(activity.packageName)
+                        component = android.content.ComponentName(activity, UpdateReceiver::class.java)
                     }
-                    val flags = PendingIntent.FLAG_UPDATE_CURRENT or
+                    // Replace any PendingIntent left by an older updater version.
+                    // PackageInstaller needs to be able to fill the result intent with
+                    // STATUS_PENDING_USER_ACTION / STATUS_SUCCESS / failure details.
+                    val flags = PendingIntent.FLAG_CANCEL_CURRENT or
                         if (android.os.Build.VERSION.SDK_INT >= 31) PendingIntent.FLAG_MUTABLE
                         else if (android.os.Build.VERSION.SDK_INT >= 23) PendingIntent.FLAG_IMMUTABLE
                         else 0
