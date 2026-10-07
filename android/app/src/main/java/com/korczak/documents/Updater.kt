@@ -42,7 +42,7 @@ class Updater(private val activity: Activity) {
 
                 if (!isVersion(version)) throw IllegalStateException("Manifesto de atualização inválido")
                 val assetName = url.substringAfterLast("/")
-                if (url.isBlank() || !url.startsWith("https://github.com/") || !url.contains("/releases/download/") || !assetName.matches(Regex("^Korczak-HUB-Nexus-[0-9]+(\\.[0-9]+){1,3}\\.apk$"))) {
+                if (url.isBlank() || !url.startsWith("https://github.com/$repo/releases/download/") || !url.contains("/releases/download/") || !assetName.matches(Regex("^Korczak-HUB-Nexus-[0-9]+(\\.[0-9]+){1,3}\\.apk$"))) {
                     throw IllegalStateException("URL do APK não é confiável")
                 }
                 if (!digest.matches(Regex("[0-9a-f]{64}"))) {
@@ -159,6 +159,11 @@ class Updater(private val activity: Activity) {
             throw IllegalStateException("Download HTTP $code" + if (detail.isNullOrBlank()) "" else ": $detail")
         }
         val contentType = c.contentType.orEmpty()
+        val finalUrl = c.url?.toString().orEmpty()
+        if (!finalUrl.startsWith("https://github.com/") && !finalUrl.startsWith("https://objects.githubusercontent.com/")) {
+            c.disconnect()
+            throw IllegalStateException("Destino de atualização inválido")
+        }
         c.inputStream.use { input -> apk.outputStream().use { output -> input.copyTo(output) } }
         c.disconnect()
         if (apk.length() < 100000L) throw IllegalStateException("APK baixado está incompleto")
