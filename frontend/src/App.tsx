@@ -1,4 +1,4 @@
-import {FormEvent, ReactNode, useEffect, useState} from 'react';
+import {FormEvent, ReactNode, useEffect, useRef, useState} from 'react';
 import {api, clearToken, getToken, saveSession, type DocumentItem, type Event, type Folder, type Group, type Notification, type User, type Version} from './services/api';
 import {Button, Icon, Modal, StatePanel} from './components/ui';
 import {Editor, markdownToHtml} from './components/Editor';
@@ -126,21 +126,67 @@ function DocumentTable({docs,onSelect,onAction,onPermanent}:{docs:DocumentItem[]
 }
 
 function Home({user,docs,notes,onNew,onSelect,onAction,setView}:{user:User;docs:DocumentItem[];notes:Notification[];onNew:()=>void;onSelect:(d:DocumentItem)=>void;onAction:(d:DocumentItem)=>void;setView:(v:View)=>void}){
-  const[voiceListening,setVoiceListening]=useState(false),[voiceText,setVoiceText]=useState('');
-  function toggleVoice(){
-    const SpeechRecognition=(window as any).SpeechRecognition||(window as any).webkitSpeechRecognition;
-    if(voiceListening){setVoiceListening(false);return}
-    if(!SpeechRecognition){setVoiceText('Seu navegador não oferece reconhecimento de voz.');return}
-    const recognition=new SpeechRecognition();
-    recognition.lang='pt-BR';recognition.interimResults=true;recognition.continuous=false;
-    recognition.onstart=()=>{setVoiceListening(true);setVoiceText('Ouvindo…')};
-    recognition.onresult=(event:any)=>{
-      const text=Array.from(event.results).map((r:any)=>r[0]?.transcript||'').join('').trim();
-      setVoiceText(text||'Não consegui entender o comando.');
-    };
-    recognition.onerror=()=>{setVoiceListening(false);setVoiceText('Não foi possível acessar o microfone.')};
-    recognition.onend=()=>setVoiceListening(false);
-    try{recognition.start()}catch{setVoiceListening(false);setVoiceText('Não foi possível iniciar o microfone.')}
+  const[voiceListening,setVoiceListening]=useState(false),[voiceText,setVoiceText]=useState(''),[voiceLevel,setVoiceLevel]=useState(0);
+  const streamRef=useRef<MediaStream|null>(null),audioCtxRef=useRef<AudioContext|null>(null),rafRef=useRef<number|null>(null),recognitionRef=useRef<any>(null),barsRef=useRef<HTMLSpanElement[]>([]);
+  function stopVoice(){
+    if(recognitionRef.current){try{recognitionRef.current.stop()}catch{} recognitionRef.current=null}
+    if(rafRef.current!==null){cancelAnimationFrame(rafRef.current);rafRef.current=null}
+    streamRef.current?.getTracks().forEach(t=>t.stop());streamRef.current=null;
+    if(audioCtxRef.current){try{audioCtxRef.current.close()}catch{} audioCtxRef.current=null}
+    setVoiceListening(false);setVoiceLevel(0);
+    barsRef.current.forEach((el,i)=>{if(el)el.style.transform='scaleY(.12)'});
+  }
+  useEffect(()=>()=>stopVoice(),[]);
+  async function toggleVoice(){
+    if(voiceListening){stopVoice();return}
+    if(!navigator.mediaDevices?.getUserMedia){setVoiceText('Seu navegador não permite acesso ao microfone.');return}
+    try{
+      const stream=await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:true,noiseSuppression:true,autoGainControl:true},video:false});
+      streamRef.current=stream;setVoiceListening(true);setVoiceText('Ouvindo…');
+      const AudioContextCtor=window.AudioContext||(window as any).webkitAudioContext;
+      if(AudioContextCtor){
+        const ctx=new AudioContextCtor();audioCtxRef.current=ctx;
+        const source=ctx.createMediaStreamSource(stream),analyser=ctx.createAnalyser();
+        analyser.fftSize=128;analyser.smoothingTimeConstant=.78;source.connect(analyser);
+        const data=new Uint8Array(analyser.frequencyBinCount);
+        const animate=()=>{
+          analyser.getByteFrequencyData(data);
+          let sum=0;for(let i=0;i<data.length;i++)sum+=data[i];
+          const level=Math.min(1,sum/data.length/92);setVoiceLevel(level);
+          barsRef.current.forEach((el,i)=>{
+            if(!el)return;
+            const index=Math.min(data.length-1,Math.floor((i/data.length)*data.length*1.7));
+            const value=Math.max(.12,Math.min(1,(data[index]||0)/150*(1.15+Math.sin(i*.9)*.18)));
+            el.style.transform='scaleY('+value+')';
+          });
+          rafRef.current=requestAnimationFrame(animate);
+        };
+        if(ctx.state==='suspended')await ctx.resume();
+        rafRef.current=requestAnimationFrame(animate);
+      }
+      const SpeechRecognition=(window as any).SpeechRecognition||(window as any).webkitSpeechRecognition;
+      if(SpeechRecognition){
+        const recognition=new SpeechRecognition();recognitionRef.current=recognition;
+        recognition.lang='pt-BR';recognition.interimResults=true;recognition.continuous=true;recognition.maxAlternatives=1;
+        recognition.onresult=(event:any)=>{
+          const results=Array.from(event.results) as any[];
+          const text=results.map((r:any)=>r?.[0]?.transcript||'').join('').trim();
+          if(text)setVoiceText(text);
+        };
+        recognition.onerror=(event:any)=>{
+          if(event?.error==='not-allowed'||event?.error==='service-not-allowed')setVoiceText('Microfone bloqueado pelo navegador.');
+          else if(event?.error!=='aborted')setVoiceText('Microfone ativo — não consegui transcrever a fala.');
+        };
+        recognition.onend=()=>{
+          if(streamRef.current&&voiceListening){try{recognition.start()}catch{}}
+        };
+        try{recognition.start()}catch{}
+      }else{
+        setVoiceText('Microfone ativo. Reconhecimento de voz não disponível neste navegador.');
+      }
+    }catch(error:any){
+      stopVoice();setVoiceText(error?.name==='NotAllowedError'?'Permita o acesso ao microfone para usar a voz.':'Não foi possível iniciar o microfone.');
+    }
   }
   return <>
     <section className="hero">
@@ -155,27 +201,26 @@ function Home({user,docs,notes,onNew,onSelect,onAction,setView}:{user:User;docs:
       <button onClick={()=>setView('editor')}><span className="quick-icon blue"><Icon name="edit"/></span><div><strong>Abrir no editor</strong><small>Escolha um documento para continuar editando.</small></div></button>
     </nav>
     <div className="home-columns">
-      <section className="home-files">
-        <div className="home-files-card">
-          <div className="card-title"><h2>Seus arquivos</h2><button onClick={()=>setView('documents')}><span>Ver todos</span><Icon name="arrowRight" size={14}/></button></div>
-          <div className="file-tabs"><span className="active">Todos os documentos</span></div>
-          <DocumentTable docs={docs.slice(0,8)} onSelect={onSelect} onAction={onAction}/>
-        </div>
-      </section>
+      <section className="home-files"><div className="home-files-card">
+        <div className="card-title"><h2>Seus arquivos</h2><button onClick={()=>setView('documents')}><span>Ver todos</span><Icon name="arrowRight" size={14}/></button></div>
+        <div className="file-tabs"><span className="active">Todos os documentos</span></div>
+        <DocumentTable docs={docs.slice(0,8)} onSelect={onSelect} onAction={onAction}/>
+      </div></section>
       <div className="home-side">
         <section className="side-card pulse-card">
           <div className="card-title"><div><p className="eyebrow">PULSO DO ESPAÇO</p><h2>O que está acontecendo</h2></div><button onClick={()=>setView('audit')}><span>Ver tudo</span><Icon name="arrowRight" size={14}/></button></div>
-          <div className="pulse-status-row"><span className="pulse-dot"/><span>Espaço sincronizado</span><strong>{docs.length}</strong></div>
+          <div className="pulse-wave" aria-hidden="true">{Array.from({length:24},(_,i)=><span key={i} ref={el=>{if(el)barsRef.current[i]=el}}/>)}</div>
+          <div className="pulse-status-row"><span className={'pulse-dot '+(voiceListening?'live':'')}/><span>{voiceListening?'Microfone captando em tempo real':'Espaço sincronizado'}</span><strong>{docs.length}</strong></div>
           <div className="pulse-stat"><strong>{docs.filter(d=>d.favorite).length}</strong><span>documentos favoritos</span></div>
           <div className="pulse-activity">{notes.slice(0,5).map((n,i)=><div className="activity-item" key={n.id}><span className={'activity-icon a'+i}><Icon name={i===0?'cloud':i===1?'upload':i===2?'file':i===3?'edit':'clock'} size={17}/></span><div><strong>{n.message}</strong><small>{n.read?'Lida':'Nova'}</small></div></div>)}{!notes.length&&<p className="muted">Nenhuma atividade recente.</p>}</div>
         </section>
         <section className="side-card voice-card">
           <div className="card-title"><div><p className="eyebrow">CONTROLE POR VOZ</p><h2>Fale com o Nexus</h2></div><span className="voice-badge">BETA</span></div>
           <div className="voice-main">
-            <button className={'voice-mic '+(voiceListening?'listening':'')} onClick={toggleVoice} aria-label={voiceListening?'Parar microfone':'Ativar microfone'}><Icon name="mic" size={28}/><span>{voiceListening?'Ouvindo':'Microfone'}</span></button>
-            <div className="voice-copy"><strong>{voiceListening?'Estou ouvindo…':'Pronto para ouvir'}</strong><p>{voiceText||'Use sua voz para comandos rápidos no Nexus.'}</p></div>
+            <button className={'voice-mic '+(voiceListening?'listening':'')} onClick={toggleVoice} aria-label={voiceListening?'Parar microfone':'Ativar microfone'}><Icon name="mic" size={28}/><span>{voiceListening?'Parar':'Microfone'}</span></button>
+            <div className="voice-copy"><strong>{voiceListening?'Voz conectada':'Pronto para ouvir'}</strong><p>{voiceText||'Ative o microfone e fale naturalmente. A frequência acompanha sua voz.'}</p><div className="voice-level"><i style={{transform:'scaleX('+Math.max(.08,voiceLevel)+')'}}/></div></div>
           </div>
-          <div className="morok-unavailable"><span className="morok-mark">M</span><div><strong>Morok AI ainda não está disponível</strong><small>O controle por voz atual funciona apenas para captura do comando.</small></div></div>
+          <div className="morok-unavailable"><span className="morok-mark">M</span><div><strong>Morok AI ainda não está disponível</strong><small>O microfone e a captura de voz já estão funcionando; a inteligência conversacional será integrada posteriormente.</small></div></div>
         </section>
         <section className="side-card">
           <div className="card-title"><h2>Links rápidos</h2></div>
