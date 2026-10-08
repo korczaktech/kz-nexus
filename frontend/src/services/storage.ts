@@ -44,19 +44,40 @@ export async function chooseLocalFolder(): Promise<StorageSelection | null> {
       connectedAt: new Date().toISOString(),
     };
   }
-  const picker = (window as Window & {
-    showDirectoryPicker?: (options?: { mode?: 'read' | 'readwrite' }) => Promise<{name:string}>;
-  }).showDirectoryPicker;
+  // No Desktop Web, prefira o seletor de diretório baseado em input.
+  // Diferentemente de showDirectoryPicker(), ele não bloqueia uma pasta
+  // apenas porque ela contém arquivos ocultos ou de sistema.
+  const input = document.createElement('input');
+  input.type = 'file';
+  input.setAttribute('webkitdirectory', '');
+  input.setAttribute('directory', '');
+  input.multiple = true;
+  input.style.display = 'none';
 
-  if (!picker) {
-    throw new Error('Seu navegador não oferece seleção de pastas para este PWA. Use Arquivos para escolher documentos individualmente.');
-  }
+  const files = await new Promise<FileList | null>((resolve) => {
+    let settled = false;
+    const finish = (value: FileList | null) => {
+      if (settled) return;
+      settled = true;
+      input.remove();
+      resolve(value);
+    };
+    input.addEventListener('change', () => finish(input.files));
+    document.body.appendChild(input);
+    input.click();
+    // Alguns navegadores não disparam change quando o usuário cancela.
+    input.addEventListener('cancel', () => finish(null));
+  });
 
-  const handle = await picker({ mode: 'readwrite' });
+  if (!files || files.length === 0) return null;
+
+  const firstPath = files[0].webkitRelativePath || files[0].name;
+  const folderName = firstPath.split('/')[0] || files[0].name;
+
   return {
     provider: 'local',
     label: storageLabel('local'),
-    folderName: handle.name,
+    folderName,
     connectedAt: new Date().toISOString(),
   };
 }
