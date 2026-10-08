@@ -130,18 +130,35 @@ function VoiceControl(){
   const[transcript,setTranscript]=useState('');
   const recognitionRef=useRef<any>(null);
 
+  function chooseBestVoice(voices:SpeechSynthesisVoice[]){
+    const br=voices.filter(v=>/^pt-BR$/i.test(v.lang));
+    const pt=voices.filter(v=>/^pt(?:-|$)/i.test(v.lang));
+    const pool=br.length?br:pt;
+    const preferred=/Google.*Portuguese|Portugu[eê]s.*Brasil|Brazil|Francisca|Luciana|Heloisa|Maria|Daniela/i;
+    return pool.find(v=>preferred.test(v.name))||pool.find(v=>!/(espeak|festival|mbrola|compact|default)/i.test(v.name))||pool[0];
+  }
+
   function speakUnavailable(){
     const message='Integração ao Morok AI indisponivel';
     if(!('speechSynthesis' in window))return;
-    window.speechSynthesis.cancel();
-    const utterance=new SpeechSynthesisUtterance(message);
-    utterance.lang='pt-BR';
-    utterance.rate=.92;
-    utterance.pitch=.92;
-    const voices=window.speechSynthesis.getVoices();
-    const voice=voices.find(v=>/^pt-BR$/i.test(v.lang))||voices.find(v=>/^pt/i.test(v.lang));
-    if(voice)utterance.voice=voice;
-    window.speechSynthesis.speak(utterance);
+    const synth=window.speechSynthesis;
+    synth.cancel();
+    const speak=()=>{
+      const utterance=new SpeechSynthesisUtterance(message);
+      utterance.lang='pt-BR';
+      utterance.rate=.88;
+      utterance.pitch=.98;
+      utterance.volume=1;
+      const voice=chooseBestVoice(synth.getVoices());
+      if(voice)utterance.voice=voice;
+      synth.speak(utterance);
+    };
+    if(synth.getVoices().length)speak();
+    else{
+      const onVoices=()=>{synth.removeEventListener('voiceschanged',onVoices);speak()};
+      synth.addEventListener('voiceschanged',onVoices);
+      setTimeout(()=>{synth.removeEventListener('voiceschanged',onVoices);if(!synth.speaking)speak()},350);
+    }
   }
 
   function startListening(){
