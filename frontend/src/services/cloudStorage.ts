@@ -1,5 +1,5 @@
 export type CloudProvider="google-drive";
-type CloudSession={provider:CloudProvider;accessToken:string;refreshToken?:string;expiresAt:number;account?:string};
+type CloudSession={provider:CloudProvider;accessToken:string;refreshToken?:string;expiresAt:number;account?:string;rootFolderId?:string};
 const KEY="kz_cloud_sessions_v2";
 function read():Partial<Record<CloudProvider,CloudSession>>{try{return JSON.parse(localStorage.getItem(KEY)||"{}")}catch{return {}}}
 function write(v:Partial<Record<CloudProvider,CloudSession>>){localStorage.setItem(KEY,JSON.stringify(v))}
@@ -31,4 +31,4 @@ export async function listCloudFiles(folderId?:string){
   const r=await request("https://www.googleapis.com/drive/v3/files?spaces=drive&pageSize=1000&fields=files(id,name,mimeType,size,modifiedTime,parents,webViewLink)&q="+encodeURIComponent(q));
   return r.json();
 }
-export async function createCloudFolder(name:string,parentId?:string){const r=await request("https://www.googleapis.com/drive/v3/files",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({name,mimeType:"application/vnd.google-apps.folder",...(parentId?{parents:[parentId]}:{})})});return r.json()}
+export async function createCloudFolder(name:string,parentId?:string){const root=await ensureRootFolder();const parent=parentId||root.id;const r=await request("https://www.googleapis.com/drive/v3/files",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({name,mimeType:"application/vnd.google-apps.folder",parents:[parent]})});return r.json()}
