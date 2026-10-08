@@ -72,13 +72,16 @@ await connectCloudStorage(provider);
   </div>
 }
 
+function PasswordStrength({password}:{password:string}){const score=[password.length>=12,password.length>=16,/[a-z]/.test(password),/[A-Z]/.test(password),/[0-9]/.test(password),/[^A-Za-z0-9]/.test(password)].filter(Boolean).length;const level=score<=2?'Fraca':score<=4?'Média':'Forte';return <div className="password-strength"><div className="password-strength-bar"><span style={{width:Math.max(8,Math.round(score/6*100))+'%'}}/></div><small>Senha <strong>{level}</strong></small></div>}
+
 function Auth({done}:{done:(u:User)=>void}){
   const[register,setRegister]=useState(false),[recovery,setRecovery]=useState(false);
-  const[form,setForm]=useState({name:'',email:'',password:''}),[error,setError]=useState(''),[message,setMessage]=useState('');
+  const[form,setForm]=useState({name:'',email:'',password:'',confirmPassword:''}),[error,setError]=useState(''),[message,setMessage]=useState('');
   async function submit(e:FormEvent){e.preventDefault();setError('');setMessage('');
     try{
       if(recovery){const r=await api.recovery(form.email);setMessage(r.message);return}
-      const s=register?await api.register(form):await api.login({email:form.email,password:form.password});
+      if(register&&form.password!==form.confirmPassword){setError('As senhas não coincidem.');return}
+      const s=register?await api.register({name:form.name,email:form.email,password:form.password}):await api.login({email:form.email,password:form.password});
       saveSession(s);done(s.user);
     }catch(x){setError(x instanceof Error?x.message:'Não foi possível concluir.')}
   }
@@ -90,7 +93,7 @@ function Auth({done}:{done:(u:User)=>void}){
     <form onSubmit={submit}>
       {!recovery&&register&&<label>Nome<input value={form.name} onChange={e=>setForm({...form,name:e.target.value})} required/></label>}
       <label>E-mail<input type="email" value={form.email} onChange={e=>setForm({...form,email:e.target.value})} required/></label>
-      {!recovery&&<label>Senha<input type="password" value={form.password} onChange={e=>setForm({...form,password:e.target.value})} minLength={register?12:undefined} required/></label>}
+      {!recovery&&<label>Senha<input type="password" value={form.password} onChange={e=>setForm({...form,password:e.target.value})} minLength={register?12:undefined} required/>{register&&<PasswordStrength password={form.password}/>}</label>}{!recovery&&register&&<label>Confirmar senha<input type="password" value={form.confirmPassword} onChange={e=>setForm({...form,confirmPassword:e.target.value})} minLength={12} required/></label>}
       <Button>{recovery?'Enviar recuperação':register?'Criar conta':'Entrar'}</Button>
     </form>
     <div className="auth-links"><button className="text-button" onClick={()=>setRecovery(!recovery)}>{recovery?'Voltar':'Recuperar acesso'}</button><button className="text-button" onClick={()=>{setRecovery(false);setRegister(!register)}}>{register?'Já tenho conta':'Criar conta'}</button></div>
