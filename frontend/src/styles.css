@@ -1242,3 +1242,16 @@ button,input,textarea,select{
   .mobile-profile-menu-wrap .profile-menu{right:0;}
   .about-grid{grid-template-columns:1fr;}
 }
+
+.password-strength{display:grid;gap:5px;margin-top:-2px;}
+.password-strength-bar{height:5px;background:#1b2940;border-radius:999px;overflow:hidden;}
+.password-strength-bar span{display:block;height:100%;border-radius:999px;background:linear-gradient(90deg,#e0556f,#e8b04b,#3dd6a0);transition:width .2s ease;}
+.password-strength small{color:var(--muted);font-size:9px;}
+.password-strength small strong{color:var(--text);}
+.about-info-list{display:grid;gap:8px;padding:0 17px 20px;}
+.about-info-list article,.about-info-list button{display:flex;justify-content:space-between;align-items:center;gap:16px;padding:12px 14px;border:1px solid var(--line);border-radius:12px;background:rgba(255,255,255,.02);color:var(--text);text-align:left;}
+.about-info-list article strong{font-size:10px;color:var(--muted);}
+.about-info-list article span{font-size:11px;text-align:right;}
+.about-info-list button{width:100%;border-color:var(--line);font-size:11px;cursor:pointer;}
+.about-info-list button:hover{background:rgba(139,124,255,.08);}
+.legal-page{padding:0 17px 20px;color:#9aabc1;line-height:1.7;}
