@@ -169,11 +169,11 @@ function Home({user,docs,notes,onNew,onSelect,onAction,setView}:{user:User;docs:
     </section>
 
     <section className="nexus-rail">
-      <button onClick={onNew}><em>+</em><span>Novo</span></button>
-      <button onClick={()=>setView('documents')}><em>↗</em><span>Arquivos</span></button>
-      <button onClick={()=>setView('folders')}><em>□</em><span>Pastas</span></button>
-      <button onClick={()=>setView('favorites')}><em>☆</em><span>Favoritos</span></button>
-      <button onClick={()=>setView('settings')}><em>◌</em><span>Espaço</span></button>
+      <button onClick={onNew}><em><Icon name="plus" size={17}/></em><span>Novo</span></button>
+      <button onClick={()=>setView('documents')}><em><Icon name="file" size={16}/></em><span>Arquivos</span></button>
+      <button onClick={()=>setView('folders')}><em><Icon name="folder" size={16}/></em><span>Pastas</span></button>
+      <button onClick={()=>setView('favorites')}><em><Icon name="star" size={16}/></em><span>Favoritos</span></button>
+      <button onClick={()=>setView('settings')}><em><Icon name="storage" size={16}/></em><span>Espaço</span></button>
       <div className="rail-hint">Arraste o olhar. Clique para continuar.</div>
     </section>
 
@@ -184,7 +184,7 @@ function Home({user,docs,notes,onNew,onSelect,onAction,setView}:{user:User;docs:
           <span className="flow-no">{String(index+1).padStart(2,'0')}</span>
           <span className="flow-type">{d.document_type.slice(0,3).toUpperCase()}</span>
           <span className="flow-name"><b>{d.name}</b><small>{new Date(d.updated_at).toLocaleString('pt-BR')}</small></span>
-          <span className="flow-open">{d.favorite?'★':'↗'}</span>
+          <span className="flow-open"><Icon name={d.favorite?"star":"arrowUpRight"} size={14}/></span>
           <span className="flow-line"/>
         </button>):<div className="flow-empty"><span>—</span><b>Nada criado ainda.</b><button onClick={onNew}>Começar agora</button></div>}
       </div>
