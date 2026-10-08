@@ -477,7 +477,7 @@ class MainActivity : AppCompatActivity() {
         hero.addView(NexusOrbView(this),LinearLayout.LayoutParams(0,-1,0.36f))
         box.addView(hero,LinearLayout.LayoutParams(-1,dp(178)).apply{topMargin=dp(18)})
 
-        val actions=LinearLayout(this).horizontal().apply{gravity=Gravity.CENTER}
+        val actions=LinearLayout(this).horizontal().apply{gravity=Gravity.CENTER;setPadding(0,dp(2),0,dp(2))}
         data class A(val title:String,val icon:NexusIcon,val tint:Int,val base:Int)
         listOf(
             A("Novo\ndocumento",NexusIcon.PAGE_PLUS,cyan,blue),
@@ -486,7 +486,7 @@ class MainActivity : AppCompatActivity() {
             A("Pastas",NexusIcon.FOLDER,Color.rgb(245,182,66),Color.rgb(245,166,35))
         ).forEach{a->
             val q=LinearLayout(this).vertical().apply{
-                gravity=Gravity.CENTER;background=rounded(panel,18).apply{setStroke(dp(1),line)}
+                gravity=Gravity.CENTER;background=android.graphics.drawable.ColorDrawable(Color.TRANSPARENT)
                 setOnClickListener{when(a.title.replace("\n"," ")){
                     "Novo documento"->showCreateDocument()
                     "Importar"->chooseStorage()
@@ -494,7 +494,7 @@ class MainActivity : AppCompatActivity() {
                     "Pastas"->navigate("folders")
                 }}
             }
-            val ib=FrameLayout(this).apply{background=rounded(Color.argb(42,Color.red(a.base),Color.green(a.base),Color.blue(a.base)),50).apply{setStroke(dp(1),Color.argb(110,Color.red(a.base),Color.green(a.base),Color.blue(a.base)))}}
+            val ib=FrameLayout(this).apply{background=rounded(Color.argb(32,Color.red(a.base),Color.green(a.base),Color.blue(a.base)),50).apply{setStroke(dp(90/3),Color.argb(95,Color.red(a.base),Color.green(a.base),Color.blue(a.base)))}}
             ib.addView(NexusIconView(this,a.icon,a.tint),FrameLayout.LayoutParams(dp(42),dp(42),Gravity.CENTER))
             q.addView(ib,LinearLayout.LayoutParams(dp(42),dp(42)))
             q.addView(label(a.title,12f,text).apply{gravity=Gravity.CENTER;setLineSpacing(0f,.95f)},LinearLayout.LayoutParams(-1,dp(32)).apply{topMargin=dp(8)})
@@ -504,7 +504,7 @@ class MainActivity : AppCompatActivity() {
 
         val st=StatFs(Environment.getDataDirectory().path);val total=st.blockCountLong*st.blockSizeLong;val free=st.availableBlocksLong*st.blockSizeLong;val used=(total-free).coerceAtLeast(0L)
         val pct=if(total>0)((used.toDouble()/total.toDouble())*100.0).toInt().coerceIn(0,100)else 0
-        val storageCard=LinearLayout(this).horizontal().apply{gravity=Gravity.CENTER_VERTICAL;background=rounded(panel,20).apply{setStroke(dp(1),line)};setPadding(dp(18),dp(16),dp(16),dp(16))}
+        val storageCard=LinearLayout(this).horizontal().apply{gravity=Gravity.CENTER_VERTICAL;background=android.graphics.drawable.ColorDrawable(Color.TRANSPARENT);setPadding(dp(2),dp(16),dp(2),dp(16))}
         storageCard.addView(NexusStorageRingView(this,pct),LinearLayout.LayoutParams(dp(66),dp(66)))
         val stText=LinearLayout(this).vertical().apply{setPadding(dp(16),0,0,0)}
         stText.addView(label("Armazenamento",15f,text,true))
@@ -518,7 +518,7 @@ class MainActivity : AppCompatActivity() {
         storageCard.addView(NexusIconView(this,NexusIcon.CHEVRON,muted,14),LinearLayout.LayoutParams(dp(14),dp(14)).apply{leftMargin=dp(10)})
         box.addView(storageCard,LinearLayout.LayoutParams(-1,-2).apply{topMargin=dp(14)})
 
-        val recent=LinearLayout(this).vertical().apply{background=rounded(panel,20).apply{setStroke(dp(1),line)}}
+        val recent=LinearLayout(this).vertical().apply{background=android.graphics.drawable.ColorDrawable(Color.TRANSPARENT)}
         val head=LinearLayout(this).horizontal().apply{gravity=Gravity.CENTER_VERTICAL;setPadding(dp(18),dp(16),dp(18),dp(12))}
         head.addView(NexusIconView(this,NexusIcon.CLOCK,cyan,20),LinearLayout.LayoutParams(dp(20),dp(20)))
         head.addView(label("Documentos recentes",16f,text,true),LinearLayout.LayoutParams(0,-2,1f).apply{leftMargin=dp(10)})
@@ -548,7 +548,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun infoCardExact(title:String,status:String,desc:String,icon:NexusIcon,onClick:()->Unit):View{
-        val row=LinearLayout(this).horizontal().apply{background=rounded(panel,18).apply{setStroke(dp(1),line)};setPadding(dp(14),dp(14),dp(10),dp(14));setOnClickListener{onClick()}}
+        val row=LinearLayout(this).horizontal().apply{background=android.graphics.drawable.ColorDrawable(Color.TRANSPARENT);setPadding(dp(4),dp(12),dp(4),dp(12));setOnClickListener{onClick()}}
         val circle=FrameLayout(this).apply{background=rounded(Color.argb(38,47,107,255),50).apply{setStroke(dp(1),Color.argb(128,47,107,255))}}
         circle.addView(NexusIconView(this,icon,cyan),FrameLayout.LayoutParams(dp(20),dp(20),Gravity.CENTER));row.addView(circle,LinearLayout.LayoutParams(dp(38),dp(38)))
         val col=LinearLayout(this).vertical();col.addView(label(title,14f,text,true));col.addView(label("● $status",12f,green));col.addView(label(desc,11f,muted).apply{setPadding(0,dp(4),0,0)});row.addView(col,LinearLayout.LayoutParams(0,-2,1f).apply{leftMargin=dp(12)})
