@@ -125,6 +125,69 @@ function DocumentTable({docs,onSelect,onAction,onPermanent}:{docs:DocumentItem[]
   </tbody></table></div>:<StatePanel title="Nada por aqui" message="Nenhum documento encontrado."/>
 }
 
+function VoiceControl(){
+  const[status,setStatus]=useState<'idle'|'listening'|'done'|'unsupported'>('idle');
+  const[transcript,setTranscript]=useState('');
+  const recognitionRef=useRef<any>(null);
+
+  function speakUnavailable(){
+    const message='Integração ao Morok AI indisponivel';
+    if(!('speechSynthesis' in window))return;
+    window.speechSynthesis.cancel();
+    const utterance=new SpeechSynthesisUtterance(message);
+    utterance.lang='pt-BR';
+    utterance.rate=.92;
+    utterance.pitch=.92;
+    const voices=window.speechSynthesis.getVoices();
+    const voice=voices.find(v=>/^pt-BR$/i.test(v.lang))||voices.find(v=>/^pt/i.test(v.lang));
+    if(voice)utterance.voice=voice;
+    window.speechSynthesis.speak(utterance);
+  }
+
+  function startListening(){
+    const Recognition=(window as any).SpeechRecognition||(window as any).webkitSpeechRecognition;
+    if(!Recognition){setStatus('unsupported');speakUnavailable();return;}
+    try{
+      const recognition=new Recognition();
+      recognitionRef.current=recognition;
+      recognition.lang='pt-BR';
+      recognition.continuous=false;
+      recognition.interimResults=true;
+      recognition.maxAlternatives=1;
+      setTranscript('');
+      setStatus('listening');
+      recognition.onresult=(event:any)=>{
+        let text='';
+        for(let i=event.resultIndex;i<event.results.length;i++)text+=event.results[i][0]?.transcript||'';
+        setTranscript(text.trim());
+      };
+      recognition.onerror=()=>{setStatus('done');speakUnavailable();};
+      recognition.onend=()=>{setStatus('done');speakUnavailable();recognitionRef.current=null;};
+      recognition.start();
+    }catch{
+      setStatus('done');
+      speakUnavailable();
+      recognitionRef.current=null;
+    }
+  }
+
+  function stopListening(){
+    try{recognitionRef.current?.stop()}catch{}
+  }
+
+  const listening=status==='listening';
+  return <div className="voice-control">
+    <button className={'voice-button '+(listening?'is-listening':'')} onClick={listening?stopListening:startListening} aria-label={listening?'Parar de ouvir':'Falar'}>
+      <span className="voice-icon"><Icon name="mic" size={17}/></span>
+      <span>{listening?'Ouvindo…':'Falar'}</span>
+      <small>{listening?'toque para parar':'voz'}</small>
+    </button>
+    <div className="voice-result" aria-live="polite">
+      {status==='unsupported'?'Seu navegador não oferece reconhecimento de voz.':transcript?<>Você disse: <strong>{transcript}</strong></>:status==='done'?'Integração ao Morok AI indisponivel.':'Toque em Falar e diga um comando.'}
+    </div>
+  </div>
+}
+
 function Home({user,docs,notes,onNew,onSelect,onAction,setView}:{user:User;docs:DocumentItem[];notes:Notification[];onNew:()=>void;onSelect:(d:DocumentItem)=>void;onAction:(d:DocumentItem)=>void;setView:(v:View)=>void}){
   const recent=docs.slice(0,7);
   const typeLabel=(value:string)=>{const v=value.toLowerCase();return v.includes('word')||v==='doc'||v==='docx'?'DOC':v.includes('pdf')?'PDF':v.includes('sheet')||v==='xls'||v==='xlsx'?'XLS':v.includes('slide')||v==='ppt'||v==='pptx'?'PPT':v.includes('text')||v==='txt'?'TXT':v.slice(0,3).toUpperCase()};
@@ -192,8 +255,17 @@ function Home({user,docs,notes,onNew,onSelect,onAction,setView}:{user:User;docs:
     </section>
 
     <section className="nexus-glance">
-      <div className="glance-pulse"><div className="pulse-heading"><span className="pulse-index">02</span><div><small>PULSO DO ESPAÇO</small><strong>{unread?unread+' atualização(ões) esperando por você.':'Seu espaço está em ordem.'}</strong></div></div><div className="pulse-meter" aria-hidden="true"><i/><i/><i/><i/><i/><i/><i/><i/></div><span className="pulse-note">{notes.length?'Há informações novas para conferir.':'Nenhuma mudança recente precisa da sua atenção.'}</span><button onClick={()=>setView('audit')}>Abrir histórico <Icon name="arrowUpRight" size={13}/></button></div>
-      <div className="glance-number"><div className="glance-heading"><span>03</span><small>EM UM RELANCE</small></div><div className="glance-main"><b>{docs.length}</b><span>documentos<br/>neste espaço</span></div><div className="glance-metrics"><label><Icon name="star" size={13}/> favoritos <strong>{docs.filter(d=>d.favorite).length}</strong></label><label><Icon name="storage" size={13}/> espaço <strong>ativo</strong></label></div></div>
+      <div className="glance-pulse">
+        <div className="pulse-heading"><span className="pulse-index">02</span><div><small>PULSO DO ESPAÇO</small><strong>{unread?unread+' atualização(ões) esperando por você.':'Seu espaço está em ordem.'}</strong></div></div>
+        <div className="pulse-meter" aria-hidden="true"><i/><i/><i/><i/><i/><i/><i/><i/></div>
+        <span className="pulse-note">{notes.length?'Há informações novas para conferir.':'Nenhuma mudança recente precisa da sua atenção.'}</span>
+        <VoiceControl/>
+      </div>
+      <div className="glance-number voice-summary">
+        <div className="glance-heading"><span>03</span><small>CONTROLE POR VOZ</small></div>
+        <div className="voice-copy"><b>Fale com o Nexus.</b><span>O comando é reconhecido no dispositivo, mas a integração ao Morok AI permanece indisponível.</span></div>
+        <div className="glance-metrics"><label><Icon name="mic" size={13}/> microfone <strong>pronto</strong></label><label><Icon name="shield" size={13}/> privacidade <strong>local</strong></label></div>
+      </div>
     </section>
 
     <footer className="origin-footer"><span><i/> KZSECURITY</span><span>Korczak Nexus {NEXUS_RELEASE_FALLBACK}</span><span>feito para desaparecer quando você começa a trabalhar</span></footer>
