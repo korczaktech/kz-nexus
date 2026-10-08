@@ -1,5 +1,4 @@
 import {FormEvent, ReactNode, useEffect, useState} from 'react';
-import packageJson from '../package.json';
 import {api, clearToken, getToken, saveSession, type DocumentItem, type Event, type Folder, type Group, type Notification, type User, type Version} from './services/api';
 import {Button, Icon, Modal, StatePanel} from './components/ui';
 import {Editor, markdownToHtml} from './components/Editor';
@@ -13,7 +12,6 @@ const nexusLogo = `${import.meta.env.BASE_URL}icons/favicon-nexus.svg?v=2`;
 const NEXUS_RELEASE_FALLBACK = '0.0.0.331';
 const NEXUS_API_VERSION = '0.3.0';
 const NEXUS_SITE = 'https://korczaktech.github.io/kz-nexus';
-const NEXUS_WEB_VERSION = String(packageJson.version);
 function versionParts(value:string){return value.replace(/^v/i,'').split('.').map(part=>Number.parseInt(part,10)||0)}
 function compareVersions(a:string,b:string){const aa=versionParts(a),bb=versionParts(b);for(let i=0;i<3;i++){if((aa[i]||0)!==(bb[i]||0))return (aa[i]||0)>(bb[i]||0)?1:-1}return 0}
 
@@ -344,7 +342,7 @@ function App(){
   {auditTotal>auditPageSize&&<div className="pagination"><Button variant="secondary" disabled={auditPage<=1} onClick={async()=>{const p=auditPage-1;const r=await api.audit({...auditFilters,page:p,page_size:auditPageSize});setAuditPage(p);setEvents(r.items)}}>Anterior</Button><span>Página {auditPage} de {Math.ceil(auditTotal/auditPageSize)}</span><Button variant="secondary" disabled={auditPage>=Math.ceil(auditTotal/auditPageSize)} onClick={async()=>{const p=auditPage+1;const r=await api.audit({...auditFilters,page:p,page_size:auditPageSize});setAuditPage(p);setEvents(r.items)}}>Próxima</Button></div>}
 </Section>}
         {view==='privacy'&&<Section title="Política de privacidade"><div className="legal-page">
-<h3>Política de Privacidade — Korczak Nexus</h3><p><strong>Última atualização: 8 de outubro de 2026.</strong></p>
+<h3>Política de Privacidade — Korczak Nexus</h3><p><strong>Última atualização: 7 de outubro de 2026.</strong></p>
 <p>Esta Política explica como o Korczak Nexus, produto do Korczak HUB desenvolvido e distribuído pela Korczak Technologies, trata dados pessoais e informações necessárias ao funcionamento do aplicativo, do site e de suas integrações. O documento é elaborado considerando, conforme aplicável, a Constituição Federal, a Lei Geral de Proteção de Dados Pessoais (Lei nº 13.709/2018 — LGPD), o Marco Civil da Internet (Lei nº 12.965/2014), o Código de Defesa do Consumidor (Lei nº 8.078/1990), o Estatuto da Criança e do Adolescente e a legislação brasileira aplicável, inclusive normas específicas de proteção de crianças e adolescentes em ambientes digitais.</p>
 <h4>1. Quem somos</h4><p>O Korczak Nexus é desenvolvido e distribuído pela <strong>Korczak Technologies</strong>. Para fins de proteção de dados, a identificação jurídica completa, endereço e canal formal de encarregado devem ser mantidos atualizados pela empresa nos canais oficiais. O próprio aplicativo disponibiliza o recurso de feedback para comunicação operacional e solicitações relacionadas ao serviço.</p>
 <h4>2. Dados que podem ser tratados</h4><ul><li><strong>Cadastro e autenticação:</strong> nome, e-mail, telefone quando informado, identificadores internos da conta, estado da conta, verificações e datas de criação/atualização.</li><li><strong>Conteúdo:</strong> documentos, títulos, descrições, versões, pastas, favoritos, tags, histórico, lixeira e demais informações que você voluntariamente inserir ou criar.</li><li><strong>Colaboração e administração:</strong> grupos, permissões, compartilhamentos e registros necessários para controle de acesso.</li><li><strong>Segurança e auditoria:</strong> eventos de acesso e operação, resultados de operações, identificadores técnicos e informações necessárias para prevenção de fraude, abuso e incidentes.</li><li><strong>Feedback:</strong> categoria, mensagem e avaliação quando enviada voluntariamente.</li><li><strong>Armazenamento local:</strong> preferências, seleção de armazenamento, estado de sessão e dados mantidos pelo navegador/dispositivo para permitir o funcionamento do aplicativo.</li><li><strong>Integrações externas:</strong> quando você conectar o Google Drive, podem ser tratados tokens e identificadores de autorização necessários à integração. O acesso é limitado ao escopo autorizado pelo provedor e pela funcionalidade utilizada.</li><li><strong>Dados técnicos:</strong> informações de conectividade e diagnóstico podem ser processadas para disponibilidade, segurança e correção de falhas.</li></ul>
