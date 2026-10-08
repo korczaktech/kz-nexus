@@ -126,26 +126,39 @@ function DocumentTable({docs,onSelect,onAction,onPermanent}:{docs:DocumentItem[]
 }
 
 function Home({user,docs,notes,onNew,onSelect,onAction,setView}:{user:User;docs:DocumentItem[];notes:Notification[];onNew:()=>void;onSelect:(d:DocumentItem)=>void;onAction:(d:DocumentItem)=>void;setView:(v:View)=>void}){
-  
+  const recentNotes=notes.slice(0,6);
   return <>
     <section className="hero">
       <div className="hero-copy"><p className="eyebrow">KORCZAK NEXUS</p><h1>Seus documentos,<br/><span>sempre organizados.</span></h1><p>Armazene, compartilhe e gerencie seus arquivos com segurança e praticidade. Tudo o que você precisa, em um só lugar.</p>
       <div className="hero-points"><span><Icon name="shield" size={15}/> Seguro</span><span><Icon name="clock" size={15}/> Rápido</span><span><Icon name="folder" size={15}/> Organizado</span><span><Icon name="cloud" size={15}/> Sempre disponível</span></div></div>
       <div className="hero-art" aria-hidden="true"><div className="mountain mountain-one"/><div className="mountain mountain-two"/><div className="beam"/></div>
     </section>
-    <div className="quick-actions">
+    <nav className="quick-actions" aria-label="Ações rápidas">
       <button onClick={onNew}><span className="quick-icon blue"><Icon name="plus"/></span><div><strong>Novo documento</strong><small>Crie um documento novo e escolha o modelo.</small></div></button>
       <button onClick={()=>setView('documents')}><span className="quick-icon blue"><Icon name="upload"/></span><div><strong>Adicionar arquivo</strong><small>Importe um arquivo para os seus documentos.</small></div></button>
       <button onClick={()=>setView('settings')}><span className="quick-icon blue"><Icon name="storage"/></span><div><strong>Armazenamento</strong><small>Gerencie o espaço e as opções da sua conta.</small></div></button>
-      <button onClick={()=>setView('editor')}><span className="quick-icon blue"><Icon name="edit"/></span><div><strong>Abrir no editor</strong><small>Escolha um documento para continuar editando.</small></div></button><button onClick={()=>{window.location.href='https://korczaktech.github.io/kz-nexus'}}><span className="quick-icon blue"><Icon name="arrowRight"/></span><div><strong>Ir para o Nexus</strong><small>Acesse o Korczak Nexus no navegador.</small></div></button>
-    </div>
-    <div className="home-columns">
-      <Section title="Seus arquivos"><div className="file-tabs"><span className="active">Todos os documentos</span></div><DocumentTable docs={docs.slice(0,8)} onSelect={onSelect} onAction={onAction}/><button className="see-all" onClick={()=>setView('documents')}><span>Ver todos os documentos</span><Icon name="arrowRight" size={14}/></button></Section>
-      <div className="home-side">
-        <section className="side-card storage"><div className="card-title"><h2>Resumo</h2></div><div className="storage-copy"><strong>{docs.length} documentos</strong><span>na sua conta</span></div><div className="progress"><span style={{width:'100%'}}/></div><div className="storage-copy"><strong>{docs.filter(d=>d.favorite).length} favoritos</strong><span>{notes.filter(n=>!n.read).length} notificação(ões) nova(s)</span></div></section>
-        <section className="side-card activity"><div className="card-title"><h2>Atividade recente</h2><button onClick={()=>setView('audit')}><span>Ver tudo</span><Icon name="arrowRight" size={14}/></button></div>{notes.slice(0,5).map((n,i)=><div className="activity-item" key={n.id}><span className={'activity-icon a'+i}><Icon name={i===0?'cloud':i===1?'upload':i===2?'file':i===3?'edit':'clock'} size={17}/></span><div><strong>{n.message}</strong><small>{n.read?'Lida':'Nova'}</small></div></div>)}{!notes.length&&<p className="muted">Nenhuma atividade recente.</p>}</section>
-        <section className="side-card"><div className="card-title"><h2>Links rápidos</h2></div><button className="link-row" onClick={()=>setView('folders')}><Icon name="folder"/> <span>Pastas</span><Icon name="chevronRight" size={15}/></button><button className="link-row" onClick={()=>setView('favorites')}><Icon name="star"/> <span>Documentos favoritos</span><Icon name="chevronRight" size={15}/></button><button className="link-row" onClick={()=>setView('documents')}><Icon name="file"/> <span>Todos os documentos</span><Icon name="chevronRight" size={15}/></button><button className="link-row" onClick={()=>setView('trash')}><Icon name="trash"/> <span>Lixeira</span><Icon name="chevronRight" size={15}/></button></section>
-      </div>
+      <button onClick={()=>setView('editor')}><span className="quick-icon blue"><Icon name="edit"/></span><div><strong>Abrir no editor</strong><small>Escolha um documento para continuar editando.</small></div></button>
+    </nav>
+    <div className="home-columns home-columns-clean">
+      <section className="home-files">
+        <div className="home-section-head"><div><p className="eyebrow">SEUS ARQUIVOS</p><h2>Documentos recentes</h2></div><button className="text-action" onClick={()=>setView('documents')}>Ver todos <Icon name="arrowRight" size={14}/></button></div>
+        <div className="file-tabs"><span className="active">Todos os documentos</span></div>
+        <DocumentTable docs={docs.slice(0,8)} onSelect={onSelect} onAction={onAction}/>
+      </section>
+      <section className="space-pulse">
+        <div className="home-section-head"><div><p className="eyebrow">PULSO DO ESPAÇO</p><h2>O que está acontecendo</h2></div><button className="text-action" onClick={()=>setView('audit')}>Ver tudo <Icon name="arrowRight" size={14}/></button></div>
+        <div className="pulse-summary"><strong>{docs.length}</strong><span>documentos na sua conta</span><i/></div>
+        <div className="pulse-summary"><strong>{docs.filter(d=>d.favorite).length}</strong><span>documentos favoritos</span><i/></div>
+        <div className="pulse-events">
+          {recentNotes.map((n,i)=><div className="activity-item" key={n.id}><span className={'activity-icon a'+i}><Icon name={i===0?'cloud':i===1?'upload':i===2?'file':i===3?'edit':'clock'} size={17}/></span><div><strong>{n.message}</strong><small>{n.read?'Lida':'Nova'}</small></div></div>)}
+          {!recentNotes.length&&<p className="muted">Nenhuma atividade recente.</p>}
+        </div>
+        <div className="pulse-links">
+          <button onClick={()=>setView('folders')}><Icon name="folder"/><span>Pastas</span><Icon name="chevronRight" size={15}/></button>
+          <button onClick={()=>setView('favorites')}><Icon name="star"/><span>Favoritos</span><Icon name="chevronRight" size={15}/></button>
+          <button onClick={()=>setView('trash')}><Icon name="trash"/><span>Lixeira</span><Icon name="chevronRight" size={15}/></button>
+        </div>
+      </section>
     </div>
     <div className="dashboard-foot"><span><Icon name="shield"/> Seus dados são protegidos por autenticação e controle de acesso.</span><span>Korczak Technologies&nbsp; • &nbsp;Korczak Nexus v{NEXUS_RELEASE_FALLBACK}</span></div>
   </>
