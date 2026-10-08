@@ -1255,3 +1255,20 @@ button,input,textarea,select{
 .about-info-list button{width:100%;border-color:var(--line);font-size:11px;cursor:pointer;}
 .about-info-list button:hover{background:rgba(139,124,255,.08);}
 .legal-page{padding:0 17px 20px;color:#9aabc1;line-height:1.7;}
+
+.integration-status{display:inline-flex;align-items:center;justify-content:flex-end;gap:7px;font-weight:650;}
+.integration-status i{display:inline-block;width:8px;height:8px;border-radius:50%;background:#8792a5;box-shadow:0 0 0 3px rgba(135,146,165,.10);}
+.integration-status.online{color:#63d7a7;}
+.integration-status.online i{background:#3dd6a0;box-shadow:0 0 0 3px rgba(61,214,160,.12);}
+.integration-status.offline{color:#ef9aa5;}
+.integration-status.offline i{background:#e0556f;box-shadow:0 0 0 3px rgba(224,85,111,.12);}
+.integration-status.checking{color:#b7c3d6;}
+.about-info-list .about-link-row a{display:inline-flex;align-items:center;gap:8px;color:#91a4ff;text-decoration:none;font-size:11px;}
+.about-info-list .about-link-row a:hover{text-decoration:underline;color:#c3ccff;}
+.legal-page{max-width:980px;padding:4px 22px 28px;color:#9aabc1;line-height:1.75;}
+.legal-page h3{color:#eef4ff;font-size:20px;margin:4px 0 8px;}
+.legal-page h4{color:#dbe5f4;font-size:13px;margin:24px 0 7px;}
+.legal-page p{margin:0 0 12px;}
+.legal-page ul{margin:0 0 15px;padding-left:22px;}
+.legal-page li{margin:6px 0;}
+.legal-page strong{color:#dce7f7;}
