@@ -127,6 +127,7 @@ function DocumentTable({docs,onSelect,onAction,onPermanent}:{docs:DocumentItem[]
 
 function Home({user,docs,notes,onNew,onSelect,onAction,setView}:{user:User;docs:DocumentItem[];notes:Notification[];onNew:()=>void;onSelect:(d:DocumentItem)=>void;onAction:(d:DocumentItem)=>void;setView:(v:View)=>void}){
   const recent=docs.slice(0,7);
+  const typeLabel=(value:string)=>{const v=value.toLowerCase();return v.includes('word')||v==='doc'||v==='docx'?'DOC':v.includes('pdf')?'PDF':v.includes('sheet')||v==='xls'||v==='xlsx'?'XLS':v.includes('slide')||v==='ppt'||v==='pptx'?'PPT':v.includes('text')||v==='txt'?'TXT':v.slice(0,3).toUpperCase()};
   const unread=notes.filter(n=>!n.read).length;
   const stageRef=useRef<HTMLElement|null>(null);
   const [active,setActive]=useState(-1);
@@ -182,7 +183,7 @@ function Home({user,docs,notes,onNew,onSelect,onAction,setView}:{user:User;docs:
       <div className="flow-list">
         {recent.length?recent.map((d,index)=><button className={'flow-item '+(active===index?'is-active':'')} key={d.id} onMouseEnter={()=>setActive(index)} onMouseLeave={()=>setActive(-1)} onClick={()=>onSelect(d)}>
           <span className="flow-no">{String(index+1).padStart(2,'0')}</span>
-          <span className="flow-type">{d.document_type.slice(0,3).toUpperCase()}</span>
+          <span className="flow-type">{typeLabel(d.document_type)}</span>
           <span className="flow-name"><b>{d.name}</b><small>{new Date(d.updated_at).toLocaleString('pt-BR')}</small></span>
           <span className="flow-open"><Icon name={d.favorite?"star":"arrowUpRight"} size={14}/></span>
           <span className="flow-line"/>
@@ -191,8 +192,8 @@ function Home({user,docs,notes,onNew,onSelect,onAction,setView}:{user:User;docs:
     </section>
 
     <section className="nexus-glance">
-      <div className="glance-activity"><small>02 / ATIVIDADE</small><strong>{unread?unread+' coisa(s) pedindo sua atenção.':'Tudo tranquilo por aqui.'}</strong><span>{notes.length?'Sua central tem informações novas.':'Nenhuma atividade recente.'}</span><button onClick={()=>setView('audit')}>Ver atividade <Icon name="arrowUpRight" size={13}/></button></div>
-      <div className="glance-number"><small>03 / VISÃO RÁPIDA</small><b>{docs.length}</b><span>documentos no espaço</span><div><label>favoritos <strong>{docs.filter(d=>d.favorite).length}</strong></label><label>espaço <strong>ativo</strong></label></div></div>
+      <div className="glance-pulse"><div className="pulse-heading"><span className="pulse-index">02</span><div><small>PULSO DO ESPAÇO</small><strong>{unread?unread+' atualização(ões) esperando por você.':'Seu espaço está em ordem.'}</strong></div></div><div className="pulse-meter" aria-hidden="true"><i/><i/><i/><i/><i/><i/><i/><i/></div><span className="pulse-note">{notes.length?'Há informações novas para conferir.':'Nenhuma mudança recente precisa da sua atenção.'}</span><button onClick={()=>setView('audit')}>Abrir histórico <Icon name="arrowUpRight" size={13}/></button></div>
+      <div className="glance-number"><div className="glance-heading"><span>03</span><small>EM UM RELANCE</small></div><div className="glance-main"><b>{docs.length}</b><span>documentos<br/>neste espaço</span></div><div className="glance-metrics"><label><Icon name="star" size={13}/> favoritos <strong>{docs.filter(d=>d.favorite).length}</strong></label><label><Icon name="storage" size={13}/> espaço <strong>ativo</strong></label></div></div>
     </section>
 
     <footer className="origin-footer"><span><i/> KZSECURITY</span><span>Korczak Nexus {NEXUS_RELEASE_FALLBACK}</span><span>feito para desaparecer quando você começa a trabalhar</span></footer>
