@@ -147,7 +147,7 @@ function Home({user,docs,notes,onNew,onSelect,onAction,setView}:{user:User;docs:
         <section className="side-card"><div className="card-title"><h2>Links rápidos</h2></div><button className="link-row" onClick={()=>setView('folders')}><Icon name="folder"/> <span>Pastas</span><Icon name="chevronRight" size={15}/></button><button className="link-row" onClick={()=>setView('favorites')}><Icon name="star"/> <span>Documentos favoritos</span><Icon name="chevronRight" size={15}/></button><button className="link-row" onClick={()=>setView('documents')}><Icon name="file"/> <span>Todos os documentos</span><Icon name="chevronRight" size={15}/></button><button className="link-row" onClick={()=>setView('trash')}><Icon name="trash"/> <span>Lixeira</span><Icon name="chevronRight" size={15}/></button></section>
       </div>
     </div>
-    <div className="dashboard-foot"><span><Icon name="shield"/> Seus dados são protegidos por autenticação e controle de acesso.</span><span>Korczak Technologies&nbsp; • &nbsp;Korczak Nexus v{releaseVersion}</span></div>
+    <div className="dashboard-foot"><span><Icon name="shield"/> Seus dados são protegidos por autenticação e controle de acesso.</span><span>Korczak Technologies&nbsp; • &nbsp;Korczak Nexus v{NEXUS_RELEASE_FALLBACK}</span></div>
   </>
 }
 
