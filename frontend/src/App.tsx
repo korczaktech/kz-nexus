@@ -126,7 +126,22 @@ function DocumentTable({docs,onSelect,onAction,onPermanent}:{docs:DocumentItem[]
 }
 
 function Home({user,docs,notes,onNew,onSelect,onAction,setView}:{user:User;docs:DocumentItem[];notes:Notification[];onNew:()=>void;onSelect:(d:DocumentItem)=>void;onAction:(d:DocumentItem)=>void;setView:(v:View)=>void}){
-  const recentNotes=notes.slice(0,6);
+  const[voiceListening,setVoiceListening]=useState(false),[voiceText,setVoiceText]=useState('');
+  function toggleVoice(){
+    const SpeechRecognition=(window as any).SpeechRecognition||(window as any).webkitSpeechRecognition;
+    if(voiceListening){setVoiceListening(false);return}
+    if(!SpeechRecognition){setVoiceText('Seu navegador não oferece reconhecimento de voz.');return}
+    const recognition=new SpeechRecognition();
+    recognition.lang='pt-BR';recognition.interimResults=true;recognition.continuous=false;
+    recognition.onstart=()=>{setVoiceListening(true);setVoiceText('Ouvindo…')};
+    recognition.onresult=(event:any)=>{
+      const text=Array.from(event.results).map((r:any)=>r[0]?.transcript||'').join('').trim();
+      setVoiceText(text||'Não consegui entender o comando.');
+    };
+    recognition.onerror=()=>{setVoiceListening(false);setVoiceText('Não foi possível acessar o microfone.')};
+    recognition.onend=()=>setVoiceListening(false);
+    try{recognition.start()}catch{setVoiceListening(false);setVoiceText('Não foi possível iniciar o microfone.')}
+  }
   return <>
     <section className="hero">
       <div className="hero-copy"><p className="eyebrow">KORCZAK NEXUS</p><h1>Seus documentos,<br/><span>sempre organizados.</span></h1><p>Armazene, compartilhe e gerencie seus arquivos com segurança e praticidade. Tudo o que você precisa, em um só lugar.</p>
@@ -139,31 +154,41 @@ function Home({user,docs,notes,onNew,onSelect,onAction,setView}:{user:User;docs:
       <button onClick={()=>setView('settings')}><span className="quick-icon blue"><Icon name="storage"/></span><div><strong>Armazenamento</strong><small>Gerencie o espaço e as opções da sua conta.</small></div></button>
       <button onClick={()=>setView('editor')}><span className="quick-icon blue"><Icon name="edit"/></span><div><strong>Abrir no editor</strong><small>Escolha um documento para continuar editando.</small></div></button>
     </nav>
-    <div className="home-columns home-columns-clean">
+    <div className="home-columns">
       <section className="home-files">
-        <div className="home-section-head"><div><p className="eyebrow">SEUS ARQUIVOS</p><h2>Documentos recentes</h2></div><button className="text-action" onClick={()=>setView('documents')}>Ver todos <Icon name="arrowRight" size={14}/></button></div>
-        <div className="file-tabs"><span className="active">Todos os documentos</span></div>
-        <DocumentTable docs={docs.slice(0,8)} onSelect={onSelect} onAction={onAction}/>
-      </section>
-      <section className="space-pulse">
-        <div className="home-section-head"><div><p className="eyebrow">PULSO DO ESPAÇO</p><h2>O que está acontecendo</h2></div><button className="text-action" onClick={()=>setView('audit')}>Ver tudo <Icon name="arrowRight" size={14}/></button></div>
-        <div className="pulse-summary"><strong>{docs.length}</strong><span>documentos na sua conta</span><i/></div>
-        <div className="pulse-summary"><strong>{docs.filter(d=>d.favorite).length}</strong><span>documentos favoritos</span><i/></div>
-        <div className="pulse-events">
-          {recentNotes.map((n,i)=><div className="activity-item" key={n.id}><span className={'activity-icon a'+i}><Icon name={i===0?'cloud':i===1?'upload':i===2?'file':i===3?'edit':'clock'} size={17}/></span><div><strong>{n.message}</strong><small>{n.read?'Lida':'Nova'}</small></div></div>)}
-          {!recentNotes.length&&<p className="muted">Nenhuma atividade recente.</p>}
-        </div>
-        <div className="pulse-links">
-          <button onClick={()=>setView('folders')}><Icon name="folder"/><span>Pastas</span><Icon name="chevronRight" size={15}/></button>
-          <button onClick={()=>setView('favorites')}><Icon name="star"/><span>Favoritos</span><Icon name="chevronRight" size={15}/></button>
-          <button onClick={()=>setView('trash')}><Icon name="trash"/><span>Lixeira</span><Icon name="chevronRight" size={15}/></button>
+        <div className="home-files-card">
+          <div className="card-title"><h2>Seus arquivos</h2><button onClick={()=>setView('documents')}><span>Ver todos</span><Icon name="arrowRight" size={14}/></button></div>
+          <div className="file-tabs"><span className="active">Todos os documentos</span></div>
+          <DocumentTable docs={docs.slice(0,8)} onSelect={onSelect} onAction={onAction}/>
         </div>
       </section>
+      <div className="home-side">
+        <section className="side-card pulse-card">
+          <div className="card-title"><div><p className="eyebrow">PULSO DO ESPAÇO</p><h2>O que está acontecendo</h2></div><button onClick={()=>setView('audit')}><span>Ver tudo</span><Icon name="arrowRight" size={14}/></button></div>
+          <div className="pulse-status-row"><span className="pulse-dot"/><span>Espaço sincronizado</span><strong>{docs.length}</strong></div>
+          <div className="pulse-stat"><strong>{docs.filter(d=>d.favorite).length}</strong><span>documentos favoritos</span></div>
+          <div className="pulse-activity">{notes.slice(0,5).map((n,i)=><div className="activity-item" key={n.id}><span className={'activity-icon a'+i}><Icon name={i===0?'cloud':i===1?'upload':i===2?'file':i===3?'edit':'clock'} size={17}/></span><div><strong>{n.message}</strong><small>{n.read?'Lida':'Nova'}</small></div></div>)}{!notes.length&&<p className="muted">Nenhuma atividade recente.</p>}</div>
+        </section>
+        <section className="side-card voice-card">
+          <div className="card-title"><div><p className="eyebrow">CONTROLE POR VOZ</p><h2>Fale com o Nexus</h2></div><span className="voice-badge">BETA</span></div>
+          <div className="voice-main">
+            <button className={'voice-mic '+(voiceListening?'listening':'')} onClick={toggleVoice} aria-label={voiceListening?'Parar microfone':'Ativar microfone'}><Icon name="mic" size={28}/><span>{voiceListening?'Ouvindo':'Microfone'}</span></button>
+            <div className="voice-copy"><strong>{voiceListening?'Estou ouvindo…':'Pronto para ouvir'}</strong><p>{voiceText||'Use sua voz para comandos rápidos no Nexus.'}</p></div>
+          </div>
+          <div className="morok-unavailable"><span className="morok-mark">M</span><div><strong>Morok AI ainda não está disponível</strong><small>O controle por voz atual funciona apenas para captura do comando.</small></div></div>
+        </section>
+        <section className="side-card">
+          <div className="card-title"><h2>Links rápidos</h2></div>
+          <button className="link-row" onClick={()=>setView('folders')}><Icon name="folder"/> <span>Pastas</span><Icon name="chevronRight" size={15}/></button>
+          <button className="link-row" onClick={()=>setView('favorites')}><Icon name="star"/> <span>Documentos favoritos</span><Icon name="chevronRight" size={15}/></button>
+          <button className="link-row" onClick={()=>setView('documents')}><Icon name="file"/> <span>Todos os documentos</span><Icon name="chevronRight" size={15}/></button>
+          <button className="link-row" onClick={()=>setView('trash')}><Icon name="trash"/> <span>Lixeira</span><Icon name="chevronRight" size={15}/></button>
+        </section>
+      </div>
     </div>
     <div className="dashboard-foot"><span><Icon name="shield"/> Seus dados são protegidos por autenticação e controle de acesso.</span><span>Korczak Technologies&nbsp; • &nbsp;Korczak Nexus v{NEXUS_RELEASE_FALLBACK}</span></div>
   </>
 }
-
 function App(){
   const[user,setUser]=useState<User|null>(null),[boot,setBoot]=useState(true),[view,setView]=useState<View>('home'),[profileMenuOpen,setProfileMenuOpen]=useState(false);
   const[storageSelection,setStorageSelection]=useState(()=>getStorageSelection()),[showStoragePicker,setShowStoragePicker]=useState(false);
