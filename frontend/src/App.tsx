@@ -126,44 +126,96 @@ function DocumentTable({docs,onSelect,onAction,onPermanent}:{docs:DocumentItem[]
 }
 
 function VoiceControl(){
-  const[status,setStatus]=useState<'idle'|'listening'|'done'|'unsupported'>('idle');
+  const[status,setStatus]=useState<'idle'|'listening'|'speaking'|'done'|'unsupported'>('idle');
   const[transcript,setTranscript]=useState('');
+  const[voiceError,setVoiceError]=useState('');
   const recognitionRef=useRef<any>(null);
+  const audioRef=useRef<HTMLAudioElement|null>(null);
 
   function chooseBestVoice(voices:SpeechSynthesisVoice[]){
     const br=voices.filter(v=>/^pt-BR$/i.test(v.lang));
     const pt=voices.filter(v=>/^pt(?:-|$)/i.test(v.lang));
     const pool=br.length?br:pt;
-    const preferred=/Google.*Portuguese|Portugu[eê]s.*Brasil|Brazil|Francisca|Luciana|Heloisa|Maria|Daniela/i;
-    return pool.find(v=>preferred.test(v.name))||pool.find(v=>!/(espeak|festival|mbrola|compact|default)/i.test(v.name))||pool[0];
+    const remote=pool.filter(v=>v.localService===false);
+    const preferred=/Google|Natural|Neural|Online|Premium|Portugu[eê]s.*Brasil|Brazil/i;
+    return remote.find(v=>preferred.test(v.name))||remote[0]||pool.find(v=>preferred.test(v.name))||pool[0];
   }
 
-  function speakUnavailable(){
+  function speakLocalFallback(){
     const message='Integração ao Morok AI indisponivel';
-    if(!('speechSynthesis' in window))return;
+    if(!('speechSynthesis' in window)){setStatus('done');return;}
     const synth=window.speechSynthesis;
     synth.cancel();
     const speak=()=>{
       const utterance=new SpeechSynthesisUtterance(message);
       utterance.lang='pt-BR';
-      utterance.rate=.88;
-      utterance.pitch=.98;
+      utterance.rate=.98;
+      utterance.pitch=1;
       utterance.volume=1;
       const voice=chooseBestVoice(synth.getVoices());
       if(voice)utterance.voice=voice;
+      utterance.onend=()=>setStatus('done');
       synth.speak(utterance);
     };
     if(synth.getVoices().length)speak();
     else{
       const onVoices=()=>{synth.removeEventListener('voiceschanged',onVoices);speak()};
       synth.addEventListener('voiceschanged',onVoices);
-      setTimeout(()=>{synth.removeEventListener('voiceschanged',onVoices);if(!synth.speaking)speak()},350);
+      setTimeout(()=>{synth.removeEventListener('voiceschanged',onVoices);if(!synth.speaking)speak()},500);
+    }
+  }
+
+  async function loadPuter(){
+    const w=window as any;
+    if(w.puter?.ai?.txt2speech)return w.puter;
+    await new Promise<void>((resolve,reject)=>{
+      const existing=document.querySelector('script[data-nexus-puter]');
+      if(existing){
+        existing.addEventListener('load',()=>resolve(),{once:true});
+        existing.addEventListener('error',()=>reject(new Error('TTS externo indisponível.')),{once:true});
+        if((window as any).puter?.ai?.txt2speech)resolve();
+        return;
+      }
+      const script=document.createElement('script');
+      script.src='https://js.puter.com/v2/';
+      script.async=true;
+      script.dataset.nexusPuter='true';
+      script.onload=()=>resolve();
+      script.onerror=()=>reject(new Error('Não foi possível carregar a voz neural.'));
+      document.head.appendChild(script);
+    });
+    if(!(window as any).puter?.ai?.txt2speech)throw new Error('Motor neural não carregou.');
+    return (window as any).puter;
+  }
+
+  async function speakUnavailable(){
+    const message='Integração ao Morok AI indisponivel';
+    setVoiceError('');
+    setStatus('speaking');
+    try{
+      const puter=await loadPuter();
+      const audio=await puter.ai.txt2speech(message,{
+        provider:'aws-polly',
+        voice:'Camila',
+        engine:'generative',
+        language:'pt-BR'
+      });
+      if(audioRef.current){
+        try{audioRef.current.pause()}catch{}
+      }
+      audioRef.current=audio;
+      audio.onended=()=>setStatus('done');
+      audio.onerror=()=>{setVoiceError('A voz neural não pôde ser reproduzida.');speakLocalFallback()};
+      await audio.play();
+    }catch{
+      setVoiceError('Voz neural indisponível — usando a melhor voz do dispositivo.');
+      speakLocalFallback();
     }
   }
 
   function startListening(){
     const Recognition=(window as any).SpeechRecognition||(window as any).webkitSpeechRecognition;
-    if(!Recognition){setStatus('unsupported');speakUnavailable();return;}
+    if(!Recognition){setStatus('unsupported');void speakUnavailable();return;}
     try{
       const recognition=new Recognition();
       recognitionRef.current=recognition;
@@ -172,18 +224,19 @@ function VoiceControl(){
       recognition.interimResults=true;
       recognition.maxAlternatives=1;
       setTranscript('');
+      setVoiceError('');
       setStatus('listening');
       recognition.onresult=(event:any)=>{
         let text='';
         for(let i=event.resultIndex;i<event.results.length;i++)text+=event.results[i][0]?.transcript||'';
         setTranscript(text.trim());
       };
-      recognition.onerror=()=>{setStatus('done');speakUnavailable();};
-      recognition.onend=()=>{setStatus('done');speakUnavailable();recognitionRef.current=null;};
+      recognition.onerror=()=>{setStatus('done');void speakUnavailable();recognitionRef.current=null};
+      recognition.onend=()=>{setStatus('done');void speakUnavailable();recognitionRef.current=null};
       recognition.start();
     }catch{
       setStatus('done');
-      speakUnavailable();
+      void speakUnavailable();
       recognitionRef.current=null;
     }
   }
@@ -192,19 +245,21 @@ function VoiceControl(){
     try{recognitionRef.current?.stop()}catch{}
   }
 
+  useEffect(()=>()=>{try{recognitionRef.current?.abort()}catch{};try{audioRef.current?.pause()}catch{}},[]);
+
   const listening=status==='listening';
+  const speaking=status==='speaking';
   return <div className="voice-control">
-    <button className={'voice-button '+(listening?'is-listening':'')} onClick={listening?stopListening:startListening} aria-label={listening?'Parar de ouvir':'Falar'}>
+    <button className={'voice-button '+(listening||speaking?'is-listening':'')} onClick={listening?stopListening:startListening} disabled={speaking} aria-label={listening?'Parar de ouvir':'Falar'}>
       <span className="voice-icon"><Icon name="mic" size={17}/></span>
-      <span>{listening?'Ouvindo…':'Falar'}</span>
-      <small>{listening?'toque para parar':'voz'}</small>
+      <span>{speaking?'Falando…':listening?'Ouvindo…':'Falar'}</span>
+      <small>{speaking?'voz neural':listening?'toque para parar':'voz'}</small>
     </button>
     <div className="voice-result" aria-live="polite">
-      {status==='unsupported'?'Seu navegador não oferece reconhecimento de voz.':transcript?<>Você disse: <strong>{transcript}</strong></>:status==='done'?'Integração ao Morok AI indisponivel.':'Toque em Falar e diga um comando.'}
+      {voiceError?<>{voiceError}</>:status==='unsupported'?'Seu navegador não oferece reconhecimento de voz.':transcript?<>Você disse: <strong>{transcript}</strong></>:status==='done'?'Integração ao Morok AI indisponivel.':'Toque em Falar e diga um comando.'}
     </div>
   </div>
 }
-
 function Home({user,docs,notes,onNew,onSelect,onAction,setView}:{user:User;docs:DocumentItem[];notes:Notification[];onNew:()=>void;onSelect:(d:DocumentItem)=>void;onAction:(d:DocumentItem)=>void;setView:(v:View)=>void}){
   const recent=docs.slice(0,7);
   const typeLabel=(value:string)=>{const v=value.toLowerCase();return v.includes('word')||v==='doc'||v==='docx'?'DOC':v.includes('pdf')?'PDF':v.includes('sheet')||v==='xls'||v==='xlsx'?'XLS':v.includes('slide')||v==='ppt'||v==='pptx'?'PPT':v.includes('text')||v==='txt'?'TXT':v.slice(0,3).toUpperCase()};
