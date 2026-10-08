@@ -56,6 +56,8 @@ const paths:Record<string,ReactNode>={
   menu:<><path d="M5 7.1c2.2-1 4.5-1.4 7-1.4s4.8.4 7 1.4"/><path d="M5 12c2.2-1 4.5-1.4 7-1.4s4.8.4 7 1.4"/><path d="M5 16.9c2.2-1 4.5-1.4 7-1.4s4.8.4 7 1.4"/></>,
   versions:<><rect x="4.2" y="4.2" width="15.6" height="15.6" rx="3.1"/><path d="M8 8.1h8M8 12h5.2M8 15.9h8"/><path d="m16.1 11.1 2.2 2.2-2.2 2.2"/></>,
   gridMenu:<><rect x="4.2" y="4.2" width="6.2" height="6.2" rx="2.4"/><rect x="13.6" y="4.2" width="6.2" height="6.2" rx="2.4"/><rect x="4.2" y="13.6" width="6.2" height="6.2" rx="2.4"/><rect x="13.6" y="13.6" width="6.2" height="6.2" rx="2.4"/><path d="M9.3 12h5.4"/></>,
+  arrowUpRight:<><path d="M6.1 17.9 17.8 6.2"/><path d="M9.8 6.2h8v8"/></>,
+  share:<><circle cx="7" cy="12" r="2.3"/><circle cx="17" cy="6.5" r="2.3"/><circle cx="17" cy="17.5" r="2.3"/><path d="m9 10.9 5.7-3.2M9 13.1l5.7 3.2"/></>,
   arrowRight:<><path d="M4.2 12c3.8-1.1 8.1-1.1 12.7 0"/><path d="m13.5 7.7 4.7 4.3-4.7 4.3"/><path d="M7.3 8.7c.9-.8 1.8-1.2 2.8-1.4"/></>,
   chevronDown:<path d="m6.8 9.4 5.2 5.2 5.2-5.2"/>,
   chevronRight:<path d="m9.2 6.9 5.1 5.1-5.1 5.1"/>,
