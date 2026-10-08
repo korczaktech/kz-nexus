@@ -178,7 +178,7 @@ function Home({user,docs,notes,onNew,onSelect,onAction,setView}:{user:User;docs:
           else if(event?.error!=='aborted')setVoiceText('Microfone ativo — não consegui transcrever a fala.');
         };
         recognition.onend=()=>{
-          if(streamRef.current&&voiceListening){try{recognition.start()}catch{}}
+          if(streamRef.current){try{recognition.start()}catch{}}
         };
         try{recognition.start()}catch{}
       }else{
