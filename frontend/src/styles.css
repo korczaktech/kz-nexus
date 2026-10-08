@@ -1272,3 +1272,55 @@ button,input,textarea,select{
 .legal-page ul{margin:0 0 15px;padding-left:22px;}
 .legal-page li{margin:6px 0;}
 .legal-page strong{color:#dce7f7;}
+
+/* Nexus Home — continuous desktop interface, no dashboard cards */
+.hero{border:0!important;border-radius:0!important;box-shadow:none!important;border-bottom:1px solid var(--line)!important;background:linear-gradient(90deg,#07111e 0%,#06111d 47%,#050c17 100%)!important}
+.quick-actions{display:flex!important;gap:0!important;margin:0!important;border-bottom:1px solid var(--line)!important}
+.quick-actions button{flex:1;min-height:88px;border:0!important;border-right:1px solid var(--line)!important;border-radius:0!important;background:transparent!important;padding:15px 16px!important;box-shadow:none!important}
+.quick-actions button:last-child{border-right:0!important}
+.quick-actions button:hover{background:rgba(255,255,255,.025)!important;transform:none!important}
+.home-columns-clean{grid-template-columns:minmax(0,1fr) 360px!important;gap:0!important}
+.home-files,.space-pulse{min-width:0;background:transparent!important;border:0!important;border-radius:0!important}
+.home-files{border-right:1px solid var(--line)!important}
+.home-section-head{display:flex;align-items:end;justify-content:space-between;gap:16px;padding:24px 20px 13px}
+.home-section-head h2{margin:0;color:var(--text);font-size:17px;letter-spacing:-.02em}
+.text-action{display:inline-flex;align-items:center;gap:6px;border:0;background:transparent;color:#899aff;font-size:10px;padding:4px 0}
+.text-action:hover{color:#c1c8ff}
+.home-files .file-tabs{padding:0 20px}
+.home-files .table-wrap{border-top:0}
+.home-files .table-wrap th,.home-files .table-wrap td{padding-left:20px;padding-right:20px}
+.space-pulse{padding-bottom:10px}
+.space-pulse .home-section-head{padding-left:22px;padding-right:20px}
+.pulse-summary{display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:10px;padding:14px 20px;border-top:1px solid var(--line)}
+.pulse-summary strong{font-size:20px;font-weight:650;color:var(--text)}
+.pulse-summary span{font-size:10px;color:var(--muted)}
+.pulse-summary i{width:6px;height:6px;border-radius:50%;background:#7d75ff;box-shadow:0 0 12px rgba(125,117,255,.6)}
+.pulse-events{border-top:1px solid var(--line)}
+.pulse-events .activity-item{border-top:0;border-bottom:1px solid #111e2d;padding:11px 20px}
+.pulse-links{margin-top:4px}
+.pulse-links button{width:100%;display:flex;align-items:center;gap:11px;padding:12px 20px;border:0;border-bottom:1px solid #111e2d;background:transparent;color:#8295ae;text-align:left}
+.pulse-links button span{flex:1;color:#9fb0c6;font-size:10px}
+.pulse-links button:hover{background:rgba(255,255,255,.025);color:#c8d4e7}
+.top-search{height:42px!important;max-width:650px!important;background:linear-gradient(180deg,#0a1524,#07111e)!important;border:1px solid #263953!important;border-radius:12px!important;padding:0 13px!important;gap:11px!important;box-shadow:inset 0 1px 0 rgba(255,255,255,.025),0 8px 25px rgba(0,0,0,.12)!important;transition:border-color .18s ease,box-shadow .18s ease,background .18s ease!important}
+.top-search:focus-within{border-color:#566cff!important;box-shadow:0 0 0 3px rgba(86,108,255,.12),inset 0 1px 0 rgba(255,255,255,.04)!important}
+.top-search .icon-svg{width:17px!important;height:17px!important;color:#8fa1bb!important;flex:0 0 17px}
+.top-search input{font-size:12px!important;letter-spacing:.01em}
+.top-search input::placeholder{color:#71839d!important}
+.top-search kbd{background:#0d1a2c;border-color:#293c58!important;border-radius:7px!important;padding:4px 8px!important;color:#9aacbf!important}
+@media(max-width:1100px){
+  .quick-actions{display:grid!important;grid-template-columns:repeat(2,1fr)!important}
+  .quick-actions button{border-bottom:1px solid var(--line)!important}
+  .home-columns-clean{grid-template-columns:1fr!important}
+  .home-files{border-right:0!important;border-bottom:1px solid var(--line)!important}
+}
+@media(max-width:760px){
+  .quick-actions{grid-template-columns:1fr!important}
+  .quick-actions button{border-right:0!important;border-bottom:1px solid var(--line)!important}
+  .home-columns-clean{display:block!important}
+  .home-files{border-right:0!important}
+  .space-pulse{border-top:1px solid var(--line)!important}
+  .home-section-head{padding:20px 12px 12px}
+  .home-files .file-tabs{padding:0 12px}
+  .home-files .table-wrap th,.home-files .table-wrap td{padding-left:12px;padding-right:12px}
+  .pulse-summary,.pulse-events .activity-item,.pulse-links button{padding-left:12px;padding-right:12px}
+}
