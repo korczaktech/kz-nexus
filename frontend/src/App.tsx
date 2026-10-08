@@ -1,4 +1,4 @@
-import {FormEvent, ReactNode, useEffect, useState} from 'react';
+import {FormEvent, ReactNode, useEffect, useRef, useState} from 'react';
 import {api, clearToken, getToken, saveSession, type DocumentItem, type Event, type Folder, type Group, type Notification, type User, type Version} from './services/api';
 import {Button, Icon, Modal, StatePanel} from './components/ui';
 import {Editor, markdownToHtml} from './components/Editor';
@@ -128,66 +128,74 @@ function DocumentTable({docs,onSelect,onAction,onPermanent}:{docs:DocumentItem[]
 function Home({user,docs,notes,onNew,onSelect,onAction,setView}:{user:User;docs:DocumentItem[];notes:Notification[];onNew:()=>void;onSelect:(d:DocumentItem)=>void;onAction:(d:DocumentItem)=>void;setView:(v:View)=>void}){
   const recent=docs.slice(0,7);
   const unread=notes.filter(n=>!n.read).length;
+  const stageRef=useRef<HTMLElement|null>(null);
+  const [active,setActive]=useState(-1);
+  useEffect(()=>{
+    const el=stageRef.current;
+    if(!el)return;
+    let frame=0;
+    const move=(event:PointerEvent)=>{
+      cancelAnimationFrame(frame);
+      frame=requestAnimationFrame(()=>{
+        const r=el.getBoundingClientRect();
+        const x=(event.clientX-r.left)/r.width-.5;
+        const y=(event.clientY-r.top)/r.height-.5;
+        el.style.setProperty('--mx',String(x));
+        el.style.setProperty('--my',String(y));
+      });
+    };
+    el.addEventListener('pointermove',move);
+    return()=>{cancelAnimationFrame(frame);el.removeEventListener('pointermove',move)};
+  },[]);
   return <>
-    <section className="nexus-home-intro">
-      <div className="nexus-intro-mark" aria-hidden="true">
-        <span>N</span><i/><b/>
+    <section className="nexus-origin" ref={stageRef}>
+      <div className="origin-grid" aria-hidden="true"/>
+      <div className="origin-orbit" aria-hidden="true"><i/><b/><span/></div>
+      <div className="origin-copy">
+        <div className="origin-kicker"><span>NX</span><i/> KORCZAK NEXUS</div>
+        <h1>Trabalhe<br/><span>do seu jeito.</span></h1>
+        <p>Um lugar silencioso para seus documentos. Abra, crie e continue — o resto fica fora do caminho.</p>
+        <div className="origin-actions">
+          <button onClick={onNew} className="origin-primary"><span>+</span><b>Novo documento</b><small>Enter ↵</small></button>
+          <button onClick={()=>setView('documents')} className="origin-secondary">Abrir arquivos <Icon name="arrowUpRight" size={14}/></button>
+        </div>
       </div>
-      <div className="nexus-intro-copy">
-        <p className="eyebrow">NEXUS / ESPAÇO PESSOAL</p>
-        <h1>O seu trabalho.<br/><em>no centro.</em></h1>
-        <p>Documentos, ideias e arquivos reunidos em um ambiente feito para trabalhar — sem excesso de interface.</p>
-      </div>
-      <div className="nexus-intro-meta">
-        <span>SESSÃO ATIVA</span>
+      <div className="origin-side">
+        <span>AGORA</span>
         <strong>{user.name.split(' ')[0]}</strong>
-        <small><i/> Nexus operacional</small>
+        <small><i/> sessão protegida</small>
+        <div className="origin-clock">{new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})}</div>
       </div>
     </section>
 
-    <section className="nexus-command-line" aria-label="Ações do Nexus">
-      <button className="nexus-command-main" onClick={onNew}>
-        <span className="command-glyph">+</span>
-        <span><b>Novo</b><small>documento</small></span>
-      </button>
-      <button onClick={()=>setView('documents')}><span>01</span><b>Arquivos</b></button>
-      <button onClick={()=>setView('folders')}><span>02</span><b>Pastas</b></button>
-      <button onClick={()=>setView('favorites')}><span>03</span><b>Favoritos</b></button>
-      <button onClick={()=>setView('settings')}><span>04</span><b>Armazenamento</b></button>
-      <div className="nexus-command-end"><span>CTRL K</span><small>pesquisar</small></div>
+    <section className="nexus-rail">
+      <button onClick={onNew}><em>+</em><span>Novo</span></button>
+      <button onClick={()=>setView('documents')}><em>↗</em><span>Arquivos</span></button>
+      <button onClick={()=>setView('folders')}><em>□</em><span>Pastas</span></button>
+      <button onClick={()=>setView('favorites')}><em>☆</em><span>Favoritos</span></button>
+      <button onClick={()=>setView('settings')}><em>◌</em><span>Espaço</span></button>
+      <div className="rail-hint">Arraste o olhar. Clique para continuar.</div>
     </section>
 
-    <section className="nexus-document-stage">
-      <div className="nexus-stage-head">
-        <div><span className="stage-index">01</span><div><p className="eyebrow">NÚCLEO DE DOCUMENTOS</p><h2>Continuar trabalhando</h2></div></div>
-        <button onClick={()=>setView('documents')}>Abrir biblioteca <Icon name="arrowUpRight" size={14}/></button>
-      </div>
-      <div className="nexus-document-list">
-        {recent.length?recent.map((d,index)=><button className="nexus-document-row" key={d.id} onClick={()=>onSelect(d)}>
-          <span className="doc-index">{String(index+1).padStart(2,'0')}</span>
-          <span className="doc-sign">{d.document_type.toUpperCase().slice(0,3)}</span>
-          <span className="doc-main"><strong>{d.name}</strong><small>{new Date(d.updated_at).toLocaleString('pt-BR')}</small></span>
-          <span className="doc-state">{d.favorite&&<Icon name="star" size={13}/>}<Icon name="arrowUpRight" size={15}/></span>
-        </button>):<div className="nexus-empty"><span>00</span><strong>O espaço está vazio.</strong><small>Crie o primeiro documento para começar.</small><button onClick={onNew}>Criar documento <Icon name="arrowRight" size={14}/></button></div>}
+    <section className="nexus-flow">
+      <header><div><span>01</span><div><small>FLUXO ATUAL</small><h2>Continue de onde parou</h2></div></div><button onClick={()=>setView('documents')}>todos os documentos <Icon name="arrowRight" size={13}/></button></header>
+      <div className="flow-list">
+        {recent.length?recent.map((d,index)=><button className={'flow-item '+(active===index?'is-active':'')} key={d.id} onMouseEnter={()=>setActive(index)} onMouseLeave={()=>setActive(-1)} onClick={()=>onSelect(d)}>
+          <span className="flow-no">{String(index+1).padStart(2,'0')}</span>
+          <span className="flow-type">{d.document_type.slice(0,3).toUpperCase()}</span>
+          <span className="flow-name"><b>{d.name}</b><small>{new Date(d.updated_at).toLocaleString('pt-BR')}</small></span>
+          <span className="flow-open">{d.favorite?'★':'↗'}</span>
+          <span className="flow-line"/>
+        </button>):<div className="flow-empty"><span>—</span><b>Nada criado ainda.</b><button onClick={onNew}>Começar agora</button></div>}
       </div>
     </section>
 
-    <section className="nexus-lower-grid">
-      <div className="nexus-pulse">
-        <div className="nexus-section-label"><span>02</span><p>ATIVIDADE</p></div>
-        <div className="pulse-main"><strong>{unread?unread+' nova(s) atividade(s)':'Tudo em dia'}</strong><span>{notes.length?'Há novas informações na sua central de atividades.':'Nenhuma atividade pendente no momento.'}</span></div>
-        <button onClick={()=>setView('audit')}><Icon name="arrowUpRight" size={15}/></button>
-      </div>
-      <aside className="nexus-stats">
-        <div className="nexus-section-label"><span>03</span><p>LEITURA RÁPIDA</p></div>
-        <div className="nexus-stat-big"><strong>{docs.length}</strong><span>documentos</span></div>
-        <div className="nexus-stat-line"><span>Favoritos</span><b>{docs.filter(d=>d.favorite).length}</b></div>
-        <div className="nexus-stat-line"><span>Armazenamento</span><b>Ativo</b></div>
-        <button onClick={()=>setView('settings')}>Gerenciar armazenamento <Icon name="arrowUpRight" size={14}/></button>
-      </aside>
+    <section className="nexus-glance">
+      <div className="glance-activity"><small>02 / ATIVIDADE</small><strong>{unread?unread+' coisa(s) pedindo sua atenção.':'Tudo tranquilo por aqui.'}</strong><span>{notes.length?'Sua central tem informações novas.':'Nenhuma atividade recente.'}</span><button onClick={()=>setView('audit')}>Ver atividade <Icon name="arrowUpRight" size={13}/></button></div>
+      <div className="glance-number"><small>03 / VISÃO RÁPIDA</small><b>{docs.length}</b><span>documentos no espaço</span><div><label>favoritos <strong>{docs.filter(d=>d.favorite).length}</strong></label><label>espaço <strong>ativo</strong></label></div></div>
     </section>
 
-    <div className="nexus-home-footer"><span><i/> KZSECURITY / CONTROLE DE ACESSO ATIVO</span><span>KORCZAK NEXUS · {NEXUS_RELEASE_FALLBACK}</span></div>
+    <footer className="origin-footer"><span><i/> KZSECURITY</span><span>Korczak Nexus {NEXUS_RELEASE_FALLBACK}</span><span>feito para desaparecer quando você começa a trabalhar</span></footer>
   </>
 }
 function App(){
