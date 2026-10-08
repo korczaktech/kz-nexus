@@ -494,7 +494,7 @@ class MainActivity : AppCompatActivity() {
                     "Pastas"->navigate("folders")
                 }}
             }
-            val ib=FrameLayout(this).apply{background=rounded(Color.argb(32,Color.red(a.base),Color.green(a.base),Color.blue(a.base)),50).apply{setStroke(dp(90/3),Color.argb(95,Color.red(a.base),Color.green(a.base),Color.blue(a.base)))}}
+            val ib=FrameLayout(this).apply{background=rounded(Color.argb(32,Color.red(a.base),Color.green(a.base),Color.blue(a.base)),50).apply{setStroke(dp(1),Color.argb(95,Color.red(a.base),Color.green(a.base),Color.blue(a.base)))}}
             ib.addView(NexusIconView(this,a.icon,a.tint),FrameLayout.LayoutParams(dp(42),dp(42),Gravity.CENTER))
             q.addView(ib,LinearLayout.LayoutParams(dp(42),dp(42)))
             q.addView(label(a.title,12f,text).apply{gravity=Gravity.CENTER;setLineSpacing(0f,.95f)},LinearLayout.LayoutParams(-1,dp(32)).apply{topMargin=dp(8)})
