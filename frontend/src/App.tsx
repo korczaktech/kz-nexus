@@ -131,6 +131,7 @@ function VoiceControl(){
   const[voiceError,setVoiceError]=useState('');
   const recognitionRef=useRef<any>(null);
   const audioRef=useRef<HTMLAudioElement|null>(null);
+  const responseSpokenRef=useRef(false);
 
   function chooseBestVoice(voices:SpeechSynthesisVoice[]){
     const br=voices.filter(v=>/^pt-BR$/i.test(v.lang));
@@ -225,14 +226,16 @@ function VoiceControl(){
       recognition.maxAlternatives=1;
       setTranscript('');
       setVoiceError('');
+      responseSpokenRef.current=false;
       setStatus('listening');
       recognition.onresult=(event:any)=>{
         let text='';
         for(let i=event.resultIndex;i<event.results.length;i++)text+=event.results[i][0]?.transcript||'';
         setTranscript(text.trim());
       };
-      recognition.onerror=()=>{setStatus('done');void speakUnavailable();recognitionRef.current=null};
-      recognition.onend=()=>{setStatus('done');void speakUnavailable();recognitionRef.current=null};
+      const finishRecognition=()=>{setStatus('done');if(!responseSpokenRef.current){responseSpokenRef.current=true;void speakUnavailable()}recognitionRef.current=null};
+      recognition.onerror=finishRecognition;
+      recognition.onend=finishRecognition;
       recognition.start();
     }catch{
       setStatus('done');
