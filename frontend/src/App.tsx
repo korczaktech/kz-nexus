@@ -126,50 +126,68 @@ function DocumentTable({docs,onSelect,onAction,onPermanent}:{docs:DocumentItem[]
 }
 
 function Home({user,docs,notes,onNew,onSelect,onAction,setView}:{user:User;docs:DocumentItem[];notes:Notification[];onNew:()=>void;onSelect:(d:DocumentItem)=>void;onAction:(d:DocumentItem)=>void;setView:(v:View)=>void}){
-  const recent=docs.slice(0,6);
+  const recent=docs.slice(0,7);
   const unread=notes.filter(n=>!n.read).length;
   return <>
-    <section className="hero hero-rebuilt">
-      <div className="hero-copy"><p className="eyebrow">KORCZAK NEXUS</p><h1>Seus documentos,<br/><span>sempre organizados.</span></h1><p>Um espaço único para criar, editar, armazenar e compartilhar seus documentos com segurança.</p>
-      <div className="hero-points"><span><Icon name="shield" size={15}/> Protegido</span><span><Icon name="cloud" size={15}/> Sincronizado</span><span><Icon name="clock" size={15}/> Sempre disponível</span></div></div>
-      <div className="hero-art" aria-hidden="true"><div className="mountain mountain-one"/><div className="mountain mountain-two"/><div className="beam"/></div>
-    </section>
-
-    <section className="command-bar" aria-label="Ações rápidas">
-      <button className="command-primary" onClick={onNew}><Icon name="plus"/><span><strong>Novo documento</strong><small>Começar do zero ou usar um modelo</small></span></button>
-      <button onClick={()=>setView('documents')}><Icon name="upload"/><span><strong>Importar</strong><small>Adicionar um arquivo</small></span></button>
-      <button onClick={()=>setView('folders')}><Icon name="folder"/><span><strong>Pastas</strong><small>Organizar documentos</small></span></button>
-      <button onClick={()=>setView('favorites')}><Icon name="star"/><span><strong>Favoritos</strong><small>Acesso rápido</small></span></button>
-      <button onClick={()=>setView('settings')}><Icon name="storage"/><span><strong>Armazenamento</strong><small>Gerenciar espaço</small></span></button>
-    </section>
-
-    <section className="home-workspace">
-      <div className="workspace-main">
-        <div className="workspace-heading"><div><p className="eyebrow">SEU ESPAÇO</p><h2>Documentos recentes</h2></div><button onClick={()=>setView('documents')}>Ver todos <Icon name="arrowRight" size={14}/></button></div>
-        <div className="document-list-clean">
-          {recent.length?recent.map(d=><button className="document-row-clean" key={d.id} onClick={()=>onSelect(d)}>
-            <span className="file-type">{d.document_type.toUpperCase().slice(0,3)}</span>
-            <span className="document-row-name"><strong>{d.name}</strong><small>{new Date(d.updated_at).toLocaleString('pt-BR')}</small></span>
-            <span className="document-row-state">{d.favorite&&<Icon name="star" size={14}/>}<Icon name="chevronRight" size={15}/></span>
-          </button>):<StatePanel title="Nenhum documento" message="Crie seu primeiro documento para começar."/>}
-        </div>
+    <section className="nexus-home-intro">
+      <div className="nexus-intro-mark" aria-hidden="true">
+        <span>N</span><i/><b/>
       </div>
-      <aside className="workspace-summary">
-        <div className="summary-header"><span>Resumo</span><Icon name="gridMenu" size={16}/></div>
-        <div className="summary-number"><strong>{docs.length}</strong><span>documentos</span></div>
-        <div className="summary-line"><span>Favoritos</span><strong>{docs.filter(d=>d.favorite).length}</strong></div>
-        <div className="summary-line"><span>Novas atividades</span><strong>{unread}</strong></div>
-        <div className="summary-line"><span>Armazenamento</span><strong>Ativo</strong></div>
-        <button className="summary-link" onClick={()=>setView('settings')}>Gerenciar armazenamento <Icon name="arrowRight" size={14}/></button>
+      <div className="nexus-intro-copy">
+        <p className="eyebrow">NEXUS / ESPAÇO PESSOAL</p>
+        <h1>O seu trabalho.<br/><em>no centro.</em></h1>
+        <p>Documentos, ideias e arquivos reunidos em um ambiente feito para trabalhar — sem excesso de interface.</p>
+      </div>
+      <div className="nexus-intro-meta">
+        <span>SESSÃO ATIVA</span>
+        <strong>{user.name.split(' ')[0]}</strong>
+        <small><i/> Nexus operacional</small>
+      </div>
+    </section>
+
+    <section className="nexus-command-line" aria-label="Ações do Nexus">
+      <button className="nexus-command-main" onClick={onNew}>
+        <span className="command-glyph">+</span>
+        <span><b>Novo</b><small>documento</small></span>
+      </button>
+      <button onClick={()=>setView('documents')}><span>01</span><b>Arquivos</b></button>
+      <button onClick={()=>setView('folders')}><span>02</span><b>Pastas</b></button>
+      <button onClick={()=>setView('favorites')}><span>03</span><b>Favoritos</b></button>
+      <button onClick={()=>setView('settings')}><span>04</span><b>Armazenamento</b></button>
+      <div className="nexus-command-end"><span>CTRL K</span><small>pesquisar</small></div>
+    </section>
+
+    <section className="nexus-document-stage">
+      <div className="nexus-stage-head">
+        <div><span className="stage-index">01</span><div><p className="eyebrow">NÚCLEO DE DOCUMENTOS</p><h2>Continuar trabalhando</h2></div></div>
+        <button onClick={()=>setView('documents')}>Abrir biblioteca <Icon name="arrowUpRight" size={14}/></button>
+      </div>
+      <div className="nexus-document-list">
+        {recent.length?recent.map((d,index)=><button className="nexus-document-row" key={d.id} onClick={()=>onSelect(d)}>
+          <span className="doc-index">{String(index+1).padStart(2,'0')}</span>
+          <span className="doc-sign">{d.document_type.toUpperCase().slice(0,3)}</span>
+          <span className="doc-main"><strong>{d.name}</strong><small>{new Date(d.updated_at).toLocaleString('pt-BR')}</small></span>
+          <span className="doc-state">{d.favorite&&<Icon name="star" size={13}/>}<Icon name="arrowUpRight" size={15}/></span>
+        </button>):<div className="nexus-empty"><span>00</span><strong>O espaço está vazio.</strong><small>Crie o primeiro documento para começar.</small><button onClick={onNew}>Criar documento <Icon name="arrowRight" size={14}/></button></div>}
+      </div>
+    </section>
+
+    <section className="nexus-lower-grid">
+      <div className="nexus-pulse">
+        <div className="nexus-section-label"><span>02</span><p>ATIVIDADE</p></div>
+        <div className="pulse-main"><strong>{unread?unread+' nova(s) atividade(s)':'Tudo em dia'}</strong><span>{notes.length?'Há novas informações na sua central de atividades.':'Nenhuma atividade pendente no momento.'}</span></div>
+        <button onClick={()=>setView('audit')}><Icon name="arrowUpRight" size={15}/></button>
+      </div>
+      <aside className="nexus-stats">
+        <div className="nexus-section-label"><span>03</span><p>LEITURA RÁPIDA</p></div>
+        <div className="nexus-stat-big"><strong>{docs.length}</strong><span>documentos</span></div>
+        <div className="nexus-stat-line"><span>Favoritos</span><b>{docs.filter(d=>d.favorite).length}</b></div>
+        <div className="nexus-stat-line"><span>Armazenamento</span><b>Ativo</b></div>
+        <button onClick={()=>setView('settings')}>Gerenciar armazenamento <Icon name="arrowUpRight" size={14}/></button>
       </aside>
     </section>
 
-    <section className="activity-strip">
-      <div><p className="eyebrow">ATIVIDADE</p><strong>{unread?unread+' nova(s) atividade(s)':'Tudo em dia'}</strong><span>{notes.length?'Acompanhe suas últimas ações e notificações.':'Nenhuma atividade recente.'}</span></div>
-      <button onClick={()=>setView('audit')}>Abrir histórico <Icon name="arrowRight" size={14}/></button>
-    </section>
-
-    <div className="dashboard-foot"><span><Icon name="shield"/> Seus dados são protegidos por autenticação e controle de acesso.</span><span>Korczak Technologies&nbsp; • &nbsp;Korczak Nexus v{NEXUS_RELEASE_FALLBACK}</span></div>
+    <div className="nexus-home-footer"><span><i/> KZSECURITY / CONTROLE DE ACESSO ATIVO</span><span>KORCZAK NEXUS · {NEXUS_RELEASE_FALLBACK}</span></div>
   </>
 }
 function App(){
