@@ -1,4 +1,5 @@
-from fastapi import APIRouter, Depends, Header, Query, status
+from fastapi import APIRouter, Body, Depends, Header, Query, status
+import httpx
 from datetime import datetime, timezone, timedelta
 
 from ..dependencies import current_user
@@ -10,6 +11,72 @@ from ..services import api as service
 from ..database.connection import get_database, get_accounts_database
 
 router = APIRouter()
+
+
+@router.post("/oauth/google/token")
+async def exchange_google_oauth_code(payload: dict = Body(...)):
+    """Troca o código OAuth no servidor, mantendo o client secret privado."""
+    from ..config.settings import get_settings
+    settings = get_settings()
+    client_id = settings.google_client_id.strip()
+    client_secret = settings.google_client_secret.strip()
+    if not client_id or not client_secret:
+        raise AppError("Google Drive não está configurado no servidor. Configure GOOGLE_CLIENT_ID e GOOGLE_CLIENT_SECRET no Render.", "google_oauth_not_configured", 503)
+    code = str(payload.get("code") or "").strip()
+    redirect_uri = str(payload.get("redirect_uri") or "").strip()
+    code_verifier = str(payload.get("code_verifier") or "").strip()
+    if not code or not redirect_uri or not code_verifier:
+        raise ValidationError("Código OAuth, redirect_uri e code_verifier são obrigatórios.")
+    try:
+        async with httpx.AsyncClient(timeout=15.0) as client:
+            response = await client.post("https://oauth2.googleapis.com/token", data={
+                "client_id": client_id,
+                "client_secret": client_secret,
+                "grant_type": "authorization_code",
+                "code": code,
+                "redirect_uri": redirect_uri,
+                "code_verifier": code_verifier,
+            })
+    except httpx.HTTPError:
+        raise AppError("Não foi possível comunicar com o serviço OAuth do Google.", "google_oauth_unavailable", 502)
+    if response.is_error:
+        try:
+            detail = response.json()
+        except ValueError:
+            detail = {}
+        raise AppError("O Google recusou a autorização: " + str(detail.get("error_description") or detail.get("error") or "erro desconhecido"), "google_oauth_exchange_failed", 400)
+    return response.json()
+
+
+@router.post("/oauth/google/refresh")
+async def refresh_google_oauth_token(payload: dict = Body(...)):
+    """Renova tokens do Google Drive sem expor o client secret."""
+    from ..config.settings import get_settings
+    settings = get_settings()
+    client_id = settings.google_client_id.strip()
+    client_secret = settings.google_client_secret.strip()
+    refresh_token = str(payload.get("refresh_token") or "").strip()
+    if not client_id or not client_secret:
+        raise AppError("Google Drive não está configurado no servidor. Configure GOOGLE_CLIENT_ID e GOOGLE_CLIENT_SECRET no Render.", "google_oauth_not_configured", 503)
+    if not refresh_token:
+        raise ValidationError("refresh_token é obrigatório.")
+    try:
+        async with httpx.AsyncClient(timeout=15.0) as client:
+            response = await client.post("https://oauth2.googleapis.com/token", data={
+                "client_id": client_id,
+                "client_secret": client_secret,
+                "grant_type": "refresh_token",
+                "refresh_token": refresh_token,
+            })
+    except httpx.HTTPError:
+        raise AppError("Não foi possível comunicar com o serviço OAuth do Google.", "google_oauth_unavailable", 502)
+    if response.is_error:
+        try:
+            detail = response.json()
+        except ValueError:
+            detail = {}
+        raise AppError("A renovação do Google Drive falhou: " + str(detail.get("error_description") or detail.get("error") or "erro desconhecido"), "google_oauth_refresh_failed", 400)
+    return response.json()
 
 
 @router.get("/config/public")
