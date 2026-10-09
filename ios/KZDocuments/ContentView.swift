@@ -21,7 +21,7 @@ final class IOSBridge: NSObject, ObservableObject, UIDocumentPickerDelegate {
     @Published var pendingDocument: URL?
     weak var webView: WKWebView?
 
-    let appURL = URL(string: "https://korczaktech.github.io/kz-nexus/")!
+    let appURL = URL(string: "https://nexus.korczaktech.com.br/")!
 
     func attach(_ webView: WKWebView) {
         self.webView = webView
