@@ -258,7 +258,7 @@ function App(){
   useEffect(()=>{if(user&&!getStorageSelection())setShowStoragePicker(true)},[user]);
   async function refreshDriveFiles(folderId:string|null=driveFolderId){if(getStorageSelection()?.provider!=='google-drive')return;setDriveBusy(true);try{const result=await listCloudFiles(folderId||undefined);setDriveFiles(result.files)}catch(e){setError(e instanceof Error?e.message:'Não foi possível carregar o Google Drive.')}finally{setDriveBusy(false)}}
   useEffect(()=>{if(user&&view==='documents'&&getStorageSelection()?.provider==='google-drive')refreshDriveFiles(null)},[user,view,storageSelection?.provider]);
-  useEffect(()=>{if(user)load(view)},[user,view]);
+  useEffect(()=>{if(user)load(view)},[user,view,storageSelection?.provider]);
   useEffect(()=>{
     if(!isIOS)return;
     const onRuntime=(event:globalThis.Event)=>setIosOffline(!((event as CustomEvent<{online:boolean}>).detail?.online));
