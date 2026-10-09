@@ -13,6 +13,7 @@ class Settings(BaseSettings):
     mongodb_accounts_database: str = "Contas"
     mongodb_server_selection_timeout_ms: int = 3000
     google_client_id: str = ""
+    google_client_secret: str = ""
     model_config = SettingsConfigDict(env_file=".env",env_file_encoding="utf-8",extra="ignore",case_sensitive=False)
     @property
     def is_production(self)->bool:return self.app_env.lower()=="production"
