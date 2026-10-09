@@ -3,7 +3,7 @@ import {api, clearToken, getToken, saveSession, type DocumentItem, type Event, t
 import {Button, Icon, Modal, StatePanel} from './components/ui';
 import {Editor, markdownToHtml} from './components/Editor';
 import {ApiError} from './services/api';
-import {chooseLocalFolder, getStorageSelection, saveStorageSelection, storageLabel, connectCloudStorage, type StorageProvider} from './services/storage';
+import {chooseLocalFolder, getStorageSelection, saveStorageSelection, storageLabel, connectCloudStorage, listLocalFiles, getLocalFile, deleteLocalFile, type StorageProvider} from './services/storage';
 
 import {listIOSFiles, getIOSFile, deleteIOSFile, shareIOSFile} from './services/iosFiles';
 import {isIOS} from './iosPwa';
@@ -121,7 +121,7 @@ function Section({title,children,actions}:{title:string;children:ReactNode;actio
 
 function DocumentTable({docs,onSelect,onAction,onPermanent}:{docs:DocumentItem[];onSelect:(d:DocumentItem)=>void;onAction:(d:DocumentItem)=>void;onPermanent?:(d:DocumentItem)=>void}){
   return docs.length?<div className="table-wrap"><table><thead><tr><th>Nome</th><th>Tipo</th><th>Modificado em</th><th>Status</th><th></th></tr></thead><tbody>
-    {docs.map(d=><tr key={d.id}><td><button className="file-name" onClick={()=>onSelect(d)}><span className="file-type">{d.document_type.toUpperCase().slice(0,3)}</span><strong>{d.name}</strong></button></td><td>{d.document_type}</td><td>{new Date(d.updated_at).toLocaleString('pt-BR')}</td><td><span className={'status '+(d.status==='deleted'?'deleted':'active')}>{d.status==='deleted'?'Lixeira':'Ativo'}</span></td><td><button className="row-menu" aria-label={d.status==='deleted'?'Restaurar documento':d.favorite?'Remover favorito':'Adicionar favorito'} onClick={()=>onAction(d)}><Icon name={d.status==='deleted'?'arrowRight': 'star'} /></button>{d.status==='deleted'&&onPermanent&&<button className="row-menu danger" onClick={()=>onPermanent(d)} aria-label="Excluir definitivamente"><Icon name="close"/></button>}</td></tr>)}
+    {docs.map(d=><tr key={d.id}><td><button className="file-name" onClick={()=>onSelect(d)}><span className="file-type">{d.document_type.toUpperCase().slice(0,3)}</span><strong>{d.name}</strong></button></td><td>{d.document_type}</td><td>{new Date(d.updated_at).toLocaleString('pt-BR')}</td><td><span className={'status '+(d.status==='deleted'?'deleted':'active')}>{d.status==='deleted'?'Lixeira':'Ativo'}</span></td><td><button className="row-menu" aria-label={d.status==='deleted'?'Restaurar documento':d.id.startsWith('local:')?'Remover da lista local':d.favorite?'Remover favorito':'Adicionar favorito'} onClick={()=>onAction(d)}><Icon name={d.status==='deleted'?'arrowRight':d.id.startsWith('local:')?'trash':'star'} /></button>{d.status==='deleted'&&onPermanent&&<button className="row-menu danger" onClick={()=>onPermanent(d)} aria-label="Excluir definitivamente"><Icon name="close"/></button>}</td></tr>)}
   </tbody></table></div>:<StatePanel title="Nada por aqui" message="Nenhum documento encontrado."/>
 }
 
@@ -278,6 +278,10 @@ function App(){
       if(isIOS){
         const local=iosLocalFiles.map(f=>({id:'ios:'+f.id,owner_id:user?.id||'',name:f.name,document_type:(f.type.split('/').pop()||'file').slice(0,12),folder_id:null,current_version_id:null,status:'local',favorite:false,created_at:new Date(f.lastModified||Date.now()).toISOString(),updated_at:new Date(f.lastModified||Date.now()).toISOString(),content:null}));
         setDocs([...local,...remote]);
+      }else if(getStorageSelection()?.provider==='local'){
+        const localFiles=await listLocalFiles();
+        const local=localFiles.map(f=>({id:'local:'+f.id,owner_id:user?.id||'',name:f.name,document_type:(f.name.split('.').pop()||f.type.split('/').pop()||'file').toLowerCase(),folder_id:null,current_version_id:null,status:'local',favorite:false,created_at:new Date(f.lastModified||Date.now()).toISOString(),updated_at:new Date(f.lastModified||Date.now()).toISOString(),content:null}));
+        setDocs([...local,...remote]);
       }else setDocs(remote);
     }
     if(v==='favorites')setDocs(await api.favorites()); if(v==='trash')setDocs(await api.trash()); if(v==='recent')setDocs(await api.recent());
@@ -287,6 +291,22 @@ function App(){
     if(v==='advanced-search'){setFolders(await api.folders());setTags(await api.tags());const result=await api.advancedSearch({...advancedFilters,page:searchPage,page_size:searchPageSize});setDocs(result.items);setSearchTotal(result.total)}
   }catch(x){setError(x instanceof Error?x.message:'Falha ao carregar dados.')}}
   async function openDoc(d:DocumentItem){
+    if(d.id.startsWith('local:')){
+      try{
+        const record=await getLocalFile(d.id.slice(6));
+        if(!record){setError('Este arquivo local não está mais disponível. Selecione a pasta novamente.');return;}
+        const textExtensions=/\\.(txt|md|markdown|csv|json|html|htm|xml|rtf|css|js|ts|tsx|jsx|py|yml|yaml|log|svg|ini|toml|sql)$/i;
+        if(record.type.startsWith('text/')||textExtensions.test(record.name)){
+          const content=await record.file.text();
+          setSelected({...d,content});setVersions([]);setView('viewer');
+        }else{
+          const url=URL.createObjectURL(record.file);
+          window.open(url,'_blank','noopener,noreferrer');
+          window.setTimeout(()=>URL.revokeObjectURL(url),60000);
+        }
+      }catch(x){setError(x instanceof Error?x.message:'Não foi possível abrir o arquivo local.')}
+      return;
+    }
     if(d.id.startsWith('ios:')){
       try{
         const file=await getIOSFile(d.id.slice(4));
@@ -328,6 +348,10 @@ function App(){
 
   const title=nav.concat(secondary).find(n=>n[0]===view)?.[1]||'Korczak Nexus';
   const action=async(d:DocumentItem)=>{
+    if(d.id.startsWith('local:')){
+      try{await deleteLocalFile(d.id.slice(6));await load(view)}catch(x){setError(x instanceof Error?x.message:'Não foi possível remover o arquivo da lista local.')}
+      return;
+    }
     if(d.id.startsWith('ios:')){
       try{await deleteIOSFile(d.id.slice(4));const local=await listIOSFiles();setIosLocalFiles(local);await load(view)}
       catch(x){setError(x instanceof Error?x.message:'Não foi possível remover o arquivo local.')}
@@ -494,7 +518,7 @@ function App(){
     {showStoragePicker&&<StoragePicker allowClose={Boolean(storageSelection)} onComplete={(provider)=>{const next=getStorageSelection();setStorageSelection(next||{provider,label:storageLabel(provider),connectedAt:new Date().toISOString()});setShowStoragePicker(false)}}/>}
     {moveModal&&selected&&<Modal title="Mover documento" onClose={()=>setMoveModal(false)}><form className="modal-form" onSubmit={async e=>{e.preventDefault();const f=new FormData(e.currentTarget);try{const d=await api.updateDocument(selected.id,{folder_id:String(f.get('folder')||'')||null});setSelected(await api.document(d.id));setMoveModal(false)}catch(x){setError(x instanceof Error?x.message:'Não foi possível mover o documento.')}}}><label>Pasta de destino<select name="folder" defaultValue={selected.folder_id||''}><option value="">Sem pasta</option>{folders.map(f=><option key={f.id} value={f.id}>{f.name}</option>)}</select></label><Button type="submit"><Icon name="folderOpen"/> <span>Mover</span></Button></form></Modal>}
     {modal&&view==='users'&&<Modal title={editingUser?'Editar usuário':'Novo usuário'} onClose={()=>setModal(false)}><form className="modal-form" onSubmit={async e=>{e.preventDefault();const f=new FormData(e.currentTarget);if(editingUser){await api.adminUpdateUser(editingUser.id,{name:String(f.get('name')),phone:String(f.get('phone')),role:String(f.get('role'))});}else{await api.adminCreateUser({name:String(f.get('name')),email:String(f.get('email')),password:String(f.get('password')),phone:String(f.get('phone')||''),role:String(f.get('role'))});}setUsers(await api.users());setModal(false)}}><label>Nome<input name="name" defaultValue={editingUser?.name||''} required/></label><label>E-mail<input name="email" defaultValue={editingUser?.email||''} type="email" required disabled={!!editingUser}/></label>{!editingUser&&<label>Senha<input name="password" type="password" minLength={12} required/></label>}<label>Telefone<input name="phone" defaultValue={editingUser?.phone||''}/></label><label>Perfil<select name="role" defaultValue={editingUser?.role||'user'}><option value="user">Usuário</option><option value="manager">Gestor</option>{user.role==='admin'&&<option value="admin">Administrador</option>}</select></label><Button type="submit">Salvar</Button></form></Modal>}
-    {modal&&view!=='users'&&<Modal title={view==='folders'?(editingFolder?'Renomear pasta':'Nova pasta'):'Novo documento'}  onClose={()=>setModal(false)}><form className="modal-form" onSubmit={async e=>{e.preventDefault();const f=new FormData(e.currentTarget);if(view==='folders'){if(editingFolder)await api.updateFolder(editingFolder.id,{name:String(f.get('name'))});else await api.createFolder(String(f.get('name')),String(f.get('parent')||'')||null);setModal(false);load('folders')}else await createDocument(e)}}>{view==='folders'?<><label>Nome<input name="name" defaultValue={editingFolder?.name||''} required/></label>{!editingFolder&&<label>Pasta pai<select name="parent"><option value="">Raiz</option>{folders.map(f=><option key={f.id} value={f.id}>{f.name}</option>)}</select></label>}</>:<><label>Nome<input name="name" required/></label><label>Descrição<input name="description" maxLength={2000}/></label><label>Tipo<input name="type" defaultValue="txt" required/></label><label>Pasta<select name="folder"><option value="">Sem pasta</option>{folders.map(f=><option key={f.id} value={f.id}>{f.name}</option>)}</select></label><label>Conteúdo<textarea name="content" rows={8}/></label></>}<Button type="submit">Salvar</Button></form></Modal>}
+    {modal&&view!=='users'&&<Modal title={view==='folders'?(editingFolder?'Renomear pasta':'Nova pasta'):'Novo documento'}  onClose={()=>setModal(false)}><form className="modal-form" onSubmit={async e=>{e.preventDefault();const f=new FormData(e.currentTarget);if(view==='folders'){if(editingFolder)await api.updateFolder(editingFolder.id,{name:String(f.get('name'))});else await api.createFolder(String(f.get('name')),String(f.get('parent')||'')||null);setModal(false);load('folders')}else await createDocument(e)}}>{view==='folders'?<><label>Nome<input name="name" defaultValue={editingFolder?.name||''} required/></label>{!editingFolder&&<label>Pasta pai<select name="parent"><option value="">Raiz</option>{folders.map(f=><option key={f.id} value={f.id}>{f.name}</option>)}</select></label>}</>:<><label>Nome<input name="name" required/></label><label>Descrição<input name="description" maxLength={2000}/></label><label>Tipo de documento<select name="type" defaultValue="txt" required><option value="txt">Texto simples (.txt)</option><option value="md">Markdown (.md)</option><option value="html">HTML (.html)</option><option value="csv">CSV (.csv)</option><option value="json">JSON (.json)</option></select></label><label>Pasta<select name="folder"><option value="">Sem pasta</option>{folders.map(f=><option key={f.id} value={f.id}>{f.name}</option>)}</select></label><label>Conteúdo<textarea name="content" rows={8}/></label></>}<Button type="submit">Salvar</Button></form></Modal>}
   </div>
 }
 export default App;
