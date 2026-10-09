@@ -1,4 +1,4 @@
-const CACHE = "kz-nexus-ios-v6";
+const CACHE = "kz-nexus-ios-v7";
 const BASE = new URL("./", self.registration.scope).pathname;
 const SHELL = [
   BASE,
@@ -28,7 +28,10 @@ self.addEventListener("fetch", event => {
   if (event.request.mode === "navigate") {
     event.respondWith(
       fetch(event.request).then(response => {
-        if (response.ok) caches.open(CACHE).then(cache => cache.put(BASE, response.clone()));
+        if (response.ok) {
+          const cachedResponse = response.clone();
+          event.waitUntil(caches.open(CACHE).then(cache => cache.put(BASE, cachedResponse)));
+        }
         return response;
       }).catch(() => caches.match(BASE).then(r => r || caches.match(BASE + "index.html")))
     );
@@ -36,7 +39,10 @@ self.addEventListener("fetch", event => {
   }
   event.respondWith(
     caches.match(event.request).then(cached => cached || fetch(event.request).then(response => {
-      if (response.ok) caches.open(CACHE).then(cache => cache.put(event.request, response.clone()));
+      if (response.ok) {
+        const cachedResponse = response.clone();
+        event.waitUntil(caches.open(CACHE).then(cache => cache.put(event.request, cachedResponse)));
+      }
       return response;
     }))
   );
