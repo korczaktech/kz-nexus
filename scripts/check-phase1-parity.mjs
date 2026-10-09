@@ -59,7 +59,7 @@ const checks = [
   ['Android: update UI', files.androidNative.includes('Atualizações') && files.androidNative.includes('Updater(this).check')],
   ['Android: NexusAPI', files.androidNative.includes('API: NexusAPI')],
   ['Android: feedback', files.androidNative.includes('NexusFeedback')],
-  ['iOS: current Nexus URL', files.ios.includes('https://korczaktech.github.io/kz-nexus/')]
+  ['iOS: current Nexus URL', files.ios.includes('https://nexus.korczaktech.com.br/') && files.ios.includes('https://nexus.korczaktech.com.br/')]
 ];
 
 const failed = checks.filter(([, ok]) => !ok);
