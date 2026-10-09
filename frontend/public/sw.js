@@ -1,4 +1,4 @@
-const CACHE = "kz-nexus-ios-v7";
+const CACHE = "kz-nexus-custom-domain-v8";
 const BASE = new URL("./", self.registration.scope).pathname;
 const SHELL = [
   BASE,
