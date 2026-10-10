@@ -42,7 +42,7 @@ def _canonical_event(event: dict) -> str:
 
 
 async def find_user_by_email(email: str):
-    account = await get_accounts_database()["contas"].find_one({"Email": email.lower().strip()})
+    account = await get_accounts_database()["contas"].find_one({"Autenticacao.Email": email.lower().strip()})
     return _account_to_user(account)
 
 
@@ -58,10 +58,10 @@ def _account_to_user(account: dict | None):
     return {
         "id": account.get("id"),
         "name": account.get("Nome", ""),
-        "email": account.get("Email", ""),
+        "email": account.get("Autenticacao", {}).get("Email", account.get("Email", "")),
         "phone": account.get("Telefone"),
-        "password_hash": account.get("Aplicativos", {}).get("Nexus", {}).get("Senha", ""),
-        "email_verified": account.get("EmailVerified", False),
+        "password_hash": account.get("Autenticacao", {}).get("SenhaHash", ""),
+        "email_verified": account.get("Autenticacao", {}).get("EmailVerificado", account.get("EmailVerified", False)),
         "phone_verified": account.get("PhoneVerified", False),
         "role": conta.get("Role", "user"),
         "status": conta.get("Status", "active"),
@@ -74,18 +74,12 @@ def _account_to_user(account: dict | None):
 async def create_user(data: dict):
     timestamp = now()
     password_hash = data["password_hash"]
-    app_names = [
-        "Site", "Morok", "IDE", "AI", "ERP", "FLOW", "DOCUMENTS", "VISION", "OPS", "CONNECT", "MOBILE",
-        "Vault", "Nexus", "Nexa", "Veya", "Formly", "Korvo", "Chrona", "Meet", "Pulse", "Acta", "Memo", "People", "Web", "Klash"
-    ]
-    aplicativos = {name: {"Senha": "", "Ativo": True} for name in app_names}
-    aplicativos["Nexus"] = {"Senha": password_hash, "Ativo": True}
     document = {
         "id": str(uuid4()),
         "Nome": data["name"].strip(),
         "Email": data["email"].lower().strip(),
         "Telefone": data.get("phone"),
-        "Aplicativos": aplicativos,
+        "Autenticacao": {"Email": data["email"].lower().strip(), "SenhaHash": password_hash, "EmailVerificado": False},
         "Planos": {
             "KOS": {"Free": True, "Hephaestus": False, "Apollo": False, "Athena": False, "Zeus": False, "Veles": False, "Marzanna": False},
             "Workspace": {"Free": True, "Hephaestus": False, "Apollo": False, "Athena": False, "Zeus": False, "Veles": False, "Marzanna": False}
@@ -107,7 +101,9 @@ async def update_user(user_id: str, changes: dict):
     mapped = {}
     if "name" in changes: mapped["Nome"] = changes["name"]
     if "phone" in changes: mapped["Telefone"] = changes["phone"]
-    if "email_verified" in changes: mapped["EmailVerified"] = changes["email_verified"]
+    if "email_verified" in changes:
+        mapped["EmailVerified"] = changes["email_verified"]
+        mapped["Autenticacao.EmailVerificado"] = changes["email_verified"]
     if "phone_verified" in changes: mapped["PhoneVerified"] = changes["phone_verified"]
     if "role" in changes: mapped["Conta.Role"] = changes["role"]
     if "status" in changes: mapped["Conta.Status"] = changes["status"]
