@@ -17,6 +17,10 @@ ROLE_LEVELS = {"user": 10, "manager": 20, "admin": 30}
 
 
 def validate_password_policy(password: str, email: str | None = None, name: str | None = None) -> None:
+    # bcrypt only considers up to 72 input bytes. Reject longer UTF-8 inputs
+    # rather than silently treating distinct passwords as equivalent.
+    if len(password.encode("utf-8")) > 72:
+        raise ValidationError("A senha não pode exceder 72 bytes em UTF-8")
     if len(password) < _PASSWORD_MIN_LENGTH:
         raise ValidationError("A senha deve possuir pelo menos 12 caracteres")
     if not any(c.islower() for c in password):

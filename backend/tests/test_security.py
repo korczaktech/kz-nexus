@@ -41,6 +41,11 @@ def test_password_policy_accepts_strong_password():
     validate_password_policy("Korczak-Seguro-2026!", "user@example.com", "User")
 
 
+def test_password_policy_rejects_bcrypt_truncation_length():
+    with pytest.raises(Exception, match="72 bytes"):
+        validate_password_policy("A" * 73 + "a1!")
+
+
 @pytest.mark.integration
 @pytest.mark.asyncio
 async def test_security_end_to_end():
