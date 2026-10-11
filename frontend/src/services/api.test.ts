@@ -37,14 +37,11 @@ describe('API client — autenticação e tratamento de falhas',()=>{
 
   it('retorna erro seguro quando a API devolve conteúdo que não é JSON',async()=>{
     fetchMock.mockResolvedValue(new Response('<html>upstream failure</html>',{status:502}));
-    await expect(api.health()).rejects.toMatchObject({name:'ApiError',status:502});
-    try {
-      await api.health();
-    } catch (error) {
-      expect(error).toBeInstanceOf(ApiError);
-      expect((error as Error).message).toBe('Não foi possível concluir a operação.');
-      expect((error as Error).message).not.toContain('upstream failure');
-    }
+    const error=await api.health().catch((value:unknown)=>value);
+    expect(error).toBeInstanceOf(ApiError);
+    expect(error).toMatchObject({status:502});
+    expect((error as Error).message).toBe('Não foi possível concluir a operação.');
+    expect((error as Error).message).not.toContain('upstream failure');
   });
 
   it('codifica IDs de documentos antes de montar a URL',async()=>{
