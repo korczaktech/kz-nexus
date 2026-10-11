@@ -7,6 +7,9 @@ function renderNode(node:Node):string{
 }
 export function htmlToSlideParagraphs(html:string):string[]{
   const doc=new DOMParser().parseFromString(html,'text/html');
+  if(doc.body.querySelector('table'))throw new Error('A sincronização com Google Slides não recria tabelas adicionadas no Nexus. Exporte o documento como DOCX para preservar a estrutura.');
+  if(doc.body.querySelector('img'))throw new Error('A sincronização com Google Slides não insere imagens novas. Remova as imagens adicionadas no Nexus para sincronizar o texto.');
+  if(doc.body.querySelector('strong,em,b,i,u,s,del,a,span[style]'))throw new Error('A sincronização com Google Slides preserva texto simples, mas não aplica nova formatação inline. Remova a formatação adicional para sincronizar.');
   const result:string[]=[];
   const process=(node:Node)=>{
     if(node.nodeType===3){const text=(node.textContent||'').trim();if(text)result.push(text);return}
