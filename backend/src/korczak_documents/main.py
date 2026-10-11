@@ -44,13 +44,18 @@ app.add_middleware(
 @app.middleware("http")
 async def security_middleware(request: Request, call_next):
     path = request.url.path
+    response = None
     if path in {"/api/v1/auth/login", "/api/v1/auth/register", "/api/v1/auth/recovery"}:
         client = request.client.host if request.client else "unknown"
         try:
             enforce_rate_limit(client, path)
         except AppError as exc:
-            return JSONResponse(status_code=exc.status_code, content={"error": {"code": exc.code, "message": exc.message}})
-    response = await call_next(request)
+            response = JSONResponse(
+                status_code=exc.status_code,
+                content={"error": {"code": exc.code, "message": exc.message}},
+            )
+    if response is None:
+        response = await call_next(request)
     response.headers["X-Content-Type-Options"] = "nosniff"
     response.headers["X-Frame-Options"] = "DENY"
     response.headers["Referrer-Policy"] = "no-referrer"
