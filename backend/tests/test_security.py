@@ -7,6 +7,7 @@ from fastapi.testclient import TestClient
 from korczak_documents.database.bootstrap import bootstrap_database
 from korczak_documents.database.connection import get_database, get_accounts_database
 from korczak_documents.main import app
+from korczak_documents import rate_limit
 from korczak_documents.rate_limit import enforce_rate_limit, reset_rate_limits
 from korczak_documents.security import hash_password, validate_password_policy, verify_password
 
@@ -18,6 +19,15 @@ def test_rate_limit_blocks_after_threshold():
     with pytest.raises(Exception) as exc_info:
         enforce_rate_limit("unit-test-client", "login")
     assert getattr(exc_info.value, "code", None) == "rate_limited"
+    reset_rate_limits()
+
+
+def test_rate_limit_bucket_count_is_bounded(monkeypatch):
+    reset_rate_limits()
+    monkeypatch.setattr(rate_limit, "_MAX_BUCKETS", 3)
+    for client_key in ("client-a", "client-b", "client-c", "client-d"):
+        enforce_rate_limit(client_key, "login")
+    assert len(rate_limit._BUCKETS) <= 3
     reset_rate_limits()
 
 
