@@ -1,6 +1,6 @@
 import {afterEach,describe,expect,it,vi} from 'vitest';
 import {Window} from 'happy-dom';
-import {saveCloudFile,type CloudFile} from './cloudStorage';
+import {readCloudFile,saveCloudFile,type CloudFile} from './cloudStorage';
 
 describe('Google Drive sync adapters',()=>{
   let window:Window;
@@ -46,6 +46,7 @@ describe('Google Drive sync adapters',()=>{
     await saveCloudFile(file,'<p>nome,valor</p><p>Korczak,42</p>');
     const clear=calls.find(call=>call.url.includes('values:batchClear'));
     const update=calls.find(call=>call.init?.method==='PUT');
+    expect(update?.url).toContain('valueInputOption=USER_ENTERED');
     expect(JSON.parse(String(clear?.init?.body)).ranges).toEqual(["'Dados'!A:ZZ"]);
     expect(JSON.parse(String(update?.init?.body)).values).toEqual([['nome','valor'],['Korczak','42']]);
   });
