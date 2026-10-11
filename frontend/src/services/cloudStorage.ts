@@ -103,7 +103,6 @@ export async function readCloudFile(file:CloudFile):Promise<{content:string;docu
 
 export async function saveCloudFile(file:CloudFile,content:string):Promise<void>{
   content=stripLayoutMetadata(content);
-  if(!content.trim())throw new Error("O documento não pode ser salvo vazio.");
   const docs="application/vnd.google-apps.document";
   const sheets="application/vnd.google-apps.spreadsheet";
   const slides="application/vnd.google-apps.presentation";
