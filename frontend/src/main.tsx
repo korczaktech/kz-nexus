@@ -11,6 +11,7 @@ installIOSRuntime();
 
 const syncIOS = () => flushIOSOperationQueue(API_BASE_URL, getToken).catch(() => undefined);
 window.addEventListener("online", syncIOS, { passive: true });
+window.addEventListener("nexusIOSSyncQueued", syncIOS, { passive: true });
 if (navigator.onLine) window.addEventListener("load", syncIOS, { once: true });
 
 const root = createRoot(document.getElementById("root")!);
