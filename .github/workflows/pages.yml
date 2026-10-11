@@ -40,13 +40,13 @@ jobs:
         working-directory: frontend
         run: npm test
 
-      - name: Build Vite application
+      - name: Type-check and build Vite application
         working-directory: frontend
         env:
           VITE_API_BASE_URL: https://kzdoc.onrender.com
           VITE_GOOGLE_CLIENT_ID: ${{ vars.GOOGLE_CLIENT_ID || secrets.GOOGLE_CLIENT_ID }}
           VITE_GOOGLE_REDIRECT_URI: ${{ vars.GOOGLE_REDIRECT_URI || secrets.GOOGLE_REDIRECT_URI }}
-        run: npx vite build
+        run: npm run build
 
       - name: Generate Android-compatible PWA PNG icons
         working-directory: frontend
