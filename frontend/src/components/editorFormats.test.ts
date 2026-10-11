@@ -11,7 +11,7 @@ describe('rich RTF export',()=>{
     const rtf=htmlToRtf('<h1>Título</h1><p><strong>forte</strong> <em>ênfase</em> <u>sublinhado</u></p><ul><li>item</li></ul>');
     expect(rtf).toContain('\\b\\fs36');
     expect(rtf).toContain('\\b forte');
-    expect(rtf).toContain('\\i ênfase');
+    expect(rtf).toContain('\\i \\u234?nfase');
     expect(rtf).toContain('\\ul sublinhado');
     expect(rtf).toContain('item');
     expect(rtf.startsWith('{\\rtf1')).toBe(true);
