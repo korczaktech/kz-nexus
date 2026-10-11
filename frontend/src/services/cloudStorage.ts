@@ -21,7 +21,29 @@ async function cfg(){const id=await clientId();return{clientId:id,auth:"https://
 export async function connectCloud(){const c=await cfg();if(!c.clientId)throw new Error("Google Drive ainda não possui Client ID configurado na NexusAPI.");const{verifier,challenge}=await pkce();const state=b64url(crypto.getRandomValues(new Uint8Array(24)));sessionStorage.setItem("nexus_oauth",JSON.stringify({provider:"google-drive",state,verifier}));const url=new URL(c.auth);url.searchParams.set("client_id",c.clientId);url.searchParams.set("response_type","code");url.searchParams.set("redirect_uri",redirectUri());url.searchParams.set("scope",c.scope);url.searchParams.set("state",state);url.searchParams.set("code_challenge",challenge);url.searchParams.set("code_challenge_method","S256");url.searchParams.set("access_type","offline");url.searchParams.set("prompt","consent");location.assign(url.toString())}
 export async function finishCloudOAuth(){const q=new URLSearchParams(location.search);const oauthError=q.get("error");if(oauthError){sessionStorage.removeItem("nexus_oauth");history.replaceState({},document.title,location.pathname);throw new Error(oauthError==="access_denied"?"A autorização do Google Drive foi cancelada.":"O Google recusou a autorização do Drive: "+oauthError)}const code=q.get("code"),state=q.get("state");if(!code&&!state)return null;if(!code||!state)throw new Error("Resposta OAuth incompleta do Google Drive. Confira a URL de redirecionamento autorizada no Google Cloud Console.");let pending:null|{provider:CloudProvider;state:string;verifier:string}=null;try{pending=JSON.parse(sessionStorage.getItem("nexus_oauth")||"null")}catch{}if(!pending||pending.state!==state||pending.provider!=="google-drive")throw new Error("A sessão de autorização do Google Drive não confere. Recarregue o Nexus e tente conectar novamente.");const c=await cfg();if(!c.clientId)throw new Error("Google Drive ainda não possui Client ID configurado na NexusAPI.");const r=await fetch(c.api+"/api/v1/oauth/google/token",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({code,redirect_uri:redirectUri(),code_verifier:pending.verifier})});if(!r.ok){let detail="";try{const d=await r.json();detail=String(d.detail||d.error?.message||d.error_description||d.error||"")}catch{}throw new Error("Falha ao trocar o código OAuth por token"+(detail?": "+detail:"")+". Confira GOOGLE_CLIENT_ID e GOOGLE_CLIENT_SECRET no Render e a URL de redirecionamento no Google Cloud Console.")}const data=await r.json();if(!data.access_token)throw new Error("O Google não retornou access_token. Verifique o consentimento OAuth e o projeto Google Cloud.");const session={provider:"google-drive" as const,accessToken:data.access_token,refreshToken:data.refresh_token,expiresAt:Date.now()+Number(data.expires_in||3600)*1000};const all=read();all["google-drive"]=session;write(all);sessionStorage.removeItem("nexus_oauth");history.replaceState({},document.title,location.pathname);return"google-drive" as const}
 async function refresh(s:CloudSession){if(!s.refreshToken)return s;const c=await cfg();const r=await fetch(c.api+"/api/v1/oauth/google/refresh",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({refresh_token:s.refreshToken})});if(!r.ok){disconnectCloud("google-drive");throw new Error("A autorização do Google Drive expirou ou o servidor OAuth não está configurado. Conecte a conta novamente.")}const data=await r.json();const next={...s,accessToken:data.access_token,refreshToken:data.refresh_token||s.refreshToken,expiresAt:Date.now()+Number(data.expires_in||3600)*1000};const all=read();all["google-drive"]=next;write(all);return next}
-async function request(url:string,init:RequestInit={}){let s=getCloudSession("google-drive");if(!s)throw new Error("Conecte seu Google Drive primeiro.");if(Date.now()>s.expiresAt-60000)s=await refresh(s);const h=new Headers(init.headers);h.set("Authorization","Bearer "+s.accessToken);let r=await fetch(url,{...init,headers:h});if(r.status===401&&s.refreshToken){s=await refresh(s);h.set("Authorization","Bearer "+s.accessToken);r=await fetch(url,{...init,headers:h})}if(!r.ok)throw new Error("O Google Drive recusou a operação ("+r.status+").");return r}
+const waitForRetry=(ms:number)=>new Promise(resolve=>setTimeout(resolve,ms));
+async function request(url:string,init:RequestInit={}){
+  let session=getCloudSession("google-drive");
+  if(!session)throw new Error("Conecte seu Google Drive primeiro.");
+  if(Date.now()>session.expiresAt-60000)session=await refresh(session);
+  const method=(init.method||"GET").toUpperCase();
+  let refreshed=false;
+  for(let attempt=0;attempt<3;attempt++){
+    const headers=new Headers(init.headers);headers.set("Authorization","Bearer "+session.accessToken);
+    const response=await fetch(url,{...init,headers});
+    if(response.status===401&&session.refreshToken&&!refreshed){session=await refresh(session);refreshed=true;attempt--;continue}
+    if((response.status===429||(method==="GET"&&response.status>=500))&&attempt<2){
+      const seconds=Number(response.headers.get("Retry-After")||0);
+      await waitForRetry(seconds>0?Math.min(2000,seconds*1000):200*(attempt+1));continue;
+    }
+    if(!response.ok){
+      if(response.status===429)throw new Error("O Google Drive limitou temporariamente as solicitações. Aguarde e tente novamente.");
+      throw new Error("O Google Drive recusou a operação ("+response.status+").");
+    }
+    return response;
+  }
+  throw new Error("O Google Drive permaneceu indisponível após várias tentativas. Tente novamente em instantes.");
+}
 async function ensureRootFolder(){
   const s=getCloudSession("google-drive");
   if(!s)throw new Error("Conecte seu Google Drive primeiro.");
