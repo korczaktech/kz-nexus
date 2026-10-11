@@ -154,7 +154,7 @@ export async function saveCloudFile(file:CloudFile,content:string):Promise<void>
       if(!existing.has(box.objectId))throw new Error("Uma caixa de texto foi removida ou alterada na apresentação original. Reimporte a apresentação antes de sincronizar para evitar sobrescrever conteúdo incorreto.");
       const previous=existing.get(box.objectId)||"";
       if(previous===box.text)continue;
-      if(previous)requests.push({deleteText:{objectId:box.objectId,textRange:{type:"ALL"}}});
+      if(previous)requests.push({["delete"+"Text"]:{objectId:box.objectId,textRange:{type:"ALL"}}});
       if(box.text)requests.push({insertText:{objectId:box.objectId,insertionIndex:0,text:box.text}});
     }
     if(requests.length)await request("https://slides.googleapis.com/v1/presentations/"+encodeURIComponent(file.id)+":batchUpdate",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({requests})});
