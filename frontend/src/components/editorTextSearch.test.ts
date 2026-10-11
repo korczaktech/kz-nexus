@@ -19,6 +19,12 @@ describe('editor text search',()=>{
     expect(el.innerHTML).toContain('Olá <strong>universo</strong>!');
     expect(el.innerHTML).toContain('<p>universo</p>');
   });
+  it('returns every match in document order for next-result navigation',()=>{
+    const el=setup('<p>alpha</p><p><strong>alpha</strong> and alpha</p>');
+    const result=findTextMatches(el,'alpha');
+    expect(result.count).toBe(3);
+    expect(result.ranges.map(range=>range.toString())).toEqual(['alpha','alpha','alpha']);
+  });
   it('treats the search term literally and case-insensitively',()=>{
     const el=setup('<p>a.b A.B axb</p>');
     expect(replaceTextAcrossBlocks(el,'a.b','X')).toBe(2);
