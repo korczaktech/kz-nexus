@@ -44,8 +44,8 @@ jobs:
         working-directory: frontend
         env:
           VITE_API_BASE_URL: https://kzdoc.onrender.com
-          VITE_GOOGLE_CLIENT_ID: ${{ vars.GOOGLE_CLIENT_ID || secrets.GOOGLE_CLIENT_ID }}
-          VITE_GOOGLE_REDIRECT_URI: ${{ vars.GOOGLE_REDIRECT_URI || secrets.GOOGLE_REDIRECT_URI }}
+          VITE_GOOGLE_CLIENT_ID: ${{ vars.TST_GOOGLE_CLIENT_ID || secrets.TST_GOOGLE_CLIENT_ID }}
+          VITE_GOOGLE_REDIRECT_URI: ${{ vars.TST_GOOGLE_REDIRECT_URI || secrets.TST_GOOGLE_REDIRECT_URI }}
         run: npm run build
 
       - name: Generate Android-compatible PWA PNG icons
