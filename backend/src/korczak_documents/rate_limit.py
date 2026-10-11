@@ -24,8 +24,10 @@ def enforce_rate_limit(client_key: str, action: str) -> None:
                     existing_bucket.popleft()
                 if not existing_bucket:
                     _BUCKETS.pop(existing_key, None)
-            while len(_BUCKETS) >= _MAX_BUCKETS:
-                _BUCKETS.pop(next(iter(_BUCKETS)))
+        if key not in _BUCKETS and len(_BUCKETS) >= _MAX_BUCKETS:
+            # Do not evict an active client's bucket: an attacker could flood
+            # unique keys to erase other clients' attempt history.
+            raise AppError("Limite temporário de proteção atingido.", "rate_limited", 429)
         bucket = _BUCKETS[key]
         while bucket and now - bucket[0] >= _WINDOW_SECONDS:
             bucket.popleft()
