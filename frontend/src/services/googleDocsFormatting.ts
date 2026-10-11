@@ -1,7 +1,6 @@
 export type GoogleDocsRequest=Record<string,unknown>;
 type Marks={bold?:boolean;italic?:boolean;underline?:boolean;strikethrough?:boolean;link?:{url:string}};
 const BLOCKS=new Set(['P','DIV','H1','H2','H3','H4','H5','H6','BLOCKQUOTE','LI','PRE']);
-const esc=(value:string)=>value.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
 export function htmlToGoogleDocsPayload(html:string):{text:string;requests:GoogleDocsRequest[]}{
   const doc=new DOMParser().parseFromString(html,'text/html');
   let text='';const requests:GoogleDocsRequest[]=[];
