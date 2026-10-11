@@ -98,7 +98,7 @@ describe('Google Drive sync adapters',()=>{
     expect(calls).toHaveLength(0);
   });
   it('clears and updates a Google Sheets tab by stable ID',async()=>{
-    const {calls}=setupFetch(url=>url.includes('/spreadsheets/sheet-1?fields=')?new Response(JSON.stringify({sheets:[{properties:{title:'Dados',index:0}}]}),{status:200}):new Response('{}',{status:200}));
+    const {calls}=setupFetch(url=>url.includes('/spreadsheets/sheet-1?fields=')?new Response(JSON.stringify({sheets:[{properties:{title:'Dados',index:0,sheetId:1}}]}),{status:200}):new Response('{}',{status:200}));
     const file:CloudFile={id:'sheet-1',name:'Dados',mimeType:'application/vnd.google-apps.spreadsheet'};
     await saveCloudFile(file,'<table data-google-sheet-id="1" data-google-sheet-title="Dados"><tr><td>nome</td><td>valor</td></tr><tr><td>Korczak</td><td>42</td></tr></table>');
     const clear=calls.find(call=>call.url.includes('values:batchClear'));
