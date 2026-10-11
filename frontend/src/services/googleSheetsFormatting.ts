@@ -22,3 +22,19 @@ export function htmlToSpreadsheetValues(html:string):string[][]{
   }).join('');
   return parseCsv(lines);
 }
+
+export function htmlToPlainText(html:string):string{
+  const doc=new DOMParser().parseFromString(html,'text/html');
+  doc.querySelectorAll('script,style').forEach(node=>node.remove());
+  const render=(node:Node):string=>{
+    if(node.nodeType===3)return node.textContent||'';
+    if(node.nodeType!==1)return '';
+    const element=node as Element,tag=element.tagName.toLowerCase();
+    if(tag==='br')return '\n';
+    if(tag==='td'||tag==='th')return Array.from(element.childNodes).map(render).join('')+'\t';
+    const children=Array.from(element.childNodes).map(render).join('');
+    if(['p','div','li','h1','h2','h3','h4','h5','h6','tr','section','blockquote','pre'].includes(tag))return children.replace(/\t$/,'')+'\n';
+    return children;
+  };
+  return render(doc.body).replace(/[ \t]+\n/g,'\n').replace(/\n{3,}/g,'\n\n').trim();
+}
