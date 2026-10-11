@@ -1669,3 +1669,21 @@ button,input,textarea,select{
   .rich-editor table{break-inside:auto}
   .rich-editor table tr{break-inside:avoid;break-after:auto}
 }
+
+/* Public, unauthenticated legal routes */
+.public-legal-shell{min-height:100vh;background:radial-gradient(ellipse at 15% 0%,rgba(77,95,190,.14),transparent 38%),#f4f6fa;color:#202b40;padding:clamp(18px,5vw,64px) 16px}
+.public-legal-document{box-sizing:border-box;width:min(880px,100%);margin:0 auto;background:#fff;border:1px solid #e0e5ee;border-radius:16px;padding:clamp(24px,5vw,60px);box-shadow:0 18px 60px rgba(23,38,64,.09);font-family:Arial,Helvetica,sans-serif;font-size:16px;line-height:1.75}
+.public-legal-brand{display:inline-flex;align-items:center;gap:10px;text-decoration:none;color:#172640;margin-bottom:34px}
+.public-legal-brand img{width:42px;height:42px;object-fit:contain}
+.public-legal-brand strong,.public-legal-brand small{display:block;letter-spacing:2px;line-height:1.4}
+.public-legal-brand small{font-size:10px;color:#64748b}
+.public-legal-document .eyebrow{font-size:11px;letter-spacing:2px;color:#5267cb;font-weight:700;margin:0 0 8px}
+.public-legal-document h1{font-size:clamp(30px,5vw,42px);line-height:1.15;letter-spacing:-1.2px;color:#14213a;margin:0 0 10px}
+.public-legal-updated{font-size:13px;color:#64748b;border-bottom:1px solid #e5eaf2;padding-bottom:22px;margin-bottom:26px}
+.public-legal-document h2{font-size:20px;line-height:1.35;color:#1d2c47;margin:30px 0 8px}
+.public-legal-document p,.public-legal-document li{color:#39465b}
+.public-legal-document ul{padding-left:25px}
+.public-legal-document li{padding-left:4px;margin:6px 0}
+.public-legal-document a{color:#344fc1;text-underline-offset:3px}
+.public-legal-links{display:flex;flex-wrap:wrap;gap:12px 22px;border-top:1px solid #e5eaf2;margin-top:38px;padding-top:22px;font-size:14px;font-weight:650}
+@media(max-width:600px){.public-legal-shell{padding:0;background:#fff}.public-legal-document{border:0;border-radius:0;box-shadow:none;padding:24px 20px 36px;font-size:15px}.public-legal-brand{margin-bottom:26px}.public-legal-document h2{font-size:18px;margin-top:25px}}
