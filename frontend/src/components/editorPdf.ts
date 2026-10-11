@@ -35,7 +35,7 @@ export function mergePdfOcrParagraphs(nativeHtml:string,ocrText:string):string{
   const nativeNormalized=normalize(nativeText);
   const additions=paragraphs.filter(paragraph=>{
     const candidate=normalize(paragraph);
-    return candidate&&!nativeNormalized.includes(candidate)&&!candidate.includes(nativeNormalized);
+    return candidate&&(!nativeNormalized||(!nativeNormalized.includes(candidate)&&!candidate.includes(nativeNormalized)));
   });
   return [nativeHtml,...additions.map(paragraph=>'<p>'+escapeHtml(paragraph).replace(/\n/g,'<br>')+'</p>')].filter(Boolean).join('');
 }
