@@ -86,7 +86,8 @@ Com base na implementação atual em `frontend/src/App.tsx` e `frontend/src/serv
 Workflows de validação:
 - [Deploy GitHub Pages](.github/workflows/pages.yml) — testes frontend, TypeScript/build e publicação Web/PWA.
 - [Backend CI](.github/workflows/backend-ci.yml) — pytest com MongoDB 8 e varredura de segredos no histórico.
-- [Desktop CI e empacotamento](.github/workflows/desktop.yml) — testes e pacotes Windows/macOS/Linux.
+- [Android CI](.github/workflows/android-ci.yml) — testes nativos e build do APK de depuração; a execução `38164937626` passou.
+- [Desktop CI e empacotamento](.github/workflows/desktop.yml) — testes e pacotes Windows/macOS/Linux (AppImage + DEB); a execução `38164998938` passou.
 - [Build iOS](.github/workflows/ios.yml) — validação do projeto e build para simulador.
 - [Release multiplataforma](.github/workflows/release.yml) — APK assinado e pacotes Desktop; requer secrets Android válidos.
 
