@@ -13,6 +13,7 @@ from .errors import AppError, NotFoundError, ValidationError
 
 SESSION_HOURS = 24
 _PASSWORD_MIN_LENGTH = 12
+_BCRYPT_ROUNDS = 12
 ROLE_LEVELS = {"user": 10, "manager": 20, "admin": 30}
 
 
@@ -40,7 +41,7 @@ def validate_password_policy(password: str, email: str | None = None, name: str 
 def hash_password(password: str) -> str:
     if bcrypt is None:
         raise RuntimeError("bcrypt não está disponível")
-    return bcrypt.hashpw(password.encode("utf-8"), bcrypt.gensalt()).decode("utf-8")
+    return bcrypt.hashpw(password.encode("utf-8"), bcrypt.gensalt(rounds=_BCRYPT_ROUNDS)).decode("utf-8")
 
 
 def verify_password(password: str, encoded: str) -> bool:
@@ -60,8 +61,14 @@ def verify_password(password: str, encoded: str) -> bool:
 
 
 def needs_password_rehash(encoded: str) -> bool:
-    # O único formato aceito é bcrypt. A aplicação não migra para outro algoritmo.
-    return False
+    """Return whether a valid bcrypt hash uses fewer rounds than our current policy."""
+    if not isinstance(encoded, str) or not encoded.startswith(("$2a$", "$2b$", "$2y$")):
+        return False
+    try:
+        rounds = int(encoded.split("$")[2])
+    except (IndexError, ValueError):
+        return False
+    return rounds < _BCRYPT_ROUNDS
 
 def create_token() -> str:
     return secrets.token_urlsafe(48)
