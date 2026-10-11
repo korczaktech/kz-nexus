@@ -1534,3 +1534,9 @@ button,input,textarea,select{
 .editor-file-error[role=alert]{margin:10px 16px;padding:10px 12px;color:#ffd7dc;background:rgba(151,41,59,.16);border:1px solid rgba(239,104,120,.35);border-radius:10px;font-size:12px}
 @media(max-width:900px){.editor-findbar{align-items:stretch}.editor-findbar label{flex:1}.editor-page{width:100%!important;min-height:100%!important;padding:18mm!important;transform:none!important;margin-bottom:0!important}.rich-editor{min-height:60vh}.editor-document-header{margin-bottom:8mm}.editor-document-footer{margin-top:8mm}}
 @media print{.editor-page{box-shadow:none}.rich-editor{min-height:0}}
+
+.version-compare{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-top:14px}
+.version-compare>div{min-width:0;border:1px solid #263853;border-radius:8px;padding:12px;background:#06101d}
+.version-compare strong{display:block;color:#9eb1cc;margin-bottom:8px}
+.version-compare pre{margin:0;white-space:pre-wrap;overflow-wrap:anywhere;max-height:360px;overflow:auto;color:#d4deec;font:12px/1.55 ui-monospace,SFMono-Regular,Consolas,monospace}
+@media(max-width:720px){.version-compare{grid-template-columns:1fr}}
