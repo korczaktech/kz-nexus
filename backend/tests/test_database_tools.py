@@ -24,6 +24,7 @@ def test_restore_invokes_mongorestore(tmp_path: Path) -> None:
         restore_backup("mongodb://localhost:27017", "KZDocs", str(archive))
         assert run.call_args.args[0][0] == "mongorestore"
         assert "--drop" in run.call_args.args[0]
+        assert "--nsInclude=KZDocs.*" in run.call_args.args[0]
         assert f"--archive={archive}" in run.call_args.args[0]
 
 

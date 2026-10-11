@@ -27,7 +27,13 @@ def restore_backup(uri: str, database: str, backup_path: str) -> None:
     if archive.suffix != ".archive" or not archive.is_file():
         raise ValueError("O caminho do backup deve apontar para um arquivo .archive válido")
     subprocess.run(
-        ["mongorestore", f"--uri={uri}", "--drop", f"--archive={archive}"],
+        [
+            "mongorestore",
+            f"--uri={uri}",
+            "--drop",
+            f"--nsInclude={database}.*",
+            f"--archive={archive}",
+        ],
         check=True,
         capture_output=True,
         text=True,
