@@ -36,6 +36,13 @@ describe('API client — autenticação e tratamento de falhas',()=>{
     expect(getToken()).toBeNull();
   });
 
+  it('preserva a sessão e expõe erro controlado quando a API responde 503',async()=>{
+    saveSession({token:'session-token',expires_at:'2099-01-01T00:00:00Z',user:{}} as Session);
+    fetchMock.mockResolvedValue(new Response(JSON.stringify({error:{message:'Serviço temporariamente indisponível.',code:'service_unavailable'}}),{status:503,headers:{'Content-Type':'application/json'}}));
+    await expect(api.documents()).rejects.toMatchObject({name:'ApiError',status:503,code:'service_unavailable',message:'Serviço temporariamente indisponível.'});
+    expect(getToken()).toBe('session-token');
+  });
+
   it('retorna erro seguro quando a API devolve conteúdo que não é JSON',async()=>{
     fetchMock.mockResolvedValue(new Response('<html>upstream failure</html>',{status:502}));
     const error=await api.health().catch((value:unknown)=>value);
