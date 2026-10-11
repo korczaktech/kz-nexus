@@ -78,7 +78,6 @@ export async function readCloudFile(file:CloudFile):Promise<{content:string;docu
     const data=await valuesResponse.json();
     const values=Array.isArray(data.values)?data.values:[];
     const csv=values.map((row:any[])=>row.map(value=>{const cell=String(value??"");return /[",\r\n]/.test(cell)?'"'+cell.replace(/"/g,'""')+'"':cell}).join(",")).join("\n");
-    if(!csv.trim())throw new Error("A primeira aba da planilha está vazia.");
     return {content:csv,document_type:"csv"};
   }
   let url:string;
