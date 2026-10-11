@@ -12,7 +12,7 @@ function sanitizeHtml(html:string){
   template.content.querySelectorAll('script,iframe,object,embed,form,style,link,meta').forEach(node=>node.remove());
   template.content.querySelectorAll('*').forEach(node=>[...node.attributes].forEach(attr=>{
     const name=attr.name.toLowerCase(),value=attr.value.trim().toLowerCase();
-    if(name.startsWith('on')||name==='srcdoc'||((name==='href'||name==='src')&&(value.startsWith('javascript:')||value.startsWith('data:')))) node.removeAttribute(attr.name);
+    const safeEmbeddedImage=name==='src'&&/^data:image\/(?:png|jpeg|gif|webp);base64,/i.test(attr.value.trim());if(name.startsWith('on')||name==='srcdoc'||((name==='href'||name==='src')&&(value.startsWith('javascript:')||(value.startsWith('data:')&&!safeEmbeddedImage)))) node.removeAttribute(attr.name);
   }));
   return template.innerHTML;
 }
