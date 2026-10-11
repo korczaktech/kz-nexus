@@ -1,14 +1,14 @@
 const escapeHtml=(value:string)=>value.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 type State={bold:boolean;italic:boolean;underline:boolean;strike:boolean;fontSize:number|null;color:string|null;backgroundColor:string|null};
 function readRtfColors(source:string):(string|null)[]{
-  const match=source.match(/\\\\colortbl([\\s\\S]*?)\\}/i);
+  const match=source.match(/\\colortbl([\s\S]*?)\}/i);
   if(!match)return[null];
   const entries=match[1].split(';');if(entries[entries.length-1]==='')entries.pop();
-  return entries.map(entry=>{const red=entry.match(/\\\\red(\\d+)/i),green=entry.match(/\\\\green(\\d+)/i),blue=entry.match(/\\\\blue(\\d+)/i);if(!red&&!green&&!blue)return null;const hex=(value:string)=>Math.max(0,Math.min(255,Number(value)||0)).toString(16).padStart(2,'0');return '#'+hex(red?.[1]||'0')+hex(green?.[1]||'0')+hex(blue?.[1]||'0')});
+  return entries.map(entry=>{const red=entry.match(/\\red(\d+)/i),green=entry.match(/\\green(\d+)/i),blue=entry.match(/\\blue(\d+)/i);if(!red&&!green&&!blue)return null;const hex=(value:string)=>Math.max(0,Math.min(255,Number(value)||0)).toString(16).padStart(2,'0');return '#'+hex(red?.[1]||'0')+hex(green?.[1]||'0')+hex(blue?.[1]||'0')});
 }
 export function parseRtfToHtml(source:string):string{
   const state:State={bold:false,italic:false,underline:false,strike:false,fontSize:null,color:null,backgroundColor:null};const stack:State[]=[];let current={...state};let html='<p>';let skipFallback=false;const colors=readRtfColors(source);
-  const emit=(value:string)=>{if(!value)return;let chunk=escapeHtml(value);if(current.bold)chunk='<strong>'+chunk+'</strong>';if(current.italic)chunk='<em>'+chunk+'</em>';if(current.underline)chunk='<u>'+chunk+'</u>';if(current.strike)chunk='<s>'+chunk+'</s>';html+=chunk};
+  const emit=(value:string)=>{if(!value)return;let chunk=escapeHtml(value);if(current.bold)chunk='<strong>'+chunk+'</strong>';if(current.italic)chunk='<em>'+chunk+'</em>';if(current.underline)chunk='<u>'+chunk+'</u>';if(current.strike)chunk='<s>'+chunk+'</s>';const styles:string[]=[];if(current.fontSize)styles.push('font-size:'+(current.fontSize/2)+'pt');if(current.color)styles.push('color:'+current.color);if(current.backgroundColor)styles.push('background-color:'+current.backgroundColor);if(styles.length)chunk='<span style="'+styles.join(';')+'">'+chunk+'</span>';html+=chunk};
   const tokens=source.match(/\\'[0-9a-f]{2}|\\[a-zA-Z]+-?\d* ?|\\.|[{}]|[^\\{}]+/gi)||[];
   for(let i=0;i<tokens.length;i++){
     const token=tokens[i];
