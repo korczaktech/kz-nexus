@@ -271,10 +271,14 @@ async def test_api_end_to_end() -> None:
         return set()
     assert all(not sensitive_keys(item.get("payload", {})) for item in final_items)
 
-    test_accounts = await get_accounts_database()["contas"].find(
-        {"Autenticacao.Email": {"$regex": r"^(phase4-|fase11-|gestor-)"}}, {"id": 1}
-    ).to_list(length=1000)
-    test_user_ids = [item["id"] for item in test_accounts if item.get("id")]
+    test_user_ids = list({
+        user_id,
+        second.json()["user"]["id"],
+        managed_user["id"],
+        manager_target["id"],
+        created_user.json()["id"],
+        manager_created["id"],
+    })
     owned_documents = await database["documentos"].find(
         {"owner_id": {"$in": test_user_ids}}, {"id": 1}
     ).to_list(length=5000)
