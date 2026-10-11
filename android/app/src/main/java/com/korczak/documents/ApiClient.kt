@@ -8,24 +8,37 @@ import java.net.HttpURLConnection
 import java.net.URL
 import java.net.URLEncoder
 
-data class ApiResult(val code: Int, val body: String)
+data class ApiResult(val code: Int, val body: String) {
+    companion object {
+        fun connectionFailure(): ApiResult = ApiResult(
+            0,
+            JSONObject().put("error", JSONObject().put("message", "Não foi possível conectar à API.")).toString()
+        )
+    }
+}
 
 class ApiClient(private val session: SessionStore) {
     private val base = "https://kzdoc.onrender.com"
-    fun request(method:String,path:String,body:String?=null):ApiResult{
-        val c=(URL(base+path).openConnection() as HttpURLConnection).apply{
-            requestMethod=method; connectTimeout=20000; readTimeout=60000
-            setRequestProperty("Accept","application/json")
-            session.token?.let{setRequestProperty("Authorization","Bearer "+it)}
-            if(body!=null){doOutput=true;setRequestProperty("Content-Type","application/json")}
+    fun request(method:String,path:String,body:String?=null):ApiResult {
+        return try {
+            val c=(URL(base+path).openConnection() as HttpURLConnection).apply{
+                requestMethod=method; connectTimeout=20000; readTimeout=60000
+                setRequestProperty("Accept","application/json")
+                session.token?.let{setRequestProperty("Authorization","Bearer "+it)}
+                if(body!=null){doOutput=true;setRequestProperty("Content-Type","application/json")}
+            }
+            try {
+                if(body!=null)c.outputStream.use{it.write(body.toByteArray(Charsets.UTF_8))}
+                val status=c.responseCode
+                val stream=if(status>=400)c.errorStream else c.inputStream
+                val text=stream?.use{BufferedReader(InputStreamReader(it)).readText()}?:""
+                ApiResult(status,text)
+            } finally { c.disconnect() }
+        } catch (_: java.io.IOException) {
+            // Network loss is a normal state for a mobile client; callers can
+            // preserve edits locally instead of losing the worker before UI feedback.
+            ApiResult.connectionFailure()
         }
-        return try{
-            if(body!=null)c.outputStream.use{it.write(body.toByteArray(Charsets.UTF_8))}
-            val status=c.responseCode
-            val stream=if(status>=400)c.errorStream else c.inputStream
-            val text=stream?.use{BufferedReader(InputStreamReader(it)).readText()}?:""
-            ApiResult(status,text)
-        }finally{c.disconnect()}
     }
     fun login(e:String,p:String)=request("POST","/api/v1/auth/login",JSONObject().put("email",e).put("password",p).toString())
     fun register(n:String,e:String,p:String)=request("POST","/api/v1/auth/register",JSONObject().put("name",n).put("email",e).put("password",p).toString())

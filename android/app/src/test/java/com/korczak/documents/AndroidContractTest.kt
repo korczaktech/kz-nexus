@@ -12,6 +12,13 @@ class AndroidContractTest {
         assertFalse(re.matches("app-release.apk"))
     }
 
+    @Test fun connectionFailureIsRepresentedWithoutLeakingTransportDetails() {
+        val result = ApiResult.connectionFailure()
+        assertTrue(result.code == 0)
+        assertTrue(result.body.contains("Não foi possível conectar à API."))
+        assertFalse(result.body.contains("SocketTimeoutException"))
+    }
+
     @Test fun invalidVersionsAreRejected() {
         val re = Regex("^\\d+(\\.\\d+){1,3}$")
         assertTrue(re.matches("0.0.0.160"))
