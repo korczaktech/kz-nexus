@@ -13,7 +13,7 @@
     "dist": "electron-builder",
     "dist:win": "electron-builder --win nsis",
     "dist:mac": "electron-builder --mac dmg",
-    "dist:linux": "electron-builder --linux deb"
+    "dist:linux": "electron-builder --linux"
   },
   "devDependencies": {
     "electron": "^38.1.2",
@@ -55,6 +55,7 @@
     },
     "linux": {
       "target": [
+        "AppImage",
         "deb"
       ],
       "category": "Office"

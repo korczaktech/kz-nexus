@@ -8,7 +8,7 @@ O APK de release é gerado pelo workflow `.github/workflows/release.yml`, aciona
 - A versão do APK usa quatro componentes, por exemplo `0.0.0.294`.
 - Se o workflow for executado manualmente sem versão informada, ele procura a maior tag `v0.0.0.N` publicada e incrementa o quarto componente. Se não encontrar releases, usa o valor-base 293 e gera a próxima versão `0.0.0.294`.
 - O artefato publicado recebe o nome `Korczak-HUB-Nexus-0.0.0.N.apk`.
-- O mesmo release workflow também cria pacotes Desktop para Windows (`.exe`), macOS (`.dmg`) e Linux (`.deb`) e valida a presença de todos os artefatos antes de publicar a release.
+- O mesmo release workflow também cria pacotes Desktop para Windows (`.exe`), macOS (`.dmg`) e Linux (`.AppImage` e `.deb`) e valida a presença de todos os artefatos antes de publicar a release.
 - Depois da publicação, o workflow atualiza `update.json` na branch `updates` com a URL e o SHA-256 do APK.
 
 ## Assinatura
@@ -28,4 +28,4 @@ O aplicativo consulta a última release pública, compara a versão instalada, v
 
 O armazenamento de arquivos usa o Storage Access Framework do Android. O usuário escolhe uma pasta pelo seletor do sistema; provedores instalados no aparelho podem aparecer no mesmo seletor. O Nexus não cria um armazenamento de arquivos próprio.
 
-**Status:** a configuração de release está presente no repositório. Uma release só deve ser considerada publicada depois que o workflow completo gerar, validar e anexar os quatro artefatos com assinatura válida.
+**Status:** a configuração de release está presente no repositório. Uma release só deve ser considerada publicada depois que o workflow completo gerar, validar e anexar os cinco artefatos esperados, com o APK assinado corretamente.

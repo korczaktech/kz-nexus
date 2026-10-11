@@ -4,7 +4,7 @@ Cliente independente para Windows, macOS e Linux. A interface e a bridge são pr
 
 Inclui autenticação, documentos, pastas, favoritos, recentes, lixeira, pesquisa, editor, versões, restauração, perfil, feedback, abertura/exportação de arquivos locais, menu nativo e verificação de novas versões.
 
-Empacotamento: Windows NSIS, macOS DMG, Linux AppImage e DEB.
+Empacotamento: Windows NSIS, macOS DMG e Linux AppImage + DEB. O comando Linux usa os alvos definidos em `desktop/package.json`; o CI deve validar a presença dos dois artefatos.
 
 API oficial: https://kzdoc.onrender.com
 

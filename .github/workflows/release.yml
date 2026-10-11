@@ -144,6 +144,11 @@ jobs:
           file="$(find desktop/dist -maxdepth 1 -type f -name '*.'${{ matrix.ext }} -print -quit)"
           test -n "$file"
           cp "$file" "release-assets/Korczak-HUB-Nexus-${{ needs.prepare.outputs.version }}.${{ matrix.ext }}"
+          if [[ "${{ matrix.ext }}" == "deb" ]]; then
+            appimage="$(find desktop/dist -maxdepth 1 -type f -iname '*.AppImage' -print -quit)"
+            test -n "$appimage"
+            cp "$appimage" "release-assets/Korczak-HUB-Nexus-${{ needs.prepare.outputs.version }}.AppImage"
+          fi
       - uses: actions/upload-artifact@v4
         with:
           name: nexus-desktop-${{ matrix.ext }}
@@ -164,6 +169,7 @@ jobs:
           set -euo pipefail
           test -f "release-assets/Korczak-HUB-Nexus-${{ needs.prepare.outputs.version }}.apk"
           test -f "release-assets/Korczak-HUB-Nexus-${{ needs.prepare.outputs.version }}.deb"
+          test -f "release-assets/Korczak-HUB-Nexus-${{ needs.prepare.outputs.version }}.AppImage"
           test -f "release-assets/Korczak-HUB-Nexus-${{ needs.prepare.outputs.version }}.dmg"
           test -f "release-assets/Korczak-HUB-Nexus-${{ needs.prepare.outputs.version }}.exe"
       - name: Publish GitHub Release
@@ -176,6 +182,7 @@ jobs:
           files: |
             release-assets/Korczak-HUB-Nexus-${{ needs.prepare.outputs.version }}.apk
             release-assets/Korczak-HUB-Nexus-${{ needs.prepare.outputs.version }}.deb
+            release-assets/Korczak-HUB-Nexus-${{ needs.prepare.outputs.version }}.AppImage
             release-assets/Korczak-HUB-Nexus-${{ needs.prepare.outputs.version }}.dmg
             release-assets/Korczak-HUB-Nexus-${{ needs.prepare.outputs.version }}.exe
 
