@@ -268,9 +268,7 @@ function PublicLegalPage({kind}:{kind:'privacy'|'terms'}){
   </main>
 }
 
-function App(){
-  const legalPath=window.location.pathname.replace(/\\/+$/,'').toLowerCase();
-  if(legalPath==='/privacy'||legalPath==='/terms')return <PublicLegalPage kind={legalPath==='/privacy'?'privacy':'terms'}/>;
+function AppAuthenticated(){
   const[user,setUser]=useState<User|null>(null),[boot,setBoot]=useState(true),[view,setView]=useState<View>('home'),[profileMenuOpen,setProfileMenuOpen]=useState(false);
   const[storageSelection,setStorageSelection]=useState(()=>getStorageSelection()),[showStoragePicker,setShowStoragePicker]=useState(false),[driveFiles,setDriveFiles]=useState<CloudFile[]>([]),[driveBusy,setDriveBusy]=useState(false),[driveFolderId,setDriveFolderId]=useState<string|null>(null),[driveFolderName,setDriveFolderName]=useState('Meu Drive');
   const[docs,setDocs]=useState<DocumentItem[]>([]),[selected,setSelected]=useState<DocumentItem|null>(null),[versions,setVersions]=useState<Version[]>([]),[compareVersion,setCompareVersion]=useState<Version|null>(null),[history,setHistory]=useState<Event[]>([]);
@@ -602,5 +600,10 @@ function App(){
     {modal&&view==='users'&&<Modal title={editingUser?'Editar usuário':'Novo usuário'} onClose={()=>setModal(false)}><form className="modal-form" onSubmit={async e=>{e.preventDefault();const f=new FormData(e.currentTarget);if(editingUser){await api.adminUpdateUser(editingUser.id,{name:String(f.get('name')),phone:String(f.get('phone')),role:String(f.get('role'))});}else{await api.adminCreateUser({name:String(f.get('name')),email:String(f.get('email')),password:String(f.get('password')),phone:String(f.get('phone')||''),role:String(f.get('role'))});}setUsers(await api.users());setModal(false)}}><label>Nome<input name="name" defaultValue={editingUser?.name||''} required/></label><label>E-mail<input name="email" defaultValue={editingUser?.email||''} type="email" required disabled={!!editingUser}/></label>{!editingUser&&<label>Senha<input name="password" type="password" minLength={12} required/></label>}<label>Telefone<input name="phone" defaultValue={editingUser?.phone||''}/></label><label>Perfil<select name="role" defaultValue={editingUser?.role||'user'}><option value="user">Usuário</option><option value="manager">Gestor</option>{user.role==='admin'&&<option value="admin">Administrador</option>}</select></label><Button type="submit">Salvar</Button></form></Modal>}
     {modal&&view!=='users'&&<Modal title={view==='folders'?(editingFolder?'Renomear pasta':'Nova pasta'):'Novo documento'}  onClose={()=>setModal(false)}><form className="modal-form" onSubmit={async e=>{e.preventDefault();const f=new FormData(e.currentTarget);if(view==='folders'){if(editingFolder)await api.updateFolder(editingFolder.id,{name:String(f.get('name'))});else await api.createFolder(String(f.get('name')),String(f.get('parent')||'')||null);setModal(false);load('folders')}else await createDocument(e)}}>{view==='folders'?<><label>Nome<input name="name" defaultValue={editingFolder?.name||''} required/></label>{!editingFolder&&<label>Pasta pai<select name="parent"><option value="">Raiz</option>{folders.map(f=><option key={f.id} value={f.id}>{f.name}</option>)}</select></label>}</>:<><label>Nome<input name="name" required/></label><label>Descrição<input name="description" maxLength={2000}/></label><label>Tipo de documento<select name="type" defaultValue="txt" required><option value="txt">Texto simples (.txt)</option><option value="md">Markdown (.md)</option><option value="html">HTML (.html)</option><option value="csv">CSV (.csv)</option><option value="json">JSON (.json)</option></select></label><label>Pasta<select name="folder"><option value="">Sem pasta</option>{folders.map(f=><option key={f.id} value={f.id}>{f.name}</option>)}</select></label><label>Conteúdo<textarea name="content" rows={8}/></label></>}<Button type="submit">Salvar</Button></form></Modal>}
   </div>
+}
+export function App(){
+  const legalPath=window.location.pathname.replace(/\\/+$/,'').toLowerCase();
+  if(legalPath==='/privacy'||legalPath==='/terms')return <PublicLegalPage kind={legalPath==='/privacy'?'privacy':'terms'}/>;
+  return <AppAuthenticated/>;
 }
 export default App;
