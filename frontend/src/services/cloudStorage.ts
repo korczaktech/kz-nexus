@@ -1,7 +1,7 @@
 import * as mammoth from "mammoth";
 import {htmlToGoogleDocsPayload} from "./googleDocsFormatting";
 import {normalizeHtmlForDocx} from "../components/editorFormats";
-import {htmlToSpreadsheetValues} from "./googleSheetsFormatting";
+import {htmlToPlainText,htmlToSpreadsheetValues} from "./googleSheetsFormatting";
 export type CloudProvider="google-drive";
 export interface CloudFile{id:string;name:string;mimeType:string;size?:string;modifiedTime?:string;parents?:string[];webViewLink?:string;iconLink?:string;}
 type CloudSession={provider:CloudProvider;accessToken:string;refreshToken?:string;expiresAt:number;account?:string;rootFolderId?:string};
@@ -96,7 +96,7 @@ export async function saveCloudFile(file:CloudFile,content:string):Promise<void>
   const sheets="application/vnd.google-apps.spreadsheet";
   const slides="application/vnd.google-apps.presentation";
   const docx="application/vnd.openxmlformats-officedocument.wordprocessingml.document";
-  const htmlToText=(html:string)=>{const parsed=new DOMParser().parseFromString(html,"text/html");parsed.querySelectorAll("script,style").forEach(n=>n.remove());return (parsed.body.textContent||"").replace(/\u00a0/g," ")};
+
   if(file.mimeType===docs){
     const converted=htmlToGoogleDocsPayload(content);
     const response=await request("https://docs.googleapis.com/v1/documents/"+encodeURIComponent(file.id));
@@ -136,7 +136,7 @@ export async function saveCloudFile(file:CloudFile,content:string):Promise<void>
   if(!supported.includes(ext)&&!file.mimeType.startsWith("text/")&&file.mimeType!=="application/json"){
     throw new Error("A cópia do Nexus foi salva, mas este formato não pode ser sincronizado diretamente.");
   }
-  const payload=ext==="html"||ext==="htm"?content:htmlToText(content);
+  const payload=ext==="html"||ext==="htm"?content:htmlToPlainText(content);
   await request("https://www.googleapis.com/upload/drive/v3/files/"+encodeURIComponent(file.id)+"?uploadType=media",{method:"PATCH",headers:{"Content-Type":file.mimeType.startsWith("text/")?file.mimeType:"text/plain"},body:payload});
 }
 
