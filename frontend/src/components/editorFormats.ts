@@ -36,8 +36,8 @@ export function htmlToRtf(html:string):string{
       case 'ul':case 'ol':return children+'\\par\n';
       case 'li':return (element.parentElement?.tagName.toLowerCase()==='ol'?'\\tab '+(Array.from(element.parentElement!.children).indexOf(element)+1)+'. ':'\\tab \\u8226? ')+children+'\\par\n';
       case 'table':return Array.from(element.querySelectorAll('tr')).map(tr=>Array.from(tr.children).map(cell=>(cell.textContent||'').trim()).join('\\tab ')+'\\par\n').join('');
-      case 'a':return children+(element.getAttribute('href')?' ('+escapeRtfText(node.getAttribute('href')!)+')':'');
-      case 'img':return escapeRtfText(node.getAttribute('alt')||'[Imagem]');
+      case 'a':return children+(element.getAttribute('href')?' ('+escapeRtfText(element.getAttribute('href')!)+')':'');
+      case 'img':return escapeRtfText(element.getAttribute('alt')||'[Imagem]');
       default:return children;
     }
   };
