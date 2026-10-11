@@ -13,6 +13,7 @@ const files = {
   editorPdf: read('frontend/src/components/editorPdf.ts'),
   cloudStorage: read('frontend/src/services/cloudStorage.ts'),
   sheetsFormatting: read('frontend/src/services/googleSheetsFormatting.ts'),
+  slidesFormatting: read('frontend/src/services/googleSlidesFormatting.ts'),
   androidNative: read('android/app/src/main/java/com/korczak/documents/MainActivity.kt'),
   androidApi: read('android/app/src/main/java/com/korczak/documents/ApiClient.kt'),
   androidStorage: read('android/app/src/main/java/com/korczak/documents/StorageManager.kt'),
@@ -52,6 +53,9 @@ const checks = [
   ['Drive: Google Docs formatting protection', files.cloudStorage.includes('não achatar tabelas') && files.cloudStorage.includes('não perder imagens incorporadas')],
   ['Drive: Google Sheets formula sync', files.cloudStorage.includes('valueRenderOption=FORMULA') && files.cloudStorage.includes('valueInputOption=USER_ENTERED') && files.sheetsFormatting.includes('parseCsv')],
   ['Drive: sync integration tests', fs.existsSync(path.join(root, 'frontend/src/services/cloudStorage.test.ts'))],
+  ['Drive: Google Slides text sync', files.cloudStorage.includes('slides.googleapis.com/v1/presentations') && files.cloudStorage.includes(':batchUpdate') && files.slidesFormatting.includes('htmlToSlideParagraphs')],
+  ['Drive: safe Slides rich-content guard', files.slidesFormatting.includes("querySelector('table')") && files.slidesFormatting.includes("querySelector('img')") && files.slidesFormatting.includes('formatação inline')],
+  ['Drive: Slides sync integration tests', fs.existsSync(path.join(root, 'frontend/src/services/googleSlidesFormatting.test.ts'))],
 
   ['Android: native Activity', files.androidNative.includes('class MainActivity : AppCompatActivity()')],
   ['Android: native authentication', files.androidNative.includes('private fun showAuth()') && files.androidNative.includes('api.login(') && files.androidNative.includes('api.register(')],
