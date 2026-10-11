@@ -11,7 +11,7 @@ on:
         default: ''
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
   prepare:
@@ -180,6 +180,8 @@ jobs:
   publish:
     needs: [prepare, android, android-test, desktop]
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     steps:
       - uses: actions/download-artifact@v4
         with:
