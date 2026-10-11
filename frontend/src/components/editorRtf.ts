@@ -1,5 +1,5 @@
 const escapeHtml=(value:string)=>value.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
-type State={bold:boolean;italic:boolean;underline:boolean;strike:boolean;fontSize:number|null;color:string|null;backgroundColor:string|null};
+type State={bold:boolean;italic:boolean;underline:boolean;strike:boolean;fontSize:number|null;color:string|null;backgroundColor:string|null;alignment:'left'|'center'|'right'|'justify'};
 function readRtfColors(source:string):(string|null)[]{
   const match=source.match(/\\colortbl([\s\S]*?)\}/i);
   if(!match)return[null];
@@ -7,7 +7,7 @@ function readRtfColors(source:string):(string|null)[]{
   return entries.map(entry=>{const red=entry.match(/\\red(\d+)/i),green=entry.match(/\\green(\d+)/i),blue=entry.match(/\\blue(\d+)/i);if(!red&&!green&&!blue)return null;const hex=(value:string)=>Math.max(0,Math.min(255,Number(value)||0)).toString(16).padStart(2,'0');return '#'+hex(red?.[1]||'0')+hex(green?.[1]||'0')+hex(blue?.[1]||'0')});
 }
 export function parseRtfToHtml(source:string):string{
-  const state:State={bold:false,italic:false,underline:false,strike:false,fontSize:null,color:null,backgroundColor:null};const stack:State[]=[];let current={...state};let html='<p>';let skipFallback=false;const colors=readRtfColors(source);
+  const state:State={bold:false,italic:false,underline:false,strike:false,fontSize:null,color:null,backgroundColor:null,alignment:'left'};const stack:State[]=[];let current={...state};const openParagraph=()=>'<p'+(current.alignment==='left'?'':' style="text-align:'+current.alignment+'"')+'>';let html=openParagraph();let skipFallback=false;const colors=readRtfColors(source);
   const emit=(value:string)=>{if(!value)return;let chunk=escapeHtml(value);if(current.bold)chunk='<strong>'+chunk+'</strong>';if(current.italic)chunk='<em>'+chunk+'</em>';if(current.underline)chunk='<u>'+chunk+'</u>';if(current.strike)chunk='<s>'+chunk+'</s>';const styles:string[]=[];if(current.fontSize)styles.push('font-size:'+(current.fontSize/2)+'pt');if(current.color)styles.push('color:'+current.color);if(current.backgroundColor)styles.push('background-color:'+current.backgroundColor);if(styles.length)chunk='<span style="'+styles.join(';')+'">'+chunk+'</span>';html+=chunk};
   const tokens=source.match(/\\'[0-9a-f]{2}|\\[a-zA-Z]+-?\d* ?|\\.|[{}]|[^\\{}]+/gi)||[];
   for(let i=0;i<tokens.length;i++){
@@ -28,7 +28,7 @@ export function parseRtfToHtml(source:string):string{
       stack.push({...current});continue;
     }
     if(token==='}'){
-      current=stack.pop()||{bold:false,italic:false,underline:false,strike:false,fontSize:null,color:null,backgroundColor:null};continue;
+      current=stack.pop()||{bold:false,italic:false,underline:false,strike:false,fontSize:null,color:null,backgroundColor:null,alignment:'left'};continue;
     }
     if(token.startsWith("\\'")){
       if(skipFallback){skipFallback=false;continue}emit(String.fromCharCode(parseInt(token.slice(2),16)));continue;
@@ -49,11 +49,12 @@ export function parseRtfToHtml(source:string):string{
       else if(word==='ul'||word==='ulw'||word==='uldb')current.underline=true;
       else if(word==='ulnone')current.underline=false;
       else if(word==='strike'||word==='striked')current.strike=number!==0;
-      else if(word==='plain')current={bold:false,italic:false,underline:false,strike:false,fontSize:null,color:null,backgroundColor:null};
+      else if(word==='plain')current={...current,bold:false,italic:false,underline:false,strike:false,fontSize:null,color:null,backgroundColor:null};
       else if(word==='fs'&&number!==undefined)current.fontSize=Math.max(2,Math.min(327,number));
       else if(word==='cf'&&number!==undefined)current.color=colors[number]||null;
       else if(word==='highlight'&&number!==undefined)current.backgroundColor=colors[number]||null;
-      else if(word==='par'||word==='row'){html+='</p><p>';skipFallback=false}
+      else if(['ql','qc','qr','qj'].includes(word)){const alignment=word==='qc'?'center':word==='qr'?'right':word==='qj'?'justify':'left';if(current.alignment!==alignment){current.alignment=alignment;if(html.endsWith('<p>'))html=html.slice(0,-3)+openParagraph();else html+='</p>'+openParagraph()}}
+      else if(word==='par'||word==='row'){html+='</p>'+openParagraph();skipFallback=false}
       else if(word==='line')html+='<br>';
       else if(word==='tab')html+='&#9;';
       else if(word==='u'&&number!==undefined){const code=number<0?number+65536:number;emit(String.fromCharCode(code));skipFallback=true}
