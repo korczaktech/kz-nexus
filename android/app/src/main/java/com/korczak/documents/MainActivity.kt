@@ -56,6 +56,19 @@ class MainActivity : AppCompatActivity() {
     private val green = Color.rgb(61, 214, 160)
     private val red = Color.rgb(224, 85, 111)
 
+    override fun onResume() {
+        super.onResume()
+        if (::storage.isInitialized) {
+            executor.execute {
+                val result = runCatching { OfflineStore(this).flushPendingWrites(storage) }.getOrNull()
+                val saved = result?.optInt("saved", 0) ?: 0
+                if (saved > 0) main.post {
+                    NexusFeedback.toast(this, "$saved alteração(ões) offline recuperada(s).", NexusFeedback.Type.SUCCESS)
+                }
+            }
+        }
+    }
+
     override fun onCreate(state: Bundle?) {
         super.onCreate(state)
         showStartupSplash()

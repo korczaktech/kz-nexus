@@ -10,6 +10,7 @@ class OfflineStore(private val context: Context) {
     private val prefs = context.getSharedPreferences("nexus_offline_v1", Context.MODE_PRIVATE)
     private val queueKey = "write_queue"
     private val cacheKey = "document_cache"
+    private val recoveryKeyPrefix = "write_queue_recovery_"
 
     fun networkState(): JSONObject {
         val cm = context.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
@@ -31,17 +32,42 @@ class OfflineStore(private val context: Context) {
         val q = readQueue()
         q.put(JSONObject().put("id",id).put("uri",uri).put("name",name).put("content",content)
             .put("createdAt",System.currentTimeMillis()).put("status","pending"))
-        prefs.edit().putString(queueKey,q.toString()).apply()
+        check(prefs.edit().putString(queueKey,q.toString()).commit()) {
+            "Não foi possível persistir a fila offline no armazenamento local."
+        }
         return id
     }
 
     fun remove(id: String) {
         val q=readQueue()
         for(i in q.length()-1 downTo 0) if(q.optJSONObject(i)?.optString("id")==id) q.remove(i)
-        prefs.edit().putString(queueKey,q.toString()).apply()
+        check(prefs.edit().putString(queueKey,q.toString()).commit()) {
+            "Não foi possível atualizar a fila offline no armazenamento local."
+        }
     }
 
     fun queueSnapshot(): JSONObject = JSONObject().put("items",readQueue()).put("count",readQueue().length())
+
+    /** Retry locally queued file writes. Failed writes stay queued for the next foreground. */
+    fun flushPendingWrites(storage: StorageManager): JSONObject {
+        val queued = readQueue()
+        var saved = 0
+        var failed = 0
+        for (i in 0 until queued.length()) {
+            val item = queued.optJSONObject(i) ?: run { failed++; continue }
+            val id = item.optString("id")
+            val result = runCatching {
+                storage.write(item.optString("uri"), item.optString("name"), item.optString("content"))
+            }.getOrNull()
+            if (result?.first == true && id.isNotBlank()) {
+                remove(id)
+                saved++
+            } else {
+                failed++
+            }
+        }
+        return JSONObject().put("saved", saved).put("failed", failed).put("pending", readQueue().length())
+    }
 
     fun cacheDocument(uri: String, name: String, content: String) {
         val c=readCache()
@@ -52,30 +78,28 @@ class OfflineStore(private val context: Context) {
     fun cachedDocument(uri: String): JSONObject? = readCache().optJSONObject(uri)
 
     fun prune() {
-        runCatching {
-            val now = System.currentTimeMillis()
-            val q = readQueue()
-            for (i in q.length() - 1 downTo 0) {
-                val item = q.optJSONObject(i)
-                if (item == null) {
-                    q.remove(i)
-                    continue
-                }
-                val createdAt = item.optLong("createdAt", now).takeIf { it > 0L } ?: now
-                val age = (now - createdAt).coerceAtLeast(0L)
-                if (age > 7L * 24 * 60 * 60 * 1000) q.remove(i)
-            }
-            prefs.edit().putString(queueKey, q.toString()).apply()
-        }.onFailure {
-            android.util.Log.e("KorczakNexus", "Falha ao limpar fila offline; estado será preservado", it)
-        }
+        // Pending writes are user data. Never delete them solely because they
+        // are old; unresolved operations must remain available for recovery.
+        val pending = readQueue().length()
+        android.util.Log.i("KorczakNexus", "Fila offline preservada: $pending operação(ões) pendente(s)")
     }
 
-    private fun readQueue(): JSONArray = runCatching {
-        JSONArray(prefs.getString(queueKey, "[]") ?: "[]")
-    }.getOrElse {
-        android.util.Log.w("KorczakNexus", "Fila offline inválida; iniciando fila vazia", it)
-        JSONArray()
+    private fun readQueue(): JSONArray {
+        val raw = prefs.getString(queueKey, "[]") ?: "[]"
+        return try {
+            JSONArray(raw)
+        } catch (error: Exception) {
+            // Preserve the corrupt payload before allowing a new queue to be written.
+            val recoveryKey = recoveryKeyPrefix + System.currentTimeMillis()
+            val preserved = prefs.edit().putString(recoveryKey, raw).commit()
+            android.util.Log.e(
+                "KorczakNexus",
+                if (preserved) "Fila offline inválida preservada para recuperação ($recoveryKey)"
+                else "Fila offline inválida; falha ao preservar cópia de recuperação",
+                error
+            )
+            JSONArray()
+        }
     }
     private fun readCache(): JSONObject = runCatching { JSONObject(prefs.getString(cacheKey,"{}") ?: "{}") }.getOrElse { JSONObject() }
 }
