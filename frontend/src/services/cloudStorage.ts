@@ -2,7 +2,7 @@ import * as mammoth from "mammoth";
 import {htmlToGoogleDocsPayload} from "./googleDocsFormatting";
 import {normalizeHtmlForDocx} from "../components/editorFormats";
 import {stripLayoutMetadata} from "../components/editorLayoutMetadata";
-import {htmlToPlainText,htmlToSpreadsheetValues} from "./googleSheetsFormatting";
+import {htmlToPlainText,htmlToSpreadsheetTables} from "./googleSheetsFormatting";
 import {escapeSlideHtml,htmlToSlideParagraphs,htmlToSlideTextBoxes,slideShapeText} from "./googleSlidesFormatting";
 export type CloudProvider="google-drive";
 export interface CloudFile{id:string;name:string;mimeType:string;size?:string;modifiedTime?:string;parents?:string[];webViewLink?:string;iconLink?:string;}
