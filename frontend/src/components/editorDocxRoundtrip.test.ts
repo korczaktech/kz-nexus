@@ -22,4 +22,15 @@ describe('DOCX import/export round-trip',()=>{
     expect(result.value).toContain('Segundo');
     expect(result.value).toContain('<table>');
   },15000);
+  it('retains embedded raster images through DOCX export and import',async()=>{
+    window=new Window();vi.stubGlobal('DOMParser',window.DOMParser);
+    const mod=await import('html-to-docx');
+    const convert=(mod as any).default||mod;
+    const png='data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+j7V8AAAAASUVORK5CYII=';
+    const html=normalizeHtmlForDocx('<p><img src="'+png+'" alt="pixel"></p>');
+    const output=await convert('<html><body>'+html+'</body></html>',null,{});
+    const arrayBuffer=output instanceof Blob?await output.arrayBuffer():await new Blob([output as BlobPart]).arrayBuffer();
+    const result=await mammoth.convertToHtml({buffer:Buffer.from(arrayBuffer)});
+    expect(result.value).toContain('<img');
+  },15000);
 });
