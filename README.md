@@ -29,7 +29,7 @@ Sistema multiplataforma de gestão documental.
 | 11 | Usuários, Grupos e Permissões | 181–194 | 🟢 Concluída |
 | 12 | Auditoria e Histórico | 195–204 | 🟢 Concluída |
 | 13 | Integração Frontend ↔ Backend | 205–222 | 🟢 Concluída |
-| 14 | Responsividade e Acessibilidade | 223–238 | ⚪ Planejada |
+| 14 | Responsividade e Acessibilidade | 223–238 | 🟡 Em andamento |
 | 15 | Versão Web / GitHub Pages | 239–252 | ⚪ Planejada |
 | 16 | Aplicação Desktop | 253–274 | ⚪ Planejada |
 | 17 | Aplicação Mobile | 275–295 | ⚪ Planejada |
@@ -367,7 +367,9 @@ Sistema multiplataforma de gestão documental.
 - tabelas;
 - editor.
 
-**Estado:** ⚪ Planejada.
+**Documentação:** [Fase 14](docs/FASE_14_RESPONSIVIDADE_ACESSIBILIDADE.md)
+
+**Estado:** 🟡 Em andamento.
 
 ## Fase 15 — Versão Web / GitHub Pages
 **Itens:** 239–252  
