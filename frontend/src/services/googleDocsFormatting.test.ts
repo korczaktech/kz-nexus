@@ -13,6 +13,15 @@ describe('Google Docs formatting conversion',()=>{
     expect(result.requests).toContainEqual({updateTextStyle:{range:{startIndex:12,endIndex:17},textStyle:{bold:true},fields:'bold'}});
     expect(result.requests).toContainEqual({updateTextStyle:{range:{startIndex:18,endIndex:22},textStyle:{link:{url:'https://example.com'}},fields:'link'}});
   });
+  it('preserves color, font family, font size and paragraph alignment',()=>{
+    window=new Window();vi.stubGlobal('DOMParser',window.DOMParser);vi.stubGlobal('Node',window.Node);
+    const result=htmlToGoogleDocsPayload('<p style="text-align:center"><span style="color:#ff0000;background-color:#ffff00;font-family:Arial;font-size:16px">styled</span></p>');
+    expect(result.requests.some((request:any)=>request.updateTextStyle?.textStyle?.foregroundColor?.color?.rgbColor?.red===1)).toBe(true);
+    expect(result.requests.some((request:any)=>request.updateTextStyle?.textStyle?.backgroundColor?.color?.rgbColor?.green===1)).toBe(true);
+    expect(result.requests.some((request:any)=>request.updateTextStyle?.textStyle?.fontSize?.magnitude===12)).toBe(true);
+    expect(result.requests.some((request:any)=>request.updateTextStyle?.textStyle?.weightedFontFamily?.fontFamily==='Arial')).toBe(true);
+    expect(result.requests.some((request:any)=>request.updateParagraphStyle?.paragraphStyle?.alignment==='CENTER')).toBe(true);
+  });
   it('converts lists and tables into readable content',()=>{
     window=new Window();vi.stubGlobal('DOMParser',window.DOMParser);vi.stubGlobal('Node',window.Node);
     const result=htmlToGoogleDocsPayload('<ul><li>um</li><li>dois</li></ul><table><tr><td>A</td><td>B</td></tr></table>');
