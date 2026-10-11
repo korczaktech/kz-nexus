@@ -18,6 +18,28 @@ describe('Google Drive sync adapters',()=>{
     window.localStorage.setItem('kz_cloud_sessions_v2',JSON.stringify({'google-drive':{provider:'google-drive',accessToken:'test-token',expiresAt:Date.now()+3600000}}));
     return{calls,mock};
   }
+  it('imports each Google Slides text box as a separate HTML paragraph',async()=>{
+    setupFetch(()=>new Response(JSON.stringify({slides:[{pageElements:[
+      {objectId:'title',shape:{text:{textElements:[{textRun:{content:'Título\n'}}]}}},
+      {objectId:'body',shape:{text:{textElements:[{textRun:{content:'Corpo\n'}}]}}}
+    ]}]}),{status:200}));
+    const file:CloudFile={id:'slides-read',name:'Deck',mimeType:'application/vnd.google-apps.presentation'};
+    const result=await readCloudFile(file);
+    expect(result.document_type).toBe('html');
+    expect(result.content).toBe('<p>Título</p><p>Corpo</p>');
+  });
+  it('syncs plain text back into existing Google Slides text boxes',async()=>{
+    const {calls}=setupFetch(url=>url.endsWith(':batchUpdate')?new Response('{}',{status:200}):new Response(JSON.stringify({slides:[{pageElements:[
+      {objectId:'title',shape:{text:{textElements:[{textRun:{content:'Título antigo\n'}}]}}},
+      {objectId:'body',shape:{text:{textElements:[{textRun:{content:'Corpo antigo\n'}}]}}}
+    ]}]}),{status:200}));
+    const file:CloudFile={id:'slides-save',name:'Deck',mimeType:'application/vnd.google-apps.presentation'};
+    await saveCloudFile(file,'<p>Novo título</p><p>Novo corpo</p>');
+    const batch=calls.find(call=>call.url.endsWith(':batchUpdate'));
+    const requests=JSON.parse(String(batch?.init?.body)).requests;
+    expect(requests.some((request:any)=>request.insertText?.objectId==='title'&&request.insertText?.text==='Novo título')).toBe(true);
+    expect(requests.some((request:any)=>request.insertText?.objectId==='body'&&request.insertText?.text==='Novo corpo')).toBe(true);
+  });
   it('imports formula cells and quoted CSV values from Google Sheets',async()=>{
     setupFetch(url=>url.includes('/spreadsheets/sheet-read?fields=')?new Response(JSON.stringify({sheets:[{properties:{title:'Dados',index:0}}]}),{status:200}):new Response(JSON.stringify({values:[['Name','Formula'],['Korczak','=A1+A2'],['A, B','say "hi"']]}),{status:200}));
     const file:CloudFile={id:'sheet-read',name:'Dados',mimeType:'application/vnd.google-apps.spreadsheet'};
