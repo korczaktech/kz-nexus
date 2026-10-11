@@ -1,6 +1,6 @@
 import {afterEach,describe,expect,it,vi} from 'vitest';
 import {Window} from 'happy-dom';
-import {htmlToPlainText,htmlToSpreadsheetValues} from './googleSheetsFormatting';
+import {htmlToPlainText,htmlToSpreadsheetTables,htmlToSpreadsheetValues} from './googleSheetsFormatting';
 
 describe('Google Sheets cell conversion',()=>{
   let window:Window;
@@ -21,4 +21,16 @@ describe('Google Sheets cell conversion',()=>{
     window=new Window();vi.stubGlobal('DOMParser',window.DOMParser);
     expect(htmlToSpreadsheetValues('<table><tr><th>Name</th><th>Value</th></tr><tr><td>A</td><td>1</td></tr></table>')).toEqual([['Name','Value'],['A','1']]);
   });
+  it('reads every sheet by stable sheet ID',()=>{
+    window=new Window();vi.stubGlobal('DOMParser',window.DOMParser);
+    expect(htmlToSpreadsheetTables('<table data-google-sheet-id="22" data-google-sheet-title="Resumo"><tr><td>Total</td></tr></table><table data-google-sheet-id="11" data-google-sheet-title="Dados"><tr><td>Nome</td><td>Valor</td></tr></table>')).toEqual([
+      {sheetId:'22',title:'Resumo',values:[['Total']]},
+      {sheetId:'11',title:'Dados',values:[['Nome','Valor']]}
+    ]);
+  });
+  it('rejects tables without stable source identity',()=>{
+    window=new Window();vi.stubGlobal('DOMParser',window.DOMParser);
+    expect(()=>htmlToSpreadsheetTables('<table><tr><td>Dados</td></tr></table>')).toThrow(/identificador/);
+  });
+
 });
