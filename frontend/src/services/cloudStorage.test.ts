@@ -50,17 +50,19 @@ describe('Google Drive sync adapters',()=>{
     expect(calls.some(call=>call.url.endsWith(':batchUpdate'))).toBe(false);
   });
   it('imports formula cells and quoted CSV values from Google Sheets',async()=>{
-    setupFetch(url=>url.includes('/spreadsheets/sheet-read?fields=')?new Response(JSON.stringify({sheets:[{properties:{title:'Dados',index:0}}]}),{status:200}):new Response(JSON.stringify({values:[['Name','Formula'],['Korczak','=A1+A2'],['A, B','say "hi"']]}),{status:200}));
+    setupFetch(url=>url.includes('/spreadsheets/sheet-read?fields=')?new Response(JSON.stringify({sheets:[{properties:{title:'Dados',index:0,sheetId:1}}]}),{status:200}):new Response(JSON.stringify({values:[['Name','Formula'],['Korczak','=A1+A2'],['A, B','say "hi"']]}),{status:200}));
     const file:CloudFile={id:'sheet-read',name:'Dados',mimeType:'application/vnd.google-apps.spreadsheet'};
     const result=await readCloudFile(file);
-    expect(result.document_type).toBe('csv');
-    expect(result.content).toBe('Name,Formula\nKorczak,=A1+A2\n"A, B","say ""hi"""');
+    expect(result.document_type).toBe('html');
+    expect(result.content).toContain('data-google-sheet-id="1"');
+    expect(result.content).toContain('<td>=A1+A2</td>');
+    expect(result.content).toContain('<td>A, B</td>');
   });
   it('allows an empty Google Sheet to be opened and cleared',async()=>{
     const {calls}=setupFetch(url=>url.includes('/spreadsheets/empty?fields=')?new Response(JSON.stringify({sheets:[{properties:{title:'Dados',index:0}}]}),{status:200}):url.includes('/values/')?new Response(JSON.stringify({values:[]}),{status:200}):new Response('{}',{status:200}));
     const file:CloudFile={id:'empty',name:'Vazia',mimeType:'application/vnd.google-apps.spreadsheet'};
     const imported=await readCloudFile(file);
-    expect(imported.content).toBe('');
+    expect(imported.content).toContain('data-google-sheet-id="1"');
     await saveCloudFile(file,'');
     expect(calls.filter(call=>call.url.includes('values:batchClear'))).toHaveLength(1);
     expect(calls.some(call=>call.init?.method==='PUT')).toBe(false);
@@ -98,7 +100,7 @@ describe('Google Drive sync adapters',()=>{
   it('clears and updates the first Google Sheets tab with parsed values',async()=>{
     const {calls}=setupFetch(url=>url.includes('/spreadsheets/sheet-1?fields=')?new Response(JSON.stringify({sheets:[{properties:{title:'Dados',index:0}}]}),{status:200}):new Response('{}',{status:200}));
     const file:CloudFile={id:'sheet-1',name:'Dados',mimeType:'application/vnd.google-apps.spreadsheet'};
-    await saveCloudFile(file,'<p>nome,valor</p><p>Korczak,42</p>');
+    await saveCloudFile(file,'<table data-google-sheet-id="1" data-google-sheet-title="Dados"><tr><td>nome</td><td>valor</td></tr><tr><td>Korczak</td><td>42</td></tr></table>');
     const clear=calls.find(call=>call.url.includes('values:batchClear'));
     const update=calls.find(call=>call.init?.method==='PUT');
     expect(update?.url).toContain('valueInputOption=USER_ENTERED');
