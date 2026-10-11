@@ -17,6 +17,7 @@ export function htmlToSpreadsheetValues(html:string):string[][]{
   if(table)return Array.from(table.querySelectorAll('tr')).map(tr=>Array.from(tr.children).map(cell=>(cell.textContent||'').trim())).filter(row=>row.length>0);
   const lines=Array.from(doc.body.childNodes).map(node=>{
     if(node.nodeType===3)return node.textContent||'';
+    if(node.nodeType!==1)return '';
     const element=node as Element;const tag=element.tagName?.toLowerCase();
     return (node.textContent||'')+(['p','div','li','br','h1','h2','h3','tr'].includes(tag||'')?'\n':'');
   }).join('');
