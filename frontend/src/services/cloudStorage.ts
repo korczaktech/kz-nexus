@@ -1,3 +1,4 @@
+import * as mammoth from "mammoth";
 export type CloudProvider="google-drive";
 export interface CloudFile{id:string;name:string;mimeType:string;size?:string;modifiedTime?:string;parents?:string[];webViewLink?:string;iconLink?:string;}
 type CloudSession={provider:CloudProvider;accessToken:string;refreshToken?:string;expiresAt:number;account?:string;rootFolderId?:string};
@@ -47,6 +48,21 @@ export async function readCloudFile(file:CloudFile):Promise<{content:string;docu
   const docs="application/vnd.google-apps.document";
   const sheets="application/vnd.google-apps.spreadsheet";
   const slides="application/vnd.google-apps.presentation";
+  const docx="application/vnd.openxmlformats-officedocument.wordprocessingml.document";
+  const ext=(file.name.split(".").pop()||"").toLowerCase();
+  if(ext==="docx"||file.mimeType===docx){
+    const response=await request("https://www.googleapis.com/drive/v3/files/"+encodeURIComponent(file.id)+"?alt=media");
+    const arrayBuffer=await response.arrayBuffer();
+    try{
+      const result=await mammoth.extractRawText({arrayBuffer});
+      const textContent=String(result.value||"").trim();
+      if(!textContent)throw new Error("O DOCX não contém texto extraível.");
+      return {content:textContent,document_type:"txt"};
+    }catch(error){
+      if(error instanceof Error&&error.message==="O DOCX não contém texto extraível.")throw error;
+      throw new Error("Não foi possível ler este DOCX. Verifique se o arquivo não está corrompido ou protegido por senha.");
+    }
+  }
   let url:string;
   let type="txt";
   if(file.mimeType===docs){
@@ -57,10 +73,9 @@ export async function readCloudFile(file:CloudFile):Promise<{content:string;docu
   }else if(file.mimeType===slides){
     url="https://www.googleapis.com/drive/v3/files/"+encodeURIComponent(file.id)+"/export?mimeType="+encodeURIComponent("text/plain");
   }else{
-    const ext=(file.name.split(".").pop()||"").toLowerCase();
     const supported=["txt","md","markdown","csv","json","html","htm","xml","rtf","css","js","ts","tsx","jsx","py","yml","yaml","log","svg","ini","toml","sql"];
     if(!supported.includes(ext)&&!file.mimeType.startsWith("text/")&&file.mimeType!=="application/json"){
-      throw new Error("Este formato ("+(ext||file.mimeType)+") ainda não pode ser convertido em texto pelo editor do Nexus. DOCX, PDF, imagens e outros formatos binários precisam de um importador específico.");
+      throw new Error("Este formato ("+(ext||file.mimeType)+") ainda não pode ser convertido em texto pelo editor do Nexus. PDF, imagens e outros formatos binários precisam de um importador específico.");
     }
     type=ext==="markdown"?"md":(ext||"txt");
     url="https://www.googleapis.com/drive/v3/files/"+encodeURIComponent(file.id)+"?alt=media";
