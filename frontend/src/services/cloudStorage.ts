@@ -1,6 +1,7 @@
 import * as mammoth from "mammoth";
 import {htmlToGoogleDocsPayload} from "./googleDocsFormatting";
 import {normalizeHtmlForDocx} from "../components/editorFormats";
+import {stripLayoutMetadata} from "../components/editorLayoutMetadata";
 import {htmlToPlainText,htmlToSpreadsheetValues} from "./googleSheetsFormatting";
 export type CloudProvider="google-drive";
 export interface CloudFile{id:string;name:string;mimeType:string;size?:string;modifiedTime?:string;parents?:string[];webViewLink?:string;iconLink?:string;}
@@ -102,6 +103,7 @@ export async function readCloudFile(file:CloudFile):Promise<{content:string;docu
 }
 
 export async function saveCloudFile(file:CloudFile,content:string):Promise<void>{
+  content=stripLayoutMetadata(content);
   if(!content.trim())throw new Error("O documento não pode ser salvo vazio.");
   const docs="application/vnd.google-apps.document";
   const sheets="application/vnd.google-apps.spreadsheet";
