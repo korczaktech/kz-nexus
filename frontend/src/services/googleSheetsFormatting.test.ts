@@ -35,7 +35,7 @@ describe('Google Sheets cell conversion',()=>{
 
   it('preserves intentional leading and trailing whitespace inside cells',()=>{
     window=new Window();vi.stubGlobal('DOMParser',window.DOMParser);
-    expect(htmlToSpreadsheetTables('<table data-google-sheet-id="1" data-google-sheet-title="Dados"><tr><td>  valor  </td></tr></table>')[0].values).toEqual([['  valor  ']]);
+    expect(htmlToSpreadsheetTables('<table data-google-sheet-id="1" data-google-sheet-title="Dados"><tr><td>&#160;&#160;valor&#160;&#160;</td></tr></table>')[0].values).toEqual([['  valor  ']]);
   });
 
 });
