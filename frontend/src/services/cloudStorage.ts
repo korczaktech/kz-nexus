@@ -54,10 +54,10 @@ export async function readCloudFile(file:CloudFile):Promise<{content:string;docu
     const response=await request("https://www.googleapis.com/drive/v3/files/"+encodeURIComponent(file.id)+"?alt=media");
     const arrayBuffer=await response.arrayBuffer();
     try{
-      const result=await mammoth.extractRawText({arrayBuffer});
-      const textContent=String(result.value||"").trim();
-      if(!textContent)throw new Error("O DOCX não contém texto extraível.");
-      return {content:textContent,document_type:"txt"};
+      const result=await mammoth.convertToHtml({arrayBuffer});
+      const html=String(result.value||"").trim();
+      if(!html.replace(/<[^>]*>/g,"").trim())throw new Error("O DOCX não contém texto extraível.");
+      return {content:html,document_type:"html"};
     }catch(error){
       if(error instanceof Error&&error.message==="O DOCX não contém texto extraível.")throw error;
       throw new Error("Não foi possível ler este DOCX. Verifique se o arquivo não está corrompido ou protegido por senha.");
@@ -66,7 +66,8 @@ export async function readCloudFile(file:CloudFile):Promise<{content:string;docu
   let url:string;
   let type="txt";
   if(file.mimeType===docs){
-    url="https://www.googleapis.com/drive/v3/files/"+encodeURIComponent(file.id)+"/export?mimeType="+encodeURIComponent("text/plain");
+    url="https://www.googleapis.com/drive/v3/files/"+encodeURIComponent(file.id)+"/export?mimeType="+encodeURIComponent("text/html");
+    type="html";
   }else if(file.mimeType===sheets){
     url="https://www.googleapis.com/drive/v3/files/"+encodeURIComponent(file.id)+"/export?mimeType="+encodeURIComponent("text/csv");
     type="csv";
@@ -75,7 +76,7 @@ export async function readCloudFile(file:CloudFile):Promise<{content:string;docu
   }else{
     const supported=["txt","md","markdown","csv","json","html","htm","xml","rtf","css","js","ts","tsx","jsx","py","yml","yaml","log","svg","ini","toml","sql"];
     if(!supported.includes(ext)&&!file.mimeType.startsWith("text/")&&file.mimeType!=="application/json"){
-      throw new Error("Este formato ("+(ext||file.mimeType)+") ainda não pode ser convertido em texto pelo editor do Nexus. PDF, imagens e outros formatos binários precisam de um importador específico.");
+      throw new Error("Este formato ("+(ext||file.mimeType)+") não pode ser convertido em texto editável. PDF e imagens exigem importadores específicos.");
     }
     type=ext==="markdown"?"md":(ext||"txt");
     url="https://www.googleapis.com/drive/v3/files/"+encodeURIComponent(file.id)+"?alt=media";
@@ -86,32 +87,41 @@ export async function readCloudFile(file:CloudFile):Promise<{content:string;docu
   return {content,document_type:type};
 }
 
-
 export async function saveCloudFile(file:CloudFile,content:string):Promise<void>{
   if(!content.trim())throw new Error("O documento não pode ser salvo vazio.");
   const docs="application/vnd.google-apps.document";
   const sheets="application/vnd.google-apps.spreadsheet";
   const slides="application/vnd.google-apps.presentation";
+  const docx="application/vnd.openxmlformats-officedocument.wordprocessingml.document";
+  const htmlToText=(html:string)=>{const parsed=new DOMParser().parseFromString(html,"text/html");parsed.querySelectorAll("script,style").forEach(n=>n.remove());return (parsed.body.innerText||parsed.body.textContent||"").replace(/\u00a0/g," ")};
   if(file.mimeType===docs){
+    const plain=htmlToText(content);
     const response=await request("https://docs.googleapis.com/v1/documents/"+encodeURIComponent(file.id));
     const document=await response.json();
     const endIndex=Number(document.body?.content?.[document.body.content.length-1]?.endIndex||1);
     const requests:any[]=[];
     if(endIndex>2)requests.push({deleteContentRange:{range:{startIndex:1,endIndex:endIndex-1}}});
-    if(content)requests.push({insertText:{location:{index:1},text:content.replace(/<[^>]*>/g," ").replace(/&nbsp;/g," ")}});
-    if(!requests.length)return;
-    await request("https://docs.googleapis.com/v1/documents/"+encodeURIComponent(file.id)+":batchUpdate",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({requests})});
+    if(plain)requests.push({insertText:{location:{index:1},text:plain}});
+    if(requests.length)await request("https://docs.googleapis.com/v1/documents/"+encodeURIComponent(file.id)+":batchUpdate",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({requests})});
     return;
   }
   if(file.mimeType===sheets||file.mimeType===slides){
-    throw new Error("A cópia do Nexus foi salva, mas a sincronização deste arquivo nativo do Google ainda não está disponível. Planilhas e apresentações precisam de sincronizadores próprios.");
+    throw new Error("A cópia do Nexus foi salva, mas a sincronização de planilhas e apresentações nativas do Google ainda exige sincronizadores específicos.");
   }
   const ext=(file.name.split(".").pop()||"").toLowerCase();
+  if(ext==="docx"||file.mimeType===docx){
+    const mod=await import("html-to-docx");
+    const convert=(mod as any).default||mod;
+    const blob=await convert("<html><body>"+content+"</body></html>",null,{});
+    await request("https://www.googleapis.com/upload/drive/v3/files/"+encodeURIComponent(file.id)+"?uploadType=media",{method:"PATCH",headers:{"Content-Type":docx},body:blob instanceof Blob?blob:new Blob([blob],{type:docx})});
+    return;
+  }
   const supported=["txt","md","markdown","csv","json","html","htm","xml","rtf","css","js","ts","tsx","jsx","py","yml","yaml","log","svg","ini","toml","sql"];
   if(!supported.includes(ext)&&!file.mimeType.startsWith("text/")&&file.mimeType!=="application/json"){
     throw new Error("A cópia do Nexus foi salva, mas este formato não pode ser sincronizado diretamente.");
   }
-  await request("https://www.googleapis.com/upload/drive/v3/files/"+encodeURIComponent(file.id)+"?uploadType=media",{method:"PATCH",headers:{"Content-Type":file.mimeType.startsWith("text/")?file.mimeType:"text/plain"},body:content});
+  const payload=ext==="html"||ext==="htm"?content:htmlToText(content);
+  await request("https://www.googleapis.com/upload/drive/v3/files/"+encodeURIComponent(file.id)+"?uploadType=media",{method:"PATCH",headers:{"Content-Type":file.mimeType.startsWith("text/")?file.mimeType:"text/plain"},body:payload});
 }
 
 export async function createCloudFolder(name:string,parentId?:string){const root=await ensureRootFolder();const parent=parentId||root.id;const r=await request("https://www.googleapis.com/drive/v3/files",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({name,mimeType:"application/vnd.google-apps.folder",parents:[parent]})});return r.json()}
