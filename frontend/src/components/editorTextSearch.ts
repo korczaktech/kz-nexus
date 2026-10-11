@@ -42,5 +42,6 @@ export function replaceTextAcrossBlocks(root:HTMLElement,query:string,replacemen
     const range=rangeFor(match.segment,match.start,match.end);
     range.deleteContents();range.insertNode(root.ownerDocument.createTextNode(replacement));
   }
+  root.querySelectorAll('strong,em,b,i,u,s,del,span,sub,sup').forEach(element=>{if(!(element.textContent||'').length&&!element.querySelector('img,br'))element.remove()});
   return matches.length;
 }
