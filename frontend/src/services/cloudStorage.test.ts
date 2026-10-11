@@ -18,6 +18,13 @@ describe('Google Drive sync adapters',()=>{
     window.localStorage.setItem('kz_cloud_sessions_v2',JSON.stringify({'google-drive':{provider:'google-drive',accessToken:'test-token',expiresAt:Date.now()+3600000}}));
     return{calls,mock};
   }
+  it('imports formula cells and quoted CSV values from Google Sheets',async()=>{
+    setupFetch(url=>url.includes('/spreadsheets/sheet-read?fields=')?new Response(JSON.stringify({sheets:[{properties:{title:'Dados',index:0}}]}),{status:200}):new Response(JSON.stringify({values:[['Name','Formula'],['Korczak','=A1+A2'],['A, B','say "hi"']]}),{status:200}));
+    const file:CloudFile={id:'sheet-read',name:'Dados',mimeType:'application/vnd.google-apps.spreadsheet'};
+    const result=await readCloudFile(file);
+    expect(result.document_type).toBe('csv');
+    expect(result.content).toBe('Name,Formula\nKorczak,=A1+A2\n"A, B","say ""hi"""');
+  });
   it('updates a Google Doc with inserted text and inline styles',async()=>{
     const {calls}=setupFetch(url=>url.includes('/documents/doc-1')&&!url.endsWith(':batchUpdate')?new Response(JSON.stringify({body:{content:[{endIndex:2}]}}),{status:200}):new Response('{}',{status:200}));
     const file:CloudFile={id:'doc-1',name:'Doc',mimeType:'application/vnd.google-apps.document'};
