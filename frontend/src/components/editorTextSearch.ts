@@ -39,8 +39,15 @@ export function replaceTextAcrossBlocks(root:HTMLElement,query:string,replacemen
     while((at=hay.indexOf(needle,at))!==-1){matches.push({segment,start:at,end:at+query.length});at+=Math.max(needle.length,1)}
   }
   for(const match of matches.reverse()){
-    const range=rangeFor(match.segment,match.start,match.end);
-    range.deleteContents();range.insertNode(root.ownerDocument.createTextNode(replacement));
+    const startPart=match.segment.nodes.find(part=>match.start>=part.start&&match.start<part.end)||match.segment.nodes[match.segment.nodes.length-1];
+    const endPart=match.segment.nodes.find(part=>match.end>part.start&&match.end<=part.end)||match.segment.nodes[match.segment.nodes.length-1];
+    const startOffset=Math.max(0,match.start-startPart.start),endOffset=Math.min(endPart.node.data.length,match.end-endPart.start);
+    if(startPart.node===endPart.node){const value=startPart.node.data;startPart.node.data=value.slice(0,startOffset)+replacement+value.slice(endOffset);continue}
+    const startValue=startPart.node.data,endValue=endPart.node.data;
+    startPart.node.data=startValue.slice(0,startOffset)+replacement;
+    endPart.node.data=endValue.slice(endOffset);
+    const startIndex=match.segment.nodes.indexOf(startPart),endIndex=match.segment.nodes.indexOf(endPart);
+    for(let i=startIndex+1;i<endIndex;i++)match.segment.nodes[i].node.data='';
   }
   root.querySelectorAll('strong,em,b,i,u,s,del,span,sub,sup').forEach(element=>{if(!(element.textContent||'').length&&!element.querySelector('img,br'))element.remove()});
   return matches.length;
