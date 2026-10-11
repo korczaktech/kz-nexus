@@ -1540,3 +1540,30 @@ button,input,textarea,select{
 .version-compare strong{display:block;color:#9eb1cc;margin-bottom:8px}
 .version-compare pre{margin:0;white-space:pre-wrap;overflow-wrap:anywhere;max-height:360px;overflow:auto;color:#d4deec;font:12px/1.55 ui-monospace,SFMono-Regular,Consolas,monospace}
 @media(max-width:720px){.version-compare{grid-template-columns:1fr}}
+
+
+/* Fase 14 — acessibilidade transversal: foco visível, movimento reduzido e alto contraste. */
+:where(a,button,input,textarea,select,summary,[tabindex]:not([tabindex="-1"])):focus-visible{
+  outline:3px solid #9aa8ff;
+  outline-offset:3px;
+}
+:where(button,a,input,textarea,select):disabled{
+  cursor:not-allowed;
+}
+@media (prefers-reduced-motion: reduce){
+  *,*::before,*::after{
+    scroll-behavior:auto!important;
+    animation-duration:.01ms!important;
+    animation-iteration-count:1!important;
+    transition-duration:.01ms!important;
+  }
+}
+@media (forced-colors: active){
+  :where(a,button,input,textarea,select,summary,[tabindex]:not([tabindex="-1"])):focus-visible{
+    outline:2px solid Highlight;
+  }
+  .button,.nav-item.active,.status.active,.status.deleted{
+    forced-color-adjust:auto;
+    border:1px solid ButtonText;
+  }
+}
