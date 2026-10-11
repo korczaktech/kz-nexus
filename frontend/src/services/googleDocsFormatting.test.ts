@@ -22,6 +22,14 @@ describe('Google Docs formatting conversion',()=>{
     expect(result.requests.some((request:any)=>request.updateTextStyle?.textStyle?.weightedFontFamily?.fontFamily==='Arial')).toBe(true);
     expect(result.requests.some((request:any)=>request.updateParagraphStyle?.paragraphStyle?.alignment==='CENTER')).toBe(true);
   });
+  it('parses named colors and CSS-only emphasis',()=>{
+    window=new Window();vi.stubGlobal('DOMParser',window.DOMParser);vi.stubGlobal('Node',window.Node);
+    const result=htmlToGoogleDocsPayload('<p><span style="color:red;font-weight:700;font-style:italic;text-decoration:underline">styled</span></p>');
+    expect(result.requests.some((request:any)=>request.updateTextStyle?.textStyle?.foregroundColor?.color?.rgbColor?.red===1)).toBe(true);
+    expect(result.requests.some((request:any)=>request.updateTextStyle?.textStyle?.bold===true)).toBe(true);
+    expect(result.requests.some((request:any)=>request.updateTextStyle?.textStyle?.italic===true)).toBe(true);
+    expect(result.requests.some((request:any)=>request.updateTextStyle?.textStyle?.underline===true)).toBe(true);
+  });
   it('converts lists and tables into readable content',()=>{
     window=new Window();vi.stubGlobal('DOMParser',window.DOMParser);vi.stubGlobal('Node',window.Node);
     const result=htmlToGoogleDocsPayload('<ul><li>um</li><li>dois</li></ul><table><tr><td>A</td><td>B</td></tr></table>');
