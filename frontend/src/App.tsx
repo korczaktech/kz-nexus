@@ -277,11 +277,13 @@ function App(){
       }
       const imported=await readCloudFile(file);
       const slidesMime='application/vnd.google-apps.presentation';
+      const sheetsMime='application/vnd.google-apps.spreadsheet';
       const isSlides=file.mimeType===slidesMime;
+      const isSheets=file.mimeType===sheetsMime;
       const created=await api.createDocument({
         name:file.name,
         document_type:imported.document_type,
-        description:isSlides?'Importado do Google Slides como texto para edição no Nexus. A sincronização de volta para a apresentação original não é suportada.':'Importado do Google Drive (ID de origem: '+file.id+'). A sincronização de volta depende do formato e das permissões da conta.',
+        description:isSlides?'Importado do Google Slides como texto para edição no Nexus. A sincronização de volta para a apresentação original não é suportada.':isSheets?'Importado da primeira aba do Google Sheets. A sincronização atualiza somente essa aba e mantém as demais intactas.':'Importado do Google Drive (ID de origem: '+file.id+'). A sincronização de volta depende do formato e das permissões da conta.',
         content:imported.content
       });
       const full=await api.document(created.id);
