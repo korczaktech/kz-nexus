@@ -94,3 +94,16 @@ def test_app_error_handler_returns_standard_json() -> None:
             "message": "Documento não encontrado",
         }
     }
+
+
+def test_custom_production_web_origin_is_allowed_by_cors() -> None:
+    response = TestClient(app).options(
+        "/api/v1/health",
+        headers={
+            "Origin": "https://nexus.korczaktech.com.br",
+            "Access-Control-Request-Method": "GET",
+        },
+    )
+    assert response.status_code == 200
+    assert response.headers["access-control-allow-origin"] == "https://nexus.korczaktech.com.br"
+
