@@ -9,7 +9,14 @@ export function parseRtfToHtml(source:string):string{
     if(token==='{'){
       let look=i+1;if(tokens[look]==='\\*')look++;
       const destination=(tokens[look]||'').match(/^\\([a-zA-Z]+)/)?.[1]?.toLowerCase();
-      if(destination&&['fonttbl','colortbl','stylesheet','info','pict','object','header','footer','filetbl','listtable','listoverridetable','generator','xmlopen','xmlclose','datastore','themedata','colorschememapping'].includes(destination)){
+      if(destination==='pict'){
+        let depth=1,j=i+1;for(;j<tokens.length&&depth>0;j++){if(tokens[j]==='{')depth++;else if(tokens[j]==='}')depth--}
+        const group=tokens.slice(i,j).join('');const mime=group.includes('\\jpegblip')?'jpeg':group.includes('\\pngblip')?'png':'';
+        const hex=group.replace(/\\[a-zA-Z]+-?\d* ?/g,'').replace(/[{}\\\s]/g,'');
+        if(mime&&hex.length>=2&&hex.length%2===0){let binary='';for(let p=0;p<hex.length;p+=2)binary+=String.fromCharCode(parseInt(hex.slice(p,p+2),16));html+='<img src="data:image/'+mime+';base64,'+btoa(binary)+'" alt="Imagem importada">'}
+        i=j-1;continue;
+      }
+      if(destination&&['fonttbl','colortbl','stylesheet','info','object','header','footer','filetbl','listtable','listoverridetable','generator','xmlopen','xmlclose','datastore','themedata','colorschememapping'].includes(destination)){
         let depth=1,j=i+1;for(;j<tokens.length&&depth>0;j++){if(tokens[j]==='{')depth++;else if(tokens[j]==='}')depth--}i=j-1;continue;
       }
       stack.push({...current});continue;
