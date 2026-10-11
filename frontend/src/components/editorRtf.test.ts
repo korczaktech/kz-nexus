@@ -26,4 +26,11 @@ describe('RTF import',()=>{
     expect(html).toContain('<p style="text-align:right">Direita</p>');
   });
 
+  it('preserves RTF bullets and typographic punctuation',()=>{
+    const html=parseRtfToHtml(String.raw`{\rtf1\bullet item \emdash \ldblquote texto\rdblquote}`);
+    expect(html).toContain('• item');
+    expect(html).toContain('—');
+    expect(html).toContain('“texto”');
+  });
+
 });
