@@ -15,6 +15,7 @@ describe('API client — autenticação e tratamento de falhas',()=>{
   });
 
   afterEach(()=>{
+    vi.useRealTimers();
     vi.unstubAllGlobals();
     window.close();
   });
