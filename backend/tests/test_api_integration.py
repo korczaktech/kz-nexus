@@ -18,8 +18,7 @@ async def test_api_end_to_end() -> None:
 
     await bootstrap_database()
     database = get_database()
-    for collection in ("documentos", "versoes", "pastas", "etiquetas", "sessoes", "eventos", "notificacoes", "grupos"):
-        await database[collection].delete_many({})
+    # Test data is namespaced by unique account IDs; never wipe shared collections.
 
     client = TestClient(app)
     email = f"phase4-{uuid4().hex}@example.com"
@@ -227,6 +226,11 @@ async def test_api_end_to_end() -> None:
     folder_acl_for_second = client.put(f"/api/v1/folder-permissions/{folder['id']}", headers=manager_headers, json={"role":"viewer","actions":["read"],"user_ids":[second.json()["user"]["id"]],"group_ids":[]})
     assert folder_acl_for_second.status_code == 200
     assert client.get(f"/api/v1/folders/{folder['id']}", headers=second_headers).status_code == 200
+    denied_folder_document = client.post(
+        "/api/v1/documents", headers=second_headers,
+        json={"name": "Não autorizado na pasta", "document_type": "txt", "folder_id": folder["id"]},
+    )
+    assert denied_folder_document.status_code == 404
     second_folder = client.post("/api/v1/folders", headers=second_headers, json={"name": "Pasta privada"}).json()
     cross_owner_move = client.patch(f"/api/v1/documents/{document_id}", headers=second_headers, json={"folder_id": second_folder["id"]})
     assert cross_owner_move.status_code == 404
@@ -267,11 +271,21 @@ async def test_api_end_to_end() -> None:
         return set()
     assert all(not sensitive_keys(item.get("payload", {})) for item in final_items)
 
-    await database["documentos"].delete_many({})
-    await database["versoes"].delete_many({})
-    await database["pastas"].delete_many({})
-    await database["etiquetas"].delete_many({})
-    await database["sessoes"].delete_many({})
-    await database["eventos"].delete_many({})
-    await database["notificacoes"].delete_many({})
-    await database["grupos"].delete_many({})
+    test_accounts = await get_accounts_database()["contas"].find(
+        {"Autenticacao.Email": {"$regex": r"^(phase4-|fase11-|gestor-)"}}, {"id": 1}
+    ).to_list(length=1000)
+    test_user_ids = [item["id"] for item in test_accounts if item.get("id")]
+    owned_documents = await database["documentos"].find(
+        {"owner_id": {"$in": test_user_ids}}, {"id": 1}
+    ).to_list(length=5000)
+    document_ids = [item["id"] for item in owned_documents if item.get("id")]
+    if document_ids:
+        await database["versoes"].delete_many({"document_id": {"$in": document_ids}})
+    await database["documentos"].delete_many({"owner_id": {"$in": test_user_ids}})
+    await database["pastas"].delete_many({"owner_id": {"$in": test_user_ids}})
+    await database["etiquetas"].delete_many({"owner_id": {"$in": test_user_ids}})
+    await database["sessoes"].delete_many({"user_id": {"$in": test_user_ids}})
+    await database["eventos"].delete_many({"user_id": {"$in": test_user_ids}})
+    await database["notificacoes"].delete_many({"user_id": {"$in": test_user_ids}})
+    await database["grupos"].delete_many({"owner_id": {"$in": test_user_ids}})
+    await get_accounts_database()["contas"].delete_many({"id": {"$in": test_user_ids}})
