@@ -51,6 +51,8 @@ const checks = [
   ['Editor: persistent page layout', files.editor.includes('kzdoc:layout:')],
   ['Editor: rich RTF import/export', files.editor.includes('parseRtfToHtml') && files.editor.includes('htmlToRtf') && files.editorRtf.includes("destination==='pict") && files.editorFormats.includes('pict\\\\')],
   ['Editor: PDF reading order', files.editor.includes('pdfTextItemsToHtml') && files.editorPdf.includes('sort((a,b)')],
+  ['Editor: mixed-page PDF OCR', files.editor.includes('shouldRunPdfOcr') && files.editor.includes('mergePdfOcrParagraphs') && files.editorPdf.includes('shouldRunPdfOcr')],
+  ['Editor: PDF OCR behavior tests', fs.existsSync(path.join(root, 'frontend/src/components/editorPdf.test.ts'))],
   ['Editor: DOCX rich round-trip tests', fs.existsSync(path.join(root, 'frontend/src/components/editorDocxRoundtrip.test.ts'))],
   ['Drive: Google Docs formatting protection', files.cloudStorage.includes('não achatar tabelas') && files.cloudStorage.includes('não perder imagens incorporadas')],
   ['Drive: Google Sheets formula sync', files.cloudStorage.includes('valueRenderOption=FORMULA') && files.cloudStorage.includes('valueInputOption=USER_ENTERED') && files.sheetsFormatting.includes('parseCsv')],
