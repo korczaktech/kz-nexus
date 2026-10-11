@@ -189,6 +189,10 @@ async def documents(page: int = Query(1, ge=1), page_size: int = Query(50, ge=1,
 
 @router.post("/documents", response_model=DocumentResponse, status_code=status.HTTP_201_CREATED)
 async def create_document(payload: DocumentCreateRequest, user=Depends(current_user)):
+    if payload.folder_id:
+        target_folder = await service.folder_or_404(payload.folder_id, user["id"], "write")
+        if target_folder.get("status") == "deleted":
+            raise AppError("A pasta de destino está na lixeira.", "folder_deleted", 409)
     document = await repo.create_document(user["id"], payload.model_dump())
     if payload.content is not None:
         version = await repo.create_version(document["id"], user["id"], payload.content, 1)
@@ -220,7 +224,7 @@ async def update_document(document_id: str, payload: DocumentUpdateRequest, user
     await service.document_or_404(document_id, user["id"], "write")
     changes = payload.model_dump(exclude_unset=True)
     if "folder_id" in changes and changes["folder_id"] is not None:
-        target_folder = await service.folder_or_404(changes["folder_id"], user["id"])
+        target_folder = await service.folder_or_404(changes["folder_id"], user["id"], "write")
         if target_folder.get("status") == "deleted":
             raise AppError("A pasta de destino está na lixeira.", "folder_deleted", 409)
     document = await repo.update_document(document_id, changes)
