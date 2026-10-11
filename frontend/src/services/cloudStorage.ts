@@ -98,6 +98,8 @@ export async function saveCloudFile(file:CloudFile,content:string):Promise<void>
   const docx="application/vnd.openxmlformats-officedocument.wordprocessingml.document";
 
   if(file.mimeType===docs){
+    if(/<img\\b/i.test(content))throw new Error("A versão Nexus foi salva, mas a sincronização para o Google Docs foi interrompida para não perder imagens incorporadas. Remova as imagens ou sincronize uma versão somente de texto.");
+    if(/<table\\b/i.test(content))throw new Error("A versão Nexus foi salva, mas a sincronização para o Google Docs foi interrompida para não achatar tabelas. Exporte como DOCX para preservar a estrutura.");
     const converted=htmlToGoogleDocsPayload(content);
     const response=await request("https://docs.googleapis.com/v1/documents/"+encodeURIComponent(file.id));
     const document=await response.json();
