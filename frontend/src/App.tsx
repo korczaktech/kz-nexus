@@ -602,7 +602,7 @@ function AppAuthenticated(){
   </div>
 }
 export function App(){
-  const legalPath=window.location.pathname.replace(/\\/+$/,'').toLowerCase();
+  const legalPath=window.location.pathname.replace(/\/+$/,'').toLowerCase();
   if(legalPath==='/privacy'||legalPath==='/terms')return <PublicLegalPage kind={legalPath==='/privacy'?'privacy':'terms'}/>;
   return <AppAuthenticated/>;
 }
