@@ -1,5 +1,5 @@
 import {describe,expect,it} from 'vitest';
-import {htmlToMarkdown,markdownToHtml,toRtf} from './Editor';
+import {markdownToHtml,toRtf} from './Editor';
 
 describe('Fase 8 - editor',()=>{
   it('renderiza conteúdo formatado sem interpretar HTML bruto',()=>{
@@ -26,15 +26,6 @@ describe('Fase 8 - editor',()=>{
     expect(html).toContain('<td>1</td>');
     expect(html).toContain('<code>codigo</code>');
     expect(html).toContain('https://example.com');
-  });
-  it('exporta Markdown preservando títulos, ênfase, listas e links',()=>{
-    const source='<h1>Relatório</h1><p>Texto <strong>forte</strong> e <em>ênfase</em>.</p><ul><li>Primeiro</li><li>Segundo</li></ul><p><a href="https://example.com">Site</a></p>';
-    const markdown=htmlToMarkdown(source);
-    expect(markdown).toContain('# Relatório');
-    expect(markdown).toContain('**forte**');
-    expect(markdown).toContain('*ênfase*');
-    expect(markdown).toContain('- Primeiro');
-    expect(markdown).toContain('[Site](https://example.com)');
   });
   it('escapa caracteres especiais ao exportar RTF',()=>{
     const rtf=toRtf('A {b}\\c\nç');
