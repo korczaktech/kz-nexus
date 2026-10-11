@@ -39,11 +39,13 @@ A Fase 5 corresponde aos itens 85–100 da checklist de execução.
 
 O workflow `.github/workflows/backend-ci.yml` executa:
 
-1. instalação limpa do backend;
-2. varredura de credenciais na árvore e histórico;
-3. testes unitários de segurança;
-4. testes de integração com MongoDB 8;
-5. regressão dos testes não-integração da API.
+1. checkout do histórico completo e varredura de segredos na árvore e no histórico Git;
+2. instalação do Python 3.12 e inicialização de MongoDB 8;
+3. instalação das MongoDB Database Tools, usadas nos testes de backup e restauração;
+4. instalação do backend com as dependências opcionais de teste;
+5. execução de `pytest -q`, incluindo testes unitários, contratos HTTP e integração com MongoDB.
+
+A execução do commit `86d95305bd1db6b3a2df71cb48097c3586cea0e5` passou. O CI não substitui a revisão final de segurança, a verificação dos segredos de produção ou a homologação operacional.
 
 ## Correções de falhas do Actions
 
