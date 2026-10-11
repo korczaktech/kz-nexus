@@ -12,7 +12,7 @@ data class ApiResult(val code: Int, val body: String) {
     companion object {
         fun connectionFailure(): ApiResult = ApiResult(
             0,
-            JSONObject().put("error", JSONObject().put("message", "Não foi possível conectar à API.")).toString()
+            """{"error":{"message":"Não foi possível conectar à API."}}"""
         )
     }
 }
