@@ -51,7 +51,7 @@ export function htmlToSpreadsheetTables(html:string):SpreadsheetTable[]{
     const title=table.getAttribute('data-google-sheet-title')||'';
     if(!sheetId||!title)throw new Error('Uma tabela perdeu o identificador ou o nome da aba original. Reimporte a planilha antes de sincronizar.');
     if(result.some(item=>item.sheetId===sheetId))throw new Error('Há identificadores de abas duplicados no documento. Reimporte a planilha antes de sincronizar.');
-    const values=Array.from(table.querySelectorAll('tr')).map(row=>Array.from(row.children).map(cell=>(cell.textContent||'').trim()));
+    const values=Array.from(table.querySelectorAll('tr')).map(row=>Array.from(row.children).map(cell=>(cell.textContent||'').replace(/\u00a0/g,' ')));
     result.push({sheetId,title,values});
   }
   return result;
