@@ -66,14 +66,25 @@ export async function readCloudFile(file:CloudFile):Promise<{content:string;docu
       throw new Error("Não foi possível ler este DOCX. Verifique se o arquivo não está corrompido ou protegido por senha.");
     }
   }
+  if(file.mimeType===sheets){
+    const metadataResponse=await request("https://sheets.googleapis.com/v4/spreadsheets/"+encodeURIComponent(file.id)+"?fields=sheets.properties(title,index)");
+    const metadata=await metadataResponse.json();
+    const firstSheet=(metadata.sheets||[]).slice().sort((a:any,b:any)=>Number(a.properties?.index||0)-Number(b.properties?.index||0))[0];
+    const title=String(firstSheet?.properties?.title||"");
+    if(!title)throw new Error("Não foi possível localizar a primeira aba desta planilha.");
+    const range=encodeURIComponent("'"+title.replace(/'/g,"''")+"'!A:ZZ");
+    const valuesResponse=await request("https://sheets.googleapis.com/v4/spreadsheets/"+encodeURIComponent(file.id)+"/values/"+range+"?valueRenderOption=FORMULA");
+    const data=await valuesResponse.json();
+    const values=Array.isArray(data.values)?data.values:[];
+    const csv=values.map((row:any[])=>row.map(value=>{const cell=String(value??"");return /[",\\r\\n]/.test(cell)?'"'+cell.replace(/"/g,'""')+'"':cell}).join(",")).join("\\n");
+    if(!csv.trim())throw new Error("A primeira aba da planilha está vazia.");
+    return {content:csv,document_type:"csv"};
+  }
   let url:string;
   let type="txt";
   if(file.mimeType===docs){
     url="https://www.googleapis.com/drive/v3/files/"+encodeURIComponent(file.id)+"/export?mimeType="+encodeURIComponent("text/html");
     type="html";
-  }else if(file.mimeType===sheets){
-    url="https://www.googleapis.com/drive/v3/files/"+encodeURIComponent(file.id)+"/export?mimeType="+encodeURIComponent("text/csv");
-    type="csv";
   }else if(file.mimeType===slides){
     url="https://www.googleapis.com/drive/v3/files/"+encodeURIComponent(file.id)+"/export?mimeType="+encodeURIComponent("text/plain");
   }else{
@@ -120,7 +131,7 @@ export async function saveCloudFile(file:CloudFile,content:string):Promise<void>
     const values=htmlToSpreadsheetValues(content);
     const escapedTitle="'"+title.replace(/'/g,"''")+"'";
     await request("https://sheets.googleapis.com/v4/spreadsheets/"+encodeURIComponent(file.id)+"/values:batchClear",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({ranges:[escapedTitle+"!A:ZZ"]})});
-    if(values.length)await request("https://sheets.googleapis.com/v4/spreadsheets/"+encodeURIComponent(file.id)+"/values/"+encodeURIComponent(escapedTitle+"!A1")+"?valueInputOption=RAW",{method:"PUT",headers:{"Content-Type":"application/json"},body:JSON.stringify({majorDimension:"ROWS",values})});
+    if(values.length)await request("https://sheets.googleapis.com/v4/spreadsheets/"+encodeURIComponent(file.id)+"/values/"+encodeURIComponent(escapedTitle+"!A1")+"?valueInputOption=USER_ENTERED",{method:"PUT",headers:{"Content-Type":"application/json"},body:JSON.stringify({majorDimension:"ROWS",values})});
     return;
   }
   if(file.mimeType===slides){
