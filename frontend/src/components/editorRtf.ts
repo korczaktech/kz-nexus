@@ -7,8 +7,8 @@ export function parseRtfToHtml(source:string):string{
   for(let i=0;i<tokens.length;i++){
     const token=tokens[i];
     if(token==='{'){
-      let look=i+1;if(tokens[look]==='\\\\*')look++;
-      const destination=(tokens[look]||'').match(/^\\\\([a-zA-Z]+)/)?.[1]?.toLowerCase();
+      let look=i+1;if(tokens[look]==='\\*')look++;
+      const destination=(tokens[look]||'').match(/^\\([a-zA-Z]+)/)?.[1]?.toLowerCase();
       if(destination&&['fonttbl','colortbl','stylesheet','info','pict','object','header','footer','filetbl','listtable','listoverridetable','generator','xmlopen','xmlclose','datastore','themedata','colorschememapping'].includes(destination)){
         let depth=1,j=i+1;for(;j<tokens.length&&depth>0;j++){if(tokens[j]==='{')depth++;else if(tokens[j]==='}')depth--}i=j-1;continue;
       }
