@@ -16,8 +16,9 @@ export function htmlToRtf(html:string):string{
   const doc=new DOMParser().parseFromString(html,'text/html');
   const render=(node:Node):string=>{
     if(node.nodeType===Node.TEXT_NODE)return escapeRtfText(node.textContent||'');
-    if(!(node instanceof Element))return '';
-    const tag=node.tagName.toLowerCase();
+    if(node.nodeType!==1)return '';
+    const element=node as Element;
+    const tag=element.tagName.toLowerCase();
     const children=Array.from(node.childNodes).map(render).join('');
     switch(tag){
       case 'strong':case 'b':return '{\\b '+children+'}';
@@ -33,9 +34,9 @@ export function htmlToRtf(html:string):string{
       case 'br':return '\\line ';
       case 'hr':return '\\par\\brdrb\\brdrs\\brdrw10\\brsp20\\par\n';
       case 'ul':case 'ol':return children+'\\par\n';
-      case 'li':return (node.parentElement?.tagName.toLowerCase()==='ol'?'\\tab '+(Array.from(node.parentElement.children).indexOf(node)+1)+'. ':'\\tab \\u8226? ')+children+'\\par\n';
-      case 'table':return Array.from(node.querySelectorAll('tr')).map(tr=>Array.from(tr.children).map(cell=>(cell.textContent||'').trim()).join('\\tab ')+'\\par\n').join('');
-      case 'a':return children+(node.getAttribute('href')?' ('+escapeRtfText(node.getAttribute('href')!)+')':'');
+      case 'li':return (element.parentElement?.tagName.toLowerCase()==='ol'?'\\tab '+(Array.from(element.parentElement!.children).indexOf(element)+1)+'. ':'\\tab \\u8226? ')+children+'\\par\n';
+      case 'table':return Array.from(element.querySelectorAll('tr')).map(tr=>Array.from(tr.children).map(cell=>(cell.textContent||'').trim()).join('\\tab ')+'\\par\n').join('');
+      case 'a':return children+(element.getAttribute('href')?' ('+escapeRtfText(node.getAttribute('href')!)+')':'');
       case 'img':return escapeRtfText(node.getAttribute('alt')||'[Imagem]');
       default:return children;
     }
