@@ -4,7 +4,7 @@ from fastapi.responses import JSONResponse
 
 from .config.settings import get_settings
 from .database.bootstrap import bootstrap_database
-from .database.connection import close_client
+from .database.connection import close_client, get_database
 from .errors import AppError, register_exception_handlers
 from .logging import configure_logging, get_logger
 from .rate_limit import enforce_rate_limit
@@ -76,5 +76,20 @@ async def shutdown_mongodb() -> None:
 
 @app.get("/health", include_in_schema=False)
 def root_health() -> dict[str, str]:
+    """Liveness endpoint: confirms the API process is responding."""
     logger.debug("Health check executado")
     return {"status": "ok", "service": "korczak-nexus-api"}
+
+
+@app.get("/ready", include_in_schema=False)
+async def readiness_health():
+    """Readiness endpoint: only returns ready when MongoDB answers ping."""
+    try:
+        await get_database().command({"ping": 1})
+    except Exception:
+        logger.warning("Readiness check failed: database unavailable")
+        return JSONResponse(
+            status_code=503,
+            content={"status": "unavailable", "service": "korczak-nexus-api"},
+        )
+    return {"status": "ready", "service": "korczak-nexus-api"}
