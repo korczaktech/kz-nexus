@@ -54,7 +54,11 @@ class OfflineStore(private val context: Context) {
         var saved = 0
         var failed = 0
         for (i in 0 until queued.length()) {
-            val item = queued.optJSONObject(i) ?: run { failed++; continue }
+            val item = queued.optJSONObject(i)
+            if (item == null) {
+                failed++
+                continue
+            }
             val id = item.optString("id")
             val result = runCatching {
                 storage.write(item.optString("uri"), item.optString("name"), item.optString("content"))
