@@ -1499,3 +1499,38 @@ button,input,textarea,select{
 @media (min-width: 761px) and (max-width: 1100px) {
   .home-files-card { min-height: 440px; }
 }
+
+/* Professional document editing — page layout, import/export and find/replace */
+.editor-findbar{display:flex;align-items:end;gap:9px;flex-wrap:wrap;padding:12px 16px;background:rgba(14,22,36,.96);border-bottom:1px solid var(--line);color:var(--text)}
+.editor-findbar label{display:grid;gap:5px;min-width:160px;color:var(--muted);font-size:10px}
+.editor-findbar input{min-width:160px;padding:9px 11px;border:1px solid var(--line2);border-radius:9px;background:var(--surface2);color:var(--text)}
+.editor-findbar button{min-height:36px;white-space:nowrap}
+.editor-findbar [role=status]{font-size:11px;color:#a8b8d2;align-self:center}
+.editor-document-header,.editor-document-footer{min-height:12px;color:#66758b;font-size:10px;white-space:pre-wrap}
+.editor-document-header{margin-bottom:12mm}
+.editor-document-footer{margin-top:12mm}
+.editor-page{box-sizing:border-box;flex:none;background:#fff;color:#202124;box-shadow:0 12px 45px rgba(0,0,0,.3);overflow-wrap:anywhere}
+.rich-editor{min-height:190mm;outline:none;color:#202124;font-family:Arial,sans-serif;font-size:11pt;line-height:1.55;overflow-wrap:anywhere}
+.rich-editor:empty:before{content:"Comece a escrever seu documento…";color:#a2a9b5;pointer-events:none}
+.rich-editor p{margin:0 0 9pt}
+.rich-editor h1{font-size:24pt;line-height:1.2;margin:18pt 0 10pt}
+.rich-editor h2{font-size:18pt;line-height:1.25;margin:15pt 0 8pt}
+.rich-editor h3{font-size:14pt;line-height:1.3;margin:12pt 0 6pt}
+.rich-editor ul,.rich-editor ol{padding-left:28pt;margin:7pt 0}
+.rich-editor blockquote{margin:12pt 0;padding:8pt 14pt;border-left:3px solid #7d7aee;background:#f4f3ff;color:#444}
+.rich-editor table{border-collapse:collapse;table-layout:fixed;width:100%;margin:12pt 0}
+.rich-editor th,.rich-editor td{border:1px solid #aab2c0;padding:6pt;min-width:28px;vertical-align:top;overflow-wrap:anywhere}
+.rich-editor th{background:#edf0f6;font-weight:700}
+.rich-editor img{max-width:100%;height:auto}
+.rich-editor a{color:#245bd6;text-decoration:underline}
+.rich-editor hr{border:0;border-top:1px solid #b8bfca;margin:18pt 0}
+.rich-editor pre,.rich-editor code{font-family:"Courier New",monospace;background:#f2f4f7;color:#202124}
+.editor-page[style*="297mm"] .rich-editor{min-height:120mm}
+.editor-check{display:flex!important;align-items:center;gap:8px!important}
+.editor-check input{width:auto!important}
+.editor-side label input:not([type=checkbox]){width:100%;min-width:0}
+.editor-side label select{width:100%;min-width:0}
+.editor-side>strong{display:block;margin-top:8px}
+.editor-file-error[role=alert]{margin:10px 16px;padding:10px 12px;color:#ffd7dc;background:rgba(151,41,59,.16);border:1px solid rgba(239,104,120,.35);border-radius:10px;font-size:12px}
+@media(max-width:900px){.editor-findbar{align-items:stretch}.editor-findbar label{flex:1}.editor-page{width:100%!important;min-height:100%!important;padding:18mm!important;transform:none!important;margin-bottom:0!important}.rich-editor{min-height:60vh}.editor-document-header{margin-bottom:8mm}.editor-document-footer{margin-top:8mm}}
+@media print{.editor-page{box-shadow:none}.rich-editor{min-height:0}}
