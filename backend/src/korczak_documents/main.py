@@ -20,10 +20,19 @@ app = FastAPI(title=settings.app_name, version="0.3.0", description="API do Korc
 # origem configurada por ambiente para permitir mudanças de domínio sem
 # quebrar a autenticação no navegador.
 configured_origin = settings.frontend_url.rstrip("/") if settings.frontend_url else ""
-allowed_origins = [origin for origin in {
-    configured_origin,
+allowed_origin_set = {
     "https://korczaktech.github.io",
-} if origin]
+    "https://nexus.korczaktech.com.br",
+}
+# Em produção não mantenha localhost como origem permitida só porque é o
+# valor padrão de desenvolvimento. Origens adicionais devem ser configuradas
+# explicitamente pelo ambiente de implantação.
+if configured_origin and (
+    not settings.is_production
+    or configured_origin not in {"http://localhost:5173", "http://127.0.0.1:5173"}
+):
+    allowed_origin_set.add(configured_origin)
+allowed_origins = sorted(allowed_origin_set)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=allowed_origins,
