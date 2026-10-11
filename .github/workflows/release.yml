@@ -38,11 +38,14 @@ jobs:
           else
             latest="$(gh release list --repo "$GITHUB_REPOSITORY" --limit 100 --json tagName --jq '.[].tagName' | grep -E '^v0\.0\.0\.[0-9]+$' | sed 's/^v0\.0\.0\.//' | sort -n | tail -1 || true)"
             latest="${latest:-293}"
-            VERSION="0.0.${latest}" 
             VERSION="0.0.0.$((latest + 1))"
           fi
           [[ "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$ ]] || { echo "Versão inválida: $VERSION"; exit 1; }
           DESKTOP_VERSION="0.0.$(echo "$VERSION" | awk -F. '{print $4}')"
+          if [ "$GITHUB_REF_TYPE" != "tag" ] && gh release view "v$VERSION" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            echo "O release v$VERSION já existe; escolha uma nova versão." >&2
+            exit 1
+          fi
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
           echo "tag=v$VERSION" >> "$GITHUB_OUTPUT"
           echo "desktop_version=$DESKTOP_VERSION" >> "$GITHUB_OUTPUT"
@@ -60,10 +63,21 @@ jobs:
       - uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '8.10'
-      - name: Decode release keystore
+      - name: Validate signing secrets and decode keystore
         env:
           KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
-        run: echo "$KEYSTORE_BASE64" | base64 --decode > "$RUNNER_TEMP/kzdoc-release.jks"
+          KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          for name in KEYSTORE_BASE64 KEYSTORE_PASSWORD KEY_ALIAS KEY_PASSWORD; do
+            if [ -z "${!name}" ]; then echo "Secret obrigatório ausente: $name" >&2; exit 1; fi
+          done
+          printf '%s' "$KEYSTORE_BASE64" | base64 --decode > "$RUNNER_TEMP/kzdoc-release.jks"
+          test -s "$RUNNER_TEMP/kzdoc-release.jks"
+          keytool -list -keystore "$RUNNER_TEMP/kzdoc-release.jks" -storepass "$KEYSTORE_PASSWORD" -alias "$KEY_ALIAS" >/dev/null
       - name: Build APK
         env:
           ANDROID_KEYSTORE_FILE: ${{ runner.temp }}/kzdoc-release.jks
@@ -73,6 +87,15 @@ jobs:
         run: |
           set -o pipefail
           gradle -p android assembleRelease --no-daemon --parallel --stacktrace -PreleaseVersion="${{ needs.prepare.outputs.version }}" -PreleaseCode="${{ needs.prepare.outputs.version_code }}" 2>&1 | tee "$RUNNER_TEMP/android-build.log"
+      - name: Verify APK signature
+        shell: bash
+        run: |
+          set -euo pipefail
+          apk="android/app/build/outputs/apk/release/app-release.apk"
+          test -s "$apk"
+          apksigner="$(find "$ANDROID_HOME/build-tools" -type f -name apksigner -print | sort -V | tail -1)"
+          test -n "$apksigner"
+          "$apksigner" verify --verbose "$apk"
       - name: Upload Android build diagnostics
         if: failure()
         uses: actions/upload-artifact@v4
