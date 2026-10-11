@@ -63,6 +63,9 @@ jobs:
           test -f dist/index.html
           test -f dist/icons/nexus-icon-192.png
           test -f dist/icons/nexus-icon-512.png
+          # GitHub Pages needs a 404 fallback for React routes like /privacy and /terms.
+          cp dist/index.html dist/404.html
+          test -f dist/404.html
 
       - name: Setup Pages
         uses: actions/configure-pages@v5
