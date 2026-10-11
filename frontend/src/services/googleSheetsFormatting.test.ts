@@ -1,6 +1,6 @@
 import {afterEach,describe,expect,it,vi} from 'vitest';
 import {Window} from 'happy-dom';
-import {htmlToSpreadsheetValues} from './googleSheetsFormatting';
+import {htmlToPlainText,htmlToSpreadsheetValues} from './googleSheetsFormatting';
 
 describe('Google Sheets cell conversion',()=>{
   let window:Window;
@@ -8,6 +8,10 @@ describe('Google Sheets cell conversion',()=>{
   it('parses CSV quoting, commas, escaped quotes and line breaks',()=>{
     window=new Window();vi.stubGlobal('DOMParser',window.DOMParser);
     expect(htmlToSpreadsheetValues('<p>name,note</p><p>"Korczak, Tech","said ""hello"""</p>')).toEqual([['name','note'],['Korczak, Tech','said "hello"']]);
+  });
+  it('keeps paragraph boundaries when exporting plain text',()=>{
+    window=new Window();vi.stubGlobal('DOMParser',window.DOMParser);
+    expect(htmlToPlainText('<p>linha um</p><p>linha dois<br>continuação</p>')).toBe('linha um\nlinha dois\ncontinuação');
   });
   it('reads an inserted editor table as rows and cells',()=>{
     window=new Window();vi.stubGlobal('DOMParser',window.DOMParser);
