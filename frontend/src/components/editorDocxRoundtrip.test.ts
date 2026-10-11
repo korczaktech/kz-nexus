@@ -1,12 +1,18 @@
-import {describe,expect,it} from 'vitest';
+import {afterEach,describe,expect,it,vi} from 'vitest';
+import {Window} from 'happy-dom';
+import {normalizeHtmlForDocx} from './editorFormats';
 import * as mammoth from 'mammoth';
 import {Buffer} from 'node:buffer';
 
 describe('DOCX import/export round-trip',()=>{
+  let window:Window;
+  afterEach(()=>{vi.unstubAllGlobals();window?.close()});
   it('retains common structure and inline formatting',async()=>{
+    window=new Window();vi.stubGlobal('DOMParser',window.DOMParser);
     const mod=await import('html-to-docx');
     const convert=(mod as any).default||mod;
-    const output=await convert('<html><body><h1>Relatório</h1><p>Texto <strong>forte</strong> e <em>itálico</em>.</p><ul><li>Primeiro</li><li>Segundo</li></ul><table><tr><td>A</td><td>B</td></tr></table></body></html>',null,{});
+    const html=normalizeHtmlForDocx('<h1>Relatório</h1><p>Texto <strong>forte</strong> e <em>itálico</em>.</p><ul><li>Primeiro</li><li>Segundo</li></ul><table><tr><td>A</td><td>B</td></tr></table>');
+    const output=await convert('<html><body>'+html+'</body></html>',null,{});
     const arrayBuffer=output instanceof Blob?await output.arrayBuffer():await new Blob([output as BlobPart]).arrayBuffer();
     const result=await mammoth.convertToHtml({buffer:Buffer.from(arrayBuffer)});
     expect(result.value).toContain('Relatório');
