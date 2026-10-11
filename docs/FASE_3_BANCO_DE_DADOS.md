@@ -4,20 +4,20 @@
 **Fase:** 3 de 30  
 **Itens:** 45–59  
 **Banco:** `KZDocs`  
-**Estado:** implementação completa, aguardando validação operacional final
+**Estado:** estrutura e testes automatizados presentes; validação operacional, backup/restore em produção e revisão final ainda pendentes
 
 ### Coleções
 
 O banco `KZDocs` utiliza as seguintes coleções do serviço documental:
 
 1. `documentos` — documentos pertencentes aos usuários e seus metadados.
-3. `versoes` — versões dos documentos e seus conteúdos versionados.
-4. `pastas` — estrutura de organização hierárquica dos documentos.
-5. `etiquetas` — etiquetas associadas aos documentos e organizadas por proprietário.
-6. `sessoes` — sessões autenticadas e seus respectivos períodos de expiração.
-7. `eventos` — registros de eventos e ações relevantes para histórico e auditoria.
-8. `notificacoes` — notificações destinadas aos usuários e seu estado de leitura.
-9. `grupos` — grupos de usuários e sua relação com os respectivos proprietários e membros.
+2. `versoes` — versões dos documentos e seus conteúdos versionados.
+3. `pastas` — estrutura de organização hierárquica dos documentos.
+4. `etiquetas` — etiquetas associadas aos documentos e organizadas por proprietário.
+5. `sessoes` — sessões autenticadas e seus respectivos períodos de expiração.
+6. `eventos` — registros de eventos e ações relevantes para histórico e auditoria.
+7. `notificacoes` — notificações destinadas aos usuários e seu estado de leitura.
+8. `grupos` — grupos de usuários e sua relação com os respectivos proprietários e membros.
 
 Além dessas coleções funcionais, o banco possui a coleção técnica `migrations`, utilizada pelo mecanismo de migração para registrar as versões estruturais já aplicadas.
 

@@ -12,9 +12,9 @@ const nexusLogo = `${import.meta.env.BASE_URL}icons/favicon-nexus.svg?v=2`;
 const NEXUS_RELEASE_FALLBACK = '0.0.0.331';
 const NEXUS_API_VERSION = '0.3.0';
 const NEXUS_SITE = 'https://nexus.korczaktech.com.br';
-function versionPlainText(content:string){try{return new DOMParser().parseFromString(content,'text/html').body.textContent||''}catch{return content.replace(/<[^>]*>/g,' ').replace(/\s+/g,' ').trim()}}
+export function versionPlainText(content:string){try{return new DOMParser().parseFromString(content,'text/html').body.textContent||''}catch{return content.replace(/<[^>]*>/g,' ').replace(/\s+/g,' ').trim()}}
 function versionParts(value:string){return value.replace(/^v/i,'').split('.').map(part=>Number.parseInt(part,10)||0)}
-function compareVersions(a:string,b:string){const aa=versionParts(a),bb=versionParts(b);for(let i=0;i<3;i++){if((aa[i]||0)!==(bb[i]||0))return (aa[i]||0)>(bb[i]||0)?1:-1}return 0}
+export function compareVersions(a:string,b:string){const aa=versionParts(a),bb=versionParts(b);for(let i=0;i<Math.max(aa.length,bb.length);i++){if((aa[i]||0)!==(bb[i]||0))return (aa[i]||0)>(bb[i]||0)?1:-1}return 0}
 
 type View='home'|'documents'|'viewer'|'editor'|'create'|'history'|'versions'|'folders'|'favorites'|'recent'|'trash'|'search'|'advanced-search'|'profile'|'about'|'privacy'|'terms'|'credits'|'users'|'groups'|'permissions'|'folder-permissions'|'audit'|'admin'|'settings';
 

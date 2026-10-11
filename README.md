@@ -8,9 +8,9 @@ Sistema de gestão documental da Korczak Technologies. O repositório contém a 
 
 - **Web:** interface implementada com autenticação/cadastro/recuperação, navegação documental, editor, pastas, favoritos, recentes, lixeira, pesquisa, perfil, administração, grupos, permissões, auditoria e configurações. O cliente HTTP usa a API configurada em `VITE_API_BASE_URL` (padrão do código: `https://kzdoc.onrender.com`).
 - **PWA:** manifesto, service worker, ícones SVG e geração de PNG no pipeline de Pages. O manifesto define instalação como aplicativo Web; isso não equivale a aplicativos nativos publicados.
-- **Integração:** o frontend contém chamadas reais para os endpoints de autenticação, documentos, versões, pastas, pesquisa, usuários, grupos, permissões e auditoria. A existência das chamadas não substitui testes completos de ponta a ponta.
-- **Publicação Web:** o workflow `.github/workflows/pages.yml` executou com sucesso no commit `7591090eb70dca710b90fde733c2eabf53ada174`, incluindo testes do frontend, verificação TypeScript/build, artefatos PWA e etapa de deploy do GitHub Pages. O site e a API precisam continuar sendo monitorados; essa execução não é uma garantia de disponibilidade atual.
-- **Testes:** Vitest cobre o editor, formatos, persistência, serviços e integrações; foram adicionados testes para o cliente HTTP. A última execução consultada passou, mas a cobertura crítica ainda precisa ser ampliada e os testes de backend precisam de uma execução verificável no CI.
+- **Integração:** o frontend contém chamadas reais para os endpoints de autenticação, documentos, versões, pastas, pesquisa, usuários, grupos, permissões e auditoria. Foi corrigida a comparação de versões para considerar também o quarto componente (`0.0.0.N`), com testes de regressão adicionados. A existência das chamadas não substitui testes completos de ponta a ponta.
+- **Publicação Web:** o workflow `.github/workflows/pages.yml` passou no commit `aaf986d94412619d4d702998658ced83e3686acd`, incluindo testes do frontend, TypeScript/build, ícones PWA e deploy do GitHub Pages. Alterações posteriores no comparador de versão estão sendo validadas por um novo pipeline; o sucesso de um run não garante disponibilidade contínua do site ou API.
+- **Testes:** Vitest cobre editor, formatos, persistência, serviços e integrações. O backend agora possui CI próprio com MongoDB 8, suíte pytest de unidade/integração e varredura do histórico por segredos; a execução do commit `86d95305bd1db6b3a2df71cb48097c3586cea0e5` passou. A cobertura de interface e os cenários manuais ainda precisam ser ampliados.
 - **Desktop:** há cliente Electron, configuração de empacotamento para Windows/macOS/Linux e workflow de CI. Não declarar as três plataformas homologadas sem builds e testes por sistema operacional.
 - **Mobile:** há configuração Capacitor e arquivos/workflows nativos no repositório. A experiência mobile, a sincronização e a publicação em lojas ainda precisam de validação completa.
 - **API/backend:** existe implementação FastAPI com módulos de autenticação/segurança, rotas, serviços, repositórios, MongoDB, auditoria e testes. A saúde atual do serviço hospedado, os backups e a operação de produção não foram confirmados nesta atualização.
@@ -83,7 +83,12 @@ Com base na implementação atual em `frontend/src/App.tsx` e `frontend/src/serv
 
 ## Verificação contínua
 
-Workflow principal: [Deploy GitHub Pages](.github/workflows/pages.yml).
+Workflows de validação:
+- [Deploy GitHub Pages](.github/workflows/pages.yml) — testes frontend, TypeScript/build e publicação Web/PWA.
+- [Backend CI](.github/workflows/backend-ci.yml) — pytest com MongoDB 8 e varredura de segredos no histórico.
+- [Desktop CI e empacotamento](.github/workflows/desktop.yml) — testes e pacotes Windows/macOS/Linux.
+- [Build iOS](.github/workflows/ios.yml) — validação do projeto e build para simulador.
+- [Release multiplataforma](.github/workflows/release.yml) — APK assinado e pacotes Desktop; requer secrets Android válidos.
 
 No último run consultado, os passos abaixo terminaram com sucesso:
 

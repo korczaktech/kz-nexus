@@ -11,7 +11,7 @@ A Fase 5 corresponde aos itens 85–100 da checklist de execução.
 - **87 — Logout:** encerramento e revogação da sessão no servidor.
 - **88 — Sessão:** token opaco, hash persistido, validade de 24 horas, revogação e índice TTL.
 - **89 — Rotas:** dependência de usuário atual para rotas protegidas; sessões inválidas, expiradas ou revogadas são recusadas.
-- **90 — Senhas:** PBKDF2-HMAC-SHA256, salt aleatório e 310.000 iterações; política mínima de 12 caracteres, maiúscula, minúscula, número e especial.
+- **90 — Senhas:** bcrypt com salt aleatório gerado pela biblioteca; política mínima de 12 caracteres, maiúscula, minúscula, número e especial.
 - **91 — Autorização:** verificações são executadas no servidor.
 - **92 — Níveis:** papéis `user`, `manager` e `admin`.
 - **93 — Documentos:** consultas e mutações verificam o proprietário.
@@ -37,7 +37,7 @@ A Fase 5 corresponde aos itens 85–100 da checklist de execução.
 
 ## CI
 
-O workflow `.github/workflows/phase-5-security.yml` executa:
+O workflow `.github/workflows/backend-ci.yml` executa:
 
 1. instalação limpa do backend;
 2. varredura de credenciais na árvore e histórico;
@@ -49,6 +49,4 @@ O workflow `.github/workflows/phase-5-security.yml` executa:
 
 O teste de segurança tinha sido gravado com sequências literais `\\n`, além de possuir uma chamada incompatível com a função importada. O arquivo foi reescrito como Python válido e o teste de rate limit passou a testar o fluxo HTTP real.
 
-A Fase 5 fica considerada operacionalmente fechada somente após o workflow correspondente concluir com sucesso no GitHub Actions.
-
-**Implementação: 100% dos itens 85–100.**
+O pipeline de backend e a varredura de segredos passaram no commit `86d95305bd1db6b3a2df71cb48097c3586cea0e5`. Isso comprova a suíte automatizada naquele commit, mas não substitui a revisão final de segurança, a verificação dos segredos e a homologação da configuração de produção. A fase permanece parcialmente validada até esses critérios serem documentados.

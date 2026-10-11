@@ -1,22 +1,31 @@
-# KZ Documents Android — Release
 
-O APK é sempre a variante release. A primeira versão é 0.0.0.1.
+# Korczak Nexus Android — Publicação de releases
 
-O workflow .github/workflows/android-release.yml cria uma nova versão para cada push em main usando o número da execução: 0.0.0.1, 0.0.0.2, 0.0.0.3...
+O APK de release é gerado pelo workflow `.github/workflows/release.yml`, acionado por uma tag no padrão `v0.0.0.*` ou manualmente em GitHub Actions. Um push comum para `main` não publica automaticamente uma release.
 
-Para assinar o APK de release e permitir atualizações sobre a instalação anterior, configure estes quatro Secrets em GitHub Actions:
+## Versões e artefatos
 
-- ANDROID_KEYSTORE_BASE64
-- ANDROID_KEYSTORE_PASSWORD
-- ANDROID_KEY_ALIAS
-- ANDROID_KEY_PASSWORD
+- A versão do APK usa quatro componentes, por exemplo `0.0.0.294`.
+- Se o workflow for executado manualmente sem versão informada, ele procura a maior tag `v0.0.0.N` publicada e incrementa o quarto componente. Se não encontrar releases, usa o valor-base 293 e gera a próxima versão `0.0.0.294`.
+- O artefato publicado recebe o nome `Korczak-HUB-Nexus-0.0.0.N.apk`.
+- O mesmo release workflow também cria pacotes Desktop para Windows (`.exe`), macOS (`.dmg`) e Linux (`.deb`) e valida a presença de todos os artefatos antes de publicar a release.
+- Depois da publicação, o workflow atualiza `update.json` na branch `updates` com a URL e o SHA-256 do APK.
 
-O mesmo keystore deve ser usado em todas as versões. O Android exige a mesma assinatura para aceitar uma atualização como atualização do mesmo aplicativo.
+## Assinatura
 
-O APK publicado no GitHub Release recebe o nome Korczak Nexusuments-vX.Y.Z.W.apk.
+Configure estes quatro GitHub Actions Secrets antes de executar a publicação Android:
 
-O aplicativo consulta a última release pública do repositório korczaktech/kz-nexus, compara a versão instalada, valida o SHA-256 do APK e inicia o fluxo nativo de instalação do Android.
+- `ANDROID_KEYSTORE_BASE64`
+- `ANDROID_KEYSTORE_PASSWORD`
+- `ANDROID_KEY_ALIAS`
+- `ANDROID_KEY_PASSWORD`
 
-## BYOS
+O mesmo keystore precisa ser reutilizado nas atualizações para que o Android aceite a nova versão como atualização do aplicativo instalado.
 
-O armazenamento de arquivos usa o Storage Access Framework do Android. O usuário escolhe uma pasta pelo seletor do sistema; provedores instalados no aparelho podem aparecer no mesmo seletor. O KZ Documents não cria um armazenamento de arquivos próprio.
+## Atualizador e armazenamento
+
+O aplicativo consulta a última release pública, compara a versão instalada, valida o SHA-256 do APK e inicia o fluxo nativo de instalação.
+
+O armazenamento de arquivos usa o Storage Access Framework do Android. O usuário escolhe uma pasta pelo seletor do sistema; provedores instalados no aparelho podem aparecer no mesmo seletor. O Nexus não cria um armazenamento de arquivos próprio.
+
+**Status:** a configuração de release está presente no repositório. Uma release só deve ser considerada publicada depois que o workflow completo gerar, validar e anexar os quatro artefatos com assinatura válida.
