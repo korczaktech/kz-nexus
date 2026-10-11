@@ -2,7 +2,7 @@
 
 Sistema de gestão documental da Korczak Technologies. O repositório contém a aplicação Web (React + TypeScript + Vite), uma API Python/FastAPI, o cliente Desktop baseado em Electron e a base de clientes mobile/PWA.
 
-> **Estado honesto do projeto:** há uma aplicação Web implementada, testes automatizados e um pipeline de publicação que passou no último commit verificado. Isso **não** significa que o produto inteiro esteja 100% concluído: a validação manual, a disponibilidade da API em produção, os builds/distribuição das seis plataformas, a sincronização completa e a homologação final ainda precisam de evidências próprias.
+> **Estado honesto do projeto:** a Web/PWA, a suíte do backend, os testes Android, o build iOS para simulador e os empacotamentos Desktop passaram em CI. Isso **não** significa que o produto inteiro esteja 100% concluído: a validação manual em dispositivos reais, a disponibilidade da API em produção, a sincronização completa, a publicação final e a homologação ainda precisam de evidências próprias.
 
 ## Estado atual — resumo executivo
 
@@ -12,7 +12,7 @@ Sistema de gestão documental da Korczak Technologies. O repositório contém a 
 - **Publicação Web:** o workflow `.github/workflows/pages.yml` passou no commit `bf804b12f930255b453e72fa821c2a61a9d46e29`, incluindo testes do frontend, TypeScript/build, ícones PWA e deploy do GitHub Pages ([execução 38164998952](https://github.com/korczaktech/kz-nexus/actions/runs/38164998952)). O run inclui a correção de comparação do quarto componente da versão. O sucesso de um run não garante disponibilidade contínua do site ou API.
 - **Testes:** Vitest cobre editor, formatos, persistência, serviços e integrações. O backend possui CI com MongoDB 8, suíte pytest de unidade/integração e varredura de segredos; a execução do commit `ae2d27fcfb468100baf401ab6047833603b36985` passou ([execução 38164847983](https://github.com/korczaktech/kz-nexus/actions/runs/38164847983)). A cobertura de interface e os cenários manuais ainda precisam ser ampliados.
 - **Desktop:** testes e build passaram, e o CI gerou os pacotes Windows NSIS (`.exe`), macOS DMG (`.dmg`), Linux AppImage e DEB no commit `bf804b12f930255b453e72fa821c2a61a9d46e29` ([execução 38164998938](https://github.com/korczaktech/kz-nexus/actions/runs/38164998938)). Isso comprova o empacotamento, não a homologação funcional manual em cada sistema.
-- **Mobile:** há configuração Capacitor e projetos nativos. O CI Android passou nos testes Kotlin e gerou um APK de depuração ([execução 38164937626](https://github.com/korczaktech/kz-nexus/actions/runs/38164937626)); a experiência em dispositivo real, iOS, sincronização e publicação em lojas ainda precisam de validação completa.
+- **Mobile:** há configuração Capacitor e projetos nativos. O CI Android passou nos testes Kotlin e gerou um APK de depuração ([execução 38164937626](https://github.com/korczaktech/kz-nexus/actions/runs/38164937626)); o build iOS para simulador e a validação do projeto também passaram ([execução 38165274452](https://github.com/korczaktech/kz-nexus/actions/runs/38165274452)). Instalação/uso em aparelhos reais, sincronização e publicação ainda precisam de validação completa.
 - **API/backend:** existe implementação FastAPI com módulos de autenticação/segurança, rotas, serviços, repositórios, MongoDB, auditoria e testes. A saúde atual do serviço hospedado, os backups e a operação de produção não foram confirmados nesta atualização.
 
 ## Legenda de status
@@ -42,7 +42,7 @@ Sistema de gestão documental da Korczak Technologies. O repositório contém a 
 | 14 | 223–238 | Responsividade e acessibilidade | 🟡 Foco visível, skip link, redução de movimento e alto contraste inicial; testes manuais pendentes |
 | 15 | 239–252 | Web / GitHub Pages | 🟡 Pipeline de build/deploy passou; confirmar disponibilidade real, rotas e fluxos em produção |
 | 16 | 253–274 | Aplicação Desktop | 🟡 Testes e pacotes Windows/macOS/Linux (AppImage + DEB) passaram no CI; testes manuais e release pública pendentes |
-| 17 | 275–295 | Aplicação Mobile | 🟡 CI Android passou; validação em dispositivos reais, iOS, sincronização e experiência manual pendentes |
+| 17 | 275–295 | Aplicação Mobile | 🟡 CI Android e build iOS para simulador passaram; validação em dispositivos reais, sincronização e experiência manual pendentes |
 | 18 | 296–312 | Sincronização multiplataforma | 🟡 Há suporte offline específico no cliente iOS; sincronização e conflitos entre plataformas não homologados |
 | 19 | 313–327 | Testes automatizados | 🟡 CI frontend passou e testes de API foram adicionados; ampliar cobertura e validar backend no CI |
 | 20 | 328–346 | Testes manuais | ⚪ Falta executar e registrar os roteiros de aceite completos |

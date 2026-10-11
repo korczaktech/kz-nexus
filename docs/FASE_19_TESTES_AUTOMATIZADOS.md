@@ -17,6 +17,7 @@ O backend usa pytest com MongoDB 8 no CI e cobre contratos HTTP, autenticação,
 - [x] Executar a suíte pytest com MongoDB 8 no CI.
 - [x] Executar varredura de segredos na árvore e no histórico Git.
 - [x] Executar testes nativos Android e gerar APK de depuração no CI.
+- [x] Compilar iOS para simulador e validar o projeto e o `Info.plist` no CI.
 - [x] Executar testes/build Desktop e empacotar Windows, macOS, Linux AppImage e DEB no CI.
 - [x] Executar testes frontend, TypeScript/build e deploy Web/PWA no CI.
 
@@ -26,6 +27,7 @@ O backend usa pytest com MongoDB 8 no CI e cobre contratos HTTP, autenticação,
 - **Backend:** [execução 38164847983](https://github.com/korczaktech/kz-nexus/actions/runs/38164847983) — pytest com MongoDB 8 e varredura de segredos passaram.
 - **Desktop:** [execução 38164998938](https://github.com/korczaktech/kz-nexus/actions/runs/38164998938) — testes/build e pacotes Windows, macOS, AppImage e DEB passaram.
 - **Android:** [execução 38164937626](https://github.com/korczaktech/kz-nexus/actions/runs/38164937626) — testes nativos e build APK de depuração passaram.
+- **iOS:** [execução 38165274452](https://github.com/korczaktech/kz-nexus/actions/runs/38165274452) — build de simulador e validação do projeto passaram.
 
 ## Pendências antes de concluir a fase
 
@@ -34,7 +36,8 @@ O backend usa pytest com MongoDB 8 no CI e cobre contratos HTTP, autenticação,
 - [ ] Adicionar testes de regressão para sincronização offline e resolução de conflitos.
 - [ ] Definir e medir uma meta mínima de cobertura para módulos críticos.
 - [ ] Executar e registrar testes manuais de ponta a ponta nas seis plataformas.
-- [ ] Confirmar o build iOS e validar a experiência em dispositivos reais.
+- [x] Confirmar o build iOS para simulador.
+- [ ] Validar a experiência em dispositivos iOS reais.
 - [ ] Garantir que o release final dependa dos testes críticos e guardar evidências reproduzíveis.
 
 ## Critério de aceite
