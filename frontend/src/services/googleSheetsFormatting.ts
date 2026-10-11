@@ -39,3 +39,20 @@ export function htmlToPlainText(html:string):string{
   };
   return render(doc.body).replace(/[ \t]+\n/g,'\n').replace(/\n{3,}/g,'\n\n').trim();
 }
+
+export type SpreadsheetTable={sheetId:string;title:string;values:string[][]};
+export function htmlToSpreadsheetTables(html:string):SpreadsheetTable[]{
+  const doc=new DOMParser().parseFromString(html,'text/html');
+  const tables=Array.from(doc.body.querySelectorAll('table'));
+  if(!tables.length)throw new Error('O documento não contém abas de planilha identificadas. Reimporte a planilha antes de sincronizar.');
+  const result:SpreadsheetTable[]=[];
+  for(const table of tables){
+    const sheetId=table.getAttribute('data-google-sheet-id')||'';
+    const title=table.getAttribute('data-google-sheet-title')||'';
+    if(!sheetId||!title)throw new Error('Uma tabela perdeu o identificador ou o nome da aba original. Reimporte a planilha antes de sincronizar.');
+    if(result.some(item=>item.sheetId===sheetId))throw new Error('Há identificadores de abas duplicados no documento. Reimporte a planilha antes de sincronizar.');
+    const values=Array.from(table.querySelectorAll('tr')).map(row=>Array.from(row.children).map(cell=>(cell.textContent||'').trim()));
+    result.push({sheetId,title,values});
+  }
+  return result;
+}
