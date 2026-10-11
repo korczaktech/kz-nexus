@@ -73,7 +73,7 @@ export async function readCloudFile(file:CloudFile):Promise<{content:string;docu
     const presentation=await response.json();
     const shapes:any[]=[];
     for(const slide of presentation.slides||[])for(const element of slide.pageElements||[])if(element.shape?.text)shapes.push({objectId:element.objectId,text:slideShapeText(element.shape)});
-    const content=shapes.map(shape=>'<p>'+escapeSlideHtml(shape.text).replace(/\\n/g,'<br>')+'</p>').join('');
+    const content=shapes.map(shape=>'<p>'+escapeSlideHtml(shape.text).replace(/\n/g,'<br>')+'</p>').join('');
     return {content,document_type:"html"};
   }
   if(file.mimeType===sheets){
