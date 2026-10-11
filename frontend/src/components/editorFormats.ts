@@ -44,3 +44,20 @@ export function htmlToRtf(html:string):string{
   const body=Array.from(doc.body.childNodes).map(render).join('');
   return '{\\rtf1\\ansi\\deff0{\\fonttbl{\\f0 Arial;}}\\viewkind4\\uc1\\f0\\fs22 '+body+'}';
 }
+
+export function normalizeHtmlForDocx(html:string):string{
+  const doc=new DOMParser().parseFromString(html,'text/html');
+  doc.querySelectorAll('em').forEach(element=>{
+    const replacement=doc.createElement('i');
+    Array.from(element.attributes).forEach(attribute=>replacement.setAttribute(attribute.name,attribute.value));
+    while(element.firstChild)replacement.appendChild(element.firstChild);
+    element.replaceWith(replacement);
+  });
+  doc.querySelectorAll('strong').forEach(element=>{
+    const replacement=doc.createElement('b');
+    Array.from(element.attributes).forEach(attribute=>replacement.setAttribute(attribute.name,attribute.value));
+    while(element.firstChild)replacement.appendChild(element.firstChild);
+    element.replaceWith(replacement);
+  });
+  return doc.body.innerHTML;
+}
