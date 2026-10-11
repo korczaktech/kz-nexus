@@ -94,6 +94,7 @@ export async function saveCloudFile(file:CloudFile,content:string):Promise<void>
   const sheets="application/vnd.google-apps.spreadsheet";
   const slides="application/vnd.google-apps.presentation";
   const docx="application/vnd.openxmlformats-officedocument.wordprocessingml.document";
+  const htmlToText=(html:string)=>{const parsed=new DOMParser().parseFromString(html,"text/html");parsed.querySelectorAll("script,style").forEach(n=>n.remove());return (parsed.body.textContent||"").replace(/\\u00a0/g," ")};
   if(file.mimeType===docs){
     const converted=htmlToGoogleDocsPayload(content);
     const response=await request("https://docs.googleapis.com/v1/documents/"+encodeURIComponent(file.id));
