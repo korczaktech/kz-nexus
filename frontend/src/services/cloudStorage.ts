@@ -138,18 +138,23 @@ export async function saveCloudFile(file:CloudFile,content:string):Promise<void>
     return;
   }
   if(file.mimeType===sheets){
-    const metadataResponse=await request("https://sheets.googleapis.com/v4/spreadsheets/"+encodeURIComponent(file.id)+"?fields=sheets.properties(title,index)");
+    const metadataResponse=await request("https://sheets.googleapis.com/v4/spreadsheets/"+encodeURIComponent(file.id)+"?fields=sheets.properties(title,index,sheetId)");
     const metadata=await metadataResponse.json();
-    const firstSheet=(metadata.sheets||[]).slice().sort((a:any,b:any)=>Number(a.properties?.index||0)-Number(b.properties?.index||0))[0];
-    const title=String(firstSheet?.properties?.title||"");
-    if(!title)throw new Error("Não foi possível localizar a primeira aba desta planilha.");
-    const values=htmlToSpreadsheetValues(content);
-    const escapedTitle="'"+title.replace(/'/g,"''")+"'";
-    await request("https://sheets.googleapis.com/v4/spreadsheets/"+encodeURIComponent(file.id)+"/values:batchClear",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({ranges:[escapedTitle+"!A:ZZ"]})});
-    if(values.length)await request("https://sheets.googleapis.com/v4/spreadsheets/"+encodeURIComponent(file.id)+"/values/"+encodeURIComponent(escapedTitle+"!A1")+"?valueInputOption=USER_ENTERED",{method:"PUT",headers:{"Content-Type":"application/json"},body:JSON.stringify({majorDimension:"ROWS",values})});
+    const existing=(metadata.sheets||[]).map((sheet:any)=>({sheetId:String(sheet.properties?.sheetId??""),title:String(sheet.properties?.title||"")}));
+    if(!existing.length||existing.some((sheet:any)=>!sheet.sheetId||!sheet.title))throw new Error("Não foi possível validar as abas originais da planilha.");
+    const tables=htmlToSpreadsheetTables(content);
+    if(tables.length!==existing.length||existing.some((sheet:any)=>!tables.some(table=>table.sheetId===sheet.sheetId)))throw new Error("A lista de abas foi alterada no Nexus. A sincronização exige todas as abas originais; reimporte a planilha para sincronizar sem perdas.");
+    for(const table of tables){
+      const original=existing.find((sheet:any)=>sheet.sheetId===table.sheetId);
+      if(!original||original.title!==table.title)throw new Error("O nome ou identificador de uma aba foi alterado. Renomeie a aba diretamente no Google Sheets e reimporte a planilha.");
+      const escapedTitle="'"+original.title.replace(/'/g,"''")+"'";
+      await request("https://sheets.googleapis.com/v4/spreadsheets/"+encodeURIComponent(file.id)+"/values:batchClear",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({ranges:[escapedTitle+"!A:ZZ"]})});
+      const values=table.values.filter(row=>row.length>0);
+      if(values.length&&values.some(row=>row.some(value=>value!=="")))await request("https://sheets.googleapis.com/v4/spreadsheets/"+encodeURIComponent(file.id)+"/values/"+encodeURIComponent(escapedTitle+"!A1")+"?valueInputOption=USER_ENTERED",{method:"PUT",headers:{"Content-Type":"application/json"},body:JSON.stringify({majorDimension:"ROWS",values})});
+    }
     return;
   }
-  if(file.mimeType===slides){
+    if(file.mimeType===slides){
     const response=await request("https://slides.googleapis.com/v1/presentations/"+encodeURIComponent(file.id));
     const presentation=await response.json();
     const existing=new Map<string,string>();
