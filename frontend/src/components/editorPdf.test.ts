@@ -1,5 +1,5 @@
 import {describe,expect,it} from 'vitest';
-import {pdfTextItemsToHtml} from './editorPdf';
+import {mergePdfOcrParagraphs,pdfTextItemsToHtml,shouldRunPdfOcr} from './editorPdf';
 
 describe('PDF text extraction',()=>{
   it('reconstructs lines in reading order and escapes HTML',()=>{
@@ -13,4 +13,18 @@ describe('PDF text extraction',()=>{
   it('returns empty HTML when no selectable text exists',()=>{
     expect(pdfTextItemsToHtml([])).toBe('');
   });
+  it('requests OCR for sparse text and mixed pages with embedded images',()=>{
+    expect(shouldRunPdfOcr('')).toBe(true);
+    expect(shouldRunPdfOcr('short text')).toBe(true);
+    expect(shouldRunPdfOcr('x'.repeat(200))).toBe(false);
+    expect(shouldRunPdfOcr('x'.repeat(200),true)).toBe(true);
+    expect(shouldRunPdfOcr('x'.repeat(700),true)).toBe(false);
+  });
+  it('adds OCR-only paragraphs without duplicating native text',()=>{
+    const html=mergePdfOcrParagraphs('<p>Native text</p>','Native text\n\nScanned text');
+    expect(html).toContain('<p>Native text</p>');
+    expect(html).toContain('<p>Scanned text</p>');
+    expect((html.match(/Native text/g)||[]).length).toBe(1);
+  });
+
 });
