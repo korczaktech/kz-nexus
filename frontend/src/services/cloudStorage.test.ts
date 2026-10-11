@@ -67,6 +67,19 @@ describe('Google Drive sync adapters',()=>{
     expect(calls.filter(call=>call.url.includes('values:batchClear'))).toHaveLength(1);
     expect(calls.some(call=>call.init?.method==='PUT')).toBe(false);
   });
+
+  it('syncs every Google Sheets tab by ID even when the tables are reordered',async()=>{
+    const {calls}=setupFetch(url=>url.includes('/spreadsheets/multi?fields=')?new Response(JSON.stringify({sheets:[
+      {properties:{title:'Dados',index:0,sheetId:11}},
+      {properties:{title:'Resumo',index:1,sheetId:22}}
+    ]}),{status:200}):new Response('{}',{status:200}));
+    const file:CloudFile={id:'multi',name:'Multi',mimeType:'application/vnd.google-apps.spreadsheet'};
+    await saveCloudFile(file,'<table data-google-sheet-id="22" data-google-sheet-title="Resumo"><tr><td>Total</td></tr></table><table data-google-sheet-id="11" data-google-sheet-title="Dados"><tr><td>Nome</td></tr></table>');
+    const writes=calls.filter(call=>call.init?.method==='PUT').map(call=>call.url);
+    expect(writes.some(url=>url.includes(encodeURIComponent("'Resumo'!A1")))).toBe(true);
+    expect(writes.some(url=>url.includes(encodeURIComponent("'Dados'!A1")))).toBe(true);
+    expect(calls.filter(call=>call.url.includes('values:batchClear'))).toHaveLength(2);
+  });
   it('updates a Google Doc with inserted text and inline styles',async()=>{
     const {calls}=setupFetch(url=>url.includes('/documents/doc-1')&&!url.endsWith(':batchUpdate')?new Response(JSON.stringify({body:{content:[{endIndex:2}]}}),{status:200}):new Response('{}',{status:200}));
     const file:CloudFile={id:'doc-1',name:'Doc',mimeType:'application/vnd.google-apps.document'};
