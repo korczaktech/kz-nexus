@@ -34,7 +34,7 @@ Sistema multiplataforma de gestão documental.
 | 16 | Aplicação Desktop | 253–274 | ⚪ Planejada |
 | 17 | Aplicação Mobile | 275–295 | ⚪ Planejada |
 | 18 | Sincronização Multiplataforma | 296–312 | ⚪ Planejada |
-| 19 | Testes Automatizados | 313–327 | ⚪ Planejada |
+| 19 | Testes Automatizados | 313–327 | 🟡 Em andamento |
 | 20 | Testes Manuais | 328–346 | ⚪ Planejada |
 | 21 | Testes das 6 Plataformas | 347–375 | ⚪ Planejada |
 | 22 | Desempenho | 376–388 | ⚪ Planejada |
