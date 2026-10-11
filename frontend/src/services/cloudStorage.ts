@@ -77,19 +77,25 @@ export async function readCloudFile(file:CloudFile):Promise<{content:string;docu
     return {content,document_type:"html"};
   }
   if(file.mimeType===sheets){
-    const metadataResponse=await request("https://sheets.googleapis.com/v4/spreadsheets/"+encodeURIComponent(file.id)+"?fields=sheets.properties(title,index)");
+    const metadataResponse=await request("https://sheets.googleapis.com/v4/spreadsheets/"+encodeURIComponent(file.id)+"?fields=sheets.properties(title,index,sheetId)");
     const metadata=await metadataResponse.json();
-    const firstSheet=(metadata.sheets||[]).slice().sort((a:any,b:any)=>Number(a.properties?.index||0)-Number(b.properties?.index||0))[0];
-    const title=String(firstSheet?.properties?.title||"");
-    if(!title)throw new Error("Não foi possível localizar a primeira aba desta planilha.");
-    const range=encodeURIComponent("'"+title.replace(/'/g,"''")+"'!A:ZZ");
-    const valuesResponse=await request("https://sheets.googleapis.com/v4/spreadsheets/"+encodeURIComponent(file.id)+"/values/"+range+"?valueRenderOption=FORMULA");
-    const data=await valuesResponse.json();
-    const values=Array.isArray(data.values)?data.values:[];
-    const csv=values.map((row:any[])=>row.map(value=>{const cell=String(value??"");return /[",\r\n]/.test(cell)?'"'+cell.replace(/"/g,'""')+'"':cell}).join(",")).join("\n");
-    return {content:csv,document_type:"csv"};
+    const sheetsList=(metadata.sheets||[]).slice().sort((a:any,b:any)=>Number(a.properties?.index||0)-Number(b.properties?.index||0));
+    if(!sheetsList.length)throw new Error("Não foi possível localizar abas nesta planilha.");
+    const tables:string[]=[];
+    for(const sheet of sheetsList){
+      const title=String(sheet.properties?.title||"");
+      const sheetId=String(sheet.properties?.sheetId??"");
+      if(!title||!sheetId)throw new Error("Uma aba da planilha não possui metadados válidos.");
+      const range=encodeURIComponent("'"+title.replace(/'/g,"''")+"'!A:ZZ");
+      const valuesResponse=await request("https://sheets.googleapis.com/v4/spreadsheets/"+encodeURIComponent(file.id)+"/values/"+range+"?valueRenderOption=FORMULA");
+      const data=await valuesResponse.json();
+      const values=Array.isArray(data.values)?data.values:[];
+      const rows=values.length?values.map((row:any[])=>"<tr>"+row.map(value=>"<td>"+escapeSlideHtml(String(value??""))+"</td>").join("")+"</tr>").join(""):"<tr><td></td></tr>";
+      tables.push("<h2>"+escapeSlideHtml(title)+"</h2><table data-google-sheet-id=\""+escapeSlideHtml(sheetId)+"\" data-google-sheet-title=\""+escapeSlideHtml(title)+"\"><tbody>"+rows+"</tbody></table>");
+    }
+    return {content:tables.join(""),document_type:"html"};
   }
-  let url:string;
+    let url:string;
   let type="txt";
   if(file.mimeType===docs){
     url="https://www.googleapis.com/drive/v3/files/"+encodeURIComponent(file.id)+"/export?mimeType="+encodeURIComponent("text/html");
