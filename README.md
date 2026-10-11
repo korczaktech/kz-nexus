@@ -9,10 +9,10 @@ Sistema de gestão documental da Korczak Technologies. O repositório contém a 
 - **Web:** interface implementada com autenticação/cadastro/recuperação, navegação documental, editor, pastas, favoritos, recentes, lixeira, pesquisa, perfil, administração, grupos, permissões, auditoria e configurações. O cliente HTTP usa a API configurada em `VITE_API_BASE_URL` (padrão do código: `https://kzdoc.onrender.com`).
 - **PWA:** manifesto, service worker, ícones SVG e geração de PNG no pipeline de Pages. O manifesto define instalação como aplicativo Web; isso não equivale a aplicativos nativos publicados.
 - **Integração:** o frontend contém chamadas reais para os endpoints de autenticação, documentos, versões, pastas, pesquisa, usuários, grupos, permissões e auditoria. Foi corrigida a comparação de versões para considerar também o quarto componente (`0.0.0.N`), com testes de regressão adicionados. A existência das chamadas não substitui testes completos de ponta a ponta.
-- **Publicação Web:** o workflow `.github/workflows/pages.yml` passou no commit `357868f5dbe70ccd2151dab8df4876d4c2ad5b61`, incluindo testes do frontend, TypeScript/build, ícones PWA e deploy do GitHub Pages ([execução 38164648481](https://github.com/korczaktech/kz-nexus/actions/runs/38164648481)). Esse run valida também a correção de comparação do quarto componente da versão. O sucesso de um run não garante disponibilidade contínua do site ou API.
-- **Testes:** Vitest cobre editor, formatos, persistência, serviços e integrações. O backend agora possui CI próprio com MongoDB 8, suíte pytest de unidade/integração e varredura do histórico por segredos; a execução do commit `86d95305bd1db6b3a2df71cb48097c3586cea0e5` passou ([execução 38164494624](https://github.com/korczaktech/kz-nexus/actions/runs/38164494624)). A cobertura de interface e os cenários manuais ainda precisam ser ampliados.
-- **Desktop:** há cliente Electron, configuração de empacotamento para Windows/macOS/Linux e workflow de CI. Não declarar as três plataformas homologadas sem builds e testes por sistema operacional.
-- **Mobile:** há configuração Capacitor e arquivos/workflows nativos no repositório. A experiência mobile, a sincronização e a publicação em lojas ainda precisam de validação completa.
+- **Publicação Web:** o workflow `.github/workflows/pages.yml` passou no commit `bf804b12f930255b453e72fa821c2a61a9d46e29`, incluindo testes do frontend, TypeScript/build, ícones PWA e deploy do GitHub Pages ([execução 38164998952](https://github.com/korczaktech/kz-nexus/actions/runs/38164998952)). O run inclui a correção de comparação do quarto componente da versão. O sucesso de um run não garante disponibilidade contínua do site ou API.
+- **Testes:** Vitest cobre editor, formatos, persistência, serviços e integrações. O backend possui CI com MongoDB 8, suíte pytest de unidade/integração e varredura de segredos; a execução do commit `ae2d27fcfb468100baf401ab6047833603b36985` passou ([execução 38164847983](https://github.com/korczaktech/kz-nexus/actions/runs/38164847983)). A cobertura de interface e os cenários manuais ainda precisam ser ampliados.
+- **Desktop:** testes e build passaram, e o CI gerou os pacotes Windows NSIS (`.exe`), macOS DMG (`.dmg`), Linux AppImage e DEB no commit `bf804b12f930255b453e72fa821c2a61a9d46e29` ([execução 38164998938](https://github.com/korczaktech/kz-nexus/actions/runs/38164998938)). Isso comprova o empacotamento, não a homologação funcional manual em cada sistema.
+- **Mobile:** há configuração Capacitor e projetos nativos. O CI Android passou nos testes Kotlin e gerou um APK de depuração ([execução 38164937626](https://github.com/korczaktech/kz-nexus/actions/runs/38164937626)); a experiência em dispositivo real, iOS, sincronização e publicação em lojas ainda precisam de validação completa.
 - **API/backend:** existe implementação FastAPI com módulos de autenticação/segurança, rotas, serviços, repositórios, MongoDB, auditoria e testes. A saúde atual do serviço hospedado, os backups e a operação de produção não foram confirmados nesta atualização.
 
 ## Legenda de status
@@ -41,8 +41,8 @@ Sistema de gestão documental da Korczak Technologies. O repositório contém a 
 | 13 | 205–222 | Integração frontend ↔ backend | 🟡 Cliente HTTP e fluxos integrados existem; validar fluxos completos com backend real |
 | 14 | 223–238 | Responsividade e acessibilidade | 🟡 Foco visível, skip link, redução de movimento e alto contraste inicial; testes manuais pendentes |
 | 15 | 239–252 | Web / GitHub Pages | 🟡 Pipeline de build/deploy passou; confirmar disponibilidade real, rotas e fluxos em produção |
-| 16 | 253–274 | Aplicação Desktop | 🟡 Cliente Electron e configuração de pacotes existem; builds/testes por SO e distribuição pendentes |
-| 17 | 275–295 | Aplicação Mobile | 🟡 Base Capacitor/nativa presente; validar Android/iOS, instalação e experiência real |
+| 16 | 253–274 | Aplicação Desktop | 🟡 Testes e pacotes Windows/macOS/Linux (AppImage + DEB) passaram no CI; testes manuais e release pública pendentes |
+| 17 | 275–295 | Aplicação Mobile | 🟡 CI Android passou; validação em dispositivos reais, iOS, sincronização e experiência manual pendentes |
 | 18 | 296–312 | Sincronização multiplataforma | 🟡 Há suporte offline específico no cliente iOS; sincronização e conflitos entre plataformas não homologados |
 | 19 | 313–327 | Testes automatizados | 🟡 CI frontend passou e testes de API foram adicionados; ampliar cobertura e validar backend no CI |
 | 20 | 328–346 | Testes manuais | ⚪ Falta executar e registrar os roteiros de aceite completos |
@@ -50,7 +50,7 @@ Sistema de gestão documental da Korczak Technologies. O repositório contém a 
 | 22 | 376–388 | Desempenho | ⚪ Falta medir, estabelecer metas e otimizar com resultados documentados |
 | 23 | 389–403 | Segurança final | ⚪ Falta revisão final, correção de achados e evidência de aprovação |
 | 24 | 404–416 | Publicação do backend | 🟡 Há URL de API configurada; disponibilidade, configuração produtiva, monitoramento e recuperação precisam de validação |
-| 25 | 417–428 | Publicação das aplicações | 🟡 Web possui pipeline de publicação; releases e instaladores de todas as plataformas precisam ser comprovados |
+| 25 | 417–428 | Publicação das aplicações | 🟡 Web publicada pelo pipeline e pacotes Desktop gerados no CI; release final e APK assinado ainda precisam ser publicados/verificados |
 | 26 | 429–445 | Documentação | 🟡 Documentação técnica e de fases existe; completar guias de usuário, administrador, instalação e solução de problemas |
 | 27 | 446–455 | Operação | ⚪ Falta formalizar e testar monitoramento, backup, rollback, manutenção e resposta a incidentes |
 | 28 | 456–468 | Homologação | ⚪ Falta executar homologação integral e registrar aprovação |
