@@ -50,8 +50,9 @@ describe('API client — autenticação e tratamento de falhas',()=>{
       init?.signal?.addEventListener('abort',()=>reject(new DOMException('Aborted','AbortError')),{once:true});
     }));
     const pending=api.health();
+    const assertion=expect(pending).rejects.toMatchObject({name:'ApiError',status:408,code:'request_timeout',message:'A operação excedeu o tempo limite.'});
     await vi.advanceTimersByTimeAsync(30000);
-    await expect(pending).rejects.toMatchObject({name:'ApiError',status:408,code:'request_timeout',message:'A operação excedeu o tempo limite.'});
+    await assertion;
     vi.useRealTimers();
   });
 
