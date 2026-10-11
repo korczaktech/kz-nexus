@@ -11,7 +11,7 @@ A Fase 5 corresponde aos itens 85–100 da checklist de execução.
 - **87 — Logout:** encerramento e revogação da sessão no servidor.
 - **88 — Sessão:** token opaco, hash persistido, validade de 24 horas, revogação e índice TTL.
 - **89 — Rotas:** dependência de usuário atual para rotas protegidas; sessões inválidas, expiradas ou revogadas são recusadas.
-- **90 — Senhas:** bcrypt com salt aleatório gerado pela biblioteca; política mínima de 12 caracteres, maiúscula, minúscula, número e especial.
+- **90 — Senhas:** bcrypt com salt aleatório gerado pela biblioteca; política mínima de 12 caracteres, maiúscula, minúscula, número e especial. Entradas acima de 72 bytes UTF-8 são rejeitadas para impedir que bcrypt trate senhas diferentes como iguais por truncamento.
 - **91 — Autorização:** verificações são executadas no servidor.
 - **92 — Níveis:** papéis `user`, `manager` e `admin`.
 - **93 — Documentos:** consultas e mutações verificam o proprietário.
