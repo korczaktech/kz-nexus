@@ -22,12 +22,21 @@ def test_rate_limit_blocks_after_threshold():
     reset_rate_limits()
 
 
-def test_rate_limit_bucket_count_is_bounded(monkeypatch):
+def test_rate_limit_bucket_count_is_bounded_without_evicting_active_clients(monkeypatch):
     reset_rate_limits()
     monkeypatch.setattr(rate_limit, "_MAX_BUCKETS", 3)
-    for client_key in ("client-a", "client-b", "client-c", "client-d"):
+    for client_key in ("client-a", "client-b", "client-c"):
         enforce_rate_limit(client_key, "login")
-    assert len(rate_limit._BUCKETS) <= 3
+    with pytest.raises(Exception) as exc_info:
+        enforce_rate_limit("client-d", "login")
+    assert getattr(exc_info.value, "code", None) == "rate_limited"
+    assert len(rate_limit._BUCKETS) == 3
+    # A new key must not erase the attempt history of an existing client.
+    for _ in range(9):
+        enforce_rate_limit("client-a", "login")
+    with pytest.raises(Exception) as existing_client_error:
+        enforce_rate_limit("client-a", "login")
+    assert getattr(existing_client_error.value, "code", None) == "rate_limited"
     reset_rate_limits()
 
 
