@@ -1,5 +1,6 @@
 import * as mammoth from "mammoth";
 import {htmlToGoogleDocsPayload} from "./googleDocsFormatting";
+import {normalizeHtmlForDocx} from "../components/editorFormats";
 export type CloudProvider="google-drive";
 export interface CloudFile{id:string;name:string;mimeType:string;size?:string;modifiedTime?:string;parents?:string[];webViewLink?:string;iconLink?:string;}
 type CloudSession={provider:CloudProvider;accessToken:string;refreshToken?:string;expiresAt:number;account?:string;rootFolderId?:string};
@@ -114,7 +115,7 @@ export async function saveCloudFile(file:CloudFile,content:string):Promise<void>
   if(ext==="docx"||file.mimeType===docx){
     const mod=await import("html-to-docx");
     const convert=(mod as any).default||mod;
-    const blob=await convert("<html><body>"+content+"</body></html>",null,{});
+    const blob=await convert("<html><body>"+normalizeHtmlForDocx(content)+"</body></html>",null,{});
     await request("https://www.googleapis.com/upload/drive/v3/files/"+encodeURIComponent(file.id)+"?uploadType=media",{method:"PATCH",headers:{"Content-Type":docx},body:blob instanceof Blob?blob:new Blob([blob],{type:docx})});
     return;
   }
