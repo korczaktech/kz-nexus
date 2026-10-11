@@ -5,7 +5,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 from korczak_documents.database.bootstrap import bootstrap_database
-from korczak_documents.database.connection import get_database
+from korczak_documents.database.connection import get_database, get_accounts_database
 from korczak_documents.main import app
 from korczak_documents.repositories import api as repo
 
@@ -125,7 +125,7 @@ async def test_api_end_to_end() -> None:
     notification = client.get("/api/v1/notifications", headers=headers).json()[0]
     assert client.post(f"/api/v1/notifications/{notification['id']}/read", headers=headers).status_code == 200
 
-    await database["usuarios"].update_one({"id": user_id}, {"$set": {"role": "admin"}})
+    await get_accounts_database()["contas"].update_one({"id": user_id}, {"$set": {"Conta.Role": "admin"}})
     assert client.get("/api/v1/users", headers=headers).status_code == 200
     assert client.put(
         f"/api/v1/permissions/{document_id}",
