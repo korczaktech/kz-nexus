@@ -9,7 +9,7 @@ from korczak_documents.database.connection import get_database, get_accounts_dat
 from korczak_documents.main import app
 from korczak_documents import rate_limit
 from korczak_documents.rate_limit import enforce_rate_limit, reset_rate_limits
-from korczak_documents.security import hash_password, validate_password_policy, verify_password
+from korczak_documents.security import hash_password, needs_password_rehash, validate_password_policy, verify_password
 
 
 def test_rate_limit_blocks_after_threshold():
@@ -49,6 +49,7 @@ def test_password_hash_is_salted_and_not_plaintext():
     assert not verify_password("outra-senha", encoded)
     assert not verify_password(raw + ("x" * 80), encoded)
     assert hash_password(raw) != encoded
+    assert not needs_password_rehash(encoded)
 
 
 @pytest.mark.parametrize("password", ["12345678", "sem-maiuscula-123!", "SEM-MINUSCULA-123!", "SemNumero-aaaa!", "SemEspecial1234"])
