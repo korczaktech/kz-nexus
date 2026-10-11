@@ -1,12 +1,17 @@
 const escapeHtml=(value:string)=>value.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 type State={bold:boolean;italic:boolean;underline:boolean;strike:boolean};
 export function parseRtfToHtml(source:string):string{
-  const state:State={bold:false,italic:false,underline:false,strike:false};const stack:State[]=[];let current={...state};let html='<p>';let skipFallback=false;let skipDepth=0;
+  const state:State={bold:false,italic:false,underline:false,strike:false};const stack:State[]=[];let current={...state};let html='<p>';let skipFallback=false;
   const emit=(value:string)=>{if(!value)return;let chunk=escapeHtml(value);if(current.bold)chunk='<strong>'+chunk+'</strong>';if(current.italic)chunk='<em>'+chunk+'</em>';if(current.underline)chunk='<u>'+chunk+'</u>';if(current.strike)chunk='<s>'+chunk+'</s>';html+=chunk};
   const tokens=source.match(/\\'[0-9a-f]{2}|\\[a-zA-Z]+-?\d* ?|\\.|[{}]|[^\\{}]+/gi)||[];
   for(let i=0;i<tokens.length;i++){
     const token=tokens[i];
     if(token==='{'){
+      let look=i+1;if(tokens[look]==='\\\\*')look++;
+      const destination=(tokens[look]||'').match(/^\\\\([a-zA-Z]+)/)?.[1]?.toLowerCase();
+      if(destination&&['fonttbl','colortbl','stylesheet','info','pict','object','header','footer','filetbl','listtable','listoverridetable','generator','xmlopen','xmlclose','datastore','themedata','colorschememapping'].includes(destination)){
+        let depth=1,j=i+1;for(;j<tokens.length&&depth>0;j++){if(tokens[j]==='{')depth++;else if(tokens[j]==='}')depth--}i=j-1;continue;
+      }
       stack.push({...current});continue;
     }
     if(token==='}'){
