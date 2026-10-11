@@ -37,7 +37,14 @@ export function htmlToRtf(html:string):string{
       case 'li':return (element.parentElement?.tagName.toLowerCase()==='ol'?'\\tab '+(Array.from(element.parentElement!.children).indexOf(element)+1)+'. ':'\\tab \\u8226? ')+children+'\\par\n';
       case 'table':return Array.from(element.querySelectorAll('tr')).map(tr=>Array.from(tr.children).map(cell=>(cell.textContent||'').trim()).join('\\tab ')+'\\par\n').join('');
       case 'a':return children+(element.getAttribute('href')?' ('+escapeRtfText(element.getAttribute('href')!)+')':'');
-      case 'img':return escapeRtfText(element.getAttribute('alt')||'[Imagem]');
+      case 'img':{
+        const src=element.getAttribute('src')||'';
+        const match=src.match(/^data:image\/(png|jpeg);base64,([a-z0-9+/=]+)$/i);
+        if(!match)return escapeRtfText(element.getAttribute('alt')||'[Imagem]');
+        const binary=atob(match[2]);let hex='';for(let i=0;i<binary.length;i++)hex+=binary.charCodeAt(i).toString(16).padStart(2,'0');
+        const width=Math.max(1,Number(element.getAttribute('width'))||300),height=Math.max(1,Number(element.getAttribute('height'))||200);
+        return '{\\pict\\'+(match[1].toLowerCase()==='jpeg'?'jpegblip':'pngblip')+'\\picwgoal'+Math.round(width*15)+'\\pichgoal'+Math.round(height*15)+' '+hex+'}';
+      }
       default:return children;
     }
   };
