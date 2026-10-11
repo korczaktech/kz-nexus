@@ -11,6 +11,6 @@ export function htmlToGoogleDocsPayload(html:string):{text:string;requests:Googl
   };
   const process=(node:Node)=>{if(node.nodeType===Node.TEXT_NODE){const value=node.textContent||'';if(value.trim()){addBlock(doc.createElement('p'));text=text.slice(0,-1);addText(value,{})}return}if(node.nodeType!==1)return;const element=node as Element,tag=element.tagName.toUpperCase();if(BLOCKS.has(tag)){addBlock(element);return}if(tag==='UL'||tag==='OL'){Array.from(element.children).forEach(process);return}if(tag==='TABLE'){for(const tr of Array.from(element.querySelectorAll('tr'))){Array.from(tr.children).forEach((cell,index)=>{if(index)text+='\t';Array.from(cell.childNodes).forEach(n=>{if(n.nodeType===Node.TEXT_NODE)addText(n.textContent||'',{});else if(n.nodeType===1)Array.from(n.childNodes).forEach(child=>{if(child.nodeType===Node.TEXT_NODE)addText(child.textContent||'',{})})})});text+='\n'}return}if(tag==='BR'){text+='\n';return}addBlock(element)};
   Array.from(doc.body.childNodes).forEach(process);
-  if(!text)text='\n';else if(!text.endsWith('\n'))text+='\n';
+  if(text&&!text.endsWith('\n'))text+='\n';
   return{text,requests};
 }
