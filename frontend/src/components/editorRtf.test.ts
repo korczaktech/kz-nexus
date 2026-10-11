@@ -16,7 +16,7 @@ describe('RTF import',()=>{
     expect(html).toContain('{texto}');
   });
   it('preserves RTF font size and color-table formatting',()=>{
-    const html=parseRtfToHtml(String.raw`{\\rtf1{\\colortbl;\\red255\\green0\\blue0;}\\cf1\\fs32 Vermelho}`);
+    const html=parseRtfToHtml(String.raw`{\rtf1{\colortbl;\red255\green0\blue0;}\cf1\fs32 Vermelho}`);
     expect(html).toContain('<span style="font-size:16pt;color:#ff0000">Vermelho</span>');
   });
 
