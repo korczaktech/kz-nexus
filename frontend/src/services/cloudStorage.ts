@@ -90,7 +90,7 @@ export async function readCloudFile(file:CloudFile):Promise<{content:string;docu
       const valuesResponse=await request("https://sheets.googleapis.com/v4/spreadsheets/"+encodeURIComponent(file.id)+"/values/"+range+"?valueRenderOption=FORMULA");
       const data=await valuesResponse.json();
       const values=Array.isArray(data.values)?data.values:[];
-      const rows=values.length?values.map((row:any[])=>"<tr>"+row.map(value=>"<td>"+escapeSlideHtml(String(value??""))+"</td>").join("")+"</tr>").join(""):"<tr><td></td></tr>";
+      const rows=values.length?values.map((row:any[])=>"<tr>"+row.map(value=>{const escaped=escapeSlideHtml(String(value??""));const preserved=escaped.replace(/^ +/g,spaces=>"&nbsp;".repeat(spaces.length)).replace(/ +$/g,spaces=>"&nbsp;".repeat(spaces.length));return "<td>"+preserved+"</td>"} ).join("")+"</tr>").join(""):"<tr><td></td></tr>";
       tables.push("<h2>"+escapeSlideHtml(title)+"</h2><table data-google-sheet-id=\""+escapeSlideHtml(sheetId)+"\" data-google-sheet-title=\""+escapeSlideHtml(title)+"\"><tbody>"+rows+"</tbody></table>");
     }
     return {content:tables.join(""),document_type:"html"};
