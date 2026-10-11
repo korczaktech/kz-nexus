@@ -3,6 +3,7 @@ import {htmlToGoogleDocsPayload} from "./googleDocsFormatting";
 import {normalizeHtmlForDocx} from "../components/editorFormats";
 import {stripLayoutMetadata} from "../components/editorLayoutMetadata";
 import {htmlToPlainText,htmlToSpreadsheetValues} from "./googleSheetsFormatting";
+import {escapeSlideHtml,htmlToSlideParagraphs,slideShapeText} from "./googleSlidesFormatting";
 export type CloudProvider="google-drive";
 export interface CloudFile{id:string;name:string;mimeType:string;size?:string;modifiedTime?:string;parents?:string[];webViewLink?:string;iconLink?:string;}
 type CloudSession={provider:CloudProvider;accessToken:string;refreshToken?:string;expiresAt:number;account?:string;rootFolderId?:string};
@@ -16,7 +17,7 @@ async function pkce(){const bytes=crypto.getRandomValues(new Uint8Array(32));con
 let runtimeClientId="";
 function redirectUri(){const configured=String(import.meta.env.VITE_GOOGLE_REDIRECT_URI||"").trim();return configured||location.origin+location.pathname}
 async function clientId(){if(runtimeClientId)return runtimeClientId;const buildId=import.meta.env.VITE_GOOGLE_CLIENT_ID;if(buildId){runtimeClientId=String(buildId).trim();return runtimeClientId}throw new Error("Google Drive não configurado: defina GOOGLE_CLIENT_ID nas variáveis ou secrets do repositório GitHub. O workflow de publicação converte esse valor em VITE_GOOGLE_CLIENT_ID durante o build. Depois, execute novamente a publicação do GitHub Pages.");}
-async function cfg(){const id=await clientId();return{clientId:id,auth:"https://accounts.google.com/o/oauth2/v2/auth",api:(import.meta.env.VITE_API_BASE_URL||"https://kzdoc.onrender.com").replace(/\/$/,""),scope:"openid email profile https://www.googleapis.com/auth/drive https://www.googleapis.com/auth/documents https://www.googleapis.com/auth/spreadsheets"}}
+async function cfg(){const id=await clientId();return{clientId:id,auth:"https://accounts.google.com/o/oauth2/v2/auth",api:(import.meta.env.VITE_API_BASE_URL||"https://kzdoc.onrender.com").replace(/\/$/,""),scope:"openid email profile https://www.googleapis.com/auth/drive https://www.googleapis.com/auth/documents https://www.googleapis.com/auth/spreadsheets https://www.googleapis.com/auth/presentations"}}
 export async function connectCloud(){const c=await cfg();if(!c.clientId)throw new Error("Google Drive ainda não possui Client ID configurado na NexusAPI.");const{verifier,challenge}=await pkce();const state=b64url(crypto.getRandomValues(new Uint8Array(24)));sessionStorage.setItem("nexus_oauth",JSON.stringify({provider:"google-drive",state,verifier}));const url=new URL(c.auth);url.searchParams.set("client_id",c.clientId);url.searchParams.set("response_type","code");url.searchParams.set("redirect_uri",redirectUri());url.searchParams.set("scope",c.scope);url.searchParams.set("state",state);url.searchParams.set("code_challenge",challenge);url.searchParams.set("code_challenge_method","S256");url.searchParams.set("access_type","offline");url.searchParams.set("prompt","consent");location.assign(url.toString())}
 export async function finishCloudOAuth(){const q=new URLSearchParams(location.search);const oauthError=q.get("error");if(oauthError){sessionStorage.removeItem("nexus_oauth");history.replaceState({},document.title,location.pathname);throw new Error(oauthError==="access_denied"?"A autorização do Google Drive foi cancelada.":"O Google recusou a autorização do Drive: "+oauthError)}const code=q.get("code"),state=q.get("state");if(!code&&!state)return null;if(!code||!state)throw new Error("Resposta OAuth incompleta do Google Drive. Confira a URL de redirecionamento autorizada no Google Cloud Console.");let pending:null|{provider:CloudProvider;state:string;verifier:string}=null;try{pending=JSON.parse(sessionStorage.getItem("nexus_oauth")||"null")}catch{}if(!pending||pending.state!==state||pending.provider!=="google-drive")throw new Error("A sessão de autorização do Google Drive não confere. Recarregue o Nexus e tente conectar novamente.");const c=await cfg();if(!c.clientId)throw new Error("Google Drive ainda não possui Client ID configurado na NexusAPI.");const r=await fetch(c.api+"/api/v1/oauth/google/token",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({code,redirect_uri:redirectUri(),code_verifier:pending.verifier})});if(!r.ok){let detail="";try{const d=await r.json();detail=String(d.detail||d.error?.message||d.error_description||d.error||"")}catch{}throw new Error("Falha ao trocar o código OAuth por token"+(detail?": "+detail:"")+". Confira GOOGLE_CLIENT_ID e GOOGLE_CLIENT_SECRET no Render e a URL de redirecionamento no Google Cloud Console.")}const data=await r.json();if(!data.access_token)throw new Error("O Google não retornou access_token. Verifique o consentimento OAuth e o projeto Google Cloud.");const session={provider:"google-drive" as const,accessToken:data.access_token,refreshToken:data.refresh_token,expiresAt:Date.now()+Number(data.expires_in||3600)*1000};const all=read();all["google-drive"]=session;write(all);sessionStorage.removeItem("nexus_oauth");history.replaceState({},document.title,location.pathname);return"google-drive" as const}
 async function refresh(s:CloudSession){if(!s.refreshToken)return s;const c=await cfg();const r=await fetch(c.api+"/api/v1/oauth/google/refresh",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({refresh_token:s.refreshToken})});if(!r.ok){disconnectCloud("google-drive");throw new Error("A autorização do Google Drive expirou ou o servidor OAuth não está configurado. Conecte a conta novamente.")}const data=await r.json();const next={...s,accessToken:data.access_token,refreshToken:data.refresh_token||s.refreshToken,expiresAt:Date.now()+Number(data.expires_in||3600)*1000};const all=read();all["google-drive"]=next;write(all);return next}
@@ -66,6 +67,14 @@ export async function readCloudFile(file:CloudFile):Promise<{content:string;docu
       if(error instanceof Error&&error.message==="O DOCX não contém texto extraível.")throw error;
       throw new Error("Não foi possível ler este DOCX. Verifique se o arquivo não está corrompido ou protegido por senha.");
     }
+  }
+  if(file.mimeType===slides){
+    const response=await request("https://slides.googleapis.com/v1/presentations/"+encodeURIComponent(file.id));
+    const presentation=await response.json();
+    const shapes:any[]=[];
+    for(const slide of presentation.slides||[])for(const element of slide.pageElements||[])if(element.shape?.text)shapes.push({objectId:element.objectId,text:slideShapeText(element.shape)});
+    const content=shapes.map(shape=>'<p>'+escapeSlideHtml(shape.text).replace(/\\n/g,'<br>')+'</p>').join('');
+    return {content,document_type:"html"};
   }
   if(file.mimeType===sheets){
     const metadataResponse=await request("https://sheets.googleapis.com/v4/spreadsheets/"+encodeURIComponent(file.id)+"?fields=sheets.properties(title,index)");
@@ -135,7 +144,18 @@ export async function saveCloudFile(file:CloudFile,content:string):Promise<void>
     return;
   }
   if(file.mimeType===slides){
-    throw new Error("A apresentação foi importada como texto para edição, mas a sincronização de volta para Google Slides ainda não é compatível com o editor de documentos.");
+    const response=await request("https://slides.googleapis.com/v1/presentations/"+encodeURIComponent(file.id));
+    const presentation=await response.json();
+    const shapes:any[]=[];
+    for(const slide of presentation.slides||[])for(const element of slide.pageElements||[])if(element.shape?.text)shapes.push({objectId:element.objectId,text:slideShapeText(element.shape)});
+    const paragraphs=htmlToSlideParagraphs(content);
+    if(!shapes.length&&paragraphs.some(value=>value.trim()))throw new Error("A apresentação não contém caixas de texto editáveis.");
+    const mapped=shapes.map((shape,index)=>paragraphs[index]??'');
+    if(paragraphs.length>shapes.length&&shapes.length)mapped[mapped.length-1]=[mapped[mapped.length-1],...paragraphs.slice(shapes.length)].filter(Boolean).join('\n');
+    const requests:any[]=[];
+    shapes.forEach((shape,index)=>{const next=mapped[index];if(shape.text&&shape.text!==next)requests.push({deleteText:{objectId:shape.objectId,textRange:{type:"ALL"}}});if(next&&shape.text!==next)requests.push({insertText:{objectId:shape.objectId,insertionIndex:0,text:next}})});
+    if(requests.length)await request("https://slides.googleapis.com/v1/presentations/"+encodeURIComponent(file.id)+":batchUpdate",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({requests})});
+    return;
   }
   const ext=(file.name.split(".").pop()||"").toLowerCase();
   if(ext==="docx"||file.mimeType===docx){
