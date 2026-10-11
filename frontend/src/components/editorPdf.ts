@@ -22,3 +22,20 @@ export function pdfTextItemsToHtml(items:PdfTextItem[]):string{
     return '<p>'+escapeHtml(text.trim())+'</p>';
   }).join('');
 }
+
+export function shouldRunPdfOcr(extractedText:string,hasImages=false):boolean{
+  const text=extractedText.replace(/\s+/g,' ').trim();
+  if(!text)return true;
+  return text.length<80||(hasImages&&text.length<600);
+}
+export function mergePdfOcrParagraphs(nativeHtml:string,ocrText:string):string{
+  const paragraphs=ocrText.split(/\n{2,}/).map(value=>value.trim()).filter(Boolean);
+  const nativeText=nativeHtml.replace(/<[^>]*>/g,' ').replace(/&nbsp;/g,' ').replace(/\s+/g,' ').trim();
+  const normalize=(value:string)=>value.toLocaleLowerCase().replace(/[^a-z0-9À-ÿ]+/gi,' ').trim();
+  const nativeNormalized=normalize(nativeText);
+  const additions=paragraphs.filter(paragraph=>{
+    const candidate=normalize(paragraph);
+    return candidate&&!nativeNormalized.includes(candidate)&&!candidate.includes(nativeNormalized);
+  });
+  return [nativeHtml,...additions.map(paragraph=>'<p>'+escapeHtml(paragraph).replace(/\n/g,'<br>')+'</p>')].filter(Boolean).join('');
+}
