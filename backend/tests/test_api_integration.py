@@ -18,7 +18,7 @@ async def test_api_end_to_end() -> None:
 
     await bootstrap_database()
     database = get_database()
-    for collection in ("usuarios", "documentos", "versoes", "pastas", "etiquetas", "sessoes", "eventos", "notificacoes", "grupos"):
+    for collection in ("documentos", "versoes", "pastas", "etiquetas", "sessoes", "eventos", "notificacoes", "grupos"):
         await database[collection].delete_many({})
 
     client = TestClient(app)
@@ -267,7 +267,6 @@ async def test_api_end_to_end() -> None:
         return set()
     assert all(not sensitive_keys(item.get("payload", {})) for item in final_items)
 
-    await database["usuarios"].delete_many({})
     await database["documentos"].delete_many({})
     await database["versoes"].delete_many({})
     await database["pastas"].delete_many({})

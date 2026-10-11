@@ -6,7 +6,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 from korczak_documents.database.bootstrap import bootstrap_database
-from korczak_documents.database.connection import get_database
+from korczak_documents.database.connection import get_database, get_accounts_database
 from korczak_documents.main import app
 from korczak_documents.repositories import api as repo
 
@@ -19,7 +19,7 @@ async def test_phase12_audit_contract():
 
     await bootstrap_database()
     database = get_database()
-    for collection in ("usuarios", "documentos", "versoes", "pastas", "etiquetas", "sessoes", "notificacoes", "grupos", "eventos"):
+    for collection in ("documentos", "versoes", "pastas", "etiquetas", "sessoes", "notificacoes", "grupos", "eventos"):
         await database[collection].delete_many({})
 
     client = TestClient(app)
@@ -41,7 +41,7 @@ async def test_phase12_audit_contract():
     assert client.delete(f"/api/v1/documents/{document_id}", headers=headers).status_code == 200
     assert client.post(f"/api/v1/documents/{document_id}/restore", headers=headers).status_code == 200
 
-    await database["usuarios"].update_one({"id": user_id}, {"$set": {"role": "admin"}})
+    await get_accounts_database()["contas"].update_one({"id": user_id}, {"$set": {"Conta.Role": "admin"}})
     assert client.put(
         f"/api/v1/permissions/{document_id}",
         headers=headers,
