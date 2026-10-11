@@ -14,7 +14,7 @@ function parseCsv(source:string):string[][]{
 export function htmlToSpreadsheetValues(html:string):string[][]{
   const doc=new DOMParser().parseFromString(html,'text/html');
   const table=doc.body.querySelector('table');
-  if(table)return Array.from(table.querySelectorAll('tr')).map(tr=>Array.from(tr.children).map(cell=>(cell.textContent||'').trim())).filter(row=>row.length>0);
+  if(table)return Array.from(table.querySelectorAll('tr')).map(tr=>Array.from(tr.children).map(cell=>cell.textContent||'')).filter(row=>row.length>0);
   const lines=Array.from(doc.body.childNodes).map(node=>{
     if(node.nodeType===3)return node.textContent||'';
     if(node.nodeType!==1)return '';
