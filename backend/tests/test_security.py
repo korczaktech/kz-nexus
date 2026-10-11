@@ -28,6 +28,7 @@ def test_password_hash_is_salted_and_not_plaintext():
     assert encoded.startswith(("$2a$", "$2b$", "$2y$"))
     assert verify_password(raw, encoded)
     assert not verify_password("outra-senha", encoded)
+    assert not verify_password(raw + ("x" * 80), encoded)
     assert hash_password(raw) != encoded
 
 

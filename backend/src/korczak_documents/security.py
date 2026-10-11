@@ -44,6 +44,10 @@ def hash_password(password: str) -> str:
 
 
 def verify_password(password: str, encoded: str) -> bool:
+    # Login must enforce the same byte boundary as registration; otherwise
+    # bcrypt's 72-byte truncation can make a longer input authenticate.
+    if len(password.encode("utf-8")) > 72:
+        return False
     if not isinstance(encoded, str) or not encoded:
         return False
     encoded = encoded.strip()
