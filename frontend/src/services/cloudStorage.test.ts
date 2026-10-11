@@ -44,6 +44,14 @@ describe('Google Drive sync adapters',()=>{
     expect(body.requests.some((request:any)=>request.insertText?.text==='Olá mundo\n')).toBe(true);
     expect(body.requests.some((request:any)=>request.updateTextStyle?.textStyle?.bold===true)).toBe(true);
   });
+  it('allows an empty Google Doc to be cleared without inserting placeholder text',async()=>{
+    const {calls}=setupFetch(url=>url.includes('/documents/doc-empty')&&!url.endsWith(':batchUpdate')?new Response(JSON.stringify({body:{content:[{endIndex:10}]}}),{status:200}):new Response('{}',{status:200}));
+    const file:CloudFile={id:'doc-empty',name:'Empty',mimeType:'application/vnd.google-apps.document'};
+    await saveCloudFile(file,'');
+    const batch=calls.find(call=>call.url.endsWith(':batchUpdate'));
+    const body=JSON.parse(String(batch?.init?.body));
+    expect(body.requests).toEqual([{deleteContentRange:{range:{startIndex:1,endIndex:9}}}]);
+  });
   it('does not overwrite a Google Doc when embedded images would be lost',async()=>{
     const {calls}=setupFetch(()=>new Response('{}',{status:200}));
     const file:CloudFile={id:'doc-image',name:'Image doc',mimeType:'application/vnd.google-apps.document'};
