@@ -8,10 +8,9 @@
 
 ### Coleções
 
-O banco utiliza as seguintes coleções da aplicação:
+O banco `KZDocs` utiliza as seguintes coleções do serviço documental:
 
-1. `usuarios` — dados dos usuários e informações necessárias à autenticação e gestão de contas.
-2. `documentos` — documentos pertencentes aos usuários e seus metadados.
+1. `documentos` — documentos pertencentes aos usuários e seus metadados.
 3. `versoes` — versões dos documentos e seus conteúdos versionados.
 4. `pastas` — estrutura de organização hierárquica dos documentos.
 5. `etiquetas` — etiquetas associadas aos documentos e organizadas por proprietário.
@@ -26,13 +25,13 @@ O bootstrap materializa as coleções necessárias para que a estrutura inicial 
 
 ### Conexão
 
-A conexão usa PyMongo Async e recebe a URI por variável de ambiente. O nome do banco é configurado separadamente como `KZDocs`, evitando credenciais e endpoints no código.
+A conexão usa PyMongo Async e recebe a URI por variável de ambiente. O banco documental é `KZDocs`; as identidades e credenciais são armazenadas separadamente na base `Contas`, na coleção `contas`. Os dois nomes são configuráveis por ambiente.
 
 ### Índices
 
-Foram definidos índices iniciais para identidade de usuário, propriedade e atualização de documentos, numeração de versões, hierarquia de pastas, etiquetas por usuário, expiração de sessões, histórico de eventos, notificações não lidas e identificação de grupos.
+Foram definidos índices iniciais para propriedade e atualização de documentos, numeração de versões, hierarquia de pastas, etiquetas por usuário, expiração de sessões, histórico de eventos, notificações não lidas e identificação de grupos.
 
-Também existe uma restrição de unicidade para o e-mail dos usuários e um índice de expiração automática para sessões.
+A base `Contas` mantém a identidade do usuário separada dos dados documentais. Em `KZDocs`, há índices únicos para IDs aplicacionais e um índice de expiração automática para sessões.
 
 ### Referências e integridade
 
@@ -44,7 +43,7 @@ O seed não cria usuários nem credenciais. Ele grava somente um marcador `syste
 
 ### Evolução do banco
 
-A versão de migração é registrada em `migrations`, permitindo evoluir a estrutura por versões rastreáveis. A coleção `migrations` é técnica e não representa uma entidade funcional do sistema.
+A versão de migração é registrada em `migrations`, permitindo evoluir a estrutura por versões rastreáveis. A coleção técnica `migrations` é técnica e não representa uma entidade funcional do sistema.
 
 ### Backup e recuperação
 
