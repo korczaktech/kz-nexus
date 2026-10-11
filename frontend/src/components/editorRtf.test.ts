@@ -20,4 +20,10 @@ describe('RTF import',()=>{
     expect(html).toContain('<span style="font-size:16pt;color:#ff0000">Vermelho</span>');
   });
 
+  it('preserves paragraph alignment controls',()=>{
+    const html=parseRtfToHtml(String.raw`{\rtf1\qc Centralizado\par\qr Direita}`);
+    expect(html).toContain('<p style="text-align:center">Centralizado</p>');
+    expect(html).toContain('<p style="text-align:right">Direita</p>');
+  });
+
 });
