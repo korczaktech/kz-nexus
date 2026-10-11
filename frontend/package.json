@@ -15,7 +15,8 @@
     "mammoth": "^1.9.1",
     "html-to-docx": "^1.8.0",
     "pdfjs-dist": "^4.10.38",
-    "pagedjs": "^0.4.3"
+    "pagedjs": "^0.4.3",
+    "tesseract.js": "^6.0.1"
   },
   "devDependencies": {
     "@types/react": "^19.1.10",
