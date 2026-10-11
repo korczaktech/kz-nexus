@@ -55,8 +55,9 @@ async def test_security_end_to_end():
     reset_rate_limits()
     await bootstrap_database()
     database = get_database()
-    for collection in ("documentos", "versoes", "pastas", "etiquetas", "sessoes", "notificacoes", "grupos", "eventos"):
-        await database[collection].delete_many({})
+    # Nunca limpar coleções inteiras: MONGODB_URI pode apontar para um banco
+    # compartilhado. Este teste usa contas com e-mails únicos e limpa apenas
+    # os registros que pertencem às contas criadas aqui.
 
     client = TestClient(app)
     email = f"security-{uuid4().hex}@example.com"
@@ -96,15 +97,21 @@ async def test_security_end_to_end():
     events = await database["eventos"].find({"user_id": user_id}).to_list(length=100)
     assert all("@" not in str(event.get("payload")) for event in events)
 
-    await get_accounts_database()["contas"].delete_many({"id": {"$in": [user_id, other.json()["user"]["id"]]}})
-    await database["documentos"].delete_many({})
-    await database["versoes"].delete_many({})
-    await database["pastas"].delete_many({})
-    await database["etiquetas"].delete_many({})
-    await database["sessoes"].delete_many({})
-    await database["eventos"].delete_many({})
-    await database["notificacoes"].delete_many({})
-    await database["grupos"].delete_many({})
+    user_ids = [user_id, other.json()["user"]["id"]]
+    owned_documents = await database["documentos"].find(
+        {"owner_id": {"$in": user_ids}}, {"id": 1}
+    ).to_list(length=1000)
+    document_ids = [item["id"] for item in owned_documents if item.get("id")]
+    if document_ids:
+        await database["versoes"].delete_many({"document_id": {"$in": document_ids}})
+    await database["documentos"].delete_many({"owner_id": {"$in": user_ids}})
+    await database["pastas"].delete_many({"owner_id": {"$in": user_ids}})
+    await database["etiquetas"].delete_many({"owner_id": {"$in": user_ids}})
+    await database["sessoes"].delete_many({"user_id": {"$in": user_ids}})
+    await database["eventos"].delete_many({"user_id": {"$in": user_ids}})
+    await database["notificacoes"].delete_many({"user_id": {"$in": user_ids}})
+    await database["grupos"].delete_many({"owner_id": {"$in": user_ids}})
+    await get_accounts_database()["contas"].delete_many({"id": {"$in": user_ids}})
 
 
 def test_security_headers_and_cors_contract():
