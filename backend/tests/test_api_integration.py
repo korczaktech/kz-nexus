@@ -277,7 +277,7 @@ async def test_api_end_to_end() -> None:
         managed_user["id"],
         manager_target["id"],
         created_user.json()["id"],
-        manager_created["id"],
+        manager_target["id"],
     })
     owned_documents = await database["documentos"].find(
         {"owner_id": {"$in": test_user_ids}}, {"id": 1}
