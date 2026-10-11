@@ -1,4 +1,5 @@
 import * as mammoth from "mammoth";
+import {htmlToGoogleDocsPayload} from "./googleDocsFormatting";
 export type CloudProvider="google-drive";
 export interface CloudFile{id:string;name:string;mimeType:string;size?:string;modifiedTime?:string;parents?:string[];webViewLink?:string;iconLink?:string;}
 type CloudSession={provider:CloudProvider;accessToken:string;refreshToken?:string;expiresAt:number;account?:string;rootFolderId?:string};
@@ -93,15 +94,15 @@ export async function saveCloudFile(file:CloudFile,content:string):Promise<void>
   const sheets="application/vnd.google-apps.spreadsheet";
   const slides="application/vnd.google-apps.presentation";
   const docx="application/vnd.openxmlformats-officedocument.wordprocessingml.document";
-  const htmlToText=(html:string)=>{const parsed=new DOMParser().parseFromString(html,"text/html");parsed.querySelectorAll("script,style").forEach(n=>n.remove());return (parsed.body.innerText||parsed.body.textContent||"").replace(/\u00a0/g," ")};
   if(file.mimeType===docs){
-    const plain=htmlToText(content);
+    const converted=htmlToGoogleDocsPayload(content);
     const response=await request("https://docs.googleapis.com/v1/documents/"+encodeURIComponent(file.id));
     const document=await response.json();
     const endIndex=Number(document.body?.content?.[document.body.content.length-1]?.endIndex||1);
     const requests:any[]=[];
     if(endIndex>2)requests.push({deleteContentRange:{range:{startIndex:1,endIndex:endIndex-1}}});
-    if(plain)requests.push({insertText:{location:{index:1},text:plain}});
+    if(converted.text)requests.push({insertText:{location:{index:1},text:converted.text}});
+    requests.push(...converted.requests);
     if(requests.length)await request("https://docs.googleapis.com/v1/documents/"+encodeURIComponent(file.id)+":batchUpdate",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({requests})});
     return;
   }
