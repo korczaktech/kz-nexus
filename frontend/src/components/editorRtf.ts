@@ -57,7 +57,7 @@ export function parseRtfToHtml(source:string):string{
       else if(word==='par'||word==='row'){html+='</p>'+openParagraph();skipFallback=false}
       else if(word==='line')html+='<br>';
       else if(word==='tab')html+='&#9;';
-      else if(word==='bullet')emit('•');
+      else if(word==='bullet')emit('• ');
       else if(word==='emdash')emit('—');
       else if(word==='endash')emit('–');
       else if(word==='lquote')emit('‘');
