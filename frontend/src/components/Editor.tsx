@@ -8,6 +8,7 @@ import {htmlToRtf,normalizeHtmlForDocx} from './editorFormats';
 import {mergePdfOcrParagraphs,pdfTextItemsToHtml,shouldRunPdfOcr} from './editorPdf';
 import {PagedPreview} from './PagedPreview';
 import {attachLayoutMetadata,parseLayoutMetadata,stripLayoutMetadata} from './editorLayoutMetadata';
+import type {EditorLayoutSettings} from './editorLayoutMetadata';
 import {parseRtfToHtml} from './editorRtf';
 import {mergeDocumentContent} from './editorMerge';
 
