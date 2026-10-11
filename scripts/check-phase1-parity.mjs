@@ -102,4 +102,4 @@ if (failed.length) {
   process.exit(1);
 }
 
-console.log(`Fase 1: ${checks.length} verificações passaram.`);
+console.log(`Fase 1: ${checks.length} verificações estáticas de integração passaram. Os testes comportamentais são executados separadamente pelo Vitest.`);
