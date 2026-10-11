@@ -133,6 +133,24 @@ async def test_security_end_to_end():
     await get_accounts_database()["contas"].delete_many({"id": {"$in": user_ids}})
 
 
+def test_rate_limit_response_keeps_security_headers():
+    reset_rate_limits()
+    client = TestClient(app)
+    response = None
+    for _ in range(11):
+        response = client.post(
+            "/api/v1/auth/login",
+            json={"email": "invalid@example.com", "password": "wrong"},
+        )
+    assert response is not None
+    assert response.status_code == 429
+    assert response.json()["error"]["code"] == "rate_limited"
+    assert response.headers["x-content-type-options"] == "nosniff"
+    assert response.headers["x-frame-options"] == "DENY"
+    assert response.headers["referrer-policy"] == "no-referrer"
+    reset_rate_limits()
+
+
 def test_security_headers_and_cors_contract():
     reset_rate_limits()
     response = TestClient(app).get("/health", headers={"Origin": "http://localhost:5173"})
