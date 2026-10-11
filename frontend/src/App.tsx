@@ -283,7 +283,7 @@ function App(){
       const created=await api.createDocument({
         name:file.name,
         document_type:imported.document_type,
-        description:isSlides?'Importado do Google Slides. A sincronização atualiza as caixas de texto existentes em ordem; imagens, layout e outros elementos visuais são mantidos. Formatação inline, tabelas e imagens novas não são sincronizadas.':isSheets?'Importado da primeira aba do Google Sheets. A sincronização atualiza somente essa aba e mantém as demais intactas.':'Importado do Google Drive (ID de origem: '+file.id+'). A sincronização de volta depende do formato e das permissões da conta.',
+        description:isSlides?'Importado do Google Slides. A sincronização atualiza o texto das caixas existentes em ordem; layout e elementos visuais originais são mantidos, mas a formatação inline pode ser simplificada. Tabelas e imagens novas não são sincronizadas.':isSheets?'Importado da primeira aba do Google Sheets. A sincronização atualiza somente essa aba e mantém as demais intactas.':'Importado do Google Drive (ID de origem: '+file.id+'). A sincronização de volta depende do formato e das permissões da conta.',
         content:imported.content
       });
       const full=await api.document(created.id);
