@@ -25,6 +25,15 @@ describe('Google Drive sync adapters',()=>{
     expect(result.document_type).toBe('csv');
     expect(result.content).toBe('Name,Formula\nKorczak,=A1+A2\n"A, B","say ""hi"""');
   });
+  it('allows an empty Google Sheet to be opened and cleared',async()=>{
+    const {calls}=setupFetch(url=>url.includes('/spreadsheets/empty?fields=')?new Response(JSON.stringify({sheets:[{properties:{title:'Dados',index:0}}]}),{status:200}):url.includes('/values/')?new Response(JSON.stringify({values:[]}),{status:200}):new Response('{}',{status:200}));
+    const file:CloudFile={id:'empty',name:'Vazia',mimeType:'application/vnd.google-apps.spreadsheet'};
+    const imported=await readCloudFile(file);
+    expect(imported.content).toBe('');
+    await saveCloudFile(file,'');
+    expect(calls.filter(call=>call.url.includes('values:batchClear'))).toHaveLength(1);
+    expect(calls.some(call=>call.init?.method==='PUT')).toBe(false);
+  });
   it('updates a Google Doc with inserted text and inline styles',async()=>{
     const {calls}=setupFetch(url=>url.includes('/documents/doc-1')&&!url.endsWith(':batchUpdate')?new Response(JSON.stringify({body:{content:[{endIndex:2}]}}),{status:200}):new Response('{}',{status:200}));
     const file:CloudFile={id:'doc-1',name:'Doc',mimeType:'application/vnd.google-apps.document'};
