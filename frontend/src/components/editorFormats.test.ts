@@ -17,7 +17,7 @@ describe('rich RTF export',()=>{
     expect(rtf.startsWith('{\\rtf1')).toBe(true);
   });
   it('encodes non-BMP characters as UTF-16 RTF escapes',()=>{
-    window=new Window();
+    window=new Window();vi.stubGlobal('DOMParser',window.DOMParser);vi.stubGlobal('Node',window.Node);
     const rtf=htmlToRtf('<p>Olá 😀</p>');
     expect(rtf).toContain('\\u-10179?');
     expect(rtf).toContain('\\u-8704?');
