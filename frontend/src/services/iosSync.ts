@@ -2,6 +2,10 @@ const DB_NAME="korczak-nexus-ios";
 const STORE="syncQueue";
 const DB_VERSION=2;
 
+export function isSuccessfulIOSSyncResponse(status:number):boolean {
+  return status >= 200 && status < 300;
+}
+
 export type IOSQueuedOperation={
   id:string;
   method:string;
@@ -58,22 +62,29 @@ async function remove(id:string):Promise<void>{
 
 export async function pendingIOSOperations():Promise<number>{ return (await listQueue()).length; }
 
-export async function flushIOSOperationQueue(base:string,getToken:()=>string|null):Promise<{synced:number;pending:number}>{
+export async function flushIOSOperationQueue(base:string,getToken:()=>string|null):Promise<{synced:number;pending:number;blockedStatus?:number}>{
   if(!navigator.onLine) return {synced:0,pending:await pendingIOSOperations()};
   let synced=0;
+  let blockedStatus:number|undefined;
   for(const op of await listQueue()){
     const headers=new Headers();
     if(op.body!==undefined) headers.set("Content-Type","application/json");
     const token=getToken(); if(token) headers.set("Authorization","Bearer "+token);
     try{
       const response=await fetch(base.replace(/\/$/,"")+op.path,{method:op.method,headers,body:op.body});
-      if(response.ok || (response.status>=400 && response.status<500 && response.status!==409)){
-        await remove(op.id); synced++; continue;
+      if(isSuccessfulIOSSyncResponse(response.status)){
+        await remove(op.id);
+        synced++;
+        continue;
       }
+      // Preserve every failed operation. A 4xx may mean expired credentials,
+      // denied permission, invalid data, or a conflict; none proves the write succeeded.
+      blockedStatus=response.status;
+      window.dispatchEvent(new CustomEvent("nexusIOSSyncBlocked",{detail:{id:op.id,status:response.status}}));
       break;
     }catch{ break; }
   }
   const pending=await pendingIOSOperations();
-  window.dispatchEvent(new CustomEvent("nexusIOSSyncChanged",{detail:{synced,pending}}));
-  return {synced,pending};
+  window.dispatchEvent(new CustomEvent("nexusIOSSyncChanged",{detail:{synced,pending,blockedStatus}}));
+  return {synced,pending,...(blockedStatus===undefined?{}:{blockedStatus})};
 }
