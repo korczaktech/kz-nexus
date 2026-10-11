@@ -1,777 +1,121 @@
 # Korczak Nexus
 
-Sistema multiplataforma de gestão documental.
-
-## Plataformas
-
-- Web / GitHub Pages
-- Windows
-- macOS
-- Linux
-- Android
-- iOS
-
-## Estado geral das fases
-
-| Fase | Nome | Itens | Estado |
-|---:|---|---:|---|
-| 0 | Definição e Congelamento do Projeto | 1–16 | 🟢 Concluída |
-| 1 | Preparação do Ambiente | 17–28 | 🟢 Concluída |
-| 2 | Estrutura do Código | 29–44 | 🟢 Concluída |
-| 3 | Banco de Dados | 45–59 | 🟢 Concluída |
-| 4 | Backend / API | 60–84 | 🟢 Concluída |
-| 5 | Autenticação e Segurança | 85–100 | 🟢 Concluída |
-| 6 | Interface Web | 101–114 | 🟢 Concluída |
-| 7 | Telas Principais | 115–135 | 🟢 Concluída |
-| 8 | Editor de Documentos | 136–153 | 🟢 Concluída |
-| 9 | Organização | 154–167 | 🟢 Concluída |
-| 10 | Pesquisa | 168–180 | 🟢 Concluída |
-| 11 | Usuários, Grupos e Permissões | 181–194 | 🟢 Concluída |
-| 12 | Auditoria e Histórico | 195–204 | 🟢 Concluída |
-| 13 | Integração Frontend ↔ Backend | 205–222 | 🟢 Concluída |
-| 14 | Responsividade e Acessibilidade | 223–238 | 🟡 Em andamento |
-| 15 | Versão Web / GitHub Pages | 239–252 | ⚪ Planejada |
-| 16 | Aplicação Desktop | 253–274 | ⚪ Planejada |
-| 17 | Aplicação Mobile | 275–295 | ⚪ Planejada |
-| 18 | Sincronização Multiplataforma | 296–312 | ⚪ Planejada |
-| 19 | Testes Automatizados | 313–327 | 🟡 Em andamento |
-| 20 | Testes Manuais | 328–346 | ⚪ Planejada |
-| 21 | Testes das 6 Plataformas | 347–375 | ⚪ Planejada |
-| 22 | Desempenho | 376–388 | ⚪ Planejada |
-| 23 | Segurança Final | 389–403 | ⚪ Planejada |
-| 24 | Publicação do Backend | 404–416 | ⚪ Planejada |
-| 25 | Publicação das Aplicações | 417–428 | ⚪ Planejada |
-| 26 | Documentação | 429–445 | ⚪ Planejada |
-| 27 | Operação | 446–455 | ⚪ Planejada |
-| 28 | Homologação | 456–468 | ⚪ Planejada |
-| 29 | Release Final | 469–479 | ⚪ Planejada |
-| 30 | Conclusão Oficial | 480–503 | ⚪ Planejada |
-
-> O estado acima representa o estado documentado e validado no repositório. Uma fase planejada não deve ser considerada concluída apenas porque sua estrutura foi criada.
-
-# Fases do projeto
-
-## Fase 0 — Definição e Congelamento do Projeto
-**Itens:** 1–16  
-**Objetivo:** transformar o Korczak Nexus em uma especificação fechada antes da implementação.
-
-- escopo definitivo;
-- funcionalidades obrigatórias e futuras;
-- seis plataformas e comportamento comum;
-- particularidades por plataforma;
-- identidade visual;
-- nomenclatura;
-- regras de negócio;
-- permissões;
-- modelos de documentos, usuários, pastas, versões e auditoria;
-- documentação oficial.
-
-**Estado:** 🟢 Concluída.
-
-## Fase 1 — Preparação do Ambiente
-**Itens:** 17–28  
-**Objetivo:** criar um ambiente reproduzível de desenvolvimento, testes e empacotamento.
-
-- repositório e branch;
-- estrutura inicial;
-- .gitignore e ambiente;
-- separação desenvolvimento/produção;
-- Python;
-- frontend;
-- testes;
-- empacotamento desktop;
-- empacotamento mobile;
-- documentação de instalação;
-- validação em ambiente limpo.
-
-**Estado:** 🟢 Concluída.
-
-## Fase 2 — Estrutura do Código
-**Itens:** 29–44  
-**Objetivo:** estabelecer a organização interna definitiva.
-
-- aplicacao-web, api, testes, documentacao e scripts;
-- componentes;
-- serviços;
-- repositórios;
-- modelos;
-- rotas;
-- validações;
-- configurações;
-- erros centralizados;
-- logs;
-- ambientes de desenvolvimento e produção.
-
-**Estado:** 🟢 Concluída.
-
-## Fase 3 — Banco de Dados
-**Itens:** 45–59  
-**Objetivo:** criar a persistência oficial e garantir integridade e recuperação.
-
-- MongoDB e banco Korczak Nexuss;
-- usuários, documentos, versões, pastas, etiquetas, sessões, eventos e notificações;
-- índices;
-- referências;
-- integridade;
-- dados iniciais;
-- backup;
-- recuperação.
-
-**Estado:** 🟢 Concluída.
-
-## Fase 4 — Backend / API
-**Itens:** 60–84  
-**Objetivo:** disponibilizar a API de negócio para Web, desktop e mobile.
-
-- aplicação e /api/v1/;
-- health check;
-- autenticação e sessões;
-- usuários;
-- documentos;
-- versões;
-- pastas;
-- etiquetas;
-- favoritos;
-- recentes;
-- lixeira;
-- pesquisa;
-- grupos;
-- permissões;
-- auditoria;
-- notificações;
-- validação;
-- respostas;
-- erros;
-- logs;
-- testes dos endpoints.
-
-**Estado:** 🟢 Concluída.
-
-## Fase 5 — Autenticação e Segurança
-**Itens:** 85–100  
-**Objetivo:** proteger identidade, sessões, dados e operações administrativas.
-
-- contas, login e logout;
-- sessões;
-- proteção de rotas;
-- senhas seguras;
-- autorização no servidor;
-- níveis de acesso;
-- propriedade de documentos;
-- operações administrativas;
-- variáveis de ambiente;
-- revisão de segredos e histórico Git;
-- proteção de logs;
-- testes de segurança.
-
-**Estado:** 🟢 Concluída.
-
-## Fase 6 — Interface Web
-**Itens:** 101–114  
-**Objetivo:** construir a base visual e interativa da aplicação.
-
-- login;
-- sessão e recuperação;
-- layout;
-- menu lateral;
-- cabeçalho;
-- conteúdo;
-- navegação;
-- modais;
-- notificações;
-- tabelas;
-- carregamento;
-- estados vazios;
-- erros;
-- feedback.
-
-**Estado:** 🟢 Concluída.
-
-## Fase 7 — Telas Principais
-**Itens:** 115–135  
-**Objetivo:** transformar a interface base em uma aplicação documental funcional.
-
-- dashboard;
-- documentos;
-- visualização;
-- editor;
-- criação e edição;
-- histórico e versões;
-- pastas;
-- favoritos;
-- recentes;
-- lixeira;
-- pesquisa e pesquisa avançada;
-- perfil;
-- usuários;
-- grupos;
-- permissões;
-- auditoria;
-- administração;
-- configurações.
-
-**Estado:** 🟢 Concluída.
-
-## Fase 8 — Editor de Documentos
-**Itens:** 136–153  
-**Objetivo:** consolidar o editor como ferramenta real de criação, edição e preservação.
-
-- editor e barra de ferramentas;
-- criação e edição;
-- salvamento e estado do salvamento;
-- desfazer e refazer;
-- saída segura;
-- leitura;
-- novas versões;
-- histórico;
-- restauração;
-- proteção contra perda;
-- testes de documentos pequenos e grandes;
-- interrupção durante salvamento;
-- abertura simultânea.
-
-**Estado:** 🟢 Concluída.
-
-## Fase 9 — Organização
-**Itens:** 154–167  
-**Objetivo:** completar a organização documental.
-
-- criação, renomeação, exclusão lógica e restauração de pastas;
-- movimentação de documentos entre pastas;
-- criação, aplicação e remoção de etiquetas;
-- favoritos;
-- registro e consulta de documentos recentes;
-- lixeira de documentos;
-- restauração;
-- exclusão definitiva.
-
-**Documentação:** [Fase 9](docs/FASE_9_ORGANIZACAO.md)
-
-**Estado:** 🟢 Concluída.
-
-## Fase 10 — Pesquisa
-**Itens:** 168–180  
-**Objetivo:** criar pesquisa completa e escalável.
-
-- nome;
-- descrição;
-- conteúdo quando aplicável;
-- pasta;
-- etiqueta;
-- proprietário;
-- estado;
-- período;
-- filtros combinados;
-- ordenação;
-- paginação;
-- nenhuma ocorrência;
-- grandes volumes.
-
-**Documentação:** [Fase 10](docs/FASE_10_PESQUISA.md)
-
-**Estado:** 🟢 Concluída.
-
-## Fase 11 — Usuários, Grupos e Permissões
-**Itens:** 181–194  
-**Objetivo:** completar identidade, grupos e autorização.
-
-- criar, editar e desativar usuários;
-- grupos e membros;
-- permissões;
-- permissões documentais e de áreas;
-- perfis administrador, gestor e usuário;
-- acesso permitido;
-- acesso negado;
-- tentativa direta pela API.
-
-**Estado:** ⚪ Planejada.
-
-**Documentação:** [Fase 11](docs/FASE_11_USUARIOS_GRUPOS_PERMISSOES.md)
-
-**Estado:** 🟢 Concluída.
-
-## Fase 12 — Auditoria e Histórico
-**Itens:** 195–204  
-**Objetivo:** garantir rastreabilidade.
-
-- criação;
-- edição;
-- exclusão;
-- restauração;
-- permissões;
-- alterações administrativas;
-- autenticações relevantes;
-- consulta;
-- filtros;
-- integridade dos registros.
-
-**Estado:** ⚪ Planejada.
-
-## Fase 12 — Auditoria e Histórico
-**Itens:** 195–204  
-**Objetivo:** garantir rastreabilidade das operações e integridade dos registros de auditoria.
-
-- criação, edição, exclusão e restauração;
-- alterações de permissões;
-- alterações administrativas;
-- autenticações relevantes;
-- consulta e filtros;
-- integridade criptográfica e detecção de adulteração;
-- redaction de dados sensíveis.
-
-**Documentação:** [Fase 12](docs/FASE_12_AUDITORIA_E_HISTORICO.md)
-
-**Estado:** 🟢 Concluída.
-
-## Fase 13 — Integração Frontend ↔ Backend
-**Itens:** 205–222  
-**Objetivo:** garantir que toda ação da interface use a aplicação real.
-
-- login;
-- dashboard;
-- documentos;
-- editor;
-- pastas;
-- favoritos;
-- recentes;
-- lixeira;
-- pesquisa;
-- usuários;
-- grupos;
-- permissões;
-- auditoria;
-- configurações;
-- eliminação de dados fictícios;
-- eliminação de botões sem função;
-- comportamento real;
-- tratamento de erros da API.
-
-**Estado:** ⚪ Planejada.
-
-## Fase 14 — Responsividade e Acessibilidade
-**Itens:** 223–238  
-**Objetivo:** garantir qualidade em diferentes telas e condições de acesso.
-
-- desktop;
-- notebook;
-- tablet;
-- celulares;
-- orientação vertical e horizontal;
-- teclado;
-- foco;
-- leitores de tela quando aplicável;
-- contraste;
-- textos;
-- toque;
-- menus;
-- tabelas;
-- editor.
-
-**Documentação:** [Fase 14](docs/FASE_14_RESPONSIVIDADE_ACESSIBILIDADE.md)
-
-**Estado:** 🟡 Em andamento.
-
-## Fase 15 — Versão Web / GitHub Pages
-**Itens:** 239–252  
-**Objetivo:** preparar e publicar a versão Web.
-
-- build de produção;
-- GitHub Pages;
-- domínio quando houver;
-- base/path;
-- comunicação segura com API;
-- proteção de informações privadas;
-- testes de login, documentos, editor e pesquisa;
-- todas as rotas;
-- recarregamento;
-- publicação.
-
-**Estado:** ⚪ Planejada.
-
-## Fase 16 — Aplicação Desktop
-**Itens:** 253–274  
-**Objetivo:** disponibilizar clientes Windows, macOS e Linux.
-
-- tecnologia definitiva;
-- aplicações Windows/macOS/Linux;
-- ícone, nome e informações;
-- janela e inicialização;
-- API e armazenamento local;
-- instaladores/pacotes;
-- instalação;
-- atualização;
-- desinstalação;
-- login;
-- documentos;
-- editor;
-- encerramento;
-- execução sem privilégios administrativos.
-
-**Estado:** 🟢 Concluída.
-
-## Fase 17 — Aplicação Mobile
-**Itens:** 275–295  
-**Objetivo:** disponibilizar Android e iOS.
-
-- tecnologia definitiva;
-- Android e iOS;
-- toque;
-- menus;
-- editor;
-- listas;
-- pesquisa;
-- notificações quando previstas;
-- armazenamento local;
-- sessão;
-- rotação;
-- telas;
-- teclado;
-- perda e recuperação de conexão;
-- APK/AAB;
-- pacote iOS;
-- instalação;
-- atualização;
-- preparação para lojas.
-
-**Estado:** ⚪ Planejada.
-
-## Fase 18 — Sincronização Multiplataforma
-**Itens:** 296–312  
-**Objetivo:** manter o mesmo estado de dados entre dispositivos.
-
-- servidor como fonte central;
-- identificadores;
-- versões;
-- documentos;
-- pastas;
-- favoritos;
-- configurações globais;
-- sessões conforme política;
-- perda e reconexão;
-- alterações concorrentes;
-- prevenção de sobrescrita silenciosa;
-- testes entre computador, celular, Web e desktop;
-- múltiplos dispositivos.
-
-**Estado:** ⚪ Planejada.
-
-## Fase 19 — Testes Automatizados
-**Itens:** 313–327  
-**Objetivo:** ampliar a cobertura automática e impedir regressões.
-
-- modelos;
-- validações;
-- serviços;
-- repositórios;
-- rotas;
-- autenticação;
-- permissões;
-- documentos;
-- versões;
-- pesquisa;
-- lixeira;
-- auditoria;
-- frontend;
-- integração;
-- regressão.
-
-**Estado:** ⚪ Planejada.
-
-## Fase 20 — Testes Manuais
-**Itens:** 328–346  
-**Objetivo:** validar os fluxos completos como usuário real.
-
-- conta;
-- entrada e saída;
-- documentos;
-- edição;
-- salvamento;
-- versões;
-- restauração;
-- movimentação;
-- favoritos;
-- pesquisa;
-- exclusão;
-- administração;
-- permissões;
-- auditoria;
-- erros;
-- rede interrompida;
-- sessão expirada.
-
-**Estado:** ⚪ Planejada.
-
-## Fase 21 — Testes das 6 Plataformas
-**Itens:** 347–375  
-**Objetivo:** validar todos os ambientes oficiais.
-
-- Web: Chrome, Firefox, Edge e Safari quando aplicável;
-- Windows: instalação, execução, login, documentos e atualização;
-- macOS: instalação, execução, login, documentos e atualização;
-- Linux: instalação, execução, login, documentos e atualização;
-- Android: instalação, login, documentos, editor e sincronização;
-- iOS: instalação, login, documentos, editor e sincronização.
-
-**Estado:** ⚪ Planejada.
-
-## Fase 22 — Desempenho
-**Itens:** 376–388  
-**Objetivo:** medir e otimizar o desempenho.
-
-- carregamento;
-- login;
-- abertura;
-- pesquisa;
-- grandes volumes;
-- paginação;
-- consultas;
-- dados transferidos;
-- frontend;
-- imagens/recursos;
-- memória;
-- CPU;
-- dispositivos de baixo desempenho.
-
-**Estado:** ⚪ Planejada.
-
-## Fase 23 — Segurança Final
-**Itens:** 389–403  
-**Objetivo:** executar a revisão de segurança antes da produção.
-
-- autenticação;
-- autorização;
-- sessões;
-- API;
-- banco;
-- ambiente;
-- CORS;
-- exposição de informações;
-- logs;
-- arquivos públicos;
-- credenciais;
-- chaves/tokens no histórico;
-- acessos indevidos;
-- manipulação de requisições;
-- correção das vulnerabilidades.
-
-**Estado:** ⚪ Planejada.
-
-## Fase 24 — Publicação do Backend
-**Itens:** 404–416  
-**Objetivo:** publicar e validar a API em produção.
-
-- ambiente;
-- MongoDB;
-- variáveis;
-- hospedagem;
-- publicação;
-- health check;
-- banco;
-- autenticação;
-- documentos;
-- APIs;
-- logs;
-- monitoramento;
-- backup.
-
-**Estado:** ⚪ Planejada.
-
-## Fase 25 — Publicação das Aplicações
-**Itens:** 417–428  
-**Objetivo:** preparar a distribuição das aplicações.
-
-- Web;
-- Windows;
-- macOS;
-- Linux;
-- Android;
-- iOS;
-- páginas de download;
-- instalação;
-- atualização;
-- versão inicial;
-- versionamento;
-- registro da versão publicada.
-
-**Estado:** ⚪ Planejada.
-
-## Fase 26 — Documentação
-**Itens:** 429–445  
-**Objetivo:** documentar o produto para desenvolvimento, operação e uso.
-
-- documentação geral;
-- arquitetura;
-- frontend;
-- backend;
-- API;
-- banco;
-- autenticação;
-- permissões;
-- editor;
-- implantação;
-- manutenção;
-- desenvolvedores;
-- usuário;
-- administrador;
-- instalação desktop;
-- mobile;
-- solução de problemas.
-
-**Estado:** ⚪ Planejada.
-
-## Fase 27 — Operação
-**Itens:** 446–455  
-**Objetivo:** estabelecer a rotina de operação contínua.
-
-- backup;
-- atualização;
-- monitoramento;
-- correção de erros;
-- revisão de segurança;
-- limpeza;
-- manutenção do banco;
-- controle de versões;
-- publicação;
-- rollback.
-
-**Estado:** ⚪ Planejada.
-
-## Fase 28 — Homologação
-**Itens:** 456–468  
-**Objetivo:** validar a versão candidata antes do lançamento.
-
-- ambiente final;
-- fluxos principais;
-- permissões;
-- dispositivos;
-- plataformas;
-- aparência;
-- desempenho;
-- segurança;
-- sincronização;
-- registro de problemas;
-- correções;
-- nova execução dos testes;
-- aprovação da versão candidata.
-
-**Estado:** ⚪ Planejada.
-
-## Fase 29 — Release Final
-**Itens:** 469–479  
-**Objetivo:** realizar o lançamento oficial.
-
-- versão 1.0.0;
-- tag Git;
-- release;
-- Web;
-- desktop;
-- mobile;
-- documentação;
-- backup inicial;
-- changelog;
-- data de lançamento;
-- funcionamento em produção.
-
-**Estado:** ⚪ Planejada.
-
-## Fase 30 — Conclusão Oficial
-**Itens:** 480–503  
-**Objetivo:** comprovar a conclusão real do projeto.
-
-### Verificações
-
-- funcionalidades;
-- ausência de botões sem função;
-- ausência de telas fictícias;
-- frontend ↔ backend;
-- backend ↔ banco;
-- autenticação;
-- permissões;
-- versionamento;
-- histórico;
-- auditoria;
-- pesquisa;
-- lixeira;
-- sincronização.
-
-### Plataformas
-
-- Web;
-- Windows;
-- macOS;
-- Linux;
-- Android;
-- iOS.
-
-### Operação final
-
-- documentação;
-- segurança;
-- backup;
-- publicação;
-- operação.
-
-O projeto só deve ser considerado 100% concluído quando os itens **1–503** estiverem validados.
-
-**Estado:** ⚪ Planejada.
-
-# Estrutura principal
-
-- 'aplicacao-web/' — raiz formal da aplicação Web.
-- 'api/' — raiz formal da API.
-- 'backend/' — implementação da API.
-- 'frontend/' — implementação da interface Web.
-- 'desktop/' — configuração do cliente desktop.
-- 'mobile/' — configuração dos clientes mobile.
-- 'testes/' — raiz formal da estratégia de testes.
-- 'documentacao/' — raiz formal da documentação.
-- 'scripts/' — raiz formal de automações.
-- 'docs/' — documentação detalhada das fases.
-
-# Documentação detalhada
-
-- [Fase 0](docs/FASE_0_DEFINICAO_E_CONGELAMENTO.md)
-- [Fase 1](docs/FASE_1_PREPARACAO_DO_AMBIENTE.md)
-- [Fase 2](docs/FASE_2_ESTRUTURA_DO_CODIGO.md)
-- [Fase 3](docs/FASE_3_BANCO_DE_DADOS.md)
-- [Fase 4](docs/FASE_4_BACKEND_API.md)
-- [Fase 5](docs/FASE_5_AUTENTICACAO_E_SEGURANCA.md)
-- [Fase 6](docs/FASE_6_INTERFACE_WEB.md)
-- [Fase 7](docs/FASE_7_TELAS_PRINCIPAIS.md)
-- [Fase 8](docs/FASE_8_EDITOR_DE_DOCUMENTOS.md)
-- Fase 8 — Editor de Documentos
-- Fase 9 — Organização
-- Fase 10 — Pesquisa
-- Fase 11 — Usuários, Grupos e Permissões
-- Fase 12 — Auditoria e Histórico
-- Fase 13 — Integração Frontend ↔ Backend
-- Fase 14 — Responsividade e Acessibilidade
-- Fase 15 — Versão Web / GitHub Pages
-- Fase 16 — Aplicação Desktop
-- Fase 17 — Aplicação Mobile
-- Fase 18 — Sincronização Multiplataforma
-- Fase 19 — Testes Automatizados
-- Fase 20 — Testes Manuais
-- Fase 21 — Testes das 6 Plataformas
-- Fase 22 — Desempenho
-- Fase 23 — Segurança Final
-- Fase 24 — Publicação do Backend
-- Fase 25 — Publicação das Aplicações
-- Fase 26 — Documentação
-- Fase 27 — Operação
-- Fase 28 — Homologação
-- Fase 29 — Release Final
-- Fase 30 — Conclusão Oficial
-
-# Critério global de conclusão
-
-O Korczak Nexus não deve ser considerado concluído somente porque o código foi escrito.
-
-O critério final é a validação dos **503 itens da checklist oficial**, cobrindo:
-
-**Planejamento → Ambiente → Estrutura → Banco → Backend → Segurança → Interface → Funcionalidades → Integração → Responsividade → Web → Desktop → Mobile → Sincronização → Testes → Segurança final → Produção → Documentação → Homologação → Release → Operação.**
-
-**Projeto:** Korczak Nexus  
-**Checklist total:** 503 itens  
-**Fases:** 30  
-**Plataformas:** 6  
+Sistema de gestão documental da Korczak Technologies. O repositório contém a aplicação Web (React + TypeScript + Vite), uma API Python/FastAPI, o cliente Desktop baseado em Electron e a base de clientes mobile/PWA.
+
+> **Estado honesto do projeto:** há uma aplicação Web implementada, testes automatizados e um pipeline de publicação que passou no último commit verificado. Isso **não** significa que o produto inteiro esteja 100% concluído: a validação manual, a disponibilidade da API em produção, os builds/distribuição das seis plataformas, a sincronização completa e a homologação final ainda precisam de evidências próprias.
+
+## Estado atual — resumo executivo
+
+- **Web:** interface implementada com autenticação/cadastro/recuperação, navegação documental, editor, pastas, favoritos, recentes, lixeira, pesquisa, perfil, administração, grupos, permissões, auditoria e configurações. O cliente HTTP usa a API configurada em `VITE_API_BASE_URL` (padrão do código: `https://kzdoc.onrender.com`).
+- **PWA:** manifesto, service worker, ícones SVG e geração de PNG no pipeline de Pages. O manifesto define instalação como aplicativo Web; isso não equivale a aplicativos nativos publicados.
+- **Integração:** o frontend contém chamadas reais para os endpoints de autenticação, documentos, versões, pastas, pesquisa, usuários, grupos, permissões e auditoria. A existência das chamadas não substitui testes completos de ponta a ponta.
+- **Publicação Web:** o workflow `.github/workflows/pages.yml` executou com sucesso no commit `7591090eb70dca710b90fde733c2eabf53ada174`, incluindo testes do frontend, verificação TypeScript/build, artefatos PWA e etapa de deploy do GitHub Pages. O site e a API precisam continuar sendo monitorados; essa execução não é uma garantia de disponibilidade atual.
+- **Testes:** Vitest cobre o editor, formatos, persistência, serviços e integrações; foram adicionados testes para o cliente HTTP. A última execução consultada passou, mas a cobertura crítica ainda precisa ser ampliada e os testes de backend precisam de uma execução verificável no CI.
+- **Desktop:** há cliente Electron, configuração de empacotamento para Windows/macOS/Linux e workflow de CI. Não declarar as três plataformas homologadas sem builds e testes por sistema operacional.
+- **Mobile:** há configuração Capacitor e arquivos/workflows nativos no repositório. A experiência mobile, a sincronização e a publicação em lojas ainda precisam de validação completa.
+- **API/backend:** existe implementação FastAPI com módulos de autenticação/segurança, rotas, serviços, repositórios, MongoDB, auditoria e testes. A saúde atual do serviço hospedado, os backups e a operação de produção não foram confirmados nesta atualização.
+
+## Legenda de status
+
+- 🟢 **Concluída:** entregáveis da fase presentes e critérios principais aceitos com evidências.
+- 🟡 **Parcial / validação pendente:** há código ou configuração, mas ainda faltam testes, homologação, operação ou evidências para considerar a fase concluída.
+- ⚪ **Pendente:** fase ainda não iniciada de forma suficiente para ser considerada implementada.
+
+## Estado das 31 fases (itens 1–503)
+
+| Fase | Itens | Escopo | Estado atual |
+|---:|---:|---|---|
+| 0 | 1–16 | Definição e congelamento do projeto | 🟢 Concluída documentalmente |
+| 1 | 17–28 | Preparação do ambiente | 🟢 Estrutura e automação-base presentes |
+| 2 | 29–44 | Estrutura do código | 🟢 Estrutura principal presente |
+| 3 | 45–59 | Banco de dados | 🟡 Implementação presente; validar ambiente, integridade, backup e recuperação |
+| 4 | 60–84 | Backend / API | 🟡 API implementada; falta comprovação completa dos contratos e operação de produção |
+| 5 | 85–100 | Autenticação e segurança | 🟡 Implementação presente; auditoria de segurança final pendente |
+| 6 | 101–114 | Interface Web | 🟡 Interface presente; validação de todos os estados e fluxos pendente |
+| 7 | 115–135 | Telas principais | 🟡 Áreas principais existem; aceite funcional completo pendente |
+| 8 | 136–153 | Editor de documentos | 🟡 Editor e testes de formatos existem; homologação de fluxos e formatos pendente |
+| 9 | 154–167 | Organização | 🟡 Funções de pastas/favoritos/recentes/lixeira existem; validação ponta a ponta pendente |
+| 10 | 168–180 | Pesquisa | 🟡 Pesquisa rápida/avançada implementada no cliente; validação de filtros e volume pendente |
+| 11 | 181–194 | Usuários, grupos e permissões | 🟡 Código e documentação existem; repetir e registrar os testes de autorização |
+| 12 | 195–204 | Auditoria e histórico | 🟡 Código e documentação existem; comprovar integridade e isolamento com testes reproduzíveis |
+| 13 | 205–222 | Integração frontend ↔ backend | 🟡 Cliente HTTP e fluxos integrados existem; validar fluxos completos com backend real |
+| 14 | 223–238 | Responsividade e acessibilidade | 🟡 Foco visível, skip link, redução de movimento e alto contraste inicial; testes manuais pendentes |
+| 15 | 239–252 | Web / GitHub Pages | 🟡 Pipeline de build/deploy passou; confirmar disponibilidade real, rotas e fluxos em produção |
+| 16 | 253–274 | Aplicação Desktop | 🟡 Cliente Electron e configuração de pacotes existem; builds/testes por SO e distribuição pendentes |
+| 17 | 275–295 | Aplicação Mobile | 🟡 Base Capacitor/nativa presente; validar Android/iOS, instalação e experiência real |
+| 18 | 296–312 | Sincronização multiplataforma | 🟡 Há suporte offline específico no cliente iOS; sincronização e conflitos entre plataformas não homologados |
+| 19 | 313–327 | Testes automatizados | 🟡 CI frontend passou e testes de API foram adicionados; ampliar cobertura e validar backend no CI |
+| 20 | 328–346 | Testes manuais | ⚪ Falta executar e registrar os roteiros de aceite completos |
+| 21 | 347–375 | Testes das seis plataformas | ⚪ Falta matriz de evidências Web, Windows, macOS, Linux, Android e iOS |
+| 22 | 376–388 | Desempenho | ⚪ Falta medir, estabelecer metas e otimizar com resultados documentados |
+| 23 | 389–403 | Segurança final | ⚪ Falta revisão final, correção de achados e evidência de aprovação |
+| 24 | 404–416 | Publicação do backend | 🟡 Há URL de API configurada; disponibilidade, configuração produtiva, monitoramento e recuperação precisam de validação |
+| 25 | 417–428 | Publicação das aplicações | 🟡 Web possui pipeline de publicação; releases e instaladores de todas as plataformas precisam ser comprovados |
+| 26 | 429–445 | Documentação | 🟡 Documentação técnica e de fases existe; completar guias de usuário, administrador, instalação e solução de problemas |
+| 27 | 446–455 | Operação | ⚪ Falta formalizar e testar monitoramento, backup, rollback, manutenção e resposta a incidentes |
+| 28 | 456–468 | Homologação | ⚪ Falta executar homologação integral e registrar aprovação |
+| 29 | 469–479 | Release final | ⚪ Falta validar versão candidata e release 1.0.0 em todas as plataformas |
+| 30 | 480–503 | Conclusão oficial | ⚪ Só concluir após validar e documentar todos os itens 1–503 |
+
+**Importante:** fases com documentação ou estrutura de código não são automaticamente consideradas concluídas. Os status acima são conservadores: quando não há evidência reproduzível de aceite, a fase permanece parcial ou pendente.
+
+## O que está implementado na aplicação Web
+
+Com base na implementação atual em `frontend/src/App.tsx` e `frontend/src/services/api.ts`:
+
+- Login, cadastro, recuperação de acesso e persistência do token de sessão.
+- Seleção inicial de armazenamento local ou Google Drive.
+- Navegação para início, documentos, pastas, favoritos, recentes, lixeira, pesquisa, perfil e configurações.
+- Visualização/edição, salvamento e versões de documentos.
+- Chamadas de API para documentos, pastas, favoritos, recentes, lixeira, pesquisa rápida/avançada, usuários, grupos, permissões e auditoria.
+- Tratamento centralizado de erros HTTP, timeout e falhas de conexão; remoção do token quando a API responde 401.
+- Interface PWA com manifesto, service worker e recursos de ícone.
+- Ajustes iniciais de acessibilidade: foco de teclado visível, link para pular a navegação, respeito a `prefers-reduced-motion` e suporte inicial a `forced-colors`.
+
+### Limitações e pontos ainda não confirmados na Web
+
+- Não foi possível confirmar nesta revisão a disponibilidade em tempo real do domínio e do backend; o sucesso do workflow comprova a execução do pipeline naquele commit, não a saúde contínua dos serviços.
+- Acessibilidade e responsividade ainda precisam de testes manuais com teclado, leitor de tela, contraste, tamanhos de tela e orientação.
+- A cobertura dos testes de interface precisa ser baseada em comportamento real; alguns testes existentes apenas verificam listas/constantes e não validam interações reais.
+- A suíte de testes do cliente API existe, mas precisa permanecer verde no CI do commit atual e crescer para fluxos completos.
+- A seleção de armazenamento local/Google Drive não deve ser interpretada como sincronização geral entre todos os dispositivos.
+- Não considerar funções como OCR, assinatura, backup de usuário ou outras operações como disponíveis se não houver fluxo implementado, endpoint ativo e teste de aceite.
+
+## Verificação contínua
+
+Workflow principal: [Deploy GitHub Pages](.github/workflows/pages.yml).
+
+No último run consultado, os passos abaixo terminaram com sucesso:
+
+1. instalação das dependências;
+2. verificação de paridade da Fase 1;
+3. testes do frontend (`npm test`);
+4. TypeScript e build de produção (`npm run build`);
+5. geração e verificação dos ícones PWA;
+6. upload do artefato e etapa de deploy do GitHub Pages.
+
+Links úteis:
+- [Histórico do CI](https://github.com/korczaktech/kz-nexus/actions)
+- [Fase 14 — Responsividade e acessibilidade](docs/FASE_14_RESPONSIVIDADE_ACESSIBILIDADE.md)
+- [Fase 19 — Testes automatizados](docs/FASE_19_TESTES_AUTOMATIZADOS.md)
+- [Fase 11 — Usuários, grupos e permissões](docs/FASE_11_USUARIOS_GRUPOS_PERMISSOES.md)
+- [Fase 12 — Auditoria e histórico](docs/FASE_12_AUDITORIA_E_HISTORICO.md)
+- [Fase 13 — Integração frontend/backend](docs/FASE_13_INTEGRACAO_FRONTEND_BACKEND.md)
+
+## Estrutura principal
+
+- `frontend/` — aplicação Web React + TypeScript + Vite.
+- `backend/` — API FastAPI, serviços, repositórios, modelos e persistência.
+- `api/` — documentação/raiz formal da API.
+- `desktop/` — cliente Electron e configuração de empacotamento.
+- `mobile/` — configuração Capacitor.
+- `android/` e `ios/` — projetos nativos, quando presentes no branch.
+- `backend/tests/` — testes de backend.
+- `frontend/src/**/*.test.*` — testes de frontend.
+- `docs/` — documentação das fases e critérios de aceite.
+- `scripts/` — validações, segurança e ferramentas operacionais.
+- `.github/workflows/` — CI, publicação Web, Desktop, iOS e releases.
+
+## Critério para declarar 100%
+
+O Korczak Nexus só estará **100% concluído** quando os itens **1–503** tiverem evidência de implementação e aceite; os fluxos críticos passarem em testes automatizados e manuais; a API e o banco estiverem validados em produção; as seis plataformas forem testadas; a sincronização e a recuperação forem comprovadas; e a release final estiver publicada e documentada. Até lá, este README deve continuar distinguindo implementação parcial de conclusão verificada.
