@@ -57,7 +57,7 @@ A Fase 3 possui testes unitários para modelos, integridade e comandos de backup
 
 A estrutura de dados documentada nesta fase é, portanto:
 
-`usuarios` · `documentos` · `versoes` · `pastas` · `etiquetas` · `sessoes` · `eventos` · `notificacoes` · `grupos`
+`Contas.contas` (identidades) · `KZDocs.documentos` · `KZDocs.versoes` · `KZDocs.pastas` · `KZDocs.etiquetas` · `KZDocs.sessoes` · `KZDocs.eventos` · `KZDocs.notificacoes` · `KZDocs.grupos`
 
 com `migrations` como coleção técnica de controle de versões.
 

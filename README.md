@@ -28,9 +28,9 @@ Sistema de gestão documental da Korczak Technologies. O repositório contém a 
 | 0 | 1–16 | Definição e congelamento do projeto | 🟢 Concluída documentalmente |
 | 1 | 17–28 | Preparação do ambiente | 🟢 Estrutura e automação-base presentes |
 | 2 | 29–44 | Estrutura do código | 🟢 Estrutura principal presente |
-| 3 | 45–59 | Banco de dados | 🟡 Implementação presente; validar ambiente, integridade, backup e recuperação |
+| 3 | 45–59 | Banco de dados | 🟡 Backup/restauração restringidos ao namespace solicitado; ensaio operacional de recuperação pendente |
 | 4 | 60–84 | Backend / API | 🟡 API implementada; falta comprovação completa dos contratos e operação de produção |
-| 5 | 85–100 | Autenticação e segurança | 🟡 Implementação presente; auditoria de segurança final pendente |
+| 5 | 85–100 | Autenticação e segurança | 🟡 Política de senha também limita entradas a 72 bytes UTF-8 para evitar truncamento bcrypt; auditoria final pendente |
 | 6 | 101–114 | Interface Web | 🟡 Interface presente; validação de todos os estados e fluxos pendente |
 | 7 | 115–135 | Telas principais | 🟡 Áreas principais existem; aceite funcional completo pendente |
 | 8 | 136–153 | Editor de documentos | 🟡 Editor e testes de formatos existem; homologação de fluxos e formatos pendente |
@@ -43,14 +43,14 @@ Sistema de gestão documental da Korczak Technologies. O repositório contém a 
 | 15 | 239–252 | Web / GitHub Pages | 🟡 Pipeline de build/deploy passou; confirmar disponibilidade real, rotas e fluxos em produção |
 | 16 | 253–274 | Aplicação Desktop | 🟡 Testes e pacotes Windows/macOS/Linux (AppImage + DEB) passaram no CI; testes manuais e release pública pendentes |
 | 17 | 275–295 | Aplicação Mobile | 🟡 CI Android e build iOS para simulador passaram; validação em dispositivos reais, sincronização e experiência manual pendentes |
-| 18 | 296–312 | Sincronização multiplataforma | 🟡 Há suporte offline específico no cliente iOS; sincronização e conflitos entre plataformas não homologados |
+| 18 | 296–312 | Sincronização multiplataforma | 🟡 Filas PWA/Android preservam operações com falha; replay cloud e resolução de conflitos ainda pendentes |
 | 19 | 313–327 | Testes automatizados | 🟡 CI frontend passou e testes de API foram adicionados; ampliar cobertura e validar backend no CI |
 | 20 | 328–346 | Testes manuais | ⚪ Falta executar e registrar os roteiros de aceite completos |
 | 21 | 347–375 | Testes das seis plataformas | ⚪ Falta matriz de evidências Web, Windows, macOS, Linux, Android e iOS |
-| 22 | 376–388 | Desempenho | ⚪ Falta medir, estabelecer metas e otimizar com resultados documentados |
+| 22 | 376–388 | Desempenho | 🟡 Smoke test k6 de baixa carga adicionado; baseline representativa e otimização pendentes |
 | 23 | 389–403 | Segurança final | ⚪ Falta revisão final, correção de achados e evidência de aprovação |
-| 24 | 404–416 | Publicação do backend | 🟡 Há URL de API configurada; disponibilidade, configuração produtiva, monitoramento e recuperação precisam de validação |
-| 25 | 417–428 | Publicação das aplicações | 🟡 Web publicada pelo pipeline e pacotes Desktop gerados no CI; release final e APK assinado ainda precisam ser publicados/verificados |
+| 24 | 404–416 | Publicação do backend | 🟡 Endpoint /ready agora verifica MongoDB; configuração real, alertas e disponibilidade ainda precisam de evidências |
+| 25 | 417–428 | Publicação das aplicações | 🟡 Workflow exige keystore e valida assinatura APK; release assinada ainda não foi executada |
 | 26 | 429–445 | Documentação | 🟡 Documentação técnica e de fases existe; completar guias de usuário, administrador, instalação e solução de problemas |
 | 27 | 446–455 | Operação | ⚪ Falta formalizar e testar monitoramento, backup, rollback, manutenção e resposta a incidentes |
 | 28 | 456–468 | Homologação | ⚪ Falta executar homologação integral e registrar aprovação |
@@ -103,7 +103,11 @@ No último run consultado, os passos abaixo terminaram com sucesso:
 Links úteis:
 - [Histórico do CI](https://github.com/korczaktech/kz-nexus/actions)
 - [Fase 14 — Responsividade e acessibilidade](docs/FASE_14_RESPONSIVIDADE_ACESSIBILIDADE.md)
+- [Fase 18 — Sincronização multiplataforma](docs/FASE_18_SINCRONIZACAO_MULTIPLATAFORMA.md)
 - [Fase 19 — Testes automatizados](docs/FASE_19_TESTES_AUTOMATIZADOS.md)
+- [Fase 22 — Desempenho e carga](docs/FASE_22_DESEMPENHO_E_CARGA.md)
+- [Fases 24/27 — Operação e prontidão](docs/FASE_24_OPERACAO_E_PRONTIDAO.md)
+- [Fase 25 — Releases](docs/FASE_25_RELEASES.md)
 - [Fase 11 — Usuários, grupos e permissões](docs/FASE_11_USUARIOS_GRUPOS_PERMISSOES.md)
 - [Fase 12 — Auditoria e histórico](docs/FASE_12_AUDITORIA_E_HISTORICO.md)
 - [Fase 13 — Integração frontend/backend](docs/FASE_13_INTEGRACAO_FRONTEND_BACKEND.md)
