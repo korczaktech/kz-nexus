@@ -26,7 +26,7 @@ describe('Google Drive sync adapters',()=>{
     const file:CloudFile={id:'slides-read',name:'Deck',mimeType:'application/vnd.google-apps.presentation'};
     const result=await readCloudFile(file);
     expect(result.document_type).toBe('html');
-    expect(result.content).toBe('<p>Título</p><p>Corpo</p>');
+    expect(result.content).toBe('<p data-slide-object-id="title">Título</p><p data-slide-object-id="body">Corpo</p>');
   });
   it('syncs plain text back into existing Google Slides text boxes',async()=>{
     const {calls}=setupFetch(url=>url.endsWith(':batchUpdate')?new Response('{}',{status:200}):new Response(JSON.stringify({slides:[{pageElements:[
@@ -34,11 +34,20 @@ describe('Google Drive sync adapters',()=>{
       {objectId:'body',shape:{text:{textElements:[{textRun:{content:'Corpo antigo\n'}}]}}}
     ]}]}),{status:200}));
     const file:CloudFile={id:'slides-save',name:'Deck',mimeType:'application/vnd.google-apps.presentation'};
-    await saveCloudFile(file,'<p>Novo título</p><p>Novo corpo</p>');
+    await saveCloudFile(file,'<p data-slide-object-id="body">Novo corpo</p><p data-slide-object-id="title">Novo título</p>');
     const batch=calls.find(call=>call.url.endsWith(':batchUpdate'));
     const requests=JSON.parse(String(batch?.init?.body)).requests;
     expect(requests.some((request:any)=>request.insertText?.objectId==='title'&&request.insertText?.text==='Novo título')).toBe(true);
     expect(requests.some((request:any)=>request.insertText?.objectId==='body'&&request.insertText?.text==='Novo corpo')).toBe(true);
+  });
+
+  it('refuses to sync new Slides paragraphs without a stable object ID',async()=>{
+    const {calls}=setupFetch(()=>new Response(JSON.stringify({slides:[{pageElements:[
+      {objectId:'title',shape:{text:{textElements:[{textRun:{content:'Título antigo\n'}}]}}}
+    ]}]}),{status:200}));
+    const file:CloudFile={id:'slides-new-text',name:'Deck',mimeType:'application/vnd.google-apps.presentation'};
+    await expect(saveCloudFile(file,'<p data-slide-object-id="title">Título</p><p>Texto novo</p>')).rejects.toThrow(/identificador/);
+    expect(calls.some(call=>call.url.endsWith(':batchUpdate'))).toBe(false);
   });
   it('imports formula cells and quoted CSV values from Google Sheets',async()=>{
     setupFetch(url=>url.includes('/spreadsheets/sheet-read?fields=')?new Response(JSON.stringify({sheets:[{properties:{title:'Dados',index:0}}]}),{status:200}):new Response(JSON.stringify({values:[['Name','Formula'],['Korczak','=A1+A2'],['A, B','say "hi"']]}),{status:200}));
