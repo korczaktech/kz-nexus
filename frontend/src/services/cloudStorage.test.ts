@@ -59,11 +59,11 @@ describe('Google Drive sync adapters',()=>{
     expect(result.content).toContain('<td>A, B</td>');
   });
   it('allows an empty Google Sheet to be opened and cleared',async()=>{
-    const {calls}=setupFetch(url=>url.includes('/spreadsheets/empty?fields=')?new Response(JSON.stringify({sheets:[{properties:{title:'Dados',index:0}}]}),{status:200}):url.includes('/values/')?new Response(JSON.stringify({values:[]}),{status:200}):new Response('{}',{status:200}));
+    const {calls}=setupFetch(url=>url.includes('/spreadsheets/empty?fields=')?new Response(JSON.stringify({sheets:[{properties:{title:'Dados',index:0,sheetId:1}}]}),{status:200}):url.includes('/values/')?new Response(JSON.stringify({values:[]}),{status:200}):new Response('{}',{status:200}));
     const file:CloudFile={id:'empty',name:'Vazia',mimeType:'application/vnd.google-apps.spreadsheet'};
     const imported=await readCloudFile(file);
     expect(imported.content).toContain('data-google-sheet-id="1"');
-    await saveCloudFile(file,'');
+    await saveCloudFile(file,imported.content);
     expect(calls.filter(call=>call.url.includes('values:batchClear'))).toHaveLength(1);
     expect(calls.some(call=>call.init?.method==='PUT')).toBe(false);
   });
@@ -97,7 +97,7 @@ describe('Google Drive sync adapters',()=>{
     await expect(saveCloudFile(file,'<table><tr><td>A</td></tr></table>')).rejects.toThrow('não achatar tabelas');
     expect(calls).toHaveLength(0);
   });
-  it('clears and updates the first Google Sheets tab with parsed values',async()=>{
+  it('clears and updates a Google Sheets tab by stable ID',async()=>{
     const {calls}=setupFetch(url=>url.includes('/spreadsheets/sheet-1?fields=')?new Response(JSON.stringify({sheets:[{properties:{title:'Dados',index:0}}]}),{status:200}):new Response('{}',{status:200}));
     const file:CloudFile={id:'sheet-1',name:'Dados',mimeType:'application/vnd.google-apps.spreadsheet'};
     await saveCloudFile(file,'<table data-google-sheet-id="1" data-google-sheet-title="Dados"><tr><td>nome</td><td>valor</td></tr><tr><td>Korczak</td><td>42</td></tr></table>');
