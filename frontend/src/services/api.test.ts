@@ -43,6 +43,17 @@ describe('API client — autenticação e tratamento de falhas',()=>{
     expect(getToken()).toBe('session-token');
   });
 
+  it('aborta requisições que excedem 30 segundos e devolve erro de timeout controlado',async()=>{
+    vi.useFakeTimers();
+    fetchMock.mockImplementation((_input:RequestInfo|URL,init?:RequestInit)=>new Promise((_resolve,reject)=>{
+      init?.signal?.addEventListener('abort',()=>reject(new DOMException('Aborted','AbortError')),{once:true});
+    }));
+    const pending=api.health();
+    await vi.advanceTimersByTimeAsync(30000);
+    await expect(pending).rejects.toMatchObject({name:'ApiError',status:408,code:'request_timeout',message:'A operação excedeu o tempo limite.'});
+    vi.useRealTimers();
+  });
+
   it('retorna erro seguro quando a API devolve conteúdo que não é JSON',async()=>{
     fetchMock.mockResolvedValue(new Response('<html>upstream failure</html>',{status:502}));
     const error=await api.health().catch((value:unknown)=>value);
