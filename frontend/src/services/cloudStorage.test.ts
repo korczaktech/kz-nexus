@@ -65,6 +65,23 @@ describe('Google Drive sync adapters',()=>{
     expect(result.content).toContain('<td>=A1+A2</td>');
     expect(result.content).toContain('<td>A, B</td>');
   });
+
+  it('imports every Google Sheets tab and its original ID',async()=>{
+    setupFetch(url=>{
+      if(url.includes('/spreadsheets/multi-read?fields='))return new Response(JSON.stringify({sheets:[
+        {properties:{title:'Dados',index:0,sheetId:11}},
+        {properties:{title:'Resumo',index:1,sheetId:22}}
+      ]}),{status:200});
+      if(url.includes('Resumo'))return new Response(JSON.stringify({values:[['Total'],['42']]}),{status:200});
+      return new Response(JSON.stringify({values:[['Nome'],['Korczak']]}),{status:200});
+    });
+    const result=await readCloudFile({id:'multi-read',name:'Multi',mimeType:'application/vnd.google-apps.spreadsheet'});
+    expect(result.document_type).toBe('html');
+    expect(result.content).toContain('data-google-sheet-id="11"');
+    expect(result.content).toContain('data-google-sheet-id="22"');
+    expect(result.content).toContain('<td>Korczak</td>');
+    expect(result.content).toContain('<td>42</td>');
+  });
   it('allows an empty Google Sheet to be opened and cleared',async()=>{
     const {calls}=setupFetch(url=>url.includes('/spreadsheets/empty?fields=')?new Response(JSON.stringify({sheets:[{properties:{title:'Dados',index:0,sheetId:1}}]}),{status:200}):url.includes('/values/')?new Response(JSON.stringify({values:[]}),{status:200}):new Response('{}',{status:200}));
     const file:CloudFile={id:'empty',name:'Vazia',mimeType:'application/vnd.google-apps.spreadsheet'};
