@@ -19,4 +19,9 @@ describe('Google Slides text mapping',()=>{
     window=new Window();vi.stubGlobal('DOMParser',window.DOMParser);
     expect(()=>htmlToSlideTextBoxes('<p data-slide-object-id="shape_a">Known</p><p>New text</p>')).toThrow(/identificador/);
   });
+  it('rejects unwrapped text that would otherwise be silently omitted',()=>{
+    window=new Window();vi.stubGlobal('DOMParser',window.DOMParser);
+    expect(()=>htmlToSlideTextBoxes('texto solto<p data-slide-object-id="shape_a">Conhecido</p>')).toThrow(/fora das caixas/);
+  });
+
 });
