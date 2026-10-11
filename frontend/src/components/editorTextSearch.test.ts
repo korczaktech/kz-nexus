@@ -4,7 +4,7 @@ import {findTextMatches,replaceTextAcrossBlocks} from './editorTextSearch';
 
 describe('editor text search',()=>{
   let window:Window;
-  let root:HTMLElement;
+  let root:any;
   afterEach(()=>{window?.close()});
   function setup(html:string){window=new Window();root=window.document.createElement('div');root.innerHTML=html;return root}
   it('finds text split across inline formatting',()=>{
