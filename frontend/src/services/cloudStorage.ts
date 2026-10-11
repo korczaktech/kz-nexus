@@ -38,7 +38,17 @@ async function request(url:string,init:RequestInit={}){
     }
     if(!response.ok){
       if(response.status===429)throw new Error("O Google Drive limitou temporariamente as solicitações. Aguarde e tente novamente.");
-      throw new Error("O Google Drive recusou a operação ("+response.status+").");
+      let detail="";let reason="";
+      try{
+        const payload=await response.clone().json();
+        const error=payload?.error;
+        detail=String(error?.message||payload?.message||"").trim();
+        const errors=Array.isArray(error?.errors)?error.errors:[];
+        reason=String(errors[0]?.reason||error?.status||"").trim();
+        if(!reason&&Array.isArray(error?.details))reason=String(error.details[0]?.reason||error.details[0]?.metadata?.reason||"").trim();
+      }catch{}
+      const operation=method+" "+new URL(url).pathname;
+      throw new Error("O Google Drive recusou a operação ("+response.status+")"+(reason?" ["+reason+"]":"")+(detail?": "+detail:"")+" — "+operation+". Verifique se as APIs e permissões necessárias estão habilitadas no projeto Google Cloud.");
     }
     return response;
   }
