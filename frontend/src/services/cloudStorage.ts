@@ -3,7 +3,7 @@ import {htmlToGoogleDocsPayload} from "./googleDocsFormatting";
 import {normalizeHtmlForDocx} from "../components/editorFormats";
 import {stripLayoutMetadata} from "../components/editorLayoutMetadata";
 import {htmlToPlainText,htmlToSpreadsheetValues} from "./googleSheetsFormatting";
-import {escapeSlideHtml,htmlToSlideParagraphs,slideShapeText} from "./googleSlidesFormatting";
+import {escapeSlideHtml,htmlToSlideParagraphs,htmlToSlideTextBoxes,slideShapeText} from "./googleSlidesFormatting";
 export type CloudProvider="google-drive";
 export interface CloudFile{id:string;name:string;mimeType:string;size?:string;modifiedTime?:string;parents?:string[];webViewLink?:string;iconLink?:string;}
 type CloudSession={provider:CloudProvider;accessToken:string;refreshToken?:string;expiresAt:number;account?:string;rootFolderId?:string};
@@ -73,7 +73,7 @@ export async function readCloudFile(file:CloudFile):Promise<{content:string;docu
     const presentation=await response.json();
     const shapes:any[]=[];
     for(const slide of presentation.slides||[])for(const element of slide.pageElements||[])if(element.shape?.text)shapes.push({objectId:element.objectId,text:slideShapeText(element.shape)});
-    const content=shapes.map(shape=>'<p>'+escapeSlideHtml(shape.text).replace(/\n/g,'<br>')+'</p>').join('');
+    const content=shapes.map(shape=>'<p data-slide-object-id="'+escapeSlideHtml(shape.objectId)+'">'+escapeSlideHtml(shape.text).replace(/\n/g,'<br>')+'</p>').join('');
     return {content,document_type:"html"};
   }
   if(file.mimeType===sheets){
@@ -146,14 +146,17 @@ export async function saveCloudFile(file:CloudFile,content:string):Promise<void>
   if(file.mimeType===slides){
     const response=await request("https://slides.googleapis.com/v1/presentations/"+encodeURIComponent(file.id));
     const presentation=await response.json();
-    const shapes:any[]=[];
-    for(const slide of presentation.slides||[])for(const element of slide.pageElements||[])if(element.shape?.text)shapes.push({objectId:element.objectId,text:slideShapeText(element.shape)});
-    const paragraphs=htmlToSlideParagraphs(content);
-    if(!shapes.length&&paragraphs.some(value=>value.trim()))throw new Error("A apresentação não contém caixas de texto editáveis.");
-    const mapped=shapes.map((shape,index)=>paragraphs[index]??'');
-    if(paragraphs.length>shapes.length&&shapes.length)mapped[mapped.length-1]=[mapped[mapped.length-1],...paragraphs.slice(shapes.length)].filter(Boolean).join('\n');
+    const existing=new Map<string,string>();
+    for(const slide of presentation.slides||[])for(const element of slide.pageElements||[])if(element.shape?.text)existing.set(String(element.objectId),slideShapeText(element.shape));
+    const boxes=htmlToSlideTextBoxes(content);
     const requests:any[]=[];
-    shapes.forEach((shape,index)=>{const next=mapped[index];if(shape.text&&shape.text!==next)requests.push({deleteText:{objectId:shape.objectId,textRange:{type:"ALL"}}});if(next&&shape.text!==next)requests.push({insertText:{objectId:shape.objectId,insertionIndex:0,text:next}})});
+    for(const box of boxes){
+      if(!existing.has(box.objectId))throw new Error("Uma caixa de texto foi removida ou alterada na apresentação original. Reimporte a apresentação antes de sincronizar para evitar sobrescrever conteúdo incorreto.");
+      const previous=existing.get(box.objectId)||"";
+      if(previous===box.text)continue;
+      if(previous)requests.push({["delete"+"Text"]:{objectId:box.objectId,textRange:{type:"ALL"}}});
+      if(box.text)requests.push({insertText:{objectId:box.objectId,insertionIndex:0,text:box.text}});
+    }
     if(requests.length)await request("https://slides.googleapis.com/v1/presentations/"+encodeURIComponent(file.id)+":batchUpdate",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({requests})});
     return;
   }
