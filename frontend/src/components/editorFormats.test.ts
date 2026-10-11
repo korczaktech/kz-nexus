@@ -1,12 +1,13 @@
-import {afterEach,describe,expect,it} from 'vitest';
+import {afterEach,describe,expect,it,vi} from 'vitest';
 import {Window} from 'happy-dom';
 import {htmlToRtf} from './editorFormats';
 
 describe('rich RTF export',()=>{
   let window:Window;
-  afterEach(()=>window?.close());
+  afterEach(()=>{vi.unstubAllGlobals();window?.close()});
   it('preserves headings, bold, italic, underline and lists',()=>{
     window=new Window();
+    vi.stubGlobal('DOMParser',window.DOMParser);vi.stubGlobal('Node',window.Node);
     const rtf=htmlToRtf('<h1>Título</h1><p><strong>forte</strong> <em>ênfase</em> <u>sublinhado</u></p><ul><li>item</li></ul>');
     expect(rtf).toContain('\\b\\fs36');
     expect(rtf).toContain('\\b forte');
