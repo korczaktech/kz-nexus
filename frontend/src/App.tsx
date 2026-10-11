@@ -406,6 +406,7 @@ function App(){
     try{if(d.status==='deleted')await api.restore(d.id);else await api.favorite(d.id,!d.favorite);await load(view)}catch(x){setError(x instanceof Error?x.message:'Operação não concluída.')}};
 
   return <div className="app-shell">
+    <a className="skip-link" href="#main-content">Pular para o conteúdo principal</a>
     <aside className="sidebar">
       <div className="side-brand"><div className="brand-logo image-brand"><img src={nexusLogo} alt="" /></div><div><strong>KORCZAK</strong><span>NEXUS</span></div></div>
       <nav className="side-nav">{nav.map(n=><button className={'nav-item '+(view===n[0]?'active':'')} onClick={()=>setView(n[0])} key={n[0]}><span className="sidebar-icon"><Icon name={n[2]}/></span><span className="nav-text">{n[1]}</span></button>)}</nav>
@@ -436,7 +437,7 @@ function App(){
         <button className={view==='editor'?'active':''} onClick={()=>setView('editor')}><Icon name="editSquare"/><span>Editor</span></button>
         <button className={['settings','profile','users','groups','audit','advanced-search','search'].includes(view)?'active':''} onClick={()=>setView('settings')}><Icon name="gridMenu"/><span>Mais</span></button>
       </nav>
-      <main className="content">
+      <main className="content" id="main-content" tabIndex={-1}>
         {view!=='home'&&<div className="page-head"><div><p className="eyebrow">KORCZAK NEXUS</p><h1>{title}</h1></div>{(view==='documents'||view==='folders')&&<Button onClick={()=>{setEditingFolder(null);setModal(true)}}><Icon name="plus"/>{view==='folders'?'Nova pasta':'Novo documento'}</Button>}</div>}
         {error&&<div className="alert alert-error">{error}<button onClick={()=>load(view)}>Tentar novamente</button></div>}
         {view==='home'&&<Home user={user} docs={docs} notes={notes} onNew={()=>setModal(true)} onSelect={openDoc} onAction={action} setView={setView}/>}
