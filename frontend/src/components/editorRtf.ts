@@ -57,6 +57,13 @@ export function parseRtfToHtml(source:string):string{
       else if(word==='par'||word==='row'){html+='</p>'+openParagraph();skipFallback=false}
       else if(word==='line')html+='<br>';
       else if(word==='tab')html+='&#9;';
+      else if(word==='bullet')emit('•');
+      else if(word==='emdash')emit('—');
+      else if(word==='endash')emit('–');
+      else if(word==='lquote')emit('‘');
+      else if(word==='rquote')emit('’');
+      else if(word==='ldblquote')emit('“');
+      else if(word==='rdblquote')emit('”');
       else if(word==='u'&&number!==undefined){const code=number<0?number+65536:number;emit(String.fromCharCode(code));skipFallback=true}
       else if(word==='bin'&&number!==undefined){i+=number}
       continue;
