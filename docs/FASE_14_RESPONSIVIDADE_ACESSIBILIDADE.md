@@ -6,6 +6,7 @@
 ## Implementado nesta etapa
 
 - [x] Foco de teclado visível para links, botões, campos, elementos de resumo e controles com tabindex.
+- [x] Link para pular a navegação repetitiva e focar o conteúdo principal.
 - [x] Suporte inicial a `prefers-reduced-motion`, reduzindo animações e transições sem remover o conteúdo.
 - [x] Ajustes iniciais para o modo de alto contraste do sistema (`forced-colors`).
 - [x] Mantida a estratégia de layout responsivo existente, com breakpoints para telas estreitas, médias e largas.
