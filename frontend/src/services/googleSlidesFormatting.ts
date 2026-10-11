@@ -38,11 +38,14 @@ export function htmlToSlideTextBoxes(html:string):SlideTextBox[]{
   if(doc.body.querySelector('img'))throw new Error('A sincronização com Google Slides não insere imagens novas. Remova as imagens adicionadas no Nexus para sincronizar o texto.');
   if(doc.body.querySelector('strong,em,b,i,u,s,del,a,span[style]'))throw new Error('A sincronização com Google Slides preserva texto simples, mas não aplica nova formatação inline. Remova a formatação adicional para sincronizar.');
   const boxes:SlideTextBox[]=[];
-  for(const node of Array.from(doc.body.children)){
-    const id=node.getAttribute('data-slide-object-id');
+  for(const node of Array.from(doc.body.childNodes)){
+    if(node.nodeType===3&&!node.textContent?.trim())continue;
+    if(node.nodeType!==1)throw new Error('O documento contém texto fora das caixas originais do Google Slides. Reimporte a apresentação para restaurar o mapeamento antes de sincronizar.');
+    const element=node as Element;
+    const id=element.getAttribute('data-slide-object-id');
     if(!id)throw new Error('A sincronização segura com Google Slides exige que cada caixa de texto original mantenha seu identificador. Não adicione novos parágrafos; reimporte a apresentação para restaurar o mapeamento.');
     if(boxes.some(box=>box.objectId===id))throw new Error('Identificador de caixa de texto duplicado no documento. Reimporte a apresentação antes de sincronizar.');
-    boxes.push({objectId:id,text:renderNode(node)});
+    boxes.push({objectId:id,text:renderNode(element)});
   }
   return boxes;
 }
