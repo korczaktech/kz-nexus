@@ -1,0 +1,33 @@
+name: Production API Health Monitor
+
+on:
+  schedule:
+    - cron: "*/15 * * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: production-api-health
+  cancel-in-progress: true
+
+jobs:
+  health:
+    name: Check production API liveness and readiness
+    runs-on: ubuntu-24.04
+    timeout-minutes: 2
+    steps:
+      - name: Check liveness and readiness
+        env:
+          API_BASE_URL: ${{ vars.NEXUS_API_BASE_URL || 'https://kzdoc.onrender.com' }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          [[ "$API_BASE_URL" =~ ^https://[^/]+/?$ ]] || { echo "Configure NEXUS_API_BASE_URL as an HTTPS origin."; exit 1; }
+          API_BASE_URL="${API_BASE_URL%/}"
+          health="$(curl --fail --silent --show-error --max-time 15 "$API_BASE_URL/health")"
+          printf '%s' "$health" | python -c 'import json,sys; d=json.load(sys.stdin); assert d.get("status") == "ok", d'
+          ready="$(curl --fail --silent --show-error --max-time 15 "$API_BASE_URL/ready")"
+          printf '%s' "$ready" | python -c 'import json,sys; d=json.load(sys.stdin); assert d.get("status") == "ready", d'
+          echo "Liveness and database readiness checks passed."
