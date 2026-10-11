@@ -1,0 +1,47 @@
+name: API Performance Smoke Test
+
+on:
+  workflow_dispatch:
+    inputs:
+      target_url:
+        description: "Base URL da API autorizada para teste (ex.: https://api.example.com)"
+        required: true
+        type: string
+      virtual_users:
+        description: "Usuários virtuais (máximo 10)"
+        required: true
+        default: "5"
+        type: string
+      duration:
+        description: "Duração (ex.: 30s ou 1m; máximo recomendado 2m)"
+        required: true
+        default: "30s"
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  smoke:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v5
+      - name: Validate low-impact test parameters
+        env:
+          TARGET_URL: ${{ inputs.target_url }}
+          VIRTUAL_USERS: ${{ inputs.virtual_users }}
+          DURATION: ${{ inputs.duration }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          [[ "$TARGET_URL" =~ ^https://[^/]+/?$ ]] || { echo "Use uma URL HTTPS de API autorizada."; exit 1; }
+          [[ "$VIRTUAL_USERS" =~ ^([1-9]|10)$ ]] || { echo "virtual_users deve estar entre 1 e 10."; exit 1; }
+          [[ "$DURATION" =~ ^([1-9][0-9]?s|[1-2]m)$ ]] || { echo "duration deve ser de 1–99s ou 1–2m."; exit 1; }
+      - uses: grafana/setup-k6-action@v1
+      - name: Run health endpoint smoke load
+        env:
+          API_BASE_URL: ${{ inputs.target_url }}
+          VUS: ${{ inputs.virtual_users }}
+          DURATION: ${{ inputs.duration }}
+        run: k6 run scripts/performance/api-health.js
