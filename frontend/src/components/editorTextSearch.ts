@@ -22,14 +22,14 @@ function rangeFor(segment:Segment,start:number,end:number):Range{
   range.setEnd(endPart.node,Math.min(endPart.node.data.length,end-endPart.start));
   return range;
 }
-export function findTextMatches(root:HTMLElement,query:string):{count:number;firstRange:Range|null}{
-  if(!query)return{count:0,firstRange:null};
-  const needle=query.toLocaleLowerCase();let count=0;let firstRange:Range|null=null;
+export function findTextMatches(root:HTMLElement,query:string):{count:number;firstRange:Range|null;ranges:Range[]}{
+  if(!query)return{count:0,firstRange:null,ranges:[]};
+  const needle=query.toLocaleLowerCase();let count=0;let firstRange:Range|null=null;const ranges:Range[]=[];
   for(const segment of segments(root)){
     const hay=segment.text.toLocaleLowerCase();let at=0;
-    while((at=hay.indexOf(needle,at))!==-1){count++;if(!firstRange)firstRange=rangeFor(segment,at,at+query.length);at+=Math.max(needle.length,1)}
+    while((at=hay.indexOf(needle,at))!==-1){count++;const range=rangeFor(segment,at,at+query.length);if(!firstRange)firstRange=range;ranges.push(range);at+=Math.max(needle.length,1)}
   }
-  return{count,firstRange};
+  return{count,firstRange,ranges};
 }
 export function replaceTextAcrossBlocks(root:HTMLElement,query:string,replacement:string):number{
   if(!query)return 0;
