@@ -1,6 +1,6 @@
 import {afterEach,describe,expect,it,vi} from 'vitest';
 import {Window} from 'happy-dom';
-import {readCloudFile,saveCloudFile,type CloudFile} from './cloudStorage';
+import {listCloudFiles,readCloudFile,saveCloudFile,type CloudFile} from './cloudStorage';
 
 describe('Google Drive sync adapters',()=>{
   let window:Window;
@@ -18,6 +18,13 @@ describe('Google Drive sync adapters',()=>{
     window.localStorage.setItem('kz_cloud_sessions_v2',JSON.stringify({'google-drive':{provider:'google-drive',accessToken:'test-token',expiresAt:Date.now()+3600000}}));
     return{calls,mock};
   }
+
+  it('retries Google Drive rate limits before failing the operation',async()=>{
+    let attempts=0;
+    setupFetch(()=>{attempts++;return attempts===1?new Response(JSON.stringify({error:{message:'rate limit'}}),{status:429,headers:{'Retry-After':'0'}}):new Response(JSON.stringify({files:[]}),{status:200})});
+    await expect(listCloudFiles()).resolves.toEqual({files:[]});
+    expect(attempts).toBe(2);
+  });
   it('imports each Google Slides text box as a separate HTML paragraph',async()=>{
     setupFetch(()=>new Response(JSON.stringify({slides:[{pageElements:[
       {objectId:'title',shape:{text:{textElements:[{textRun:{content:'Título\n'}}]}}},
