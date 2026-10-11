@@ -1,6 +1,6 @@
 import {afterEach,beforeEach,describe,expect,it,vi} from 'vitest';
 import {Window} from 'happy-dom';
-import {ApiError,api,clearToken,getToken,saveSession,type Session} from './api';
+import {API_BASE_URL,ApiError,api,clearToken,getToken,saveSession,type Session} from './api';
 
 describe('API client — autenticação e tratamento de falhas',()=>{
   let window:Window;
@@ -24,6 +24,7 @@ describe('API client — autenticação e tratamento de falhas',()=>{
     saveSession(session);
     fetchMock.mockResolvedValue(new Response(JSON.stringify({id:'u1',name:'Usuário'}),{status:200}));
     await api.me();
+    expect(String(fetchMock.mock.calls[0][0])).toBe(API_BASE_URL+'/api/v1/users/me');
     const [,init]=fetchMock.mock.calls[0] as [string,RequestInit];
     expect(new Headers(init.headers).get('Authorization')).toBe('Bearer session-token');
   });
