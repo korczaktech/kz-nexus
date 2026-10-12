@@ -2531,3 +2531,43 @@ button,input,textarea,select{
 .app-shell.editor-mode .editor-workspace{width:100%;max-width:none;min-height:100%;height:100%;margin:0;border:0;border-radius:0}
 .app-shell.editor-mode .editor-workspace .editor-layout{min-height:0;height:100%}
 @media(max-width:850px){.app-shell.editor-mode .content{padding:0}}
+
+
+/* Editor usability fix: natural page scrolling and non-overlapping controls. */
+.app-shell.editor-mode{height:auto;min-height:100dvh;overflow:visible;align-items:stretch}
+.app-shell.editor-mode .main-shell{height:auto;min-height:100dvh;overflow:visible;display:block}
+.app-shell.editor-mode .content{height:auto;min-height:100dvh;overflow:visible;flex:none}
+.app-shell.editor-mode .editor-workspace{height:auto;min-height:100dvh;overflow:visible;display:flex;flex-direction:column}
+.app-shell.editor-mode .editor-head{flex-wrap:wrap;align-items:flex-start;min-width:0}
+.app-shell.editor-mode .editor-title-wrap{min-width:0;max-width:100%}
+.app-shell.editor-mode .editor-title{max-width:100%;width:min(650px,80vw)}
+.app-shell.editor-mode .editor-actions{display:flex;flex-wrap:wrap;align-items:center;justify-content:flex-end;gap:7px;min-width:0;max-width:100%}
+.app-shell.editor-mode .editor-actions button{flex:0 1 auto;min-width:0;white-space:normal}
+.app-shell.editor-mode .editor-toolbar{position:relative;display:flex;flex:0 0 auto;flex-wrap:wrap;align-items:center;gap:7px;overflow:visible;min-width:0;max-width:100%;padding:10px 14px}
+.app-shell.editor-mode .editor-toolbar>*{flex:0 1 auto;min-width:0;max-width:100%}
+.app-shell.editor-mode .editor-toolbar .editor-select{min-width:0;max-width:100%}
+.app-shell.editor-mode .editor-info{flex-wrap:wrap;white-space:normal;overflow:visible;min-width:0}
+.app-shell.editor-mode .editor-body.rich-editor-body{display:grid;grid-template-columns:minmax(0,1fr) minmax(220px,280px);min-height:0;overflow:visible;align-items:start}
+.app-shell.editor-mode .editor-canvas{min-width:0;max-width:100%;overflow:auto;overscroll-behavior:contain}
+.app-shell.editor-mode .editor-page{margin-left:auto;margin-right:auto}
+.app-shell.editor-mode .editor-side{min-width:0;max-width:100%;overflow-wrap:anywhere}
+.app-shell.editor-mode .editor-findbar{position:relative;display:flex;flex-wrap:wrap;align-items:flex-end;gap:9px;overflow:visible}
+.app-shell.editor-mode .editor-findbar label{flex:1 1 180px;min-width:0}
+.app-shell.editor-mode .editor-findbar input{width:100%;min-width:0}
+.app-shell.editor-mode .editor-foot{flex-wrap:wrap}
+@media(max-width:900px){
+ .app-shell.editor-mode .editor-body.rich-editor-body{grid-template-columns:minmax(0,1fr)}
+ .app-shell.editor-mode .editor-side{width:100%;border-left:0;border-top:1px solid var(--line);grid-template-columns:repeat(2,minmax(0,1fr))}
+ .app-shell.editor-mode .editor-title{width:100%}
+ .app-shell.editor-mode .editor-head{display:flex;flex-direction:column}
+ .app-shell.editor-mode .editor-actions{justify-content:flex-start;width:100%}
+}
+@media(max-width:560px){
+ .app-shell.editor-mode .editor-toolbar{gap:6px;padding:9px}
+ .app-shell.editor-mode .editor-toolbar .editor-select{flex:1 1 110px;width:auto}
+ .app-shell.editor-mode .editor-toolbar .editor-select.font-size{flex:0 1 70px}
+ .app-shell.editor-mode .editor-side{grid-template-columns:minmax(0,1fr)}
+ .app-shell.editor-mode .editor-page{min-height:760px}
+ .app-shell.editor-mode .editor-canvas{padding:10px 0 24px}
+ .app-shell.editor-mode .editor-actions button{flex:0 1 auto}
+}
