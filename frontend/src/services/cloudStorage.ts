@@ -1,4 +1,3 @@
-import * as mammoth from "mammoth";
 import {htmlToGoogleDocsPayload} from "./googleDocsFormatting";
 import {normalizeHtmlForDocx} from "../components/editorFormats";
 import {stripLayoutMetadata} from "../components/editorLayoutMetadata";
@@ -91,6 +90,7 @@ export async function readCloudFile(file:CloudFile):Promise<{content:string;docu
     const response=await request("https://www.googleapis.com/drive/v3/files/"+encodeURIComponent(file.id)+"?alt=media");
     const arrayBuffer=await response.arrayBuffer();
     try{
+      const mammoth=await import("mammoth");
       const result=await mammoth.convertToHtml({arrayBuffer});
       const html=String(result.value||"").trim();
       if(!html.replace(/<[^>]*>/g,"").trim())throw new Error("O DOCX não contém texto extraível.");
