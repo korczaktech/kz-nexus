@@ -13,7 +13,7 @@ function readRtfFonts(source:string):Map<number,string>{
   for(const entry of entries){
     const id=entry.match(/\\f(\d+)/i)?.[1];
     if(id===undefined)continue;
-    const name=entry.replace(/^\{\\f\d+\w*\s*/i,'').replace(/;[^;]*$/,'').replace(/\}/g,'').trim();
+    const name=entry.replace(/^\{\\f\d+/i,'').replace(/\\[a-zA-Z]+-?\d* ?/g,'').replace(/;[^;]*$/,'').replace(/\}/g,'').trim();
     if(name&&!/[{}]/.test(name))fonts.set(Number(id),name.replace(/\s+/g,' '));
   }
   return fonts;
