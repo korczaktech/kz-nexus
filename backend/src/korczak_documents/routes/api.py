@@ -18,10 +18,10 @@ async def exchange_google_oauth_code(payload: dict = Body(...)):
     """Troca o código OAuth no servidor, mantendo o client secret privado."""
     from ..config.settings import get_settings
     settings = get_settings()
-    client_id = settings.tst_google_client_id.strip()
-    client_secret = settings.tst_google_client_secret.strip()
+    client_id = settings.google_client_id.strip()
+    client_secret = settings.google_client_secret.strip()
     if not client_id or not client_secret:
-        raise AppError("Google Drive não está configurado no servidor. Configure TST_GOOGLE_CLIENT_ID e TST_GOOGLE_CLIENT_SECRET no Render.", "google_oauth_not_configured", 503)
+        raise AppError("Google Drive não está configurado no servidor. Configure GOOGLE_CLIENT_ID e GOOGLE_CLIENT_SECRET no Render.", "google_oauth_not_configured", 503)
     code = str(payload.get("code") or "").strip()
     redirect_uri = str(payload.get("redirect_uri") or "").strip()
     code_verifier = str(payload.get("code_verifier") or "").strip()
@@ -53,11 +53,11 @@ async def refresh_google_oauth_token(payload: dict = Body(...)):
     """Renova tokens do Google Drive sem expor o client secret."""
     from ..config.settings import get_settings
     settings = get_settings()
-    client_id = settings.tst_google_client_id.strip()
-    client_secret = settings.tst_google_client_secret.strip()
+    client_id = settings.google_client_id.strip()
+    client_secret = settings.google_client_secret.strip()
     refresh_token = str(payload.get("refresh_token") or "").strip()
     if not client_id or not client_secret:
-        raise AppError("Google Drive não está configurado no servidor. Configure TST_GOOGLE_CLIENT_ID e TST_GOOGLE_CLIENT_SECRET no Render.", "google_oauth_not_configured", 503)
+        raise AppError("Google Drive não está configurado no servidor. Configure GOOGLE_CLIENT_ID e GOOGLE_CLIENT_SECRET no Render.", "google_oauth_not_configured", 503)
     if not refresh_token:
         raise ValidationError("refresh_token é obrigatório.")
     try:
@@ -82,7 +82,7 @@ async def refresh_google_oauth_token(payload: dict = Body(...)):
 @router.get("/config/public")
 async def public_config():
     from ..config.settings import get_settings
-    return {"google_client_id": get_settings().tst_google_client_id.strip()}
+    return {"google_client_id": get_settings().google_client_id.strip()}
 
 
 def without_mongo_id(item: dict) -> dict:
