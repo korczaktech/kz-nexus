@@ -1742,3 +1742,28 @@ button,input,textarea,select{
 .editor-page .rich-editor table{width:100%!important;max-width:100%!important;min-width:0!important;table-layout:fixed!important}
 .editor-page .rich-editor table td,.editor-page .rich-editor table th{min-width:0!important;max-width:100%!important;overflow-wrap:anywhere!important}
 @media(max-width:900px){.editor-body.rich-editor-body{display:block!important;overflow:hidden}.editor-canvas{justify-content:flex-start!important;padding:16px!important}.editor-page{margin-left:0!important;margin-right:0!important}}
+
+
+/* Imported paper size comes from the DOCX section geometry; let the inline
+   physical width/height selected by Editor.tsx control the paper, not old A4 overrides. */
+.editor-page,
+.editor-page[style*="297mm"]{
+  width:unset!important;
+  min-width:0!important;
+  max-width:none!important;
+  min-height:unset!important;
+  height:auto!important;
+  flex:0 0 auto!important;
+  box-sizing:border-box!important;
+}
+.editor-page .rich-editor{
+  width:100%!important;
+  min-width:0!important;
+  max-width:100%!important;
+  box-sizing:border-box!important;
+  padding:var(--editor-margin,25mm)!important;
+}
+.editor-page .rich-editor .nexus-imported-page-break{
+  width:auto!important;
+  max-width:100%!important;
+}
