@@ -473,7 +473,7 @@ function AppAuthenticated(){
     }
     try{if(d.status==='deleted')await api.restore(d.id);else await api.favorite(d.id,!d.favorite);await load(view)}catch(x){setError(x instanceof Error?x.message:'Operação não concluída.')}};
 
-  return <div className="app-shell">
+  return <div className={'app-shell'+(guest?' guest-mode':'')}>
     <a className="skip-link" href="#main-content">Pular para o conteúdo principal</a>
     <aside className="sidebar">
       <div className="side-brand"><div className="brand-logo image-brand"><img src={nexusLogo} alt="" /></div><div><strong>KORCZAK</strong><span>NEXUS</span></div></div>
@@ -506,7 +506,7 @@ function AppAuthenticated(){
         <button className={view==='editor'?'active':''} onClick={()=>guest?requireAccount():setView('editor')}><Icon name="editSquare"/><span>Editor</span></button>
         <button className={['settings','profile','users','groups','audit','advanced-search','search'].includes(view)?'active':''} onClick={()=>setView('settings')}><Icon name="gridMenu"/><span>Mais</span></button>
       </nav>
-      <main className="content" id="main-content" tabIndex={-1}>
+      <main className={'content'+(guest&&view==='home'?' guest-home':'')} id="main-content" tabIndex={-1}>
         {view!=='home'&&<div className="page-head"><div><p className="eyebrow">KORCZAK NEXUS</p><h1>{title}</h1></div>{(view==='documents'||view==='folders')&&<Button onClick={()=>{if(guest){requireAccount();return}setEditingFolder(null);setModal(true)}}><Icon name="plus"/>{view==='folders'?'Nova pasta':'Novo documento'}</Button>}</div>}
         {error&&<div className="alert alert-error">{error}<button onClick={()=>load(view)}>Tentar novamente</button></div>}
         {view==='home'&&<Home user={user} docs={docs} notes={notes} onNew={requestCreate} onSelect={openDoc} onAction={action} setView={v=>{if(guest&&v==='editor'){requireAccount();return}setView(v)}}/>}
