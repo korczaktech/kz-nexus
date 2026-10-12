@@ -8,12 +8,16 @@ function readRtfColors(source:string):(string|null)[]{
 }
 function readRtfFonts(source:string):Map<number,string>{
   const fonts=new Map<number,string>();
-  const table=source.match(/\{\\fonttbl([\s\S]*?)\}\s*\}/i)?.[1]||'';
+  const start=source.search(/\{\\fonttbl/i);
+  if(start<0)return fonts;
+  const tableEnd=source.indexOf('}}',start);
+  const table=source.slice(start,tableEnd<0?source.length:tableEnd+1);
   const entries=table.match(/\{\\f\d+[^{}]*\}/g)||[];
   for(const entry of entries){
     const id=entry.match(/\\f(\d+)/i)?.[1];
     if(id===undefined)continue;
-    const name=entry.replace(/^\{\\f\d+/i,'').replace(/\\[a-zA-Z]+-?\d* ?/g,'').replace(/;[^;]*$/,'').replace(/\}/g,'').trim();
+    const body=entry.replace(/^\{\\f\d+/i,'').replace(/;\s*\}$/,'');
+    const name=body.replace(/\\[a-zA-Z]+-?\d* ?/g,'').trim();
     if(name&&!/[{}]/.test(name))fonts.set(Number(id),name.replace(/\s+/g,' '));
   }
   return fonts;
