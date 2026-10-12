@@ -4,6 +4,10 @@ Sistema de gestão documental da Korczak Technologies. O repositório contém a 
 
 > **Estado honesto do projeto:** a Web/PWA, a suíte do backend, os testes Android, o build iOS para simulador e os empacotamentos Desktop passaram em CI. Isso **não** significa que o produto inteiro esteja 100% concluído: a validação manual em dispositivos reais, a disponibilidade da API em produção, a sincronização completa, a publicação final e a homologação ainda precisam de evidências próprias.
 
+## Motor próprio de edição do Nexus
+
+A arquitetura inicial do motor próprio de edição está documentada em [Fase 0 — Fundação e Arquitetura do Motor Nexus](docs/FASE_0_MOTOR_NEXUS_FUNDACAO_ARQUITETURA.md). A proposta começa como módulo interno do repositório, sem uma API dedicada, com edição local, integração pela API existente e contratos futuros para componentes do Korczak HUB. A especificação foi registrada; a implementação do motor e a homologação multiplataforma ainda não foram declaradas concluídas.
+
 ## Estado atual — resumo executivo
 
 - **Web:** interface implementada com autenticação/cadastro/recuperação, navegação documental, editor, pastas, favoritos, recentes, lixeira, pesquisa, perfil, administração, grupos, permissões, auditoria e configurações. O cliente HTTP usa a API configurada em `VITE_API_BASE_URL` (padrão do código: `https://kzdoc.onrender.com`).
