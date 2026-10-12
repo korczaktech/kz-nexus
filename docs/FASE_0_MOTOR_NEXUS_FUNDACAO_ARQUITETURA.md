@@ -177,6 +177,43 @@ PDF é primordialmente um formato de apresentação; importar PDF editável é u
 
 A compatibilidade será medida por fixtures de teste e critérios por recurso, não por uma promessa genérica de fidelidade total.
 
+## 7.1 Formato nativo do Korczak Nexus: `.nsx`
+
+**Decisão de produto registrada:** a extensão do formato de arquivo próprio do Korczak Nexus será **`.nsx`**. Essa extensão identifica o formato nativo do Nexus e deverá ser usada por arquivos criados/salvos nesse formato quando o fluxo de arquivo nativo for implementado.
+
+### Requisitos do formato
+
+- A extensão oficial é `.nsx` (minúscula); não usar `.nexus`, `.kz` ou `.html` como substitutos do formato nativo.
+- O conteúdo deverá serializar o modelo canônico do motor, não uma captura da interface nem HTML renderizado como fonte principal.
+- A serialização deverá incluir um identificador de formato, versão do schema, metadados necessários e a árvore documental.
+- A leitura deverá validar versão, tipos, limites e conteúdo; arquivos desconhecidos ou inválidos devem falhar com erro recuperável, sem sobrescrever o arquivo original.
+- A gravação deverá ser determinística sempre que possível, preservando identificadores estáveis dos blocos e referências de recursos.
+- Recursos incorporados (imagens e componentes do HUB) deverão ter referências e políticas explícitas; não armazenar tokens, segredos ou credenciais dentro do documento.
+- A evolução do schema deverá usar migrações versionadas e testes com fixtures. Versões futuras incompatíveis deverão ser detectadas, não interpretadas silenciosamente.
+- A extensão `.nsx` é a identidade do arquivo, não uma promessa de que o parser, a importação/exportação ou todos os clientes já estejam implementados.
+
+### Envelope lógico inicial (proposta para a implementação)
+
+O envelope serializado pode começar como JSON UTF-8 com um cabeçalho de formato e um payload versionado, por exemplo:
+
+```json
+{
+  "format": "korczak-nexus",
+  "formatVersion": 1,
+  "document": {
+    "id": "stable-document-id",
+    "title": "Documento sem título",
+    "schemaVersion": 1,
+    "content": []
+  },
+  "resources": []
+}
+```
+
+Este exemplo define a direção do contrato, não um fixture de produção nem um schema validado. Antes de estabilizar a versão 1, a implementação deverá definir validação formal, limites de tamanho, regras de migração e comportamento para recursos externos. A extensão `.nsx` poderá conter um envelope binário no futuro somente se houver justificativa técnica documentada e estratégia de compatibilidade; a primeira implementação deverá preferir um formato versionável e inspecionável.
+
+---
+
 ## 8. Estrutura inicial proposta
 
 Criar o módulo em `frontend/src/engine/`, sem mover ou reescrever o editor atual durante a fundação:
