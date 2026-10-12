@@ -195,7 +195,7 @@ function Home({user,docs,notes,onNew,onSelect,onAction,setView}:{user:User;docs:
   }
   return <>
     <section className="hero">
-      <div className="hero-copy"><p className="eyebrow">KORCZAK NEXUS</p><h1>Seus documentos,<br/><span>sempre organizados.</span></h1><p>Armazene, compartilhe e gerencie seus arquivos com segurança e praticidade. Tudo o que você precisa, em um só lugar.</p>
+      <div className="hero-copy"><p className="eyebrow">KORCZAK NEXUS</p><h1>Seus documentos,<br/><span>sempre organizados.</span></h1><p>O Korczak Nexus é seu espaço de trabalho para criar, editar, organizar, armazenar e compartilhar documentos. Gerencie arquivos, versões e permissões em um só lugar, com foco em segurança e praticidade.</p>
       <div className="hero-points"><span><Icon name="shield" size={15}/> Seguro</span><span><Icon name="clock" size={15}/> Rápido</span><span><Icon name="folder" size={15}/> Organizado</span><span><Icon name="cloud" size={15}/> Sempre disponível</span></div></div>
       <div className="hero-art" aria-hidden="true"><div className="mountain mountain-one"/><div className="mountain mountain-two"/><div className="beam"/></div>
     </section>
