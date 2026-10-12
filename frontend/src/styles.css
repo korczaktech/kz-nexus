@@ -2452,3 +2452,66 @@ button,input,textarea,select{
 @media(prefers-reduced-motion:reduce){
   .editor-workspace *, .editor-workspace *::before, .editor-workspace *::after{animation-duration:.01ms!important;transition-duration:.01ms!important;scroll-behavior:auto!important}
 }
+
+
+/* Phase 1 completion pass: resilient editor layout, keyboard focus and readable controls. */
+.editor-workspace{min-width:0;max-width:100%;color:var(--text)}
+.editor-workspace button,.editor-workspace select,.editor-workspace input{touch-action:manipulation}
+.editor-workspace button:focus-visible,
+.editor-workspace select:focus-visible,
+.editor-workspace input:focus-visible,
+.editor-workspace [contenteditable="true"]:focus-visible{
+  outline:2px solid #8795ff;outline-offset:2px
+}
+.editor-workspace .editor-title{min-width:0;max-width:100%;overflow:hidden;text-overflow:ellipsis}
+.editor-workspace .editor-toolbar{align-items:center;row-gap:7px}
+.editor-workspace .editor-tool{min-height:34px;white-space:nowrap}
+.editor-workspace .editor-select{min-height:34px;max-width:100%}
+.editor-workspace .editor-info>span{overflow-wrap:anywhere}
+.editor-workspace .editor-canvas{overscroll-behavior:contain}
+.editor-workspace .editor-page{flex-shrink:0}
+.editor-workspace .rich-editor{min-width:0;overflow-wrap:anywhere;word-break:normal}
+.editor-workspace .rich-editor img,
+.editor-workspace .rich-editor video,
+.editor-workspace .rich-editor table{max-width:100%}
+.editor-workspace .rich-editor table{table-layout:fixed}
+.editor-workspace .rich-editor td,
+.editor-workspace .rich-editor th{overflow-wrap:anywhere}
+.editor-workspace .editor-side{min-width:0}
+.editor-workspace .editor-side label,
+.editor-workspace .editor-side strong,
+.editor-workspace .editor-side span{overflow-wrap:anywhere}
+.editor-workspace .editor-file-item{min-width:0;text-align:left}
+.editor-workspace .editor-file-item>span:last-child{min-width:0;overflow-wrap:anywhere;word-break:break-word}
+.editor-workspace .editor-findbar{align-items:flex-end}
+.editor-workspace .editor-findbar button{min-height:35px}
+.editor-workspace .editor-foot{flex-wrap:wrap}
+.editor-workspace .editor-foot>span{min-width:0;overflow-wrap:anywhere}
+.editor-workspace .editor-foot-actions{min-width:0}
+.editor-workspace .save-state{overflow-wrap:anywhere}
+.editor-workspace .editor-file-error{padding:10px;border-radius:7px;overflow-wrap:anywhere}
+.editor-workspace .editor-page-native-docx{overflow:visible}
+.paged-preview-overlay button:focus-visible{outline:2px solid #5368dc;outline-offset:2px}
+@media(max-width:850px){
+  .editor-workspace{width:100%;max-width:100%}
+  .editor-workspace .editor-page{max-width:none}
+  .editor-workspace .editor-side{width:100%}
+  .editor-workspace .editor-file-list{max-height:280px;overflow:auto}
+}
+@media(max-width:560px){
+  .editor-workspace .editor-actions button{min-height:38px}
+  .editor-workspace .editor-toolbar{gap:5px}
+  .editor-workspace .editor-toolbar .toolbar-separator{display:none}
+  .editor-workspace .editor-tool{min-height:36px}
+  .editor-workspace .editor-findbar{display:grid;grid-template-columns:minmax(0,1fr);align-items:stretch}
+  .editor-workspace .editor-findbar label{min-width:0}
+  .editor-workspace .editor-findbar button{width:100%}
+  .editor-workspace .editor-info{align-items:center}
+  .editor-workspace .editor-info>span{max-width:100%}
+  .editor-workspace .editor-page{max-width:none}
+  .editor-workspace .editor-foot-actions{width:100%}
+}
+@media(prefers-contrast:more){
+  .editor-workspace button,.editor-workspace input,.editor-workspace select{border-color:currentColor}
+  .editor-workspace .editor-file-error{border:2px solid currentColor}
+}
