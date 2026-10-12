@@ -109,7 +109,13 @@ async function importDocxWithFormatting(file:File):Promise<{html:string;layout:P
   try{
     await renderAsync(await file.arrayBuffer(),host,undefined,{inWrapper:false,ignoreWidth:false,ignoreHeight:false,ignoreFonts:false,breakPages:false,renderHeaders:true,renderFooters:true,renderFootnotes:true,renderEndnotes:true,useBase64URL:true});
     const layout:Partial<EditorLayoutSettings>={};
-    const page=host.querySelector<HTMLElement>('.docx');
+    // Capture the page nodes BEFORE the formatting pass removes their classes.
+    // docx-preview places each physical page directly inside .docx-wrapper.
+    const wrapper=host.querySelector<HTMLElement>('.docx-wrapper');
+    const renderedPages=wrapper
+      ? [...wrapper.children].filter((child):child is HTMLElement=>child instanceof HTMLElement&&child.classList.contains('docx'))
+      : [...host.children].filter((child):child is HTMLElement=>child instanceof HTMLElement&&child.classList.contains('docx'));
+    const page=renderedPages[0]||host.querySelector<HTMLElement>('.docx');
     if(page){const style=window.getComputedStyle(page);const width=parseFloat(style.width),height=parseFloat(style.height);if(Number.isFinite(width)&&Number.isFinite(height)){layout.pageSize=Math.abs(width-height)<2?'Letter':'A4';layout.orientation=width>height?'landscape':'portrait'}const marginPx=parseFloat(style.paddingLeft||'');if(Number.isFinite(marginPx)&&marginPx>0){const mm=Math.round(marginPx*25.4/96);layout.margin=([10,15,20,25,30] as const).reduce((best,value)=>Math.abs(value-mm)<Math.abs(best-mm)?value:best,25)}}
     const properties=['font-family','font-size','font-weight','font-style','color','background-color','text-align','text-decoration','text-transform','letter-spacing','line-height','vertical-align','white-space','word-break','overflow-wrap','width','min-width','max-width','height','margin-top','margin-right','margin-bottom','margin-left','padding-top','padding-right','padding-bottom','padding-left','border-top','border-right','border-bottom','border-left','border-collapse','border-spacing','list-style-type','text-indent'];
     host.querySelectorAll<HTMLElement>('*').forEach(element=>{
@@ -121,7 +127,6 @@ async function importDocxWithFormatting(file:File):Promise<{html:string;layout:P
     // The Nexus editor already owns the page shell and margins, so importing that wrapper
     // nests one complete page inside another (the visible 'margin inside a margin' bug).
     // Keep rendered content and formatting, but let the editor's page be the only page shell.
-    const renderedPages=[...host.querySelectorAll<HTMLElement>('.docx')];
     const importedBody=renderedPages.length
       ? renderedPages.map(page=>page.innerHTML).join('<div style="break-before:page;page-break-before:always"></div>')
       : host.innerHTML;
