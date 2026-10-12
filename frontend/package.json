@@ -16,7 +16,8 @@
     "html-to-docx": "^1.8.0",
     "pdfjs-dist": "^4.10.38",
     "pagedjs": "^0.4.3",
-    "tesseract.js": "^6.0.1"
+    "tesseract.js": "^6.0.1",
+    "docx-preview": "^0.3.6"
   },
   "devDependencies": {
     "@types/react": "^19.1.10",
