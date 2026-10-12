@@ -1677,3 +1677,34 @@ button,input,textarea,select{
 .public-legal-document a{color:#344fc1;text-underline-offset:3px}
 .public-legal-links{display:flex;flex-wrap:wrap;gap:12px 22px;border-top:1px solid #e5eaf2;margin-top:38px;padding-top:22px;font-size:14px;font-weight:650}
 @media(max-width:600px){.public-legal-shell{padding:0;background:#fff}.public-legal-document{border:0;border-radius:0;box-shadow:none;padding:24px 20px 36px;font-size:15px}.public-legal-brand{margin-bottom:26px}.public-legal-document h2{font-size:18px;margin-top:25px}}
+
+
+/* DOCX editor geometry: the page shell owns the paper size; the editable area owns
+   the single configurable margin. Avoid the former 18mm + editor-padding double margin. */
+.editor-page{padding:0!important;box-sizing:border-box;overflow:visible}
+.editor-page .rich-editor{
+  box-sizing:border-box!important;
+  min-height:calc(297mm - 2 * var(--editor-margin, 25mm))!important;
+  padding:var(--editor-margin, 25mm)!important;
+  margin:0!important;
+  width:100%;
+}
+.editor-page[style*="297mm"] .rich-editor{min-height:calc(210mm - 2 * var(--editor-margin, 25mm))!important}
+.rich-editor .nexus-imported-page-break{
+  display:block;
+  box-sizing:border-box;
+  height:24mm;
+  margin:0 calc(-1 * var(--editor-margin, 25mm));
+  background:#111a27;
+  border-top:1px solid #29374a;
+  border-bottom:1px solid #29374a;
+  break-before:page;
+  page-break-before:always;
+  pointer-events:none;
+}
+@media(max-width:900px){
+  .editor-page{width:210mm!important;max-width:none!important;min-height:297mm!important;padding:0!important;transform-origin:top left!important}
+  .editor-page[style*="297mm"]{width:297mm!important;min-height:210mm!important}
+  .editor-page .rich-editor{padding:var(--editor-margin, 25mm)!important;min-height:calc(297mm - 2 * var(--editor-margin, 25mm))!important}
+  .editor-page[style*="297mm"] .rich-editor{min-height:calc(210mm - 2 * var(--editor-margin, 25mm))!important}
+}
