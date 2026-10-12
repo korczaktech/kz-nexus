@@ -1708,3 +1708,26 @@ button,input,textarea,select{
   .editor-page .rich-editor{padding:var(--editor-margin, 25mm)!important;min-height:calc(297mm - 2 * var(--editor-margin, 25mm))!important}
   .editor-page[style*="297mm"] .rich-editor{min-height:calc(210mm - 2 * var(--editor-margin, 25mm))!important}
 }
+
+
+/* Keep imported DOCX tables and their cells inside the physical page's text area. */
+.editor-page .rich-editor{max-width:100%;min-width:0;overflow-wrap:anywhere}
+.editor-page .rich-editor table{
+  box-sizing:border-box!important;
+  width:100%!important;
+  max-width:100%!important;
+  min-width:0!important;
+  table-layout:fixed!important;
+  border-collapse:collapse;
+}
+.editor-page .rich-editor table col{width:auto!important;max-width:100%}
+.editor-page .rich-editor table th,
+.editor-page .rich-editor table td{
+  box-sizing:border-box!important;
+  min-width:0!important;
+  max-width:100%;
+  overflow-wrap:anywhere!important;
+  word-break:normal;
+}
+.editor-page .rich-editor img,
+.editor-page .rich-editor svg{max-width:100%!important}
