@@ -2013,3 +2013,49 @@ button,input,textarea,select{
 @media(prefers-reduced-motion:reduce){
   .app-shell .quick-actions > button,.app-shell .home-files-card .card-title button{transition:none!important}
 }
+
+
+/* Local/guest landing page — intentionally separate from the authenticated dashboard. */
+.guest-mode .ios-offline-banner{display:flex;align-items:center;justify-content:center;gap:8px;flex-wrap:wrap;padding:10px 18px;background:linear-gradient(90deg,#101b3b,#171538);border-bottom:1px solid #34416c;color:#c5d2f7;font-size:12px;line-height:1.5}
+.guest-mode .ios-offline-banner button{border:1px solid #6577ff;background:#5265ee;color:#fff;border-radius:7px;padding:6px 13px;font-weight:700}
+.guest-mode .topbar{background:rgba(4,10,23,.96);border-bottom-color:#28365a}
+.guest-mode .top-search{border-color:#29375b;background:#080f20}
+.guest-mode .header-account-actions{display:flex;align-items:center;gap:8px}
+.guest-mode .account-entry-button{border:1px solid #334263;background:#0c172b;color:#d4def4;border-radius:8px;padding:9px 14px;font-weight:650;font-size:12px;transition:transform .18s ease,border-color .18s ease,background .18s ease}
+.guest-mode .account-entry-button.primary{border-color:#7885ff;background:linear-gradient(135deg,#6b7cff,#6950e8);color:#fff;box-shadow:0 8px 24px rgba(91,91,235,.25)}
+.guest-mode .account-entry-button:hover{transform:translateY(-1px);border-color:#8190ff}
+.guest-home{padding:26px clamp(16px,3vw,42px) 38px;max-width:1600px}
+.guest-home .hero{min-height:300px;border-color:#29365a;border-radius:16px;background:radial-gradient(ellipse at 78% 42%,rgba(92,105,255,.17),transparent 38%),linear-gradient(115deg,#080f20 0%,#0a1427 55%,#10102a 100%);box-shadow:0 24px 65px rgba(0,0,0,.22)}
+.guest-home .hero-copy{max-width:730px;padding:clamp(28px,4vw,48px)}
+.guest-home .hero .eyebrow{color:#9ba8ff;letter-spacing:3px;font-weight:750}
+.guest-home .hero h1{font-size:clamp(34px,4vw,52px);line-height:1.05;letter-spacing:-1.8px}
+.guest-home .hero h1 span{background:linear-gradient(90deg,#a6adff,#8b76ff,#7ccaff);background-clip:text;-webkit-background-clip:text;color:transparent}
+.guest-home .hero-copy>p:not(.eyebrow){max-width:620px;color:#b1bfd7;font-size:14px;line-height:1.8}
+.guest-home .hero-points{gap:10px 12px;margin-top:24px;flex-wrap:wrap}
+.guest-home .hero-points span{padding:7px 11px;border:1px solid #29395b;background:rgba(13,25,47,.7);border-radius:999px;color:#c5d1e9;font-size:11px}
+.guest-home .hero-points .icon-svg{color:#9aa7ff}
+.guest-home .hero-art{width:48%;background:radial-gradient(ellipse at 65% 44%,rgba(101,100,255,.26),transparent 45%),linear-gradient(135deg,transparent,#111331)}
+.guest-home .mountain-one{background:linear-gradient(150deg,transparent 34%,#1a2542 35%,#11172d 67%,#080d1b 68%)}
+.guest-home .mountain-two{background:linear-gradient(150deg,transparent 34%,#202346 35%,#12172b 67%,#080d1b 68%)}
+.guest-home .beam{background:linear-gradient(transparent,#8c95ff,transparent);box-shadow:0 0 24px #7785ff}
+.guest-home .quick-actions{gap:14px;margin:18px 0 22px}
+.guest-home .quick-actions>button{min-height:102px;padding:18px;gap:14px;border-color:#263653;border-radius:13px;background:linear-gradient(145deg,#0d192d,#091322);box-shadow:0 10px 26px rgba(0,0,0,.12);transition:transform .2s ease,border-color .2s ease,box-shadow .2s ease}
+.guest-home .quick-actions>button:hover{transform:translateY(-3px);border-color:#6575df;box-shadow:0 16px 35px rgba(54,67,151,.2)}
+.guest-home .quick-actions>button>div{min-width:0}
+.guest-home .quick-actions>button strong{display:block;font-size:13px;font-weight:750;color:#edf2ff;letter-spacing:-.1px}
+.guest-home .quick-actions>button small{font-size:11px;line-height:1.55;color:#94a6c3;margin-top:6px}
+.guest-home .quick-icon{width:43px;height:43px;flex:0 0 43px;border:1px solid #394a7a;border-radius:12px;background:linear-gradient(145deg,#243b75,#242456);color:#aebaff}
+.guest-home .quick-icon .icon-svg{width:20px;height:20px}
+.guest-home .home-columns{gap:18px}
+.guest-home .home-files-card,.guest-home .side-card{border-color:#263653;border-radius:13px;background:linear-gradient(145deg,#0b1628,#08111f);box-shadow:0 12px 30px rgba(0,0,0,.1)}
+.guest-home .card-title{padding:19px 20px 12px}
+.guest-home .card-title h2{font-size:16px;color:#e5edff}
+.guest-home .card-title button{display:inline-flex;align-items:center;gap:6px;padding:7px 9px;border:1px solid #34446b;border-radius:7px;background:#101c34;color:#aeb8ff}
+.guest-home .card-title button:hover{border-color:#7c89ff;background:#172344}
+.guest-home .file-tabs{padding:0 20px}
+.guest-home .table-wrap th,.guest-home .table-wrap td{padding:12px 18px}
+.guest-home .home-side{gap:14px}
+@media(max-width:1100px){.guest-home .hero-art{width:43%}.guest-home .hero-copy{max-width:72%}.guest-home .quick-actions{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:760px){.guest-home{padding:14px 12px 26px}.guest-home .hero{min-height:390px}.guest-home .hero-copy{padding:24px 20px}.guest-home .hero h1{font-size:34px}.guest-home .hero-art{width:100%;height:42%;opacity:.75}.guest-home .hero-copy>p:not(.eyebrow){font-size:13px}.guest-home .quick-actions{grid-template-columns:1fr;gap:10px}.guest-home .quick-actions>button{min-height:82px;padding:14px}.guest-mode .header-account-actions{gap:5px}.guest-mode .account-entry-button{padding:8px 9px;font-size:11px}}
+@media(max-width:390px){.guest-home .hero h1{font-size:29px}.guest-mode .account-entry-button{padding:7px;font-size:10px}}
+@media(prefers-reduced-motion:reduce){.guest-mode .account-entry-button,.guest-home .quick-actions>button{transition:none}.guest-mode .account-entry-button:hover,.guest-home .quick-actions>button:hover{transform:none}}
