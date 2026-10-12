@@ -44,7 +44,7 @@ function prepareImportedHtml(source:string):{html:string;layout:Partial<EditorLa
     const safeDeclarations=declarations.split(';').map(part=>part.trim()).filter(part=>{
       const idx=part.indexOf(':');if(idx<1)return false;
       const prop=part.slice(0,idx).trim().toLowerCase(),val=part.slice(idx+1).trim();
-      return /^(color|background|background-color|font-family|font-size|font-weight|font-style|text-align|text-decoration|line-height|letter-spacing|margin(?:-top|-right|-bottom|-left)?|padding(?:-top|-right|-bottom|-left)?|border(?:-top|-right|-bottom|-left)?|border-collapse|border-spacing|width|min-width|max-width|vertical-align|white-space|list-style-type)$/.test(prop)&&!/(url\s*\(|expression\s*\(|javascript:|@import)/i.test(val);
+      return /^(color|background|background-color|font-family|font-size|font-weight|font-style|font-variant|text-align|text-decoration|text-transform|line-height|letter-spacing|text-indent|margin(?:-top|-right|-bottom|-left)?|padding(?:-top|-right|-bottom|-left)?|border(?:-(?:top|right|bottom|left))?(?:-(?:color|style|width))?|border-collapse|border-spacing|table-layout|width|min-width|max-width|height|min-height|max-height|vertical-align|white-space|word-break|overflow-wrap|list-style-type)$/.test(prop)&&!/(url\s*\(|expression\s*\(|javascript:|@import)/i.test(val);
     }).join(';');
     if(!safeDeclarations)continue;
     for(const selector of selectorText.split(',')){
