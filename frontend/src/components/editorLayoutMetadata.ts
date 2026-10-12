@@ -1,4 +1,4 @@
-export type EditorLayoutSettings={pageSize:'A4'|'Letter';orientation:'portrait'|'landscape';margin:number;headerText:string;footerText:string;showPageNumbers:boolean;fontFamily:string};
+export type EditorLayoutSettings={pageSize:'A3'|'A4'|'A5'|'B5'|'Letter'|'Legal'|'Executive'|'Tabloid';orientation:'portrait'|'landscape';margin:number;headerText:string;footerText:string;showPageNumbers:boolean;fontFamily:string};
 const marker='<!--kz-layout:v1:';
 export function attachLayoutMetadata(html:string,settings:EditorLayoutSettings):string{
   const clean=stripLayoutMetadata(html);
@@ -9,7 +9,7 @@ export function parseLayoutMetadata(content:string):EditorLayoutSettings|null{
   if(!match)return null;
   try{
     const value=JSON.parse(decodeURIComponent(match[1]));
-    if((value.pageSize!=='A4'&&value.pageSize!=='Letter')||(value.orientation!=='portrait'&&value.orientation!=='landscape')||![10,15,20,25,30].includes(value.margin)||typeof value.headerText!=='string'||typeof value.footerText!=='string'||typeof value.showPageNumbers!=='boolean'||typeof value.fontFamily!=='string')return null;
+    if((!['A3','A4','A5','B5','Letter','Legal','Executive','Tabloid'].includes(value.pageSize))||(value.orientation!=='portrait'&&value.orientation!=='landscape')||!Number.isFinite(value.margin)||value.margin<0||value.margin>50||typeof value.headerText!=='string'||typeof value.footerText!=='string'||typeof value.showPageNumbers!=='boolean'||typeof value.fontFamily!=='string')return null;
     return value as EditorLayoutSettings;
   }catch{return null}
 }
