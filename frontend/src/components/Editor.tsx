@@ -117,7 +117,15 @@ async function importDocxWithFormatting(file:File):Promise<{html:string;layout:P
       for(const property of properties){const value=computed.getPropertyValue(property);if(value&&value!=='normal'&&value!=='none'&&value!=='rgba(0, 0, 0, 0)'&&value!=='auto')styles.push(property+':'+value)}
       const prior=element.getAttribute('style')||'';element.setAttribute('style',[prior,...styles].filter(Boolean).join(';'));element.removeAttribute('class');
     });
-    return {html:host.innerHTML,layout};
+    // docx-preview creates its own .docx page wrapper with physical dimensions and padding.
+    // The Nexus editor already owns the page shell and margins, so importing that wrapper
+    // nests one complete page inside another (the visible 'margin inside a margin' bug).
+    // Keep rendered content and formatting, but let the editor's page be the only page shell.
+    const renderedPages=[...host.querySelectorAll<HTMLElement>('.docx')];
+    const importedBody=renderedPages.length
+      ? renderedPages.map(page=>page.innerHTML).join('<div style="break-before:page;page-break-before:always"></div>')
+      : host.innerHTML;
+    return {html:importedBody,layout};
   }finally{host.remove()}
 }
 function parseRtf(source:string){return parseRtfToHtml(source)}
