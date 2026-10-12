@@ -88,16 +88,31 @@ export async function readCloudFile(file:CloudFile):Promise<{content:string;docu
   const ext=(file.name.split(".").pop()||"").toLowerCase();
   if(ext==="docx"||file.mimeType===docx){
     const response=await request("https://www.googleapis.com/drive/v3/files/"+encodeURIComponent(file.id)+"?alt=media");
-    const arrayBuffer=await response.arrayBuffer();
+    const blob=await response.blob();
     try{
-      const mammoth=await import("mammoth");
-      const result=await mammoth.convertToHtml({arrayBuffer});
-      const html=String(result.value||"").trim();
-      if(!html.replace(/<[^>]*>/g,"").trim())throw new Error("O DOCX não contém texto extraível.");
-      return {content:html,document_type:"html"};
+      const renderer=await import("docx-preview");
+      const renderAsync=(renderer as any).renderAsync;
+      if(typeof renderAsync!=="function")throw new Error("Renderizador DOCX indisponível.");
+      const host=document.createElement("div");
+      host.setAttribute("aria-hidden","true");
+      host.style.cssText="position:fixed;left:-100000px;top:0;width:1200px;visibility:hidden;pointer-events:none";
+      document.body.appendChild(host);
+      try{
+        await renderAsync(await blob.arrayBuffer(),host,undefined,{inWrapper:false,ignoreWidth:false,ignoreHeight:false,ignoreFonts:false,breakPages:false,renderHeaders:true,renderFooters:true,renderFootnotes:true,renderEndnotes:true,useBase64URL:true});
+        const properties=["font-family","font-size","font-weight","font-style","font-variant","color","background-color","text-align","text-decoration","text-transform","letter-spacing","line-height","vertical-align","white-space","word-break","overflow-wrap","width","min-width","max-width","height","margin-top","margin-right","margin-bottom","margin-left","padding-top","padding-right","padding-bottom","padding-left","border-top","border-right","border-bottom","border-left","border-collapse","border-spacing","table-layout","list-style-type","text-indent"];
+        host.querySelectorAll<HTMLElement>("*").forEach(element=>{
+          const computed=window.getComputedStyle(element);const styles:string[]=[];
+          for(const property of properties){const value=computed.getPropertyValue(property);if(value&&value!=="normal"&&value!=="none"&&value!=="rgba(0, 0, 0, 0)"&&value!=="auto")styles.push(property+":"+value)}
+          element.setAttribute("style",[element.getAttribute("style")||"",...styles].filter(Boolean).join(";"));
+          element.removeAttribute("class");
+        });
+        const html=host.innerHTML.trim();
+        if(!html.replace(/<[^>]*>/g,"").trim())throw new Error("O DOCX não contém texto extraível.");
+        return {content:html,document_type:"docx"};
+      }finally{host.remove()}
     }catch(error){
       if(error instanceof Error&&error.message==="O DOCX não contém texto extraível.")throw error;
-      throw new Error("Não foi possível ler este DOCX. Verifique se o arquivo não está corrompido ou protegido por senha.");
+      throw new Error("Não foi possível ler este DOCX preservando sua formatação. Verifique se o arquivo não está corrompido ou protegido por senha.");
     }
   }
   if(file.mimeType===slides){
