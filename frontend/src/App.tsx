@@ -365,6 +365,35 @@ function AppAuthenticated(){
   }
   useEffect(()=>{if(user&&!guest&&view==='documents'&&getStorageSelection()?.provider==='google-drive')refreshDriveFiles(null)},[user,guest,view,storageSelection?.provider]);
   useEffect(()=>{if(user&&!guest)load(view);else if(guest){setDocs([]);setFolders([]);setDriveFiles([])}},[user,guest,view,storageSelection?.provider]);
+  // Restore the editor after a browser refresh instead of silently returning to Home.
+  const editorRestoreAttempted=useRef(false);
+  useEffect(()=>{
+    if(!user||guest||boot||editorRestoreAttempted.current)return;
+    editorRestoreAttempted.current=true;
+    let savedView='',savedDocumentId='';
+    try{savedView=localStorage.getItem('kz_nexus_last_view')||'';savedDocumentId=localStorage.getItem('kz_nexus_last_editor_document')||''}catch{}
+    if(savedView!=='editor'||!savedDocumentId)return;
+    let cancelled=false;
+    void (async()=>{
+      try{
+        const restored=await api.document(savedDocumentId);
+        if(cancelled)return;
+        setSelected(restored);
+        setView('editor');
+        void api.versions(restored.id).then(rows=>{if(!cancelled)setVersions(rows)}).catch(()=>setVersions([]));
+        void api.tags().then(setTags).catch(()=>setTags([]));
+      }catch{
+        try{localStorage.removeItem('kz_nexus_last_view');localStorage.removeItem('kz_nexus_last_editor_document')}catch{}
+      }
+    })();
+    return()=>{cancelled=true};
+  },[user,guest,boot]);
+  useEffect(()=>{
+    try{
+      localStorage.setItem('kz_nexus_last_view',view);
+      if(view==='editor'&&selected&&!selected.id.startsWith('local:')&&!selected.id.startsWith('ios:'))localStorage.setItem('kz_nexus_last_editor_document',selected.id);
+    }catch{}
+  },[view,selected?.id]);
   useEffect(()=>{
     if(!isIOS)return;
     const onRuntime=(event:globalThis.Event)=>setIosOffline(!((event as CustomEvent<{online:boolean}>).detail?.online));
