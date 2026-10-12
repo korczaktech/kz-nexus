@@ -425,7 +425,8 @@ function AppAuthenticated(){
   async function restoreVersion(v:Version){if(!selected)return;try{await api.restoreVersion(selected.id,v.id);setSelected(await api.document(selected.id));setVersions(await api.versions(selected.id));setView('viewer')}catch(x){setError(x instanceof Error?x.message:'Não foi possível restaurar a versão.')}}
   if(boot)return <StatePanel title="Iniciando" message="Preparando o Korczak Nexus… Isso pode levar cerca de 30 a 60 segundos. Em alguns casos, pode levar até 2 minutos."/>; if(!user&&!guest)return <Auth done={setUser} onGuest={()=>{setGuest(true);setUser({id:'local-guest',name:'Visitante',email:'',phone:null,email_verified:false,phone_verified:false,role:'guest',status:'active',created_at:new Date().toISOString(),updated_at:new Date().toISOString()})}}/>; if(!user)return null;
 
-  const title=nav.concat(secondary).find(n=>n[0]===view)?.[1]||'Korczak Nexus';\n  const requireAccount=()=>{setError('Entre na sua conta para usar este recurso.');setModal(false);setShowStoragePicker(false)};\n  const requestCreate=()=>guest?requireAccount():setModal(true);
+  const title=nav.concat(secondary).find(n=>n[0]===view)?.[1]||'Korczak Nexus';
+  const requireAccount=()=>{setError('Entre na sua conta para usar este recurso.');setModal(false);setShowStoragePicker(false)};\n  const requestCreate=()=>guest?requireAccount():setModal(true);
   const action=async(d:DocumentItem)=>{
     if(d.id.startsWith('local:')){
       try{await deleteLocalFile(d.id.slice(6));await load(view)}catch(x){setError(x instanceof Error?x.message:'Não foi possível remover o arquivo da lista local.')}
@@ -449,7 +450,8 @@ function AppAuthenticated(){
       <div className="sidebar-footer"><strong>KORCZAK TECHNOLOGIES</strong><span>Korczak Nexus</span></div>
     </aside>
     <div className="main-shell">
-      {guest&&<div className="ios-offline-banner" role="status">Você está no modo local. Navegação disponível; criar/editar documentos e conectar o Google Drive exigem login. <button onClick={()=>{setGuest(false);setUser(null)}}>Entrar</button></div>}\n      {isIOS&&iosOffline&&<div className="ios-offline-banner" role="status"><Icon name="cloud"/> Você está offline. Arquivos locais continuam disponíveis; alterações feitas ao servidor serão enviadas quando a conexão voltar.</div>}
+      {guest&&<div className="ios-offline-banner" role="status">Você está no modo local. Navegação disponível; criar/editar documentos e conectar o Google Drive exigem login. <button onClick={()=>{setGuest(false);setUser(null)}}>Entrar</button></div>}
+      {isIOS&&iosOffline&&<div className="ios-offline-banner" role="status"><Icon name="cloud"/> Você está offline. Arquivos locais continuam disponíveis; alterações feitas ao servidor serão enviadas quando a conexão voltar.</div>}
       <header className="topbar">
         <div className="mobile-nexus-header">
           <div className="mobile-nexus-brand"><div className="brand-logo small image-brand"><img src={nexusLogo} alt="" /></div><div><strong>KORCZAK</strong><span>NEXUS</span></div></div>
