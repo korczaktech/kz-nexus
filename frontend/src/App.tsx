@@ -426,7 +426,8 @@ function AppAuthenticated(){
   if(boot)return <StatePanel title="Iniciando" message="Preparando o Korczak Nexus… Isso pode levar cerca de 30 a 60 segundos. Em alguns casos, pode levar até 2 minutos."/>; if(!user&&!guest)return <Auth done={u=>{setUser(u);setGuest(false)}} onGuest={()=>{setGuest(true);setUser({id:'local-guest',name:'Visitante',email:'',phone:null,email_verified:false,phone_verified:false,role:'guest',status:'active',created_at:new Date().toISOString(),updated_at:new Date().toISOString()})}}/>; if(!user)return null;
 
   const title=nav.concat(secondary).find(n=>n[0]===view)?.[1]||'Korczak Nexus';
-  const requireAccount=()=>{setError('Entre na sua conta para usar este recurso.');setModal(false);setShowStoragePicker(false)};\n  const requestCreate=()=>guest?requireAccount():setModal(true);
+  const requireAccount=()=>{setError('Entre na sua conta para usar este recurso.');setModal(false);setShowStoragePicker(false)};
+  const requestCreate=()=>guest?requireAccount():setModal(true);
   const action=async(d:DocumentItem)=>{
     if(d.id.startsWith('local:')){
       try{await deleteLocalFile(d.id.slice(6));await load(view)}catch(x){setError(x instanceof Error?x.message:'Não foi possível remover o arquivo da lista local.')}
