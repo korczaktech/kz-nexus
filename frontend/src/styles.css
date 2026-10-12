@@ -1780,3 +1780,55 @@ button,input,textarea,select{
 }
 .editor-page[style*="297mm"] .rich-editor{min-height:0!important}
 .editor-page .rich-editor{min-height:0!important}
+
+
+/* Native DOCX pages: center the imported physical pages themselves.
+   In this mode the editor shell is only a transparent editing surface, not a second sheet. */
+.editor-canvas:has(.editor-page-native-docx){justify-content:center!important;align-items:flex-start!important;overflow:auto!important}
+.editor-page.editor-page-native-docx{
+  display:block!important;
+  width:max-content!important;
+  min-width:0!important;
+  max-width:none!important;
+  min-height:0!important;
+  height:auto!important;
+  padding:0!important;
+  margin:0 auto!important;
+  background:transparent!important;
+  border:0!important;
+  box-shadow:none!important;
+  overflow:visible!important;
+  transform:none!important;
+  box-sizing:content-box!important;
+}
+.editor-page.editor-page-native-docx .editor-document-header,
+.editor-page.editor-page-native-docx .editor-document-footer{display:none!important}
+.editor-page.editor-page-native-docx .rich-editor{
+  display:block!important;
+  width:max-content!important;
+  min-width:0!important;
+  max-width:none!important;
+  min-height:0!important;
+  height:auto!important;
+  padding:0!important;
+  margin:0!important;
+  overflow:visible!important;
+  background:transparent!important;
+  box-sizing:content-box!important;
+}
+.editor-page.editor-page-native-docx .nexus-imported-docx-page{
+  display:block!important;
+  position:relative!important;
+  box-sizing:border-box!important;
+  max-width:none!important;
+  min-width:0!important;
+  margin:0 auto 24px!important;
+  background:#fff!important;
+  color:#111!important;
+  box-shadow:0 2px 14px rgba(0,0,0,.22)!important;
+  overflow:visible!important;
+  break-after:page;
+  page-break-after:always;
+}
+.editor-page.editor-page-native-docx .nexus-imported-docx-page:last-child{margin-bottom:0!important;break-after:auto;page-break-after:auto}
+.editor-page.editor-page-native-docx .nexus-imported-docx-page table{max-width:none!important;table-layout:auto!important}
