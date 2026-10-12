@@ -17,6 +17,15 @@ describe('rich RTF export',()=>{
     expect(rtf).toContain('item');
     expect(rtf.startsWith('{\\rtf1')).toBe(true);
   });
+  it('preserves font family, size and color from RTF font tables',()=>{
+    window=new Window();vi.stubGlobal('DOMParser',window.DOMParser);vi.stubGlobal('Node',window.Node);
+    const rtf='{\\rtf1\\ansi{\\fonttbl{\\f0 Arial;}{\\f1\\froman Times New Roman;}}{\\colortbl;\\red255\\green0\\blue0;}\\f1\\fs28\\cf1 Texto formatado\\par}';
+    const html=parseRtfToHtml(rtf);
+    expect(html).toContain('font-family:"Times New Roman"');
+    expect(html).toContain('font-size:14pt');
+    expect(html).toContain('color:#ff0000');
+    expect(html).toContain('Texto formatado');
+  });
   it('round-trips embedded PNG images through RTF',()=>{
     window=new Window();vi.stubGlobal('DOMParser',window.DOMParser);vi.stubGlobal('Node',window.Node);
     const base64='iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+j7V8AAAAASUVORK5CYII=';
