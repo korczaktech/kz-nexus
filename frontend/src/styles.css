@@ -2515,3 +2515,19 @@ button,input,textarea,select{
   .editor-workspace button,.editor-workspace input,.editor-workspace select{border-color:currentColor}
   .editor-workspace .editor-file-error{border:2px solid currentColor}
 }
+
+
+/* Distraction-free editor: use the entire viewport and hide application navigation. */
+.app-shell.editor-mode{min-height:100dvh;height:100dvh;overflow:hidden}
+.app-shell.editor-mode .sidebar,
+.app-shell.editor-mode .topbar,
+.app-shell.editor-mode .mobile-nexus-bottom,
+.app-shell.editor-mode .ios-offline-banner,
+.app-shell.editor-mode>.skip-link{display:none!important}
+.app-shell.editor-mode .main-shell{margin-left:0;width:100%;height:100dvh;min-height:0;display:flex;flex-direction:column}
+.app-shell.editor-mode .content{width:100%;max-width:none;min-height:0;height:100%;flex:1;padding:0;margin:0;overflow:auto}
+.app-shell.editor-mode .content>.page-head{display:none}
+.app-shell.editor-mode .content>.alert{margin:8px 12px}
+.app-shell.editor-mode .editor-workspace{width:100%;max-width:none;min-height:100%;height:100%;margin:0;border:0;border-radius:0}
+.app-shell.editor-mode .editor-workspace .editor-layout{min-height:0;height:100%}
+@media(max-width:850px){.app-shell.editor-mode .content{padding:0}}
