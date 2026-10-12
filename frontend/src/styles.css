@@ -1731,3 +1731,14 @@ button,input,textarea,select{
 }
 .editor-page .rich-editor img,
 .editor-page .rich-editor svg{max-width:100%!important}
+
+/* Consistent physical paper framing in the editor */
+.editor-body.rich-editor-body{min-width:0;overflow:hidden}
+.editor-canvas{display:flex!important;justify-content:center!important;align-items:flex-start!important;min-width:0!important;width:100%!important;overflow:auto!important;padding:28px!important;box-sizing:border-box!important}
+.editor-page{display:block!important;flex:0 0 auto!important;box-sizing:border-box!important;width:210mm!important;min-width:210mm!important;max-width:none!important;min-height:297mm!important;height:auto!important;margin:0 auto 28px!important;padding:0!important;overflow:visible!important;transform-origin:top center!important}
+.editor-page[style*="297mm"]{width:297mm!important;min-width:297mm!important;max-width:none!important;min-height:210mm!important}
+.editor-page .rich-editor{display:block!important;box-sizing:border-box!important;width:100%!important;max-width:100%!important;min-width:0!important;min-height:calc(297mm - 2 * var(--editor-margin, 25mm))!important;margin:0!important;padding:var(--editor-margin, 25mm)!important;overflow-wrap:anywhere!important}
+.editor-page[style*="297mm"] .rich-editor{min-height:calc(210mm - 2 * var(--editor-margin, 25mm))!important}
+.editor-page .rich-editor table{width:100%!important;max-width:100%!important;min-width:0!important;table-layout:fixed!important}
+.editor-page .rich-editor table td,.editor-page .rich-editor table th{min-width:0!important;max-width:100%!important;overflow-wrap:anywhere!important}
+@media(max-width:900px){.editor-body.rich-editor-body{display:block!important;overflow:hidden}.editor-canvas{justify-content:flex-start!important;padding:16px!important}.editor-page{margin-left:0!important;margin-right:0!important}}
