@@ -1832,3 +1832,5 @@ button,input,textarea,select{
 }
 .editor-page.editor-page-native-docx .nexus-imported-docx-page:last-child{margin-bottom:0!important;break-after:auto;page-break-after:auto}
 .editor-page.editor-page-native-docx .nexus-imported-docx-page table{max-width:none!important;table-layout:auto!important}
+
+.auth-card .legal-consent{display:grid;gap:10px;margin:2px 0 4px}.auth-card .legal-consent label{display:flex;align-items:flex-start;gap:9px;line-height:1.55;font-size:12px}.auth-card .legal-consent input[type="checkbox"]{flex:0 0 auto;width:16px;height:16px;margin:1px 0 0;accent-color:#7c83ff;padding:0}.auth-card .legal-consent a{color:#a6adff;text-decoration:underline;text-underline-offset:2px}.public-legal-copy{padding:0;color:#39465b}.public-legal-copy h3{color:#14213a}.public-legal-copy h4{color:#1d2c47}.public-legal-copy p,.public-legal-copy li{color:#39465b}
