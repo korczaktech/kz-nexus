@@ -473,7 +473,7 @@ function AppAuthenticated(){
     }
     try{if(d.status==='deleted')await api.restore(d.id);else await api.favorite(d.id,!d.favorite);await load(view)}catch(x){setError(x instanceof Error?x.message:'Operação não concluída.')}};
 
-  return <div className={'app-shell'+(guest?' guest-mode':'')}>
+  return <div className={'app-shell'+(guest?' guest-mode':'')+(view==='editor'?' editor-mode':'')}>
     <a className="skip-link" href="#main-content">Pular para o conteúdo principal</a>
     <aside className="sidebar">
       <div className="side-brand"><div className="brand-logo image-brand"><img src={nexusLogo} alt="" /></div><div><strong>KORCZAK</strong><span>NEXUS</span></div></div>
