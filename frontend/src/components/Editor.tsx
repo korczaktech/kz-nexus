@@ -106,18 +106,22 @@ async function importDocxWithFormatting(file:File):Promise<{html:string;layout:P
   if(typeof renderAsync!=='function')throw new Error('O renderizador DOCX não está disponível.');
   const host=window.document.createElement('div');
   host.setAttribute('aria-hidden','true');
-  host.style.cssText='position:fixed;left:-100000px;top:0;width:1200px;visibility:hidden;pointer-events:none;z-index:-1';
+  host.style.cssText='position:fixed;left:-100000px;top:0;width:max-content;visibility:hidden;pointer-events:none;z-index:-1';
   window.document.body.appendChild(host);
   try{
-    await renderAsync(await file.arrayBuffer(),host,undefined,{inWrapper:false,ignoreWidth:false,ignoreHeight:false,ignoreFonts:false,breakPages:false,renderHeaders:true,renderFooters:true,renderFootnotes:true,renderEndnotes:true,useBase64URL:true});
+    await renderAsync(await file.arrayBuffer(),host,undefined,{inWrapper:true,ignoreWidth:false,ignoreHeight:false,ignoreFonts:false,breakPages:true,renderHeaders:true,renderFooters:true,renderFootnotes:true,renderEndnotes:true,useBase64URL:true});
     const layout:Partial<EditorLayoutSettings>={};
     // Capture the page nodes BEFORE the formatting pass removes their classes.
     // docx-preview places each physical page directly inside .docx-wrapper.
     const wrapper=host.querySelector<HTMLElement>('.docx-wrapper');
-    const renderedPages=wrapper
+    const directPages=wrapper
       ? [...wrapper.children].filter((child):child is HTMLElement=>child instanceof HTMLElement&&child.classList.contains('docx'))
-      : [...host.children].filter((child):child is HTMLElement=>child instanceof HTMLElement&&child.classList.contains('docx'));
-    const page=renderedPages[0]||host.querySelector<HTMLElement>('.docx');
+      : [];
+    // Different DOCX files/rendering modes can nest pages differently. Fall back
+    // to all page elements, not only direct host children, or pagination is lost.
+    const renderedPages=directPages.length?directPages:[...host.querySelectorAll<HTMLElement>('.docx')];
+    const page=renderedPages[0]||null;
+    if(!renderedPages.length)throw new Error('Não foi possível identificar as páginas deste DOCX. Tente salvar o arquivo novamente no Word ou LibreOffice.');
     if(page){const style=window.getComputedStyle(page);const width=parseFloat(style.width),height=parseFloat(style.height);if(Number.isFinite(width)&&Number.isFinite(height)){const detected=detectPageSize(width,height);layout.pageSize=detected.pageSize;layout.orientation=detected.orientation}const marginPx=parseFloat(style.paddingLeft||'');if(Number.isFinite(marginPx)&&marginPx>0){layout.margin=Math.max(0,Math.min(50,Math.round(marginPx*25.4/96)))}}
     const properties=['font-family','font-size','font-weight','font-style','color','background-color','text-align','text-decoration','text-transform','letter-spacing','line-height','vertical-align','white-space','word-break','overflow-wrap','margin-top','margin-right','margin-bottom','margin-left','padding-top','padding-right','padding-bottom','padding-left','border-top','border-right','border-bottom','border-left','border-collapse','border-spacing','list-style-type','text-indent'];
     host.querySelectorAll<HTMLElement>('*').forEach(element=>{
@@ -129,9 +133,7 @@ async function importDocxWithFormatting(file:File):Promise<{html:string;layout:P
     // The Nexus editor already owns the page shell and margins, so importing that wrapper
     // nests one complete page inside another (the visible 'margin inside a margin' bug).
     // Keep rendered content and formatting, but let the editor's page be the only page shell.
-    const importedBody=renderedPages.length
-      ? renderedPages.map(page=>page.innerHTML).join('<div class="nexus-imported-page-break" contenteditable="false" aria-hidden="true"></div>')
-      : host.innerHTML;
+    const importedBody=renderedPages.map((page,index)=>page.innerHTML).join('<div class="nexus-imported-page-break" contenteditable="false" aria-hidden="true"></div>');
     return {html:importedBody,layout};
   }finally{host.remove()}
 }
