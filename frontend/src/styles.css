@@ -2704,3 +2704,18 @@ html:has(.app-shell.editor-mode),body:has(.app-shell.editor-mode),#root:has(.app
   .app-shell.editor-mode .editor-page{height:297mm!important;min-height:297mm!important;max-height:297mm!important}
   .app-shell.editor-mode .editor-page[style*="297mm"]{height:210mm!important;min-height:210mm!important;max-height:210mm!important}
 }
+
+
+/* Distinguish landscape by its explicit rendered width, not the height value. */
+.app-shell.editor-mode .editor-page[style*="width: 210mm"]{
+  height:297mm!important;min-height:297mm!important;max-height:297mm!important;flex-basis:297mm!important;
+}
+.app-shell.editor-mode .editor-page[style*="width: 297mm"]{
+  height:210mm!important;min-height:210mm!important;max-height:210mm!important;flex-basis:210mm!important;
+}
+.app-shell.editor-mode .editor-page[style*="width: 210mm"] .rich-editor{
+  min-height:calc(297mm - 2 * var(--editor-margin, 25mm))!important;
+}
+.app-shell.editor-mode .editor-page[style*="width: 297mm"] .rich-editor{
+  min-height:calc(210mm - 2 * var(--editor-margin, 25mm))!important;
+}
