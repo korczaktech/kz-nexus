@@ -128,7 +128,7 @@ async function importDocxWithFormatting(file:File):Promise<{html:string;layout:P
     // nests one complete page inside another (the visible 'margin inside a margin' bug).
     // Keep rendered content and formatting, but let the editor's page be the only page shell.
     const importedBody=renderedPages.length
-      ? renderedPages.map(page=>page.innerHTML).join('<div style="break-before:page;page-break-before:always"></div>')
+      ? renderedPages.map(page=>page.innerHTML).join('<div class="nexus-imported-page-break" contenteditable="false" aria-hidden="true"></div>')
       : host.innerHTML;
     return {html:importedBody,layout};
   }finally{host.remove()}
