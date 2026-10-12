@@ -1767,3 +1767,16 @@ button,input,textarea,select{
   width:auto!important;
   max-width:100%!important;
 }
+
+
+/* Final sizing source: exact paper dimensions inferred from the imported file. */
+.editor-page,
+.editor-page[style*="297mm"]{
+  width:var(--page-width)!important;
+  min-width:var(--page-width)!important;
+  max-width:none!important;
+  min-height:var(--page-height)!important;
+  height:auto!important;
+}
+.editor-page[style*="297mm"] .rich-editor{min-height:0!important}
+.editor-page .rich-editor{min-height:0!important}
