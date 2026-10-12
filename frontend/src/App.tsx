@@ -373,16 +373,21 @@ function AppAuthenticated(){
     editorRestoreAttempted.current=true;
     let savedView='',savedDocumentId='';
     try{savedView=localStorage.getItem('kz_nexus_last_view')||'';savedDocumentId=localStorage.getItem('kz_nexus_last_editor_document')||''}catch{}
-    if(savedView!=='editor'||!savedDocumentId){setEditorRestoreComplete(true);return}
+    const restorableViews:View[]=['home','documents','viewer','editor','create','history','versions','folders','favorites','recent','trash','search','advanced-search','profile','about','privacy','terms','credits','users','groups','permissions','folder-permissions','audit','admin','settings'];
+    if(!restorableViews.includes(savedView as View)){setEditorRestoreComplete(true);return}
     let cancelled=false;
     void (async()=>{
       try{
-        const restored=await api.document(savedDocumentId);
+        const needsDocument=['editor','viewer','history','versions','permissions'].includes(savedView);
+        if(needsDocument&&savedDocumentId){
+          const restored=await api.document(savedDocumentId);
+          if(cancelled)return;
+          setSelected(restored);
+          void api.versions(restored.id).then(rows=>{if(!cancelled)setVersions(rows)}).catch(()=>setVersions([]));
+          void api.tags().then(rows=>{if(!cancelled)setTags(rows)}).catch(()=>setTags([]));
+        }
         if(cancelled)return;
-        setSelected(restored);
-        setView('editor');
-        void api.versions(restored.id).then(rows=>{if(!cancelled)setVersions(rows)}).catch(()=>setVersions([]));
-        void api.tags().then(setTags).catch(()=>setTags([]));
+        setView(savedView as View);
       }catch{
         try{localStorage.removeItem('kz_nexus_last_view');localStorage.removeItem('kz_nexus_last_editor_document')}catch{}
       }finally{
@@ -395,7 +400,7 @@ function AppAuthenticated(){
     if(!editorRestoreComplete)return;
     try{
       localStorage.setItem('kz_nexus_last_view',view);
-      if(view==='editor'&&selected&&!selected.id.startsWith('local:')&&!selected.id.startsWith('ios:'))localStorage.setItem('kz_nexus_last_editor_document',selected.id);
+      if(selected&&!selected.id.startsWith('local:')&&!selected.id.startsWith('ios:'))localStorage.setItem('kz_nexus_last_editor_document',selected.id);
     }catch{}
   },[editorRestoreComplete,view,selected?.id]);
   useEffect(()=>{
