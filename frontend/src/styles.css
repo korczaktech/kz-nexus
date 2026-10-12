@@ -1834,3 +1834,61 @@ button,input,textarea,select{
 .editor-page.editor-page-native-docx .nexus-imported-docx-page table{max-width:none!important;table-layout:auto!important}
 
 .auth-card .legal-consent{display:grid;gap:10px;margin:2px 0 4px}.auth-card .legal-consent label{display:flex;align-items:flex-start;gap:9px;line-height:1.55;font-size:12px}.auth-card .legal-consent input[type="checkbox"]{flex:0 0 auto;width:16px;height:16px;margin:1px 0 0;accent-color:#7c83ff;padding:0}.auth-card .legal-consent a{color:#a6adff;text-decoration:underline;text-underline-offset:2px}.public-legal-copy{padding:0;color:#39465b}.public-legal-copy h3{color:#14213a}.public-legal-copy h4{color:#1d2c47}.public-legal-copy p,.public-legal-copy li{color:#39465b}
+
+
+/* Authentication actions: polished buttons that match the Nexus dark glass theme. */
+.auth-card form > .button{
+  width:100%;
+  min-height:48px;
+  justify-content:center;
+  margin-top:5px;
+  padding:13px 18px;
+  border:1px solid rgba(142,151,255,.48);
+  border-radius:10px;
+  background:linear-gradient(135deg,#7785ff 0%,#5969f2 48%,#4654d5 100%);
+  color:#fff;
+  font-size:13px;
+  font-weight:750;
+  letter-spacing:.015em;
+  box-shadow:0 10px 26px rgba(76,91,226,.24),inset 0 1px 0 rgba(255,255,255,.2);
+  transition:transform .18s ease,box-shadow .18s ease,filter .18s ease,border-color .18s ease;
+}
+.auth-card form > .button:hover{
+  transform:translateY(-1px);
+  filter:brightness(1.08);
+  border-color:rgba(177,183,255,.82);
+  box-shadow:0 14px 32px rgba(76,91,226,.34),inset 0 1px 0 rgba(255,255,255,.25);
+}
+.auth-card form > .button:active{transform:translateY(0);filter:brightness(.98)}
+.auth-card form > .button:focus-visible,
+.auth-card .auth-links .text-button:focus-visible,
+.auth-card .guest-entry:focus-visible{
+  outline:2px solid #aeb5ff;
+  outline-offset:3px;
+}
+.auth-card .auth-links .text-button,
+.auth-card .guest-entry{
+  min-height:32px;
+  padding:7px 9px;
+  border:1px solid transparent;
+  border-radius:8px;
+  color:#a5b0ff;
+  font-size:11px;
+  font-weight:600;
+  transition:color .18s ease,background .18s ease,border-color .18s ease;
+}
+.auth-card .auth-links .text-button:hover,
+.auth-card .guest-entry:hover{
+  color:#e0e4ff;
+  background:rgba(112,125,255,.09);
+  border-color:rgba(112,125,255,.22);
+}
+.auth-card .guest-entry{
+  display:block;
+  margin:8px auto 0;
+  color:#aab8cd;
+}
+.auth-card .guest-entry:hover{color:#e4ecfa;background:rgba(148,163,184,.08);border-color:rgba(148,163,184,.18)}
+@media (prefers-reduced-motion:reduce){
+  .auth-card form > .button,.auth-card .auth-links .text-button,.auth-card .guest-entry{transition:none}
+}
