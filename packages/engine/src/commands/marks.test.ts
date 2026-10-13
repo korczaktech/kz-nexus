@@ -44,6 +44,19 @@ describe("applyMark / removeMark / toggleMark", () => {
     expect(invalid.ok).toBe(false);
   });
 
+  it("applies superscript and subscript as engine marks", () => {
+    const { document, blockId } = setup("H2O");
+    const superscript = applyMark({ blockId, start: 0, end: 1, mark: { type: "superscript" } })(document, ctx());
+    expect(superscript.ok).toBe(true);
+    if (!superscript.ok) return;
+    const subscript = applyMark({ blockId, start: 1, end: 2, mark: { type: "subscript" } })(superscript.value.document, ctx());
+    expect(subscript.ok).toBe(true);
+    if (!subscript.ok) return;
+    const paragraph = subscript.value.document.content[0] as Paragraph;
+    expect(paragraph.children.find(run => run.text === "H")?.marks).toContainEqual({ type: "superscript" });
+    expect(paragraph.children.find(run => run.text === "2")?.marks).toContainEqual({ type: "subscript" });
+  });
+
   it("toggleMark adds the mark when not fully applied, removes when fully applied", () => {
     const { document, blockId } = setup("Hello");
     const once = toggleMark({ blockId, start: 0, end: 5, mark: { type: "italic" } })(document, ctx());
