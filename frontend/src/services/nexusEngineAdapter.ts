@@ -224,6 +224,10 @@ export interface EngineDomContext {
   blockIndex: number;
   startOffset: number;
   endOffset: number;
+  anchorBlockId: string;
+  anchorOffset: number;
+  focusBlockId: string;
+  focusOffset: number;
   topLevelBlock: Block;
   topLevelIndex: number;
   list?: Extract<Block, { type: "bulletList" | "orderedList" }>;
@@ -256,6 +260,13 @@ export function getEngineDomContext(
   const startOffset = pointOffset(domBlocks[startIndex], range.startContainer, range.startOffset);
   const endOffset = pointOffset(domBlocks[endIndex], range.endContainer, range.endOffset);
   if (startOffset === null || endOffset === null) return null;
+  const anchorElement = (selection.anchorNode instanceof HTMLElement ? selection.anchorNode : selection.anchorNode.parentElement)?.closest<HTMLElement>("p,h1,h2,h3,h4,h5,h6,li,td,th,blockquote");
+  const focusElement = (selection.focusNode instanceof HTMLElement ? selection.focusNode : selection.focusNode.parentElement)?.closest<HTMLElement>("p,h1,h2,h3,h4,h5,h6,li,td,th,blockquote");
+  const anchorIndex = anchorElement ? domBlocks.indexOf(anchorElement) : -1;
+  const focusIndex = focusElement ? domBlocks.indexOf(focusElement) : -1;
+  const anchorOffset = anchorIndex >= 0 ? pointOffset(domBlocks[anchorIndex], selection.anchorNode, selection.anchorOffset) : null;
+  const focusOffset = focusIndex >= 0 ? pointOffset(domBlocks[focusIndex], selection.focusNode, selection.focusOffset) : null;
+  if (anchorIndex < 0 || focusIndex < 0 || anchorOffset === null || focusOffset === null) return null;
   const selected = modelBlocks[startIndex];
   let topLevelBlock: Block | undefined;
   let topLevelIndex = -1;
@@ -284,7 +295,7 @@ export function getEngineDomContext(
   };
   engine.getDocument().content.some((block, index) => visit(block, index));
   if (!topLevelBlock) return null;
-  return { block: selected, blockIndex: startIndex, startOffset, endOffset, topLevelBlock, topLevelIndex, list, listItemId, table, rowId, cellId, columnIndex };
+  return { block: selected, blockIndex: startIndex, startOffset, endOffset, anchorBlockId: modelBlocks[anchorIndex].id, anchorOffset, focusBlockId: modelBlocks[focusIndex].id, focusOffset, topLevelBlock, topLevelIndex, list, listItemId, table, rowId, cellId, columnIndex };
 }
 
 /** Re-renders the canonical model through the adapter, not through browser editing commands. */
