@@ -32,6 +32,16 @@ jobs:
       - name: Install dependencies
         working-directory: frontend
         run: npm install --no-audit --no-fund
+      - name: Install engine dependencies
+        working-directory: packages/engine
+        run: npm install --no-audit --no-fund
+
+      - name: Verify engine
+        working-directory: packages/engine
+        run: npm run typecheck && npm test && npm run build
+
+      - name: Build engine preview
+        run: packages/engine/node_modules/.bin/tsc -p packages/engine-preview/tsconfig.json --noEmit && node packages/engine-preview/build.mjs
 
       - name: Validate Phase 1 parity
         run: node scripts/check-phase1-parity.mjs
@@ -47,6 +57,11 @@ jobs:
           VITE_GOOGLE_CLIENT_ID: ${{ vars.GOOGLE_CLIENT_ID || secrets.GOOGLE_CLIENT_ID }}
           VITE_GOOGLE_REDIRECT_URI: ${{ vars.GOOGLE_REDIRECT_URI || secrets.GOOGLE_REDIRECT_URI }}
         run: npm run build
+
+      - name: Publish engine preview alongside the frontend
+        run: |
+          cp packages/engine-preview/dist/preview-standalone.html frontend/dist/engine-preview.html
+          test -f frontend/dist/engine-preview.html
 
       - name: Generate Android-compatible PWA PNG icons
         working-directory: frontend
