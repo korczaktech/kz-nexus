@@ -55,6 +55,7 @@ export {
 export { insertList, convertBlockToList, convertListType, insertListItem, splitListItem, mergeListItemWithPrevious, removeListItem } from "./commands/list";
 export { insertTable, addTableRow, removeTableRow, addTableColumn, removeTableColumn, setCellText } from "./commands/table";
 export { insertImage, insertImageResource, removeImage } from "./commands/image";
+export { insertImportedBlocksAtSelection } from "./commands/importedBlocks";
 export { setPageConfig, setMetadata } from "./commands/document";
 export type { CreateDocumentOptions } from "./commands/document";
 
