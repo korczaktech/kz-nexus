@@ -165,7 +165,7 @@ function renderRuns(runs: TextRun[]): string {
 
 function renderBlock(block: Block, resources: ResourceRef[] = []): string {
   if (block.type === "paragraph") { const align = block.align ? ` style="text-align:${block.align}"` : ""; return "<p" + align + ">" + renderRuns(block.children) + "</p>"; }
-  if (block.type === "heading") { const align = block.align ? ` style="text-align:${block.align}"` : ""; return "<h" + block.level + align + ">" + renderRuns(block.children) + "</h" + block.level + ">"; }
+  if (block.type === "heading") { const align = block.align ? ` style="text-align:${block.align}"` : ""; return '<h' + block.level + ' id="' + escapeHtml(block.id) + '"' + align + ">" + renderRuns(block.children) + "</h" + block.level + ">"; }
   if (block.type === "blockquote") return "<blockquote>" + block.children.map(p => renderBlock(p, resources)).join("") + "</blockquote>";
   if (block.type === "thematicBreak") return "<hr>";
   if (block.type === "bulletList" || block.type === "orderedList") {
