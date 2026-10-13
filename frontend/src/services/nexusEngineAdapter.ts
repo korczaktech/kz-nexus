@@ -12,6 +12,7 @@ import {
   replaceRange,
   getPlainText,
   isValidLink,
+  isValidColor,
   type Selection,
   type Block,
   type Mark,
@@ -112,8 +113,54 @@ function tableBlock(element: Element): Extract<Block, { type: "table" }> {
   return { type: "table", id: nextId(), children: rows };
 }
 
+function sanitizeImportedHtml(parsed: Document): void {
+  parsed.querySelectorAll("script,style,iframe,object,embed,form,input,button,textarea,select,option,link,meta,base,svg,math,template").forEach(node => node.remove());
+  const allowedStyles = new Set(["color", "background-color", "font-size", "font-family", "text-align", "margin-left", "width", "height"]);
+  parsed.body.querySelectorAll("*").forEach(element => {
+    for (const attribute of Array.from(element.attributes)) {
+      const name = attribute.name.toLowerCase();
+      if (name.startsWith("on") || name === "srcdoc" || name === "formaction" || name === "xmlns") {
+        element.removeAttribute(attribute.name);
+        continue;
+      }
+      if (name === "href") {
+        if (element.tagName.toLowerCase() !== "a" || !isValidLink(attribute.value)) element.removeAttribute(attribute.name);
+        continue;
+      }
+      if (name === "src") {
+        const value = attribute.value;
+        if (element.tagName.toLowerCase() !== "img" || !/^data:image\/(?:png|jpeg|gif|webp|svg\+xml);base64,[a-z0-9+/=]+$/i.test(value)) element.removeAttribute(attribute.name);
+        continue;
+      }
+      if (name === "style") {
+        const style = (element as HTMLElement).style;
+        for (const property of Array.from(style)) {
+          const value = style.getPropertyValue(property).trim();
+          const valid = allowedStyles.has(property) && (
+            (property === "color" || property === "background-color") ? isValidColor(value) :
+            property === "font-size" ? /^(?:\d+(?:\.\d+)?)(?:px|pt|em|rem|%)$/i.test(value) && Number.parseFloat(value) > 0 && Number.parseFloat(value) <= 200 :
+            property === "font-family" ? /^[\w\s,'"()-]{1,120}$/.test(value) :
+            property === "text-align" ? /^(?:left|right|center|justify|start|end)$/i.test(value) :
+            /^(?:\d+(?:\.\d+)?)(?:px|pt|mm|cm|in|%)$/i.test(value)
+          );
+          if (!valid) style.removeProperty(property);
+        }
+        if (!style.length) element.removeAttribute("style");
+        continue;
+      }
+      if (name === "width" || name === "height") {
+        if (!/^\d{1,4}$/.test(attribute.value) || Number(attribute.value) < 1 || Number(attribute.value) > 4096) element.removeAttribute(attribute.name);
+        continue;
+      }
+      if (["alt", "title", "start", "colspan", "rowspan"].includes(name)) continue;
+      element.removeAttribute(attribute.name);
+    }
+  });
+}
+
 function blocksFromHtml(html: string, resources: ResourceRef[] = []): Block[] {
   const parsed = new DOMParser().parseFromString(html || "<p></p>", "text/html");
+  sanitizeImportedHtml(parsed);
   const blocks: Block[] = [];
   const visit = (element: Element) => {
     const tag = element.tagName.toLowerCase();
