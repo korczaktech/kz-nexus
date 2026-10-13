@@ -2920,3 +2920,30 @@ html:has(.app-shell.editor-mode),body:has(.app-shell.editor-mode),#root:has(.app
   outline:1px solid rgba(154,168,255,.28);
   outline-offset:-2px;
 }
+
+
+/* Selected controls must look unmistakably different from idle toolbar buttons. */
+.app-shell.editor-mode .editor-toolbar button.editor-tool.active,
+.app-shell.editor-mode .editor-toolbar button.editor-tool[aria-pressed="true"]{
+  position:relative!important;isolation:isolate;
+  background:linear-gradient(145deg,#6578ff 0%,#414ed8 100%)!important;
+  border:1px solid #d5dcff!important;color:#fff!important;
+  outline:1px solid rgba(164,180,255,.78)!important;outline-offset:-3px!important;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.38),inset 0 -3px 0 rgba(18,27,105,.36),0 0 0 2px rgba(99,119,255,.2),0 3px 13px rgba(74,94,255,.48)!important;
+  transform:translateY(-1px);
+}
+.app-shell.editor-mode .editor-toolbar button.editor-tool.active::after,
+.app-shell.editor-mode .editor-toolbar button.editor-tool[aria-pressed="true"]::after{
+  content:"";position:absolute;left:7px;right:7px;bottom:2px;height:3px;border-radius:3px;
+  background:#fff!important;box-shadow:0 0 7px rgba(255,255,255,.9);pointer-events:none;
+}
+.app-shell.editor-mode .editor-toolbar button.editor-tool.active svg,
+.app-shell.editor-mode .editor-toolbar button.editor-tool.active .icon-svg,
+.app-shell.editor-mode .editor-toolbar button.editor-tool[aria-pressed="true"] svg,
+.app-shell.editor-mode .editor-toolbar button.editor-tool[aria-pressed="true"] .icon-svg{
+  color:#fff!important;stroke:currentColor!important;filter:drop-shadow(0 0 2px rgba(255,255,255,.28));
+}
+.app-shell.editor-mode .editor-toolbar button.editor-tool.active:hover:not(:disabled),
+.app-shell.editor-mode .editor-toolbar button.editor-tool[aria-pressed="true"]:hover:not(:disabled){
+  background:linear-gradient(145deg,#7888ff 0%,#4d5be8 100%)!important;border-color:#fff!important;
+}
