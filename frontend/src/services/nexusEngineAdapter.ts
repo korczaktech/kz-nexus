@@ -485,7 +485,7 @@ export function removeEngineMarksForDomSelection(
   root: HTMLElement,
 ): { ok: boolean; message?: string } {
   const selection = root.ownerDocument.defaultView?.getSelection();
-  if (!selection || selection.isCollapsed || !selection.rangeCount) return { ok: false, message: "Selecione o texto que deseja limpar." };
+  if (!selection || selection.isCollapsed || !selection.rangeCount || !selection.anchorNode || !selection.focusNode) return { ok: false, message: "Selecione o texto que deseja limpar." };
   const range = selection.getRangeAt(0);
   if (!root.contains(range.startContainer) || !root.contains(range.endContainer)) return { ok: false, message: "A seleção precisa estar dentro do documento." };
   const domBlocks = domTextBlocks(root);
