@@ -2,6 +2,7 @@ import type { Block, ImageBlock } from "../model/types";
 import { engineError } from "../errors/errors";
 import { err, ok } from "../utils/result";
 import type { Command } from "./types";
+import { addResource } from "../resources/resources";
 
 export function insertImage(params: { afterBlockId: string; resourceId: string; alt: string; width?: number; height?: number }): Command {
   return (doc, ctx) => {
@@ -30,5 +31,26 @@ export function removeImage(params: { blockId: string }): Command {
     if (!exists) return err(engineError("NODE_NOT_FOUND", `Image block "${params.blockId}" not found`, { path: params.blockId }));
     const content = doc.content.filter((block) => block.id !== params.blockId);
     return ok({ document: { ...doc, content: content.length > 0 ? content : doc.content } });
+  };
+}
+
+/** Atomically embeds an image resource and inserts its image block in one engine transaction. */
+export function insertImageResource(params: { afterBlockId: string; mimeType: string; data: string; alt: string; name?: string; width?: number; height?: number }): Command {
+  return (doc, ctx) => {
+    const index = doc.content.findIndex((block) => block.id === params.afterBlockId);
+    if (index === -1) return err(engineError("NODE_NOT_FOUND", `Top-level block "${params.afterBlockId}" not found`, { path: params.afterBlockId }));
+    const added = addResource(doc, { kind: "image", mimeType: params.mimeType, data: params.data, name: params.name }, ctx.generateId);
+    if (!added.ok) return added;
+    const image: ImageBlock = {
+      type: "image",
+      id: ctx.generateId(),
+      resourceId: added.value.resource.id,
+      alt: params.alt,
+      width: params.width,
+      height: params.height,
+    };
+    const content: Block[] = [...added.value.document.content];
+    content.splice(index + 1, 0, image);
+    return ok({ document: { ...added.value.document, content } });
   };
 }
