@@ -83,11 +83,13 @@ function tableBlock(element: Element): Extract<Block, { type: "table" }> {
   const rows = Array.from(element.querySelectorAll("tr")).map(row => ({
     type: "tableRow" as const,
     id: nextId(),
-    children: Array.from(row.children).filter(cell => ["td", "th"].includes(cell.tagName.toLowerCase())).map(cell => ({
-      type: "tableCell" as const,
-      id: nextId(),
-      children: [makeParagraph(cell) as Extract<Block, { type: "paragraph" }>],
-    })),
+    children: Array.from(row.children).filter(cell => ["td", "th"].includes(cell.tagName.toLowerCase())).map(cell => {
+      const nested = Array.from(cell.children).filter(child => /^(P|H[1-6])$/.test(child.tagName)).map(child => {
+        const paragraph = makeParagraph(child);
+        return paragraph.type === "heading" ? { type: "paragraph" as const, id: paragraph.id, align: paragraph.align, children: paragraph.children } : paragraph;
+      });
+      return { type: "tableCell" as const, id: nextId(), children: nested.length ? nested : [makeParagraph(cell) as Extract<Block, { type: "paragraph" }>] };
+    }),
   })).filter(row => row.children.length > 0);
   return { type: "table", id: nextId(), children: rows };
 }
@@ -168,7 +170,7 @@ function renderBlock(block: Block, resources: ResourceRef[] = []): string {
     const start = block.type === "orderedList" && block.start !== 1 ? ' start="' + block.start + '"' : "";
     return "<" + tag + start + ">" + block.children.map(item => "<li>" + item.children.map(child => renderBlock(child as Block, resources)).join("") + "</li>").join("") + "</" + tag + ">";
   }
-  if (block.type === "table") return "<table><tbody>" + block.children.map(row => "<tr>" + row.children.map(cell => "<td>" + cell.children.map(p => renderRuns(p.children)).join("<br>") + "</td>").join("") + "</tr>").join("") + "</tbody></table>";
+  if (block.type === "table") return "<table><tbody>" + block.children.map(row => "<tr>" + row.children.map(cell => "<td>" + cell.children.map(p => { const align = p.align ? ` style="text-align:${p.align}"` : ""; return "<p" + align + ">" + renderRuns(p.children) + "</p>"; }).join("") + "</td>").join("") + "</tr>").join("") + "</tbody></table>";
   if (block.type === "image") { const resource = resources.find(item => item.id === block.resourceId); if (!resource) return "<p>[" + escapeHtml(block.alt) + "]</p>"; const width = block.width ? ` width="${block.width}"` : ""; const height = block.height ? ` height="${block.height}"` : ""; return `<img data-nexus-image-id="${escapeHtml(block.id)}" src="data:${resource.mimeType};base64,${resource.data}" alt="${escapeHtml(block.alt)}"${width}${height} />`; }
   return "";
 }
