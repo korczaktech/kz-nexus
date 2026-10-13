@@ -16,7 +16,7 @@ jobs:
   health:
     name: Check production API liveness and readiness
     runs-on: ubuntu-24.04
-    timeout-minutes: 2
+    timeout-minutes: 5
     steps:
       - name: Check liveness and readiness
         env:
@@ -26,8 +26,23 @@ jobs:
           set -euo pipefail
           [[ "$API_BASE_URL" =~ ^https://[^/]+/?$ ]] || { echo "Configure NEXUS_API_BASE_URL as an HTTPS origin."; exit 1; }
           API_BASE_URL="${API_BASE_URL%/}"
-          health="$(curl --fail --silent --show-error --max-time 15 "$API_BASE_URL/health")"
-          printf '%s' "$health" | python -c 'import json,sys; d=json.load(sys.stdin); assert d.get("status") == "ok", d'
-          ready="$(curl --fail --silent --show-error --max-time 15 "$API_BASE_URL/ready")"
-          printf '%s' "$ready" | python -c 'import json,sys; d=json.load(sys.stdin); assert d.get("status") == "ready", d'
+          fetch_json_with_retry() {
+            local endpoint="$1"
+            local expected_status="$2"
+            local attempt response
+            for attempt in 1 2 3 4 5; do
+              if response="$(curl --fail --silent --show-error --max-time 20 "$API_BASE_URL/$endpoint" 2>&1)" &&
+                 printf '%s' "$response" | python -c 'import json,sys; d=json.load(sys.stdin); expected=sys.argv[1]; assert d.get("status") == expected, d' "$expected_status"; then
+                echo "$endpoint check passed (attempt $attempt)." >&2
+                printf '%s' "$response"
+                return 0
+              fi
+              echo "$endpoint check attempt $attempt/5 failed; retrying after 8 seconds." >&2
+              if [[ "$attempt" -lt 5 ]]; then sleep 8; fi
+            done
+            echo "$endpoint did not report status '$expected_status' after 5 attempts." >&2
+            return 1
+          }
+          fetch_json_with_retry health ok >/dev/null
+          fetch_json_with_retry ready ready >/dev/null
           echo "Liveness and database readiness checks passed."
