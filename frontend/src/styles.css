@@ -2851,4 +2851,20 @@ html:has(.app-shell.editor-mode),body:has(.app-shell.editor-mode),#root:has(.app
   background:#111b2a;
   color:#f1f5fb;
 }
+/* O seletor de estilo (Normal, Título 1/2/3 e Citação) ganha mais espaço. */
+.editor-toolbar select.editor-select[aria-label="Estilo do parágrafo"]{
+  width:112px;
+  min-width:112px;
+  height:31px;
+  padding:0 10px;
+  font-size:12px;
+  font-weight:600;
+}
+@media(max-width:850px){
+  .editor-toolbar select.editor-select[aria-label="Estilo do parágrafo"]{
+    width:112px;
+    min-width:112px;
+    font-size:12px;
+  }
+}
 
