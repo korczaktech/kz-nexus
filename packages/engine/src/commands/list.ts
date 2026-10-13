@@ -28,6 +28,26 @@ export function insertList(params: { afterBlockId: string; ordered: boolean }): 
   };
 }
 
+/** Converts a top-level paragraph or heading into a list while preserving its text runs and stable paragraph ID. */
+export function convertBlockToList(params: { blockId: string; ordered: boolean }): Command {
+  return (doc, ctx) => {
+    const index = doc.content.findIndex((block) => block.id === params.blockId);
+    if (index < 0) return err(engineError("NODE_NOT_FOUND", `Top-level block "${params.blockId}" not found`, { path: params.blockId }));
+    const source = doc.content[index];
+    if (source.type !== "paragraph" && source.type !== "heading") {
+      return err(engineError("UNSUPPORTED_OPERATION", "Only a paragraph or heading can be converted into a list", { path: params.blockId }));
+    }
+    const paragraph: Paragraph = { type: "paragraph", id: source.id, align: source.align, children: source.children };
+    const item: ListItem = { type: "listItem", id: ctx.generateId(), children: [paragraph] };
+    const list: Block = params.ordered
+      ? { type: "orderedList", id: ctx.generateId(), start: 1, children: [item] }
+      : { type: "bulletList", id: ctx.generateId(), children: [item] };
+    const content = [...doc.content];
+    content[index] = list;
+    return ok({ document: { ...doc, content }, selection: { blockId: paragraph.id, offset: 0 } });
+  };
+}
+
 /** Converts a list between bullet and ordered, preserving its items. */
 export function convertListType(params: { listId: string; ordered: boolean }): Command {
   return (doc) => {
