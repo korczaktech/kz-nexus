@@ -2714,3 +2714,9 @@ html:has(.app-shell.editor-mode),body:has(.app-shell.editor-mode),#root:has(.app
  box-shadow:0 5px 16px rgba(0,0,0,.35)
 }
 .app-shell.editor-mode .editor-ribbon-tabs button[title]:hover::after{top:calc(100% + 3px)}
+
+/* Slightly larger custom SVG action icons; category ribbon uses readable text labels. */
+.app-shell.editor-mode .editor-toolbar .editor-tool svg{width:21px;height:21px;flex:0 0 21px}
+.app-shell.editor-mode .editor-toolbar .editor-tool{min-width:38px;min-height:38px;padding:8px!important}
+.app-shell.editor-mode .editor-ribbon-tabs button{width:auto!important;min-width:0!important;height:38px!important;padding:0 13px!important;font-size:12px;font-weight:600;letter-spacing:.01em}
+.app-shell.editor-mode .editor-ribbon-tabs button svg{display:none!important}
