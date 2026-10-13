@@ -2566,3 +2566,7 @@ html:has(.app-shell.editor-mode),body:has(.app-shell.editor-mode),#root:has(.app
 .app-shell.editor-mode .editor-pages-stack>.editor-page .editor-document-footer{box-sizing:border-box;min-height:12mm}
 .app-shell.editor-mode .editor-pages-stack>.editor-page .editor-document-header{padding-top:3mm}
 .app-shell.editor-mode .editor-pages-stack>.editor-page .editor-document-footer{padding-bottom:3mm}
+
+/* Preserve imported Word documents' original page wrappers and dimensions. */
+.app-shell.editor-mode .editor-pages-stack>.editor-page-native-docx{height:auto!important;min-height:0!important;overflow:visible!important}
+.app-shell.editor-mode .editor-pages-stack>.editor-page-native-docx .rich-editor{height:auto!important;min-height:0!important;overflow:visible!important}
