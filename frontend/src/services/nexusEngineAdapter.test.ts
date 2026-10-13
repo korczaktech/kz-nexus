@@ -34,6 +34,19 @@ describe("Nexus editor adapter", () => {
     expect(htmlFromNexusDocument(document)).toContain("<p>First</p><p>Second</p>");
   });
 
+  it("round-trips safe hyperlinks through the engine document", () => {
+    const document = nexusDocumentFromHtml('<p><a href="https://example.com/docs">Read docs</a></p>', "Link test");
+    const paragraph = document.content[0];
+    expect(paragraph && (paragraph.type === "paragraph" || paragraph.type === "heading") ? paragraph.children[0]!.marks : []).toContainEqual({ type: "link", value: "https://example.com/docs" });
+    expect(htmlFromNexusDocument(document)).toContain('<a href="https://example.com/docs">Read docs</a>');
+  });
+
+  it("drops executable hyperlink schemes when importing HTML", () => {
+    const document = nexusDocumentFromHtml('<p><a href="javascript:alert(1)">Unsafe</a></p>', "Unsafe link test");
+    const paragraph = document.content[0];
+    expect(paragraph && (paragraph.type === "paragraph" || paragraph.type === "heading") ? paragraph.children[0]!.marks : []).not.toContainEqual(expect.objectContaining({ type: "link" }));
+  });
+
   it("preserves document metadata when content is synchronized", () => {
     const engine = createEditor({ document: nexusDocumentFromHtml("<p>Text</p>", "Original title") });
     expect(syncNexusEngine(engine, "<p>Text changed</p>", "Updated title")).toBe(true);
