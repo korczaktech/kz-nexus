@@ -75,7 +75,9 @@ function makeParagraph(node: Element, type: "paragraph" | "heading" = "paragraph
   if (type === "heading") {
     const level = Math.min(6, Math.max(1, Number(node.tagName.slice(1)) || 1)) as 1 | 2 | 3 | 4 | 5 | 6;
     const align = (node as HTMLElement).style.textAlign;
-    return { type: "heading", id: nextId(), level, ...(align && ["left", "start", "center", "right", "end", "justify"].includes(align) ? { align: align === "left" ? "start" : align === "right" ? "end" : align as "start" | "center" | "end" | "justify" } : {}), children: runs };
+  const indent = indentInPoints(node);
+    const indent = indentInPoints(node);
+    return { type: "heading", id: nextId(), level, ...(align && ["left", "start", "center", "right", "end", "justify"].includes(align) ? { align: align === "left" ? "start" : align === "right" ? "end" : align as "start" | "center" | "end" | "justify" } : {}), ...(indent !== undefined ? { indent } : {}), children: runs };
   }
   const align = (node as HTMLElement).style.textAlign;
   return { type: "paragraph", id: nextId(), ...(align && ["left", "start", "center", "right", "end", "justify"].includes(align) ? { align: align === "left" ? "start" : align === "right" ? "end" : align as "start" | "center" | "end" | "justify" } : {}), children: runs };
