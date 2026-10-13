@@ -2689,3 +2689,10 @@ html:has(.app-shell.editor-mode),body:has(.app-shell.editor-mode),#root:has(.app
 .app-shell.editor-mode .nexus-help-dialog ul{padding:0 34px;color:#aebed2;font-size:12px;line-height:1.9}
 .app-shell.editor-mode .nexus-dialog-primary{display:block;margin:0 20px 20px auto;padding:8px 14px;border:1px solid #6979ff;border-radius:7px;background:#4d5ee4;color:white}
 @media(max-width:900px){.app-shell.editor-mode .editor-title{width:min(100%,300px);font-size:13px}.app-shell.editor-mode .editor-head{align-items:flex-start;flex-wrap:wrap}.app-shell.editor-mode .editor-ribbon-tabs button{padding:8px}.app-shell.editor-mode .editor-ribbon-panel{gap:5px}}
+
+/* Keep a single, unified grey tool ribbon below the category tabs. */
+.app-shell.editor-mode .editor-ribbon-tabs{background:#242b36!important;border-bottom:1px solid #3a4350!important}
+.app-shell.editor-mode .editor-ribbon-tabs button{color:#c0c9d6!important}
+.app-shell.editor-mode .editor-ribbon-tabs button:hover{background:#343e4d!important;color:#fff!important}
+.app-shell.editor-mode .editor-ribbon-tabs button.active{background:#3a4554!important;border-bottom-color:#9ba9ff!important;color:#fff!important}
+.app-shell.editor-mode .editor-toolbar{background:#292f3a!important;border-top:1px solid #3a4350!important}
