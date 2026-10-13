@@ -275,7 +275,7 @@ export function Editor({document,versions,onSave,onClose,onConflict}:{document:D
   if(command==='insertUnorderedList'||command==='insertOrderedList'){const ordered=command==='insertOrderedList';if(context.list)return commitEngineCommands([convertListType({listId:context.list.id,ordered})]);if(top.type==='paragraph'||top.type==='heading')return commitEngineCommands([convertBlockToList({blockId:topId,ordered})]);setMessage('Selecione um parágrafo para convertê-lo em lista.');return false}
   if(command==='insertHorizontalRule')return commitEngineCommands([insertThematicBreak({afterBlockId:topId})]);
   if(command==='insertParagraphAfter')return commitEngineCommands([insertParagraphAfter({blockId:topId})]);
-  if(command==='splitBlock')return commitEngineCommands([splitBlock({blockId,startOffset:context.startOffset})]);
+  if(command==='splitBlock')return commitEngineCommands([splitBlock({blockId,offset:context.startOffset})]);
   if(command==='mergeBlockWithPrevious')return commitEngineCommands([mergeBlockWithPrevious({blockId:topId})]);
   if(command==='deleteBlock')return commitEngineCommands([deleteBlock({blockId:topId})]);
   if(command==='blockquote'){if(top.type==='paragraph'||top.type==='heading')return commitEngineCommands([insertBlockquote({afterBlockId:topId})]);return false}
