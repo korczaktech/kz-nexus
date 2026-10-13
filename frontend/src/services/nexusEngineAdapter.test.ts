@@ -53,6 +53,15 @@ describe("Nexus editor adapter", () => {
     expect(heading && heading.type === "heading" ? htmlFromNexusDocument(document) : "").toContain('id="' + (heading && heading.type === "heading" ? heading.id : "") + '"');
   });
 
+  it("round-trips superscript and subscript marks", () => {
+    const document = nexusDocumentFromHtml("<p>H<sup>+</sup>O<sub>2</sub></p>", "Script test");
+    const paragraph = document.content[0];
+    expect(paragraph && (paragraph.type === "paragraph" || paragraph.type === "heading") ? paragraph.children.flatMap(run => run.marks.map(mark => mark.type)) : []).toContain("superscript");
+    expect(paragraph && (paragraph.type === "paragraph" || paragraph.type === "heading") ? paragraph.children.flatMap(run => run.marks.map(mark => mark.type)) : []).toContain("subscript");
+    expect(htmlFromNexusDocument(document)).toContain("<sup>+</sup>");
+    expect(htmlFromNexusDocument(document)).toContain("<sub>2</sub>");
+  });
+
   it("preserves document metadata when content is synchronized", () => {
     const engine = createEditor({ document: nexusDocumentFromHtml("<p>Text</p>", "Original title") });
     expect(syncNexusEngine(engine, "<p>Text changed</p>", "Updated title")).toBe(true);
