@@ -1525,7 +1525,6 @@ button,input,textarea,select{
 .rich-editor a{color:#245bd6;text-decoration:underline}
 .rich-editor hr{border:0;border-top:1px solid #b8bfca;margin:18pt 0}
 .rich-editor pre,.rich-editor code{font-family:"Courier New",monospace;background:#f2f4f7;color:#202124}
-.editor-page[style*="297mm"] .rich-editor{min-height:120mm}
 .editor-check{display:flex!important;align-items:center;gap:8px!important}
 .editor-check input{width:auto!important}
 .editor-side label input:not([type=checkbox]){width:100%;min-width:0}
@@ -1689,7 +1688,6 @@ button,input,textarea,select{
   margin:0!important;
   width:100%;
 }
-.editor-page[style*="297mm"] .rich-editor{min-height:calc(210mm - 2 * var(--editor-margin, 25mm))!important}
 .rich-editor .nexus-imported-page-break{
   display:block;
   box-sizing:border-box;
@@ -1704,9 +1702,7 @@ button,input,textarea,select{
 }
 @media(max-width:900px){
   .editor-page{width:210mm!important;max-width:none!important;min-height:297mm!important;padding:0!important;transform-origin:top left!important}
-  .editor-page[style*="297mm"]{width:297mm!important;min-height:210mm!important}
   .editor-page .rich-editor{padding:var(--editor-margin, 25mm)!important;min-height:calc(297mm - 2 * var(--editor-margin, 25mm))!important}
-  .editor-page[style*="297mm"] .rich-editor{min-height:calc(210mm - 2 * var(--editor-margin, 25mm))!important}
 }
 
 
@@ -1736,26 +1732,10 @@ button,input,textarea,select{
 .editor-body.rich-editor-body{min-width:0;overflow:hidden}
 .editor-canvas{display:flex!important;justify-content:center!important;align-items:flex-start!important;min-width:0!important;width:100%!important;overflow:auto!important;padding:28px!important;box-sizing:border-box!important}
 .editor-page{display:block!important;flex:0 0 auto!important;box-sizing:border-box!important;width:210mm!important;min-width:210mm!important;max-width:none!important;min-height:297mm!important;height:auto!important;margin:0 auto 28px!important;padding:0!important;overflow:visible!important;transform-origin:top center!important}
-.editor-page[style*="297mm"]{width:297mm!important;min-width:297mm!important;max-width:none!important;min-height:210mm!important}
 .editor-page .rich-editor{display:block!important;box-sizing:border-box!important;width:100%!important;max-width:100%!important;min-width:0!important;min-height:calc(297mm - 2 * var(--editor-margin, 25mm))!important;margin:0!important;padding:var(--editor-margin, 25mm)!important;overflow-wrap:anywhere!important}
-.editor-page[style*="297mm"] .rich-editor{min-height:calc(210mm - 2 * var(--editor-margin, 25mm))!important}
 .editor-page .rich-editor table{width:100%!important;max-width:100%!important;min-width:0!important;table-layout:fixed!important}
 .editor-page .rich-editor table td,.editor-page .rich-editor table th{min-width:0!important;max-width:100%!important;overflow-wrap:anywhere!important}
 @media(max-width:900px){.editor-body.rich-editor-body{display:block!important;overflow:hidden}.editor-canvas{justify-content:flex-start!important;padding:16px!important}.editor-page{margin-left:0!important;margin-right:0!important}}
-
-
-/* Imported paper size comes from the DOCX section geometry; let the inline
-   physical width/height selected by Editor.tsx control the paper, not old A4 overrides. */
-.editor-page,
-.editor-page[style*="297mm"]{
-  width:unset!important;
-  min-width:0!important;
-  max-width:none!important;
-  min-height:unset!important;
-  height:auto!important;
-  flex:0 0 auto!important;
-  box-sizing:border-box!important;
-}
 .editor-page .rich-editor{
   width:100%!important;
   min-width:0!important;
@@ -1767,18 +1747,6 @@ button,input,textarea,select{
   width:auto!important;
   max-width:100%!important;
 }
-
-
-/* Final sizing source: exact paper dimensions inferred from the imported file. */
-.editor-page,
-.editor-page[style*="297mm"]{
-  width:var(--page-width)!important;
-  min-width:var(--page-width)!important;
-  max-width:none!important;
-  min-height:var(--page-height)!important;
-  height:auto!important;
-}
-.editor-page[style*="297mm"] .rich-editor{min-height:0!important}
 .editor-page .rich-editor{min-height:0!important}
 
 
