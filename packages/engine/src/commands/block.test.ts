@@ -8,8 +8,9 @@ import { getPlainText } from "../model/tree";
 import type { Paragraph } from "../model/types";
 import { validateDocument } from "../validation/validate";
 
+const generateTestId = createIdGenerator("id", 3);
 function ctx() {
-  return { generateId: createIdGenerator("id", 3) };
+  return { generateId: generateTestId };
 }
 
 function setup(text: string) {
