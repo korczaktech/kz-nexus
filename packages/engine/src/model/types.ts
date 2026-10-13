@@ -37,6 +37,8 @@ export interface Paragraph {
   type: "paragraph";
   id: string;
   align?: Alignment;
+  /** Left paragraph indent in points. */
+  indent?: number;
   children: TextRun[];
 }
 
