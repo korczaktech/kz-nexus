@@ -418,7 +418,7 @@ function preserveStableBlockIds(previous: Block[], next: Block[], resourceIds: M
       }) };
     }
     if (block.type === "thematicBreak" && old.type === "thematicBreak") return { ...block, id: old.id };
-    if (block.type === "image" && old.type === "image") return { ...block, id: old.id, resourceId: resourceIds.get(block.resourceId) ?? old.resourceId };
+    if (block.type === "image" && old.type === "image") return { ...block, id: old.id, resourceId: resourceIds.get(block.resourceId) ?? block.resourceId };
     return block;
   });
 }
