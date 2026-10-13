@@ -389,7 +389,7 @@ export function restoreEngineDomSelection(engine: ReturnType<typeof createEditor
   }
 }
 
-function preserveStableBlockIds(previous: Block[], next: Block[]): Block[] {
+function preserveStableBlockIds(previous: Block[], next: Block[], resourceIds: Map<string, string> = new Map()): Block[] {
   return next.map((block, index) => {
     const old = previous[index];
     if (!old || old.type !== block.type) return block;
@@ -400,12 +400,12 @@ function preserveStableBlockIds(previous: Block[], next: Block[]): Block[] {
       return { ...block, id: old.id, children: block.children.map((run, runIndex) => ({ ...run, id: old.children[runIndex]?.id ?? run.id })) };
     }
     if (block.type === "blockquote" && old.type === "blockquote") {
-      return { ...block, id: old.id, children: preserveStableBlockIds(old.children, block.children) as Extract<Block, { type: "paragraph" }>[] };
+      return { ...block, id: old.id, children: preserveStableBlockIds(old.children, block.children, resourceIds) as Extract<Block, { type: "paragraph" }>[] };
     }
     if ((block.type === "bulletList" || block.type === "orderedList") && (old.type === "bulletList" || old.type === "orderedList")) {
       return { ...block, id: old.id, children: block.children.map((item, itemIndex) => {
         const oldItem = old.children[itemIndex];
-        return { ...item, id: oldItem?.id ?? item.id, children: preserveStableBlockIds(oldItem?.children as Block[] ?? [], item.children as Block[]) as typeof item.children };
+        return { ...item, id: oldItem?.id ?? item.id, children: preserveStableBlockIds(oldItem?.children as Block[] ?? [], item.children as Block[], resourceIds) as typeof item.children };
       }) } as Block;
     }
     if (block.type === "table" && old.type === "table") {
@@ -413,12 +413,12 @@ function preserveStableBlockIds(previous: Block[], next: Block[]): Block[] {
         const oldRow = old.children[rowIndex];
         return { ...row, id: oldRow?.id ?? row.id, children: row.children.map((cell, cellIndex) => {
           const oldCell = oldRow?.children[cellIndex];
-          return { ...cell, id: oldCell?.id ?? cell.id, children: preserveStableBlockIds(oldCell?.children ?? [], cell.children) as typeof cell.children };
+          return { ...cell, id: oldCell?.id ?? cell.id, children: preserveStableBlockIds(oldCell?.children ?? [], cell.children, resourceIds) as typeof cell.children };
         }) };
       }) };
     }
     if (block.type === "thematicBreak" && old.type === "thematicBreak") return { ...block, id: old.id };
-    if (block.type === "image" && old.type === "image") return { ...block, id: old.id };
+    if (block.type === "image" && old.type === "image") return { ...block, id: old.id, resourceId: resourceIds.get(block.resourceId) ?? old.resourceId };
     return block;
   });
 }
@@ -455,13 +455,20 @@ function longestCommonSuffix(a: string, b: string, prefix: number): number {
 export function syncNexusEngine(engine: ReturnType<typeof createEditor>, html: string, title: string): boolean {
   const parsed = nexusDocumentFromHtml(html, title);
   const previous = engine.getDocument();
-  const content = preserveStableBlockIds(previous.content, parsed.content);
+  const resourceIds = new Map<string, string>();
+  const resources = parsed.resources.map(resource => {
+    const existing = previous.resources.find(item => item.kind === resource.kind && item.mimeType === resource.mimeType && item.data === resource.data);
+    if (!existing) return resource;
+    resourceIds.set(resource.id, existing.id);
+    return { ...resource, id: existing.id };
+  });
+  const content = preserveStableBlockIds(previous.content, parsed.content, resourceIds);
   const next: NexusDocument = {
     ...parsed,
     id: previous.id,
     metadata: { ...previous.metadata, title, updatedAt: systemClock() },
     pageConfig: previous.pageConfig,
-    resources: previous.resources,
+    resources: resources.length ? resources : previous.resources,
     content,
   };
 
