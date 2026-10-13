@@ -5,6 +5,8 @@ import {
   readNsx,
   systemClock,
   writeNsx,
+  toggleMark,
+  type Selection,
   type Block,
   type Mark,
   type NexusDocument,
@@ -146,6 +148,152 @@ function renderBlock(block: Block): string {
 
 export function htmlFromNexusDocument(document: NexusDocument): string {
   return document.content.map(renderBlock).join("");
+}
+
+type LogicalTextBlock = Extract<Block, { type: "paragraph" | "heading" }>;
+
+function logicalTextBlocks(blocks: Block[]): LogicalTextBlock[] {
+  const result: LogicalTextBlock[] = [];
+  const visit = (node: any) => {
+    if (!node || typeof node !== "object") return;
+    if (node.type === "paragraph" || node.type === "heading") {
+      result.push(node as LogicalTextBlock);
+      return;
+    }
+    if (node.type === "blockquote") node.children.forEach(visit);
+    else if (node.type === "bulletList" || node.type === "orderedList") {
+      node.children.forEach((item: any) => item.children.forEach(visit));
+    } else if (node.type === "table") {
+      node.children.forEach((row: any) => row.children.forEach((cell: any) => cell.children.forEach(visit)));
+    }
+  };
+  blocks.forEach(visit);
+  return result;
+}
+
+function domTextBlocks(root: HTMLElement): HTMLElement[] {
+  const selector = "p,h1,h2,h3,h4,h5,h6,li,td,th,blockquote";
+  return Array.from(root.querySelectorAll<HTMLElement>(selector)).filter(element => {
+    const tag = element.tagName.toLowerCase();
+    if (!["li", "td", "th", "blockquote"].includes(tag)) return true;
+    return !Array.from(element.children).some(child => /^(P|H[1-6])$/.test(child.tagName));
+  });
+}
+
+function pointOffset(block: HTMLElement, node: Node, offset: number): number | null {
+  if (!block.contains(node) && block !== node) return null;
+  try {
+    const range = block.ownerDocument.createRange();
+    range.selectNodeContents(block);
+    range.setEnd(node, offset);
+    return range.toString().length;
+  } catch {
+    return null;
+  }
+}
+
+function logicalTextLength(block: LogicalTextBlock): number {
+  return block.children.reduce((length, run) => length + run.text.length, 0);
+}
+
+/** Executes a formatting mark through the engine, then projects only affected text runs back into the DOM. */
+export function toggleEngineMarkForDomSelection(
+  engine: ReturnType<typeof createEditor>,
+  root: HTMLElement,
+  mark: Mark,
+): { ok: boolean; message?: string } {
+  const selection = root.ownerDocument.defaultView?.getSelection();
+  if (!selection || selection.isCollapsed || !selection.anchorNode || !selection.focusNode) {
+    return { ok: false, message: "Selecione o texto que deseja formatar." };
+  }
+  const range = selection.rangeCount ? selection.getRangeAt(0) : null;
+  if (!range || !root.contains(range.startContainer) || !root.contains(range.endContainer)) {
+    return { ok: false, message: "A seleção precisa estar dentro do documento." };
+  }
+
+  const domBlocks = domTextBlocks(root);
+  const modelBlocks = logicalTextBlocks(engine.getDocument().content);
+  if (!domBlocks.length || domBlocks.length !== modelBlocks.length) {
+    return { ok: false, message: "Não foi possível mapear a seleção para o modelo do motor." };
+  }
+  const startElement = (range.startContainer instanceof HTMLElement
+    ? range.startContainer
+    : range.startContainer.parentElement)?.closest<HTMLElement>("p,h1,h2,h3,h4,h5,h6,li,td,th,blockquote");
+  const endElement = (range.endContainer instanceof HTMLElement
+    ? range.endContainer
+    : range.endContainer.parentElement)?.closest<HTMLElement>("p,h1,h2,h3,h4,h5,h6,li,td,th,blockquote");
+  const startIndex = startElement ? domBlocks.indexOf(startElement) : -1;
+  const endIndex = endElement ? domBlocks.indexOf(endElement) : -1;
+  if (startIndex < 0 || endIndex < 0 || startIndex > endIndex) {
+    return { ok: false, message: "Não foi possível identificar os parágrafos selecionados." };
+  }
+  const startOffset = pointOffset(domBlocks[startIndex], range.startContainer, range.startOffset);
+  const endOffset = pointOffset(domBlocks[endIndex], range.endContainer, range.endOffset);
+  if (startOffset === null || endOffset === null) {
+    return { ok: false, message: "Não foi possível calcular os limites da seleção." };
+  }
+
+  const anchor = { blockId: modelBlocks[startIndex].id, offset: startOffset };
+  const focus = { blockId: modelBlocks[endIndex].id, offset: endOffset };
+  const setSelection = engine.setSelection({ anchor, focus });
+  if (!setSelection.ok) return { ok: false, message: setSelection.error.message };
+
+  const commands = modelBlocks.slice(startIndex, endIndex + 1).map((block, relativeIndex) => {
+    const index = startIndex + relativeIndex;
+    const start = index === startIndex ? startOffset : 0;
+    const end = index === endIndex ? endOffset : logicalTextLength(block);
+    return end > start ? toggleMark({ blockId: block.id, start, end, mark }) : null;
+  }).filter((command): command is NonNullable<typeof command> => command !== null);
+  if (!commands.length) return { ok: false, message: "Selecione pelo menos um caractere." };
+
+  const result = engine.exec(commands, { group: "formatting" });
+  if (!result.ok) return { ok: false, message: result.error.message };
+
+  const updatedBlocks = logicalTextBlocks(engine.getDocument().content);
+  for (let index = startIndex; index <= endIndex; index++) {
+    domBlocks[index].innerHTML = renderRuns(updatedBlocks[index].children);
+  }
+  return { ok: true };
+}
+
+/** Restores the DOM selection from the engine's logical selection after a formatting projection. */
+export function restoreEngineDomSelection(engine: ReturnType<typeof createEditor>, root: HTMLElement): void {
+  const logical = engine.getSelection();
+  if (!logical) return;
+  const modelBlocks = logicalTextBlocks(engine.getDocument().content);
+  const domBlocks = domTextBlocks(root);
+  const findPoint = (block: HTMLElement, offset: number): { node: Node; offset: number } => {
+    const walker = block.ownerDocument.createTreeWalker(block, NodeFilter.SHOW_TEXT);
+    let remaining = Math.max(0, offset);
+    let last: Node = block;
+    while (walker.nextNode()) {
+      const node = walker.currentNode;
+      last = node;
+      const length = node.textContent?.length ?? 0;
+      if (remaining <= length) return { node, offset: remaining };
+      remaining -= length;
+    }
+    return last === block ? { node: block, offset: block.childNodes.length } : { node: last, offset: last.textContent?.length ?? 0 };
+  };
+  const resolve = (point: Selection["anchor"]) => {
+    const index = modelBlocks.findIndex(block => block.id === point.blockId);
+    if (index < 0 || !domBlocks[index]) return null;
+    return findPoint(domBlocks[index], point.offset);
+  };
+  const anchor = resolve(logical.anchor);
+  const focus = resolve(logical.focus);
+  if (!anchor || !focus) return;
+  const selection = root.ownerDocument.defaultView?.getSelection();
+  if (!selection) return;
+  selection.removeAllRanges();
+  if (typeof selection.setBaseAndExtent === "function") {
+    selection.setBaseAndExtent(anchor.node, anchor.offset, focus.node, focus.offset);
+  } else {
+    const range = root.ownerDocument.createRange();
+    range.setStart(anchor.node, anchor.offset);
+    range.setEnd(focus.node, focus.offset);
+    selection.addRange(range);
+  }
 }
 
 export function syncNexusEngine(engine: ReturnType<typeof createEditor>, html: string, title: string): boolean {
