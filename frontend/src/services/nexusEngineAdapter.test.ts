@@ -19,6 +19,20 @@ describe("Nexus editor adapter", () => {
     engine.dispose();
   });
 
+  it("sanitizes active HTML and unsafe URLs before creating engine blocks", () => {
+    const document = nexusDocumentFromHtml('<p onclick="alert(1)">Safe <a href="javascript:alert(2)">link</a></p><script>alert(3)</script><iframe src="https://evil.example"></iframe><img src="https://evil.example/pixel.png" onerror="alert(4)" alt="remote image">', "Sanitization test");
+    const html = htmlFromNexusDocument(document);
+    expect(html).toContain("Safe");
+    expect(html).toContain("link");
+    expect(html).not.toContain("script");
+    expect(html).not.toContain("iframe");
+    expect(html).not.toContain("onclick");
+    expect(html).not.toContain("onerror");
+    expect(html).not.toContain("javascript:");
+    expect(html).not.toContain("evil.example");
+    expect(document.resources).toHaveLength(0);
+  });
+
   it("round-trips an embedded image as a resource and image block", () => {
     const document = nexusDocumentFromHtml('<img src="data:image/png;base64,aGVsbG8=" alt="Embedded image" />', "Image test");
     expect(document.resources).toHaveLength(1);
