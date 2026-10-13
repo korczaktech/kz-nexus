@@ -2828,8 +2828,8 @@ html:has(.app-shell.editor-mode),body:has(.app-shell.editor-mode),#root:has(.app
 .editor-toolbar .editor-select.font-family{width:94px}
 .editor-toolbar .editor-select.font-size{width:54px}
 .app-shell.editor-mode .editor-toolbar{gap:1px;overflow-x:hidden!important;overflow-y:hidden!important;flex-wrap:nowrap!important;white-space:nowrap;}
-.app-shell.editor-mode .editor-toolbar button.editor-tool{min-width:25px;width:25px;height:28px;min-height:28px;padding:0 3px!important;gap:0;border-radius:4px;}
-.app-shell.editor-mode .editor-toolbar button.editor-tool svg{width:19px;height:19px;flex:0 0 19px;}
+.app-shell.editor-mode .editor-toolbar button.editor-tool{min-width:36px!important;width:36px!important;height:36px!important;min-height:36px!important;padding:5px!important;gap:0;border-radius:5px;flex:0 0 36px!important;}
+.app-shell.editor-mode .editor-toolbar button.editor-tool svg,.app-shell.editor-mode .editor-toolbar button.editor-tool .icon-svg{display:block;width:24px!important;height:24px!important;min-width:24px!important;min-height:24px!important;max-width:24px!important;max-height:24px!important;flex:0 0 24px!important;stroke-width:1.9;}
 .app-shell.editor-mode .editor-toolbar .toolbar-separator{height:20px;margin:0 2px;flex:0 0 1px;}
 .app-shell.editor-mode .editor-toolbar select.editor-select{height:27px;padding:0 5px;font-size:10px;}
 .app-shell.editor-mode .editor-toolbar select.editor-select[aria-label="Estilo do parágrafo"]{width:92px;min-width:92px;font-size:10px;}
