@@ -6,6 +6,7 @@ import { insertText } from "./text";
 import { convertBlockToBlockquote, deleteBlock, insertParagraphAfter, mergeBlockWithPrevious, setAlign, setHeadingLevel, splitBlock } from "./block";
 import { getPlainText } from "../model/tree";
 import type { Paragraph } from "../model/types";
+import { validateDocument } from "../validation/validate";
 
 function ctx() {
   return { generateId: createIdGenerator("id", 3) };
@@ -28,6 +29,7 @@ describe("convertBlockToBlockquote", () => {
     expect(result.value.document.content[0].type).toBe("blockquote");
     const quote = result.value.document.content[0];
     if (quote.type === "blockquote") expect(getPlainText(quote.children[0])).toBe("Quoted text");
+    expect(validateDocument(result.value.document).ok).toBe(true);
   });
 });
 
