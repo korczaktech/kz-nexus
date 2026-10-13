@@ -46,7 +46,7 @@ function inlineRuns(node: Node, marks: Mark[] = []): TextRun[] {
   return Array.from(node.childNodes).flatMap(child => inlineRuns(child, marksFor(node, marks)));
 }
 
-function makeParagraph(node: Element, type: "paragraph" | "heading" = "paragraph"): Extract<Block, { type: "paragraph" | "heading" }> {
+function makeParagraph(node: Element, type: "paragraph" | "heading" = "paragraph"): Extract<Block, { type: "paragraph" }> | Extract<Block, { type: "heading" }> {
   const children = inlineRuns(node);
   const runs = children.length ? children : [{ type: "text" as const, id: nextId(), text: "", marks: [] }];
   if (type === "heading") {
@@ -62,7 +62,7 @@ function listBlock(element: Element): Extract<Block, { type: "bulletList" | "ord
   const children = Array.from(element.children).filter(item => item.tagName.toLowerCase() === "li").map(item => ({
     type: "listItem" as const,
     id: nextId(),
-    children: [makeParagraph(item)],
+    children: [makeParagraph(item) as Extract<Block, { type: "paragraph" }>],
   }));
   return ordered
     ? { type: "orderedList", id: nextId(), start: Math.max(1, Number(element.getAttribute("start")) || 1), children }
@@ -76,7 +76,7 @@ function tableBlock(element: Element): Extract<Block, { type: "table" }> {
     children: Array.from(row.children).filter(cell => ["td", "th"].includes(cell.tagName.toLowerCase())).map(cell => ({
       type: "tableCell" as const,
       id: nextId(),
-      children: [makeParagraph(cell)],
+      children: [makeParagraph(cell) as Extract<Block, { type: "paragraph" }>],
     })),
   })).filter(row => row.children.length > 0);
   return { type: "table", id: nextId(), children: rows };
