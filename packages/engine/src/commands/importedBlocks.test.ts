@@ -39,6 +39,21 @@ describe("insertImportedBlocksAtSelection", () => {
     expect(validateDocument(result.value.document).ok).toBe(true);
   });
 
+  it("rekeys embedded image resources when importing an image block", () => {
+    const { document, blockId } = sourceDocument("replace");
+    const resource = { id: "import-resource", kind: "image" as const, mimeType: "image/png", data: "aGVsbG8=", byteLength: 5, name: "image.png" };
+    const image: Block = { type: "image", id: "import-image", resourceId: resource.id, alt: "Imported image" };
+    const result = insertImportedBlocksAtSelection({ blockId, start: 0, end: 7, blocks: [image], resources: [resource] })(document, context());
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    const importedImage = result.value.document.content.find(block => block.type === "image");
+    expect(importedImage?.type).toBe("image");
+    if (importedImage?.type !== "image") return;
+    expect(importedImage.resourceId).not.toBe(resource.id);
+    expect(result.value.document.resources.some(item => item.id === importedImage.resourceId)).toBe(true);
+    expect(validateDocument(result.value.document).ok).toBe(true);
+  });
+
   it("inserts multiple structural blocks and keeps the trailing text", () => {
     const { document, blockId } = sourceDocument("before X after");
     const imported: Block[] = [
