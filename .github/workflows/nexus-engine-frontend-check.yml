@@ -27,3 +27,9 @@ jobs:
       - name: Typecheck and build frontend
         working-directory: frontend
         run: npm run build
+      - name: Install engine dependencies
+        working-directory: packages/engine
+        run: npm install --no-audit --no-fund
+      - name: Typecheck, test and build engine
+        working-directory: packages/engine
+        run: npm run typecheck && npm test && npm run build
