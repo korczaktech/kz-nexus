@@ -3,7 +3,7 @@ import { createIdGenerator } from "../core/ids";
 import { createFixedClock } from "../core/clock";
 import { createDocument } from "./document";
 import { insertText } from "./text";
-import { convertBlockToBlockquote, deleteBlock, insertParagraphAfter, mergeBlockWithPrevious, setAlign, setHeadingLevel, splitBlock } from "./block";
+import { convertBlockToBlockquote, deleteBlock, insertParagraphAfter, mergeBlockWithPrevious, setAlign, setIndent, setHeadingLevel, splitBlock } from "./block";
 import { getPlainText } from "../model/tree";
 import { insertTable } from "./table";
 import type { Paragraph } from "../model/types";
@@ -96,6 +96,15 @@ describe("setAlign / setHeadingLevel", () => {
     const result = setAlign({ blockId, align: "center" })(document, ctx());
     expect(result.ok).toBe(true);
     if (result.ok) expect((result.value.document.content[0] as Paragraph).align).toBe("center");
+  });
+
+  it("sets indentation and rejects out-of-range values", () => {
+    const { document, blockId } = setup("Indented");
+    const result = setIndent({ blockId, indent: 36 })(document, ctx());
+    expect(result.ok).toBe(true);
+    if (result.ok) expect((result.value.document.content[0] as Paragraph).indent).toBe(36);
+    const invalid = setIndent({ blockId, indent: 900 })(document, ctx());
+    expect(invalid.ok).toBe(false);
   });
 
   it("converts a paragraph into a heading and back", () => {
