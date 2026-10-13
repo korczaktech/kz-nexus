@@ -39,7 +39,7 @@ export function renderBlockHtml(block: Block, resources: ResourceRef[] = []): st
     const tag = block.type === "bulletList" ? "ul" : "ol";
     const start = block.type === "orderedList" && block.start !== 1 ? ' start="' + block.start + '"' : "";
     return "<" + tag + start + ">" + block.children.map(item => "<li>" + item.children.map(child => {
-      if (child.type === "paragraph" || child.type === "heading") return renderParagraph(child);
+      if (child.type === "paragraph") return renderParagraph(child);
       return renderBlockHtml(child as Block, resources);
     }).join("") + "</li>").join("") + "</" + tag + ">";
   }
