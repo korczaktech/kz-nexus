@@ -1,6 +1,6 @@
 import {describe,expect,it} from 'vitest';
 import {attachLayoutMetadata,parseLayoutMetadata,stripLayoutMetadata,type EditorLayoutSettings} from './editorLayoutMetadata';
-const layout:EditorLayoutSettings={pageSize:'Letter',orientation:'landscape',margin:20,headerText:'Relatório --> final',footerText:'Korczak',showPageNumbers:true,fontFamily:'Georgia'};
+const layout:EditorLayoutSettings={pageSize:'Letter',orientation:'landscape',margin:20,headerText:'Relatório --> final',footerText:'Korczak',showPageNumbers:true,fontFamily:'Georgia',footerAlign:'left'};
 describe('document layout metadata',()=>{
   it('round-trips page settings without changing visible HTML',()=>{
     const html='<p>Conteúdo</p>';
