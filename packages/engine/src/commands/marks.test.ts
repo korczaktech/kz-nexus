@@ -80,6 +80,14 @@ describe("applyMark / removeMark / toggleMark", () => {
     expect(paragraph.children.every((r) => !r.marks.some((m) => m.type === "bold"))).toBe(true);
   });
 
+  it("accepts safe hyperlink URLs and rejects executable schemes", () => {
+    const { document, blockId } = setup("OpenAI");
+    const safe = applyMark({ blockId, start: 0, end: 6, mark: { type: "link", value: "https://example.com/docs" } })(document, ctx());
+    expect(safe.ok).toBe(true);
+    const unsafe = applyMark({ blockId, start: 0, end: 6, mark: { type: "link", value: "javascript:alert(1)" } })(document, ctx());
+    expect(unsafe.ok).toBe(false);
+  });
+
   it("rejects an invalid color value", () => {
     const { document, blockId } = setup("Hello");
     const result = applyMark({ blockId, start: 0, end: 5, mark: { type: "color", value: "not-a-color" } })(document, ctx());
