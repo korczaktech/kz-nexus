@@ -34,6 +34,33 @@ describe("convertBlockToBlockquote", () => {
   });
 });
 
+describe("nested split/merge", () => {
+  it("splits and merges paragraphs inside a blockquote", () => {
+    const { document, blockId } = setup("hello world");
+    const quoted = convertBlockToBlockquote({ blockId })(document, ctx());
+    if (!quoted.ok) throw quoted.error;
+    const split = splitBlock({ blockId, offset: 5 })(quoted.value.document, ctx());
+    expect(split.ok).toBe(true);
+    if (!split.ok) return;
+    const quote = split.value.document.content[0];
+    expect(quote.type).toBe("blockquote");
+    if (quote.type !== "blockquote") return;
+    expect(quote.children).toHaveLength(2);
+    expect(getPlainText(quote.children[0])).toBe("hello");
+    expect(getPlainText(quote.children[1])).toBe(" world");
+    const merged = mergeBlockWithPrevious({ blockId: quote.children[1].id })(split.value.document, ctx());
+    expect(merged.ok).toBe(true);
+    if (!merged.ok) return;
+    const mergedQuote = merged.value.document.content[0];
+    expect(mergedQuote.type).toBe("blockquote");
+    if (mergedQuote.type === "blockquote") {
+      expect(mergedQuote.children).toHaveLength(1);
+      expect(getPlainText(mergedQuote.children[0])).toBe("hello world");
+    }
+    expect(validateDocument(merged.value.document).ok).toBe(true);
+  });
+});
+
 describe("setAlign / setHeadingLevel", () => {
   it("sets paragraph alignment", () => {
     const { document, blockId } = setup("Hello");
