@@ -85,6 +85,19 @@ describe("preview ↔ engine integration", () => {
     expect(c.isMarkActive("bold")).toBe(true);
   });
 
+  it("Enter splits list items at the caret instead of only appending", () => {
+    const c = newController();
+    c.insertText("alpha");
+    expect(c.insertListBlock(false)).toBe(true);
+    const info = collectTextBlocks(c.document)[0]!;
+    c.setSelection({ anchor: { blockId: info.block.id, offset: 2 }, focus: { blockId: info.block.id, offset: 2 } });
+    expect(c.splitAtCaret()).toBe(true);
+    expect(textAll(c)).toEqual(["al", "pha"]);
+    const list = c.document.content.find(block => block.type === "bulletList");
+    expect(list && list.type === "bulletList" ? list.children : []).toHaveLength(2);
+    expect(c.validationIssues()).toEqual([]);
+  });
+
   it("lists, quote, rule and tables are real engine structures", () => {
     const c = newController();
     c.insertText("x");
