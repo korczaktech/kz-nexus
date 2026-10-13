@@ -12,7 +12,7 @@ export * from "./model/types";
 export { getPlainText } from "./model/tree";
 
 // Schema & limits
-export { DEFAULT_LIMITS, KNOWN_BLOCK_TYPES, KNOWN_MARK_TYPES, isValidColor, isValidFontSize } from "./schema/schema";
+export { DEFAULT_LIMITS, KNOWN_BLOCK_TYPES, KNOWN_MARK_TYPES, isValidColor, isValidFontSize, isValidLink } from "./schema/schema";
 export type { EngineLimits } from "./schema/schema";
 
 // Validation & normalization
