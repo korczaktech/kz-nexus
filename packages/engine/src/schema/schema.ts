@@ -20,6 +20,8 @@ export const KNOWN_MARK_TYPES: ReadonlySet<string> = new Set([
   "italic",
   "underline",
   "strike",
+  "superscript",
+  "subscript",
   "color",
   "highlight",
   "fontSize",
