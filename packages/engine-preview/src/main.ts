@@ -83,18 +83,24 @@ export function mount(rootEl: HTMLElement): PreviewController {
     if (sizeSelect.value) controller.setMark({ type: "fontSize", value: Number(sizeSelect.value) });
     sizeSelect.value = "";
   });
+  const fontFamilySelect = h("select", { title: "Família da fonte", "aria-label": "Família da fonte", "data-cmd": "fontFamily" }, h("option", { value: "" }, "Fonte"));
+  for (const family of ["Arial", "Calibri", "Georgia", "Times New Roman", "Verdana", "Courier New", "Inter", "Garamond"]) fontFamilySelect.append(h("option", { value: family }, family));
+  fontFamilySelect.addEventListener("change", () => {
+    if (fontFamilySelect.value) controller.setMark({ type: "fontFamily", value: fontFamilySelect.value });
+    fontFamilySelect.value = "";
+  });
   const gColor = group();
-  gColor.append(colorInput, highlightInput, sizeSelect);
+  gColor.append(colorInput, highlightInput, sizeSelect, fontFamilySelect);
 
   const gAlign = group();
   for (const [id, label, title] of [["start", "⟸", "Alinhar à esquerda"], ["center", "≡", "Centralizar"], ["end", "⟹", "Alinhar à direita"], ["justify", "☰", "Justificar"]] as const) {
     addButton(gAlign, `align-${id}`, label, title, () => controller.setAlignment(id as Alignment));
   }
   const blockSelect = h("select", { title: "Tipo de bloco", "aria-label": "Tipo de bloco", "data-cmd": "blockType" },
-    h("option", { value: "paragraph" }, "Parágrafo"), h("option", { value: "1" }, "Título 1"), h("option", { value: "2" }, "Título 2"), h("option", { value: "3" }, "Título 3"));
+    h("option", { value: "paragraph" }, "Parágrafo"), h("option", { value: "1" }, "Título 1"), h("option", { value: "2" }, "Título 2"), h("option", { value: "3" }, "Título 3"), h("option", { value: "4" }, "Título 4"), h("option", { value: "5" }, "Título 5"), h("option", { value: "6" }, "Título 6"));
   blockSelect.addEventListener("change", () => {
     const v = blockSelect.value;
-    controller.setBlockType(v === "paragraph" ? "paragraph" : (Number(v) as 1 | 2 | 3));
+    controller.setBlockType(v === "paragraph" ? "paragraph" : (Number(v) as 1 | 2 | 3 | 4 | 5 | 6));
   });
   const gBlock = group();
   gBlock.append(blockSelect);
@@ -151,7 +157,7 @@ export function mount(rootEl: HTMLElement): PreviewController {
     const inTable = controller.tableContext() !== undefined;
     for (const id of ["row-add", "row-del", "col-add", "col-del"]) buttons.get(id)!.disabled = !inTable;
     const bt = controller.currentBlockType();
-    blockSelect.value = bt === "h1" ? "1" : bt === "h2" ? "2" : bt === "h3" ? "3" : "paragraph";
+    blockSelect.value = /^h[1-6]$/.test(bt) ? bt.slice(1) : "paragraph";
     fileLabel.textContent = `${controller.fileName}${controller.dirty ? " •" : ""}`;
     fileLabel.setAttribute("data-dirty", String(controller.dirty));
     const sel = controller.selection;
