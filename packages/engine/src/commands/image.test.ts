@@ -1,0 +1,30 @@
+import { describe, expect, it } from "vitest";
+import { createDocument } from "./document";
+import { createEditor } from "../editor/editor";
+import { createIdGenerator } from "../core/ids";
+import { createFixedClock } from "../core/clock";
+import { insertImageResource } from "./image";
+import { validateDocument } from "../validation/validate";
+import type { Paragraph } from "../model/types";
+
+describe("insertImageResource", () => {
+  it("adds the resource and image block in one valid command", () => {
+    const document = createDocument(createIdGenerator("n", 1), createFixedClock(0).now);
+    const paragraph = document.content[0] as Paragraph;
+    const editor = createEditor({ document, idGenerator: createIdGenerator("id", 1), clock: createFixedClock(1).now });
+    const result = editor.exec([insertImageResource({
+      afterBlockId: paragraph.id,
+      mimeType: "image/png",
+      data: "aGVsbG8=",
+      alt: "Test image",
+      name: "test.png",
+    })]);
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(editor.getDocument().resources).toHaveLength(1);
+      expect(editor.getDocument().content.some(block => block.type === "image")).toBe(true);
+      expect(validateDocument(editor.getDocument()).ok).toBe(true);
+    }
+    editor.dispose();
+  });
+});
