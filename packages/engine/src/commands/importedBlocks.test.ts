@@ -8,8 +8,10 @@ import { getPlainText } from "../model/tree";
 import { validateDocument } from "../validation/validate";
 import type { Block, Paragraph } from "../model/types";
 
+const generateTestId = createIdGenerator("engine", 7);
+
 function context() {
-  return { generateId: createIdGenerator("engine", 7) };
+  return { generateId: generateTestId };
 }
 
 function sourceDocument(text: string) {
