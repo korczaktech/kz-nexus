@@ -2792,3 +2792,43 @@ html:has(.app-shell.editor-mode),body:has(.app-shell.editor-mode),#root:has(.app
   border:0;
   opacity:.9;
 }
+
+/* Editor ribbon: compacta os grupos sem remover ferramentas nem criar segunda linha. */
+.editor-toolbar{
+  display:flex;
+  flex-wrap:nowrap!important;
+  align-items:center;
+  gap:2px;
+  padding:6px 8px;
+  overflow-x:auto;
+  overflow-y:hidden;
+  white-space:nowrap;
+}
+.editor-toolbar>*{flex:0 0 auto;min-width:0}
+.editor-toolbar button.editor-tool{
+  min-width:27px;
+  width:auto;
+  height:29px;
+  padding:0 5px;
+  gap:4px;
+  border-radius:6px;
+}
+.editor-toolbar .toolbar-separator{
+  flex:0 0 1px;
+  width:1px;
+  height:19px;
+  margin:0 2px;
+}
+.editor-toolbar .icon-svg{width:14px;height:14px}
+.editor-toolbar .editor-select{
+  height:29px;
+  padding:0 8px;
+  font-size:11px;
+}
+.editor-toolbar .editor-select.font-family{width:94px}
+.editor-toolbar .editor-select.font-size{width:54px}
+@media(max-width:850px){
+  .editor-toolbar{flex-wrap:nowrap!important;overflow-x:auto;overflow-y:hidden;gap:2px;padding:6px 8px}
+  .editor-toolbar button.editor-tool{flex:0 0 auto;padding:0 5px}
+}
+
