@@ -109,7 +109,7 @@ function blocksFromHtml(html: string): Block[] {
 }
 
 export function nexusDocumentFromHtml(html: string, title = "Documento"): NexusDocument {
-  const base = createDocument(nextId, systemClock, { title });
+  const base = createDocument({ title }, nextId, systemClock);
   return { ...base, content: blocksFromHtml(html) };
 }
 
@@ -138,7 +138,7 @@ function renderBlock(block: Block): string {
   if (block.type === "bulletList" || block.type === "orderedList") {
     const tag = block.type === "bulletList" ? "ul" : "ol";
     const start = block.type === "orderedList" && block.start !== 1 ? ' start="' + block.start + '"' : "";
-    return "<" + tag + start + ">" + block.children.map(item => "<li>" + item.children.map(child => child.type === "paragraph" || child.type === "heading" ? renderBlock(child) : renderBlock(child)).join("") + "</li>").join("") + "</" + tag + ">";
+    return "<" + tag + start + ">" + block.children.map(item => "<li>" + item.children.map(child => renderBlock(child)).join("") + "</li>").join("") + "</" + tag + ">";
   }
   if (block.type === "table") return "<table><tbody>" + block.children.map(row => "<tr>" + row.children.map(cell => "<td>" + cell.children.map(p => renderRuns(p.children)).join("<br>") + "</td>").join("") + "</tr>").join("") + "</tbody></table>";
   return "<p>[" + escapeHtml(block.alt) + "]</p>";
