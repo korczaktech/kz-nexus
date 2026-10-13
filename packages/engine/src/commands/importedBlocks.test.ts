@@ -4,6 +4,9 @@ import { createFixedClock } from "../core/clock";
 import { createDocument } from "./document";
 import { insertText } from "./text";
 import { insertImportedBlocksAtSelection } from "./importedBlocks";
+import { createEditor } from "../editor/editor";
+import { deleteText } from "./text";
+import { mergeBlockWithPrevious, insertParagraphAfter } from "./block";
 import { getPlainText } from "../model/tree";
 import { validateDocument } from "../validation/validate";
 import type { Block, Paragraph } from "../model/types";
@@ -37,6 +40,28 @@ describe("insertImportedBlocksAtSelection", () => {
     expect(getPlainText(paragraph)).toBe("Hello beautiful");
     expect(paragraph.children.some(run => run.marks.some(mark => mark.type === "bold"))).toBe(true);
     expect(validateDocument(result.value.document).ok).toBe(true);
+  });
+
+  it("composes a cross-paragraph replacement into one engine transaction", () => {
+    const { document, blockId } = sourceDocument("before unwanted");
+    const engine = createEditor({ document });
+    const insertedParagraph = engine.exec([insertParagraphAfter({ blockId })]);
+    expect(insertedParagraph.ok).toBe(true);
+    const second = engine.getDocument().content[1] as Paragraph;
+    const secondText = engine.exec([insertText({ blockId: second.id, offset: 0, text: "unwanted after" })]);
+    expect(secondText.ok).toBe(true);
+    const imported: Block = { type: "paragraph", id: "imported-middle", children: [{ type: "text", id: "imported-middle-run", text: "middle ", marks: [] }] };
+    const result = engine.exec([
+      deleteText({ blockId, start: 7, end: 15 }),
+      deleteText({ blockId: second.id, start: 0, end: 9 }),
+      mergeBlockWithPrevious({ blockId: second.id }),
+      insertImportedBlocksAtSelection({ blockId, start: 7, end: 7, blocks: [imported] }),
+    ]);
+    expect(result.ok).toBe(true);
+    expect(engine.getDocument().content).toHaveLength(1);
+    expect(getPlainText(engine.getDocument().content[0] as Paragraph)).toBe("before middle after");
+    expect(validateDocument(engine.getDocument()).ok).toBe(true);
+    engine.dispose();
   });
 
   it("rekeys embedded image resources when importing an image block", () => {
