@@ -2696,3 +2696,21 @@ html:has(.app-shell.editor-mode),body:has(.app-shell.editor-mode),#root:has(.app
 .app-shell.editor-mode .editor-ribbon-tabs button:hover{background:#343e4d!important;color:#fff!important}
 .app-shell.editor-mode .editor-ribbon-tabs button.active{background:#3a4554!important;border-bottom-color:#9ba9ff!important;color:#fff!important}
 .app-shell.editor-mode .editor-toolbar{background:#292f3a!important;border-top:1px solid #3a4350!important}
+
+/* Icon-only editor ribbon: all action names remain available to assistive tech and hover tooltips. */
+.app-shell.editor-mode .editor-ribbon-tabs button{display:inline-flex!important;align-items:center;justify-content:center;width:42px;min-width:42px;height:42px;padding:0!important}
+.app-shell.editor-mode .editor-ribbon-tabs button svg{width:19px;height:19px;stroke:currentColor}
+.app-shell.editor-mode .editor-toolbar .editor-tool{display:inline-flex;align-items:center;justify-content:center;gap:0;min-width:34px;min-height:34px;padding:8px!important;position:relative}
+.app-shell.editor-mode .editor-toolbar .editor-tool svg{width:16px;height:16px;flex:0 0 16px}
+.app-shell.editor-mode .editor-toolbar .editor-tool-label{display:none!important}
+.app-shell.editor-mode .editor-toolbar .editor-zoom-value{min-width:44px;padding:8px 4px!important;font-size:10px}
+.app-shell.editor-mode .editor-toolbar .editor-tool:focus-visible,
+.app-shell.editor-mode .editor-ribbon-tabs button:focus-visible{outline:2px solid #8793ff;outline-offset:2px}
+.app-shell.editor-mode .editor-toolbar .editor-tool[title]:hover::after,
+.app-shell.editor-mode .editor-ribbon-tabs button[title]:hover::after{
+ content:attr(title);position:absolute;left:50%;top:calc(100% + 7px);transform:translateX(-50%);
+ z-index:1000;padding:6px 8px;border:1px solid #34445c;border-radius:5px;background:#07111d;
+ color:#e3ebf8;font-size:10px;font-weight:500;line-height:1.2;white-space:nowrap;pointer-events:none;
+ box-shadow:0 5px 16px rgba(0,0,0,.35)
+}
+.app-shell.editor-mode .editor-ribbon-tabs button[title]:hover::after{top:calc(100% + 3px)}
