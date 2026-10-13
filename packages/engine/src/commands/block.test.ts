@@ -5,6 +5,7 @@ import { createDocument } from "./document";
 import { insertText } from "./text";
 import { convertBlockToBlockquote, deleteBlock, insertParagraphAfter, mergeBlockWithPrevious, setAlign, setHeadingLevel, splitBlock } from "./block";
 import { getPlainText } from "../model/tree";
+import { insertTable } from "./table";
 import type { Paragraph } from "../model/types";
 import { validateDocument } from "../validation/validate";
 
@@ -35,6 +36,34 @@ describe("convertBlockToBlockquote", () => {
 });
 
 describe("nested split/merge", () => {
+  it("splits and merges paragraphs inside a table cell", () => {
+    const { document, blockId } = setup("");
+    const inserted = insertTable({ afterBlockId: blockId, rows: 1, columns: 1 })(document, ctx());
+    if (!inserted.ok) throw inserted.error;
+    const table = inserted.value.document.content.find(block => block.type === "table");
+    if (!table || table.type !== "table") throw new Error("table fixture missing");
+    const paragraph = table.children[0]!.children[0]!.children[0]!;
+    const text = insertText({ blockId: paragraph.id, offset: 0, text: "hello world" })(inserted.value.document, ctx());
+    if (!text.ok) throw text.error;
+    const split = splitBlock({ blockId: paragraph.id, offset: 5 })(text.value.document, ctx());
+    expect(split.ok).toBe(true);
+    if (!split.ok) return;
+    const splitTable = split.value.document.content.find(block => block.type === "table");
+    if (!splitTable || splitTable.type !== "table") throw new Error("split table missing");
+    const cell = splitTable.children[0]!.children[0]!;
+    expect(cell.children).toHaveLength(2);
+    expect(getPlainText(cell.children[0]!)).toBe("hello");
+    expect(getPlainText(cell.children[1]!)).toBe(" world");
+    const merged = mergeBlockWithPrevious({ blockId: cell.children[1]!.id })(split.value.document, ctx());
+    expect(merged.ok).toBe(true);
+    if (!merged.ok) return;
+    const mergedTable = merged.value.document.content.find(block => block.type === "table");
+    if (!mergedTable || mergedTable.type !== "table") throw new Error("merged table missing");
+    expect(mergedTable.children[0]!.children[0]!.children).toHaveLength(1);
+    expect(getPlainText(mergedTable.children[0]!.children[0]!.children[0]!)).toBe("hello world");
+    expect(validateDocument(merged.value.document).ok).toBe(true);
+  });
+
   it("splits and merges paragraphs inside a blockquote", () => {
     const { document, blockId } = setup("hello world");
     const quoted = convertBlockToBlockquote({ blockId })(document, ctx());
