@@ -341,8 +341,15 @@ export function toggleEngineMarkForDomSelection(
     return { ok: false, message: "Não foi possível calcular os limites da seleção." };
   }
 
-  const anchor = { blockId: modelBlocks[startIndex].id, offset: startOffset };
-  const focus = { blockId: modelBlocks[endIndex].id, offset: endOffset };
+  const anchorElement = (selection.anchorNode instanceof HTMLElement ? selection.anchorNode : selection.anchorNode.parentElement)?.closest<HTMLElement>("p,h1,h2,h3,h4,h5,h6,li,td,th,blockquote");
+  const focusElement = (selection.focusNode instanceof HTMLElement ? selection.focusNode : selection.focusNode.parentElement)?.closest<HTMLElement>("p,h1,h2,h3,h4,h5,h6,li,td,th,blockquote");
+  const anchorIndex = anchorElement ? domBlocks.indexOf(anchorElement) : -1;
+  const focusIndex = focusElement ? domBlocks.indexOf(focusElement) : -1;
+  const anchorOffset = anchorIndex >= 0 ? pointOffset(domBlocks[anchorIndex], selection.anchorNode!, selection.anchorOffset) : null;
+  const focusOffset = focusIndex >= 0 ? pointOffset(domBlocks[focusIndex], selection.focusNode!, selection.focusOffset) : null;
+  if (anchorIndex < 0 || focusIndex < 0 || anchorOffset === null || focusOffset === null) return { ok: false, message: "Não foi possível mapear a direção da seleção." };
+  const anchor = { blockId: modelBlocks[anchorIndex].id, offset: anchorOffset };
+  const focus = { blockId: modelBlocks[focusIndex].id, offset: focusOffset };
   const setSelection = engine.setSelection({ anchor, focus });
   if (!setSelection.ok) return { ok: false, message: setSelection.error.message };
 
@@ -488,7 +495,14 @@ export function removeEngineMarksForDomSelection(
   const startOffset = pointOffset(domBlocks[startIndex], range.startContainer, range.startOffset);
   const endOffset = pointOffset(domBlocks[endIndex], range.endContainer, range.endOffset);
   if (startOffset === null || endOffset === null) return { ok: false, message: "Não foi possível calcular os limites da seleção." };
-  const selectionResult = engine.setSelection({ anchor: { blockId: modelBlocks[startIndex].id, offset: startOffset }, focus: { blockId: modelBlocks[endIndex].id, offset: endOffset } });
+  const anchorElement = (selection.anchorNode instanceof HTMLElement ? selection.anchorNode : selection.anchorNode.parentElement)?.closest<HTMLElement>("p,h1,h2,h3,h4,h5,h6,li,td,th,blockquote");
+  const focusElement = (selection.focusNode instanceof HTMLElement ? selection.focusNode : selection.focusNode.parentElement)?.closest<HTMLElement>("p,h1,h2,h3,h4,h5,h6,li,td,th,blockquote");
+  const anchorIndex = anchorElement ? domBlocks.indexOf(anchorElement) : -1;
+  const focusIndex = focusElement ? domBlocks.indexOf(focusElement) : -1;
+  const anchorOffset = anchorIndex >= 0 ? pointOffset(domBlocks[anchorIndex], selection.anchorNode!, selection.anchorOffset) : null;
+  const focusOffset = focusIndex >= 0 ? pointOffset(domBlocks[focusIndex], selection.focusNode!, selection.focusOffset) : null;
+  if (anchorIndex < 0 || focusIndex < 0 || anchorOffset === null || focusOffset === null) return { ok: false, message: "Não foi possível mapear a direção da seleção." };
+  const selectionResult = engine.setSelection({ anchor: { blockId: modelBlocks[anchorIndex].id, offset: anchorOffset }, focus: { blockId: modelBlocks[focusIndex].id, offset: focusOffset } });
   if (!selectionResult.ok) return { ok: false, message: selectionResult.error.message };
   const types: MarkType[] = ["bold", "italic", "underline", "strike", "color", "highlight", "fontSize", "fontFamily"];
   const commands = modelBlocks.slice(startIndex, endIndex + 1).flatMap((block, relativeIndex) => {
