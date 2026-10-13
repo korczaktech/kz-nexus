@@ -138,7 +138,7 @@ export function insertImportedBlocksAtSelection(params: {
           remaining = [...remaining, trailing];
           selection = { blockId: trailing.id, offset: 0 };
         } else {
-          selection = { blockId: isParagraphLike(last) ? last.id : source.id, offset: isParagraphLike(last) ? getPlainText(last).length : getPlainText(source).length };
+          selection = { blockId: source.id, offset: getPlainText(source).length };
         }
         content.splice(index + 1, 0, ...remaining);
       } else {
