@@ -26,11 +26,16 @@ export function insertImage(params: { afterBlockId: string; resourceId: string; 
 }
 
 export function removeImage(params: { blockId: string }): Command {
-  return (doc) => {
-    const exists = doc.content.some((block) => block.id === params.blockId && block.type === "image");
-    if (!exists) return err(engineError("NODE_NOT_FOUND", `Image block "${params.blockId}" not found`, { path: params.blockId }));
-    const content = doc.content.filter((block) => block.id !== params.blockId);
-    return ok({ document: { ...doc, content: content.length > 0 ? content : doc.content } });
+  return (doc, ctx) => {
+    const image = doc.content.find((block) => block.id === params.blockId && block.type === "image");
+    if (!image || image.type !== "image") return err(engineError("NODE_NOT_FOUND", `Image block "${params.blockId}" not found`, { path: params.blockId }));
+    let content: Block[] = doc.content.filter((block) => block.id !== params.blockId);
+    if (content.length === 0) {
+      content = [{ type: "paragraph", id: ctx.generateId(), children: [{ type: "text", id: ctx.generateId(), text: "", marks: [] }] }];
+    }
+    const resourceStillUsed = content.some((block) => block.type === "image" && block.resourceId === image.resourceId);
+    const resources = resourceStillUsed ? doc.resources : doc.resources.filter((resource) => resource.id !== image.resourceId);
+    return ok({ document: { ...doc, content, resources } });
   };
 }
 
