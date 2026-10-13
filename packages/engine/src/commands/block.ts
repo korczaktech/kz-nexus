@@ -73,7 +73,7 @@ export function splitBlock(params: { blockId: string; offset: number }): Command
       const parts = splitRunsAt(block.children, params.offset, ctx.generateId);
       const newId = ctx.generateId();
       const first: Block = { ...block, children: ensureRun(parts.before) } as Block;
-      const second: Paragraph = { type: "paragraph", id: newId, align: block.align, children: ensureRun(parts.after) };
+      const second: Paragraph = { type: "paragraph", id: newId, align: block.align, ...(block.indent !== undefined ? { indent: block.indent } : {}), children: ensureRun(parts.after) };
       const content = [...doc.content];
       content.splice(index, 1, first, second);
       return ok({ document: { ...doc, content }, selection: { blockId: newId, offset: 0 } });
