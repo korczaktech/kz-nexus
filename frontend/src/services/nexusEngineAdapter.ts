@@ -504,6 +504,7 @@ function longestCommonSuffix(a: string, b: string, prefix: number): number {
 export function removeEngineMarksForDomSelection(
   engine: ReturnType<typeof createEditor>,
   root: HTMLElement,
+  selectedTypes?: MarkType[],
 ): { ok: boolean; message?: string } {
   const selection = root.ownerDocument.defaultView?.getSelection();
   if (!selection || selection.isCollapsed || !selection.rangeCount || !selection.anchorNode || !selection.focusNode) return { ok: false, message: "Selecione o texto que deseja limpar." };
@@ -529,7 +530,7 @@ export function removeEngineMarksForDomSelection(
   if (anchorIndex < 0 || focusIndex < 0 || anchorOffset === null || focusOffset === null) return { ok: false, message: "Não foi possível mapear a direção da seleção." };
   const selectionResult = engine.setSelection({ anchor: { blockId: modelBlocks[anchorIndex].id, offset: anchorOffset }, focus: { blockId: modelBlocks[focusIndex].id, offset: focusOffset } });
   if (!selectionResult.ok) return { ok: false, message: selectionResult.error.message };
-  const types: MarkType[] = ["bold", "italic", "underline", "strike", "color", "highlight", "fontSize", "fontFamily", "link"];
+  const types: MarkType[] = selectedTypes ?? ["bold", "italic", "underline", "strike", "color", "highlight", "fontSize", "fontFamily", "link"];
   const commands = modelBlocks.slice(startIndex, endIndex + 1).flatMap((block, relativeIndex) => {
     const index = startIndex + relativeIndex;
     const start = index === startIndex ? startOffset : 0;
@@ -542,6 +543,10 @@ export function removeEngineMarksForDomSelection(
   const updatedBlocks = logicalTextBlocks(engine.getDocument().content);
   for (let index = startIndex; index <= endIndex; index++) domBlocks[index].innerHTML = renderRuns(updatedBlocks[index].children);
   return { ok: true };
+}
+
+export function removeEngineLinkForDomSelection(engine: ReturnType<typeof createEditor>, root: HTMLElement): { ok: boolean; message?: string } {
+  return removeEngineMarksForDomSelection(engine, root, ["link"]);
 }
 
 export function syncNexusEngine(engine: ReturnType<typeof createEditor>, html: string, title: string): boolean {
