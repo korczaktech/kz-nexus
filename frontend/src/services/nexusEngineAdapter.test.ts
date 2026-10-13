@@ -1,0 +1,36 @@
+// @vitest-environment happy-dom
+import { describe, expect, it } from "vitest";
+import { createEditor, getPlainText } from "../../../packages/engine/src/index";
+import { htmlFromNexusDocument, nexusDocumentFromHtml, syncNexusEngine } from "./nexusEngineAdapter";
+import type { Paragraph } from "../../../packages/engine/src/model/types";
+
+describe("Nexus editor adapter", () => {
+  it("routes ordinary typing through engine transactions and preserves block IDs", () => {
+    const document = nexusDocumentFromHtml("<p>Hello</p>", "Adapter test");
+    const engine = createEditor({ document });
+    const before = engine.getDocument().content[0] as Paragraph;
+    expect(syncNexusEngine(engine, "<p>Hello!</p>", "Adapter test")).toBe(true);
+    const after = engine.getDocument().content[0] as Paragraph;
+    expect(after.id).toBe(before.id);
+    expect(getPlainText(after)).toBe("Hello!");
+    expect(engine.canUndo()).toBe(true);
+    expect(engine.undo()).toBe(true);
+    expect(getPlainText(engine.getDocument().content[0] as Paragraph)).toBe("Hello");
+    engine.dispose();
+  });
+
+  it("round-trips an embedded image as a resource and image block", () => {
+    const document = nexusDocumentFromHtml('<img src="data:image/png;base64,aGVsbG8=" alt="Embedded image" />', "Image test");
+    expect(document.resources).toHaveLength(1);
+    expect(document.resources[0].byteLength).toBe(5);
+    expect(document.content.some(block => block.type === "image")).toBe(true);
+    expect(htmlFromNexusDocument(document)).toContain('src="data:image/png;base64,aGVsbG8="');
+  });
+
+  it("preserves document metadata when content is synchronized", () => {
+    const engine = createEditor({ document: nexusDocumentFromHtml("<p>Text</p>", "Original title") });
+    expect(syncNexusEngine(engine, "<p>Text changed</p>", "Updated title")).toBe(true);
+    expect(engine.getDocument().metadata.title).toBe("Updated title");
+    engine.dispose();
+  });
+});
