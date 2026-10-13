@@ -122,7 +122,7 @@ export function mergeListItemWithPrevious(params: { listId: string; itemId: stri
     const item = list.children[itemIndex]!;
     const paragraphIndex = item.children.findIndex(child => child.type === "paragraph" && child.id === params.blockId);
     if (paragraphIndex < 0) return err(engineError("NODE_NOT_FOUND", `Paragraph "${params.blockId}" not found in list item`, { path: params.blockId }));
-    let selection: { blockId: string; offset: number };
+    let selection: { blockId: string; offset: number } | undefined;
     const converted = replaceList(doc.content, params.listId, current => {
       const children = [...current.children];
       if (paragraphIndex > 0) {
@@ -157,7 +157,7 @@ export function mergeListItemWithPrevious(params: { listId: string; itemId: stri
       return { ...current, children } as typeof current;
     });
     if (!converted.found) return err(engineError("NODE_NOT_FOUND", `List "${params.listId}" not found`, { path: params.listId }));
-    if (!selection!) return err(engineError("UNSUPPORTED_OPERATION", "No previous paragraph to merge with", { path: params.blockId }));
+    if (!selection) return err(engineError("UNSUPPORTED_OPERATION", "No previous paragraph to merge with", { path: params.blockId }));
     return ok({ document: { ...doc, content: converted.blocks }, selection });
   };
 }
