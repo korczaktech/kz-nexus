@@ -178,14 +178,16 @@ export class Editor {
   normalize(): NexusDocument {
     this.assertNotDisposed();
     const before = this.document;
-    const after = deepFreeze(normalizeDocument(before, this.generateId));
-    if (after !== before) {
-      this.document = after;
-      this.history.push({ before, after, selectionBefore: this.selection, selectionAfter: this.selection, group: "structural" });
-      this.emitter.emit("documentChanged", { document: after });
+    const candidate = deepFreeze(normalizeDocument(before, this.generateId));
+    // normalizeDocument returns a defensive clone; compare values so a no-op
+    // normalization does not create a phantom history entry on every save.
+    if (JSON.stringify(candidate) !== JSON.stringify(before)) {
+      this.document = candidate;
+      this.history.push({ before, after: candidate, selectionBefore: this.selection, selectionAfter: this.selection, group: "structural" });
+      this.emitter.emit("documentChanged", { document: candidate });
       this.emitter.emit("historyChanged", { canUndo: this.history.canUndo(), canRedo: this.history.canRedo() });
     }
-    return after;
+    return this.document;
   }
 
   serialize(): Result<string> {
