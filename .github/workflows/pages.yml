@@ -40,8 +40,13 @@ jobs:
         working-directory: packages/engine
         run: npm run typecheck && npm test && npm run build
 
-      - name: Build engine preview
-        run: packages/engine/node_modules/.bin/tsc -p packages/engine-preview/tsconfig.json --noEmit && node packages/engine-preview/build.mjs
+      - name: Install engine preview dependencies
+        working-directory: packages/engine-preview
+        run: npm install --no-audit --no-fund
+
+      - name: Test and build engine preview
+        working-directory: packages/engine-preview
+        run: npm run typecheck && npm test && npm run build
 
       - name: Validate Phase 1 parity
         run: node scripts/check-phase1-parity.mjs
