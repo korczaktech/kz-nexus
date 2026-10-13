@@ -18,6 +18,19 @@ export function setAlign(params: { blockId: string; align: Alignment }): Command
   };
 }
 
+/** Sets the left indentation of a paragraph or heading, measured in points. */
+export function setIndent(params: { blockId: string; indent: number }): Command {
+  return (doc) => {
+    if (!Number.isFinite(params.indent) || params.indent < 0 || params.indent > 720) {
+      return err(engineError("INVALID_DOCUMENT", "Indent must be between 0 and 720 points", { path: params.blockId }));
+    }
+    const node = findParagraphLike(doc.content, params.blockId);
+    if (!node) return err(engineError("NODE_NOT_FOUND", `Block "${params.blockId}" not found`, { path: params.blockId }));
+    const content = mapParagraphLike(doc.content, current => current.id === params.blockId ? { ...current, indent: params.indent || undefined } : current);
+    return ok({ document: { ...doc, content } });
+  };
+}
+
 /** Converts a top-level paragraph into a heading of `level`, or a heading back into a paragraph when `level` is "paragraph". */
 export function setHeadingLevel(params: { blockId: string; level: 1 | 2 | 3 | 4 | 5 | 6 | "paragraph" }): Command {
   return (doc) => {
@@ -30,8 +43,8 @@ export function setHeadingLevel(params: { blockId: string; level: 1 | 2 | 3 | 4 
     const content = [...doc.content];
     content[index] =
       params.level === "paragraph"
-        ? { type: "paragraph", id: block.id, align: block.align, children: block.children }
-        : { type: "heading", id: block.id, level: params.level, align: block.align, children: block.children };
+        ? { type: "paragraph", id: block.id, align: block.align, ...(block.indent !== undefined ? { indent: block.indent } : {}), children: block.children }
+        : { type: "heading", id: block.id, level: params.level, align: block.align, ...(block.indent !== undefined ? { indent: block.indent } : {}), children: block.children };
     return ok({ document: { ...doc, content } });
   };
 }
