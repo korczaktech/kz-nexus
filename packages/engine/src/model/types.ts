@@ -47,6 +47,8 @@ export interface Heading {
   id: string;
   level: 1 | 2 | 3 | 4 | 5 | 6;
   align?: Alignment;
+  /** Left paragraph indent in points. */
+  indent?: number;
   children: TextRun[];
 }
 
