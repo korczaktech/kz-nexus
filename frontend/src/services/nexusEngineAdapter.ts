@@ -99,7 +99,11 @@ function blocksFromHtml(html: string, resources: ResourceRef[] = []): Block[] {
     const tag = element.tagName.toLowerCase();
     if (/^h[1-6]$/.test(tag)) blocks.push(makeParagraph(element, "heading"));
     else if (tag === "p" || tag === "div" || tag === "pre") {
-      if (tag === "div" && element.querySelector(":scope > p, :scope > h1, :scope > h2, :scope > h3, :scope > ul, :scope > ol, :scope > table")) {
+      const directChildren = Array.from(element.children);
+      const standaloneImage = directChildren.length === 1 && directChildren[0].tagName.toLowerCase() === "img" && !(element.textContent || "").trim();
+      if (standaloneImage) {
+        visit(directChildren[0]);
+      } else if (tag === "div" && element.querySelector(":scope > p, :scope > h1, :scope > h2, :scope > h3, :scope > h4, :scope > h5, :scope > h6, :scope > ul, :scope > ol, :scope > table, :scope > img")) {
         Array.from(element.children).forEach(visit);
       } else blocks.push(makeParagraph(element));
     } else if (tag === "blockquote") {
