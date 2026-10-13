@@ -1,7 +1,7 @@
 import type { Block, NexusDocument, ResourceRef, TextRun } from "../model/types";
 
 function escapeMarkdownText(value: string): string {
-  const special = new Set(["\\", "*", "_", "\`", "~", "[", "]", "|"]);
+  const special = new Set(["\\", "*", "_", String.fromCharCode(96), "~", "[", "]", "|"]);
   return Array.from(value).map(character => special.has(character) ? "\\" + character : character).join("");
 }
 
