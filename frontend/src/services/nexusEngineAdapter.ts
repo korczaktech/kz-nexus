@@ -14,6 +14,7 @@ import {
   type Mark,
   type NexusDocument,
   type TextRun,
+  type ResourceRef,
 } from "../../../packages/engine/src/index";
 
 const nextId = createIdGenerator("nexus");
@@ -87,7 +88,7 @@ function tableBlock(element: Element): Extract<Block, { type: "table" }> {
   return { type: "table", id: nextId(), children: rows };
 }
 
-function blocksFromHtml(html: string): Block[] {
+function blocksFromHtml(html: string, resources: ResourceRef[] = []): Block[] {
   const parsed = new DOMParser().parseFromString(html || "<p></p>", "text/html");
   const blocks: Block[] = [];
   const visit = (element: Element) => {
@@ -105,7 +106,19 @@ function blocksFromHtml(html: string): Block[] {
     else if (tag === "hr") blocks.push({ type: "thematicBreak", id: nextId() });
     else if (tag === "img") {
       const alt = element.getAttribute("alt") || "Imagem";
-      blocks.push({ type: "paragraph", id: nextId(), children: [{ type: "text", id: nextId(), text: "[" + alt + "]", marks: [] }] });
+      const src = element.getAttribute("src") || "";
+      const match = /^data:(image\/(?:png|jpeg|gif|webp|svg\+xml));base64,([a-z0-9+/=]+)$/i.exec(src);
+      if (match) {
+        const mimeType = match[1].toLowerCase();
+        const data = match[2];
+        const resourceId = nextId();
+        resources.push({ id: resourceId, kind: "image", mimeType, data, byteLength: Math.floor(data.replace(/=+$/, "").length * 3 / 4), name: alt });
+        const width = Number((element as HTMLImageElement).getAttribute("width")) || undefined;
+        const height = Number((element as HTMLImageElement).getAttribute("height")) || undefined;
+        blocks.push({ type: "image", id: nextId(), resourceId, alt, width, height });
+      } else {
+        blocks.push({ type: "paragraph", id: nextId(), children: [{ type: "text", id: nextId(), text: "[" + alt + "]", marks: [] }] });
+      }
     } else if (element.textContent?.trim()) blocks.push(makeParagraph(element));
   };
   Array.from(parsed.body.children).forEach(visit);
@@ -115,7 +128,9 @@ function blocksFromHtml(html: string): Block[] {
 
 export function nexusDocumentFromHtml(html: string, title = "Documento"): NexusDocument {
   const base = createDocument({ title }, nextId, systemClock);
-  return { ...base, content: blocksFromHtml(html) };
+  const resources: ResourceRef[] = [];
+  const content = blocksFromHtml(html, resources);
+  return { ...base, content, resources };
 }
 
 function renderRuns(runs: TextRun[]): string {
@@ -135,7 +150,7 @@ function renderRuns(runs: TextRun[]): string {
   }).join("");
 }
 
-function renderBlock(block: Block): string {
+function renderBlock(block: Block, resources: ResourceRef[] = []): string {
   if (block.type === "paragraph") { const align = block.align ? ` style="text-align:${block.align}"` : ""; return "<p" + align + ">" + renderRuns(block.children) + "</p>"; }
   if (block.type === "heading") { const align = block.align ? ` style="text-align:${block.align}"` : ""; return "<h" + block.level + align + ">" + renderRuns(block.children) + "</h" + block.level + ">"; }
   if (block.type === "blockquote") return "<blockquote>" + block.children.map(p => "<p>" + renderRuns(p.children) + "</p>").join("") + "</blockquote>";
@@ -143,14 +158,15 @@ function renderBlock(block: Block): string {
   if (block.type === "bulletList" || block.type === "orderedList") {
     const tag = block.type === "bulletList" ? "ul" : "ol";
     const start = block.type === "orderedList" && block.start !== 1 ? ' start="' + block.start + '"' : "";
-    return "<" + tag + start + ">" + block.children.map(item => "<li>" + item.children.map(child => renderBlock(child)).join("") + "</li>").join("") + "</" + tag + ">";
+    return "<" + tag + start + ">" + block.children.map(item => "<li>" + item.children.map(child => renderBlock(child as Block, resources)).join("") + "</li>").join("") + "</" + tag + ">";
   }
   if (block.type === "table") return "<table><tbody>" + block.children.map(row => "<tr>" + row.children.map(cell => "<td>" + cell.children.map(p => renderRuns(p.children)).join("<br>") + "</td>").join("") + "</tr>").join("") + "</tbody></table>";
-  return "<p>[" + escapeHtml(block.alt) + "]</p>";
+  if (block.type === "image") { const resource = resources.find(item => item.id === block.resourceId); if (!resource) return "<p>[" + escapeHtml(block.alt) + "]</p>"; const width = block.width ? ` width="${block.width}"` : ""; const height = block.height ? ` height="${block.height}"` : ""; return `<img data-nexus-image-id="${escapeHtml(block.id)}" src="data:${resource.mimeType};base64,${resource.data}" alt="${escapeHtml(block.alt)}"${width}${height} />`; }
+  return "";
 }
 
 export function htmlFromNexusDocument(document: NexusDocument): string {
-  return document.content.map(renderBlock).join("");
+  return document.content.map(block => renderBlock(block, document.resources)).join("");
 }
 
 type LogicalTextBlock = Extract<Block, { type: "paragraph" | "heading" }>;
