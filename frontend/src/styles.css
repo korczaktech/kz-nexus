@@ -2832,3 +2832,23 @@ html:has(.app-shell.editor-mode),body:has(.app-shell.editor-mode),#root:has(.app
   .editor-toolbar button.editor-tool{flex:0 0 auto;padding:0 5px}
 }
 
+/* Controles de título, fonte e tamanho: contraste próprio com a faixa escura. */
+.editor-toolbar select.editor-select{
+  background:#111b2a;
+  color:#f1f5fb;
+  border:1px solid #53647d;
+  border-radius:7px;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.04);
+}
+.editor-toolbar select.editor-select:hover,
+.editor-toolbar select.editor-select:focus{
+  background:#172438;
+  color:#fff;
+  border-color:#8b9cff;
+  outline:none;
+}
+.editor-toolbar select.editor-select option{
+  background:#111b2a;
+  color:#f1f5fb;
+}
+
