@@ -81,6 +81,7 @@ export { openNsx, saveNsx } from "./nsx/api";
 // Importers / exporters
 export { importPlainText } from "./importers/plainText";
 export { exportPlainText } from "./exporters/plainText";
+export { exportHtml, renderBlockHtml, renderTextRunsHtml } from "./exporters/html";
 
 // Adapter contracts (types only — no implementation in the core)
 export type { FileIO, ResourceProvider, StorageAdapter } from "./adapters/contracts";
