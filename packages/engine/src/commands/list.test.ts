@@ -54,6 +54,30 @@ describe("splitListItem", () => {
   });
 });
 
+describe("mergeListItemWithPrevious", () => {
+  it("merges a list item into its previous sibling at the logical caret", () => {
+    const d = base();
+    const paragraph = d.content[0] as Paragraph;
+    const inserted = insertText({ blockId: paragraph.id, offset: 0, text: "alpha" })(d, ctx());
+    if (!inserted.ok) throw inserted.error;
+    const converted = convertBlockToList({ blockId: paragraph.id, ordered: false })(inserted.value.document, ctx());
+    if (!converted.ok) throw converted.error;
+    const list = converted.value.document.content[0] as BulletList;
+    const split = splitListItem({ listId: list.id, itemId: list.children[0].id, blockId: paragraph.id, offset: 2 })(converted.value.document, ctx());
+    if (!split.ok) throw split.error;
+    const splitList = split.value.document.content[0] as BulletList;
+    const secondItem = splitList.children[1]!;
+    const secondParagraph = secondItem.children[0] as Paragraph;
+    const merged = mergeListItemWithPrevious({ listId: splitList.id, itemId: secondItem.id, blockId: secondParagraph.id })(split.value.document, ctx());
+    expect(merged.ok).toBe(true);
+    if (!merged.ok) return;
+    const result = merged.value.document.content[0] as BulletList;
+    expect(result.children).toHaveLength(1);
+    expect((result.children[0].children[0] as Paragraph).children.map(run => run.text).join("")).toBe("alpha");
+    expect(validateDocument(merged.value.document).ok).toBe(true);
+  });
+});
+
 describe("insertList / convertListType", () => {
   it("inserts a bullet list after a block", () => {
     const d = base();
