@@ -62,6 +62,13 @@ describe("Nexus editor adapter", () => {
     expect(htmlFromNexusDocument(document)).toContain("<sub>2</sub>");
   });
 
+  it("round-trips paragraph indentation in points", () => {
+    const document = nexusDocumentFromHtml('<p style="margin-left:36pt">Indented</p>', "Indent test");
+    const paragraph = document.content[0];
+    expect(paragraph && (paragraph.type === "paragraph" || paragraph.type === "heading") ? paragraph.indent : undefined).toBe(36);
+    expect(htmlFromNexusDocument(document)).toContain("margin-left:36pt");
+  });
+
   it("preserves document metadata when content is synchronized", () => {
     const engine = createEditor({ document: nexusDocumentFromHtml("<p>Text</p>", "Original title") });
     expect(syncNexusEngine(engine, "<p>Text changed</p>", "Updated title")).toBe(true);
