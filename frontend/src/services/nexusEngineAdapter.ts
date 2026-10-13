@@ -353,6 +353,23 @@ export function toggleEngineMarkForDomSelection(
   mark: Mark,
   toggle = true,
 ): { ok: boolean; message?: string } {
+  return updateEngineMarksForDomSelection(engine, root, [mark], toggle);
+}
+
+export function applyEngineMarksForDomSelection(
+  engine: ReturnType<typeof createEditor>,
+  root: HTMLElement,
+  marks: Mark[],
+): { ok: boolean; message?: string } {
+  return updateEngineMarksForDomSelection(engine, root, marks, false);
+}
+
+function updateEngineMarksForDomSelection(
+  engine: ReturnType<typeof createEditor>,
+  root: HTMLElement,
+  marks: Mark[],
+  toggle: boolean,
+): { ok: boolean; message?: string } {
   const selection = root.ownerDocument.defaultView?.getSelection();
   if (!selection || selection.isCollapsed || !selection.anchorNode || !selection.focusNode) {
     return { ok: false, message: "Selecione o texto que deseja formatar." };
@@ -396,12 +413,16 @@ export function toggleEngineMarkForDomSelection(
   const setSelection = engine.setSelection({ anchor, focus });
   if (!setSelection.ok) return { ok: false, message: setSelection.error.message };
 
-  const commands = modelBlocks.slice(startIndex, endIndex + 1).map((block, relativeIndex) => {
+  if (!marks.length) return { ok: false, message: "Nenhuma marca foi informada." };
+  const commands = modelBlocks.slice(startIndex, endIndex + 1).flatMap((block, relativeIndex) => {
     const index = startIndex + relativeIndex;
     const start = index === startIndex ? startOffset : 0;
     const end = index === endIndex ? endOffset : logicalTextLength(block);
-    return end > start ? (toggle ? toggleMark({ blockId: block.id, start, end, mark }) : applyMark({ blockId: block.id, start, end, mark })) : null;
-  }).filter((command): command is NonNullable<typeof command> => command !== null);
+    if (end <= start) return [];
+    return marks.map(mark => toggle
+      ? toggleMark({ blockId: block.id, start, end, mark })
+      : applyMark({ blockId: block.id, start, end, mark }));
+  });
   if (!commands.length) return { ok: false, message: "Selecione pelo menos um caractere." };
 
   const result = engine.exec(commands, { group: "formatting" });
