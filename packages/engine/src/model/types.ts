@@ -11,13 +11,15 @@ export const CURRENT_SCHEMA_VERSION = 1;
 
 export type Alignment = "start" | "center" | "end" | "justify";
 
-export type MarkType = "bold" | "italic" | "underline" | "strike" | "color" | "highlight" | "fontSize" | "fontFamily" | "link";
+export type MarkType = "bold" | "italic" | "underline" | "strike" | "superscript" | "subscript" | "color" | "highlight" | "fontSize" | "fontFamily" | "link";
 
 export type Mark =
   | { type: "bold" }
   | { type: "italic" }
   | { type: "underline" }
   | { type: "strike" }
+  | { type: "superscript" }
+  | { type: "subscript" }
   | { type: "color"; value: string }
   | { type: "highlight"; value: string }
   | { type: "fontSize"; value: number }
