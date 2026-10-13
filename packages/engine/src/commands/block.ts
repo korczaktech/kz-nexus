@@ -60,7 +60,7 @@ export function splitBlock(params: { blockId: string; offset: number }): Command
       const { before, after } = splitRunsAt(block.children, params.offset, ctx.generateId);
       const newId = ctx.generateId();
       const first: Paragraph = { ...block, children: ensureRun(before) };
-      const second: Paragraph = { type: "paragraph", id: newId, align: block.align, children: ensureRun(after) };
+      const second: Paragraph = { type: "paragraph", id: newId, align: block.align, ...(block.indent !== undefined ? { indent: block.indent } : {}), children: ensureRun(after) };
       const children = [...containerChildren];
       children.splice(childIndex, 1, first, second);
       return { children, newId };
