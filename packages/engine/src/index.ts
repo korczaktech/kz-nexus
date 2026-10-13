@@ -42,6 +42,7 @@ export { insertText, deleteText, replaceRange } from "./commands/text";
 export { applyMark, removeMark, toggleMark } from "./commands/marks";
 export {
   setAlign,
+  setIndent,
   setHeadingLevel,
   splitBlock,
   mergeBlockWithPrevious,
