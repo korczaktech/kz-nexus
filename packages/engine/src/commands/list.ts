@@ -112,6 +112,56 @@ export function splitListItem(params: { listId: string; itemId: string; blockId:
   };
 }
 
+/** Backspace at the start of a list paragraph merges it with the previous paragraph/item. */
+export function mergeListItemWithPrevious(params: { listId: string; itemId: string; blockId: string }): Command {
+  return (doc) => {
+    const list = findList(doc.content, params.listId);
+    if (!list) return err(engineError("NODE_NOT_FOUND", `List "${params.listId}" not found`, { path: params.listId }));
+    const itemIndex = list.children.findIndex(item => item.id === params.itemId);
+    if (itemIndex < 0) return err(engineError("NODE_NOT_FOUND", `List item "${params.itemId}" not found`, { path: params.itemId }));
+    const item = list.children[itemIndex]!;
+    const paragraphIndex = item.children.findIndex(child => child.type === "paragraph" && child.id === params.blockId);
+    if (paragraphIndex < 0) return err(engineError("NODE_NOT_FOUND", `Paragraph "${params.blockId}" not found in list item`, { path: params.blockId }));
+    let selection: { blockId: string; offset: number };
+    const converted = replaceList(doc.content, params.listId, current => {
+      const children = [...current.children];
+      if (paragraphIndex > 0) {
+        const previous = item.children[paragraphIndex - 1];
+        const currentParagraph = item.children[paragraphIndex];
+        if (!previous || previous.type !== "paragraph" || !currentParagraph || currentParagraph.type !== "paragraph") return current;
+        const offset = previous.children.reduce((total, run) => total + run.text.length, 0);
+        const merged: Paragraph = { ...previous, children: [...previous.children, ...currentParagraph.children] };
+        const itemChildren = [...item.children];
+        itemChildren.splice(paragraphIndex - 1, 2, merged);
+        children[itemIndex] = { ...item, children: itemChildren };
+        selection = { blockId: previous.id, offset };
+        return { ...current, children } as typeof current;
+      }
+      if (itemIndex <= 0) return current;
+      const previousItem = children[itemIndex - 1]!;
+      const currentParagraph = item.children[0];
+      if (!currentParagraph || currentParagraph.type !== "paragraph") return current;
+      const previousChildren = [...previousItem.children];
+      const last = previousChildren[previousChildren.length - 1];
+      if (last && last.type === "paragraph") {
+        const offset = last.children.reduce((total, run) => total + run.text.length, 0);
+        const merged: Paragraph = { ...last, children: [...last.children, ...currentParagraph.children] };
+        previousChildren[previousChildren.length - 1] = merged;
+        selection = { blockId: last.id, offset };
+      } else {
+        previousChildren.push(currentParagraph);
+        selection = { blockId: currentParagraph.id, offset: 0 };
+      }
+      previousChildren.push(...item.children.slice(1));
+      children.splice(itemIndex - 1, 2, { ...previousItem, children: previousChildren });
+      return { ...current, children } as typeof current;
+    });
+    if (!converted.found) return err(engineError("NODE_NOT_FOUND", `List "${params.listId}" not found`, { path: params.listId }));
+    if (!selection!) return err(engineError("UNSUPPORTED_OPERATION", "No previous paragraph to merge with", { path: params.blockId }));
+    return ok({ document: { ...doc, content: converted.blocks }, selection });
+  };
+}
+
 /** Removes an item from a list. Removing the last remaining item removes the whole list. */
 export function removeListItem(params: { listId: string; itemId: string }): Command {
   return (doc) => {
