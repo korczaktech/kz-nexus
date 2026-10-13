@@ -1,6 +1,8 @@
 import type { Block, BulletList, ListItem, OrderedList, Paragraph } from "../model/types";
 import { findList, replaceList } from "../model/tree";
 import { engineError } from "../errors/errors";
+import { findParagraphLike, findList, replaceList } from "../model/tree";
+import { splitRunsAt } from "./text";
 import { err, ok } from "../utils/result";
 import type { Command } from "./types";
 
@@ -77,6 +79,37 @@ export function insertListItem(params: { listId: string; afterItemId?: string })
     });
     const firstParagraph = newItem.children[0] as Paragraph;
     return ok({ document: { ...doc, content: blocks }, selection: { blockId: firstParagraph.id, offset: 0 } });
+  };
+}
+
+/** Splits a list item's paragraph at a logical text offset and creates the following list item. */
+export function splitListItem(params: { listId: string; itemId: string; blockId: string; offset: number }): Command {
+  return (doc, ctx) => {
+    const list = findList(doc.content, params.listId);
+    if (!list) return err(engineError("NODE_NOT_FOUND", `List "${params.listId}" not found`, { path: params.listId }));
+    const itemIndex = list.children.findIndex(item => item.id === params.itemId);
+    if (itemIndex < 0) return err(engineError("NODE_NOT_FOUND", `List item "${params.itemId}" not found`, { path: params.itemId }));
+    const item = list.children[itemIndex];
+    const paragraphIndex = item.children.findIndex(child => child.type === "paragraph" && child.id === params.blockId);
+    if (paragraphIndex < 0) return err(engineError("UNSUPPORTED_OPERATION", "The selected paragraph is not a direct child of this list item", { path: params.blockId }));
+    const paragraph = item.children[paragraphIndex] as Paragraph;
+    const length = paragraph.children.reduce((total, run) => total + run.text.length, 0);
+    if (params.offset < 0 || params.offset > length) return err(engineError("INVALID_POSITION", `Offset ${params.offset} out of range [0, ${length}]`, { path: params.blockId }));
+    const parts = splitRunsAt(paragraph.children, params.offset, ctx.generateId);
+    const ensureRun = (runs: Paragraph["children"]): Paragraph["children"] => runs.length ? runs : [{ type: "text", id: ctx.generateId(), text: "", marks: [] }];
+    const firstParagraph: Paragraph = { ...paragraph, children: ensureRun(parts.before) };
+    const secondParagraph: Paragraph = { type: "paragraph", id: ctx.generateId(), children: ensureRun(parts.after) };
+    const beforeChildren = item.children.slice(0, paragraphIndex);
+    const afterChildren = item.children.slice(paragraphIndex + 1);
+    const firstItem: ListItem = { ...item, children: [...beforeChildren, firstParagraph] };
+    const secondItem: ListItem = { type: "listItem", id: ctx.generateId(), children: [secondParagraph, ...afterChildren] };
+    const converted = replaceList(doc.content, params.listId, current => {
+      const children = [...current.children];
+      children.splice(itemIndex, 1, firstItem, secondItem);
+      return { ...current, children } as typeof current;
+    });
+    if (!converted.found) return err(engineError("NODE_NOT_FOUND", `List "${params.listId}" not found`, { path: params.listId }));
+    return ok({ document: { ...doc, content: converted.blocks }, selection: { blockId: secondParagraph.id, offset: 0 } });
   };
 }
 
