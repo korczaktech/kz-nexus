@@ -59,6 +59,16 @@ function inlineRuns(node: Node, marks: Mark[] = []): TextRun[] {
   return Array.from(node.childNodes).flatMap(child => inlineRuns(child, marksFor(node, marks)));
 }
 
+function indentInPoints(node: Element): number | undefined {
+  const value = (node as HTMLElement).style.marginLeft;
+  if (!value) return undefined;
+  const amount = Number.parseFloat(value);
+  if (!Number.isFinite(amount) || amount <= 0) return undefined;
+  const unit = value.trim().match(/[a-z%]+$/i)?.[0]?.toLowerCase() ?? "px";
+  const points = unit === "pt" ? amount : unit === "in" ? amount * 72 : unit === "cm" ? amount * 28.3464567 : unit === "mm" ? amount * 2.83464567 : amount * 0.75;
+  return Math.min(720, Math.max(0, points));
+}
+
 function makeParagraph(node: Element, type: "paragraph" | "heading" = "paragraph"): Extract<Block, { type: "paragraph" }> | Extract<Block, { type: "heading" }> {
   const children = inlineRuns(node);
   const runs = children.length ? children : [{ type: "text" as const, id: nextId(), text: "", marks: [] }];
@@ -168,8 +178,8 @@ function renderRuns(runs: TextRun[]): string {
 }
 
 function renderBlock(block: Block, resources: ResourceRef[] = []): string {
-  if (block.type === "paragraph") { const align = block.align ? ` style="text-align:${block.align}"` : ""; return "<p" + align + ">" + renderRuns(block.children) + "</p>"; }
-  if (block.type === "heading") { const align = block.align ? ` style="text-align:${block.align}"` : ""; return '<h' + block.level + ' id="' + escapeHtml(block.id) + '"' + align + ">" + renderRuns(block.children) + "</h" + block.level + ">"; }
+  if (block.type === "paragraph") { const styles = [block.align ? `text-align:${block.align}` : "", block.indent ? `margin-left:${block.indent}pt` : ""].filter(Boolean).join(";"); const style = styles ? ' style="' + styles + '"' : ""; return "<p" + style + ">" + renderRuns(block.children) + "</p>"; }
+  if (block.type === "heading") { const styles = [block.align ? `text-align:${block.align}` : "", block.indent ? `margin-left:${block.indent}pt` : ""].filter(Boolean).join(";"); const style = styles ? ' style="' + styles + '"' : ""; return '<h' + block.level + ' id="' + escapeHtml(block.id) + '"' + style + ">" + renderRuns(block.children) + "</h" + block.level + ">"; }
   if (block.type === "blockquote") return "<blockquote>" + block.children.map(p => renderBlock(p, resources)).join("") + "</blockquote>";
   if (block.type === "thematicBreak") return "<hr>";
   if (block.type === "bulletList" || block.type === "orderedList") {
@@ -177,7 +187,7 @@ function renderBlock(block: Block, resources: ResourceRef[] = []): string {
     const start = block.type === "orderedList" && block.start !== 1 ? ' start="' + block.start + '"' : "";
     return "<" + tag + start + ">" + block.children.map(item => "<li>" + item.children.map(child => renderBlock(child as Block, resources)).join("") + "</li>").join("") + "</" + tag + ">";
   }
-  if (block.type === "table") return "<table><tbody>" + block.children.map(row => "<tr>" + row.children.map(cell => "<td>" + cell.children.map(p => { const align = p.align ? ` style="text-align:${p.align}"` : ""; return "<p" + align + ">" + renderRuns(p.children) + "</p>"; }).join("") + "</td>").join("") + "</tr>").join("") + "</tbody></table>";
+  if (block.type === "table") return "<table><tbody>" + block.children.map(row => "<tr>" + row.children.map(cell => "<td>" + cell.children.map(p => { const styles = [p.align ? `text-align:${p.align}` : "", p.indent ? `margin-left:${p.indent}pt` : ""].filter(Boolean).join(";"); const align = styles ? ' style="' + styles + '"' : ""; return "<p" + align + ">" + renderRuns(p.children) + "</p>"; }).join("") + "</td>").join("") + "</tr>").join("") + "</tbody></table>";
   if (block.type === "image") { const resource = resources.find(item => item.id === block.resourceId); if (!resource) return "<p>[" + escapeHtml(block.alt) + "]</p>"; const width = block.width ? ` width="${block.width}"` : ""; const height = block.height ? ` height="${block.height}"` : ""; return `<img data-nexus-image-id="${escapeHtml(block.id)}" src="data:${resource.mimeType};base64,${resource.data}" alt="${escapeHtml(block.alt)}"${width}${height} />`; }
   return "";
 }
