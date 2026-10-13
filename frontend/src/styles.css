@@ -2654,3 +2654,38 @@ html:has(.app-shell.editor-mode),body:has(.app-shell.editor-mode),#root:has(.app
  .app-shell.editor-mode .editor-side{display:flex!important;max-height:30dvh;overflow-y:auto!important}
  .app-shell.editor-mode .editor-foot{align-items:flex-start}
 }
+
+
+/* Editor ribbon and export dialog refinements */
+.app-shell.editor-mode .editor-head{min-height:0;padding:8px 14px;gap:12px}
+.app-shell.editor-mode .editor-title-wrap{min-width:0;gap:0}
+.app-shell.editor-mode .editor-title{height:29px;min-height:29px;width:min(360px,36vw);padding:3px 9px;border:1px solid #2a3d57;border-radius:6px;background:#0a1625;color:#f0f5ff;font-size:14px;font-weight:600;line-height:1.2}
+.app-shell.editor-mode .editor-title:hover{background:#0c1b2d;border-color:#405675}
+.app-shell.editor-mode .editor-title:focus{background:#050d18;border-color:#7180ff;box-shadow:0 0 0 2px rgba(100,117,255,.16)}
+.app-shell.editor-mode .editor-breadcrumb{margin-bottom:2px;font-size:8px}
+.app-shell.editor-mode .save-state{margin-top:3px;font-size:9px}
+.app-shell.editor-mode .editor-files-empty{display:block!important;padding:13px 10px!important;border:1px dashed #3b506b!important;border-radius:8px;background:#0b1a2a!important;color:#d3deed!important;font-size:11px!important;line-height:1.55!important;text-align:center;overflow-wrap:anywhere}
+.app-shell.editor-mode .editor-ribbon-tabs{display:flex;align-items:center;gap:3px;overflow-x:auto;padding:5px 10px;background:#07111d;border-bottom:1px solid #1b2a40}
+.app-shell.editor-mode .editor-ribbon-tabs button{flex:0 0 auto;border:0;border-bottom:2px solid transparent;border-radius:5px 5px 0 0;background:transparent;color:#94a8c2;padding:8px 11px;font-size:11px;white-space:nowrap}
+.app-shell.editor-mode .editor-ribbon-tabs button:hover{background:#101f33;color:#e5eefb}
+.app-shell.editor-mode .editor-ribbon-tabs button.active{background:#12213a;border-bottom-color:#7886ff;color:#f5f7ff}
+.app-shell.editor-mode .editor-ribbon-panel{display:flex;align-items:center;gap:7px;flex-wrap:wrap;padding:8px 12px;background:#091522;border-bottom:1px solid #1b2a40;min-height:44px}
+.app-shell.editor-mode .editor-ribbon-panel button{border:1px solid #263952;border-radius:6px;background:#0d1b2d;color:#c5d3e7;padding:7px 10px;font-size:10px}
+.app-shell.editor-mode .editor-ribbon-panel button:hover{background:#182947;border-color:#40567b;color:#fff}
+.app-shell.editor-mode .editor-ribbon-panel button:disabled{opacity:.45}
+.app-shell.editor-mode .editor-foot{display:none!important}
+.app-shell.editor-mode .nexus-modal-backdrop{position:fixed;inset:0;z-index:999;display:grid;place-items:center;padding:20px;background:rgba(0,5,14,.76);backdrop-filter:blur(8px)}
+.app-shell.editor-mode .nexus-export-dialog{width:min(500px,100%);max-height:min(85vh,720px);overflow:auto;border:1px solid #2a3d59;border-radius:14px;background:#081421;color:#dce7f7;box-shadow:0 28px 90px rgba(0,0,0,.55)}
+.app-shell.editor-mode .nexus-export-dialog>header{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;padding:20px;border-bottom:1px solid #1b2b41}
+.app-shell.editor-mode .nexus-export-dialog h2{margin:0 0 5px;font-size:17px;color:#f1f5fc}
+.app-shell.editor-mode .nexus-export-dialog p{margin:0;color:#8498b3;font-size:11px;line-height:1.5}
+.app-shell.editor-mode .nexus-dialog-close{border:0;background:transparent;color:#9eb0c7;font-size:24px;line-height:1}
+.app-shell.editor-mode .nexus-export-options{display:grid;gap:7px;padding:13px}
+.app-shell.editor-mode .nexus-export-options button{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:4px 12px;text-align:left;padding:12px;border:1px solid #1e3048;border-radius:8px;background:#0a1929;color:#d9e4f3}
+.app-shell.editor-mode .nexus-export-options button:hover{background:#10223a;border-color:#6576ff}
+.app-shell.editor-mode .nexus-export-options button strong{font-size:12px;font-weight:650}
+.app-shell.editor-mode .nexus-export-options button span:nth-child(2){grid-column:1;color:#8297b2;font-size:10px}
+.app-shell.editor-mode .nexus-export-options button span:last-child{grid-column:2;grid-row:1/3;align-self:center;color:#8595ff;font-size:20px}
+.app-shell.editor-mode .nexus-help-dialog ul{padding:0 34px;color:#aebed2;font-size:12px;line-height:1.9}
+.app-shell.editor-mode .nexus-dialog-primary{display:block;margin:0 20px 20px auto;padding:8px 14px;border:1px solid #6979ff;border-radius:7px;background:#4d5ee4;color:white}
+@media(max-width:900px){.app-shell.editor-mode .editor-title{width:min(100%,300px);font-size:13px}.app-shell.editor-mode .editor-head{align-items:flex-start;flex-wrap:wrap}.app-shell.editor-mode .editor-ribbon-tabs button{padding:8px}.app-shell.editor-mode .editor-ribbon-panel{gap:5px}}
