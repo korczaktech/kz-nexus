@@ -197,6 +197,79 @@ function logicalTextLength(block: LogicalTextBlock): number {
   return block.children.reduce((length, run) => length + run.text.length, 0);
 }
 
+export interface EngineDomContext {
+  block: LogicalTextBlock;
+  blockIndex: number;
+  startOffset: number;
+  endOffset: number;
+  topLevelBlock: Block;
+  topLevelIndex: number;
+  list?: Extract<Block, { type: "bulletList" | "orderedList" }>;
+  listItemId?: string;
+  table?: Extract<Block, { type: "table" }>;
+  rowId?: string;
+  cellId?: string;
+  columnIndex?: number;
+}
+
+/** Maps the browser selection to stable model IDs before a command is dispatched. */
+export function getEngineDomContext(
+  engine: ReturnType<typeof createEditor>,
+  root: HTMLElement,
+): EngineDomContext | null {
+  const selection = root.ownerDocument.defaultView?.getSelection();
+  if (!selection?.rangeCount || !selection.anchorNode || !selection.focusNode) return null;
+  const range = selection.getRangeAt(0);
+  if (!root.contains(range.startContainer) || !root.contains(range.endContainer)) return null;
+  const domBlocks = domTextBlocks(root);
+  const modelBlocks = logicalTextBlocks(engine.getDocument().content);
+  if (!domBlocks.length || domBlocks.length !== modelBlocks.length) return null;
+  const startElement = (range.startContainer instanceof HTMLElement ? range.startContainer : range.startContainer.parentElement)
+    ?.closest<HTMLElement>("p,h1,h2,h3,h4,h5,h6,li,td,th,blockquote");
+  const endElement = (range.endContainer instanceof HTMLElement ? range.endContainer : range.endContainer.parentElement)
+    ?.closest<HTMLElement>("p,h1,h2,h3,h4,h5,h6,li,td,th,blockquote");
+  const startIndex = startElement ? domBlocks.indexOf(startElement) : -1;
+  const endIndex = endElement ? domBlocks.indexOf(endElement) : -1;
+  if (startIndex < 0 || endIndex < 0 || startIndex > endIndex) return null;
+  const startOffset = pointOffset(domBlocks[startIndex], range.startContainer, range.startOffset);
+  const endOffset = pointOffset(domBlocks[endIndex], range.endContainer, range.endOffset);
+  if (startOffset === null || endOffset === null) return null;
+  const selected = modelBlocks[startIndex];
+  let topLevelBlock: Block | undefined;
+  let topLevelIndex = -1;
+  let list: EngineDomContext["list"];
+  let listItemId: string | undefined;
+  let table: EngineDomContext["table"];
+  let rowId: string | undefined;
+  let cellId: string | undefined;
+  let columnIndex: number | undefined;
+  const visit = (block: Block, topIndex: number, listOwner?: EngineDomContext["list"], itemId?: string, tableOwner?: EngineDomContext["table"], row?: string, cell?: string, column?: number): boolean => {
+    if ((block.type === "paragraph" || block.type === "heading") && block.id === selected.id) {
+      topLevelBlock = engine.getDocument().content[topIndex];
+      topLevelIndex = topIndex;
+      list = listOwner;
+      listItemId = itemId;
+      table = tableOwner;
+      rowId = row;
+      cellId = cell;
+      columnIndex = column;
+      return true;
+    }
+    if (block.type === "blockquote") return block.children.some(child => visit(child, topIndex, listOwner, itemId, tableOwner, row, cell, column));
+    if (block.type === "bulletList" || block.type === "orderedList") return block.children.some(item => item.children.some(child => visit(child as Block, topIndex, block, item.id, tableOwner, row, cell, column)));
+    if (block.type === "table") return block.children.some((tableRow, rowIndex) => tableRow.children.some((tableCell, cellIndex) => tableCell.children.some(child => visit(child, topIndex, listOwner, itemId, block, tableRow.id, tableCell.id, cellIndex))));
+    return false;
+  };
+  engine.getDocument().content.some((block, index) => visit(block, index));
+  if (!topLevelBlock) return null;
+  return { block: selected, blockIndex: startIndex, startOffset, endOffset, topLevelBlock, topLevelIndex, list, listItemId, table, rowId, cellId, columnIndex };
+}
+
+/** Re-renders the canonical model through the adapter, not through browser editing commands. */
+export function renderEngineIntoDom(engine: ReturnType<typeof createEditor>, root: HTMLElement): void {
+  root.innerHTML = htmlFromNexusDocument(engine.getDocument());
+}
+
 /** Executes a formatting mark through the engine, then projects only affected text runs back into the DOM. */
 export function toggleEngineMarkForDomSelection(
   engine: ReturnType<typeof createEditor>,
