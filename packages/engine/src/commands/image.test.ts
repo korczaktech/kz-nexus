@@ -3,7 +3,7 @@ import { createDocument } from "./document";
 import { createEditor } from "../editor/editor";
 import { createIdGenerator } from "../core/ids";
 import { createFixedClock } from "../core/clock";
-import { insertImageResource } from "./image";
+import { insertImageResource, removeImage } from "./image";
 import { validateDocument } from "../validation/validate";
 import type { Paragraph } from "../model/types";
 
@@ -24,6 +24,13 @@ describe("insertImageResource", () => {
       expect(editor.getDocument().resources).toHaveLength(1);
       expect(editor.getDocument().content.some(block => block.type === "image")).toBe(true);
       expect(validateDocument(editor.getDocument()).ok).toBe(true);
+      const image = editor.getDocument().content.find(block => block.type === "image");
+      if (image && image.type === "image") {
+        const removed = editor.exec([removeImage({ blockId: image.id })]);
+        expect(removed.ok).toBe(true);
+        expect(editor.getDocument().resources).toHaveLength(0);
+        expect(validateDocument(editor.getDocument()).ok).toBe(true);
+      }
     }
     editor.dispose();
   });
