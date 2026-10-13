@@ -26,6 +26,7 @@ import {
   setHeadingLevel,
   setPageConfig,
   splitBlock,
+  splitListItem,
   systemClock,
   type Alignment,
   type Clock,
@@ -346,13 +347,9 @@ export class PreviewController {
       cmds.push(splitBlock({ blockId, offset }));
       return this.run("Novo parágrafo", cmds, "structural").ok;
     }
-    if (startInfo.container === "listItem" && startInfo.listId) {
-      if (!r.collapsed || offset !== textOf(info.block).length) {
-        this.notify("info", "Dentro de listas, Enter cria um novo item ao final do item atual; dividir um item no meio ainda não é suportado.");
-        return false;
-      }
-      cmds.push(insertListItem({ listId: startInfo.listId, afterItemId: startInfo.itemId }));
-      return this.run("Novo item de lista", cmds, "structural").ok;
+    if (startInfo.container === "listItem" && startInfo.listId && startInfo.itemId) {
+      cmds.push(splitListItem({ listId: startInfo.listId, itemId: startInfo.itemId, blockId, offset }));
+      return this.run("Dividir item de lista", cmds, "structural").ok;
     }
     void blockId;
     void offset;
