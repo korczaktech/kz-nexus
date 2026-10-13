@@ -164,7 +164,7 @@ export function Editor({document,versions,onSave,onClose,onConflict}:{document:D
  useEffect(()=>{const t=plainText(readEditorHtml()||content).trim();setWordCount(t?t.split(/\s+/).length:0)},[content]);
  function markDirty(html?:string){const next=sanitizeHtml(html??(readEditorHtml()||content));if(next===lastHtml.current)return;lastHtml.current=next;setContent(next);setState('dirty');setMessage('Alterações não salvas');if(history.current[history.current.length-1]!==next){history.current.push(next);if(history.current.length>150)history.current.shift()}future.current=[]}
  function syncEditor(){paginateEditor();markDirty(readEditorHtml())}
- function focusEditor(){editorRef.current?.querySelector<HTMLElement>('.rich-editor:last-of-type')?.focus()}
+ function focusEditor(){const active=window.getSelection()?.anchorNode?.parentElement?.closest<HTMLElement>('.rich-editor');if(active&&editorRef.current?.contains(active))return;editorRef.current?.querySelector<HTMLElement>('.rich-editor:last-of-type')?.focus()}
  function exec(command:string,value?:string){if(readOnly)return;focusEditor();window.document.execCommand(command,false,value);syncEditor()}
  function formatBlock(tag:string){if(readOnly)return;focusEditor();window.document.execCommand('formatBlock',false,tag);setFormat(tag==='h1'?'Título 1':tag==='h2'?'Título 2':tag==='h3'?'Título 3':tag==='blockquote'?'Citação':'Normal');syncEditor()}
  function insertLink(){const url=window.prompt('Endereço do link (https://):','https://');if(!url)return;try{const parsed=new URL(url);if(!['http:','https:','mailto:'].includes(parsed.protocol))throw new Error();exec('createLink',parsed.href)}catch{window.alert('Informe um endereço http, https ou mailto válido.')}}
