@@ -7,11 +7,14 @@ import {
   writeNsx,
   toggleMark,
   applyMark,
+  removeMark,
+  setMetadata,
   replaceRange,
   getPlainText,
   type Selection,
   type Block,
   type Mark,
+  type MarkType,
   type NexusDocument,
   type TextRun,
   type ResourceRef,
@@ -57,7 +60,8 @@ function makeParagraph(node: Element, type: "paragraph" | "heading" = "paragraph
   const runs = children.length ? children : [{ type: "text" as const, id: nextId(), text: "", marks: [] }];
   if (type === "heading") {
     const level = Math.min(6, Math.max(1, Number(node.tagName.slice(1)) || 1)) as 1 | 2 | 3 | 4 | 5 | 6;
-    return { type: "heading", id: nextId(), level, children: runs };
+    const align = (node as HTMLElement).style.textAlign;
+    return { type: "heading", id: nextId(), level, ...(align && ["left", "start", "center", "right", "end", "justify"].includes(align) ? { align: align === "left" ? "start" : align === "right" ? "end" : align as "start" | "center" | "end" | "justify" } : {}), children: runs };
   }
   const align = (node as HTMLElement).style.textAlign;
   return { type: "paragraph", id: nextId(), ...(align && ["left", "start", "center", "right", "end", "justify"].includes(align) ? { align: align === "left" ? "start" : align === "right" ? "end" : align as "start" | "center" | "end" | "justify" } : {}), children: runs };
@@ -452,23 +456,66 @@ function longestCommonSuffix(a: string, b: string, prefix: number): number {
   return i;
 }
 
+
+/** Removes every supported inline mark from the selected logical range via engine commands. */
+export function removeEngineMarksForDomSelection(
+  engine: ReturnType<typeof createEditor>,
+  root: HTMLElement,
+): { ok: boolean; message?: string } {
+  const selection = root.ownerDocument.defaultView?.getSelection();
+  if (!selection || selection.isCollapsed || !selection.rangeCount) return { ok: false, message: "Selecione o texto que deseja limpar." };
+  const range = selection.getRangeAt(0);
+  if (!root.contains(range.startContainer) || !root.contains(range.endContainer)) return { ok: false, message: "A seleção precisa estar dentro do documento." };
+  const domBlocks = domTextBlocks(root);
+  const modelBlocks = logicalTextBlocks(engine.getDocument().content);
+  if (!domBlocks.length || domBlocks.length !== modelBlocks.length) return { ok: false, message: "Não foi possível mapear a seleção para o modelo do motor." };
+  const startElement = (range.startContainer instanceof HTMLElement ? range.startContainer : range.startContainer.parentElement)?.closest<HTMLElement>("p,h1,h2,h3,h4,h5,h6,li,td,th,blockquote");
+  const endElement = (range.endContainer instanceof HTMLElement ? range.endContainer : range.endContainer.parentElement)?.closest<HTMLElement>("p,h1,h2,h3,h4,h5,h6,li,td,th,blockquote");
+  const startIndex = startElement ? domBlocks.indexOf(startElement) : -1;
+  const endIndex = endElement ? domBlocks.indexOf(endElement) : -1;
+  if (startIndex < 0 || endIndex < 0 || startIndex > endIndex) return { ok: false, message: "Não foi possível identificar o intervalo selecionado." };
+  const startOffset = pointOffset(domBlocks[startIndex], range.startContainer, range.startOffset);
+  const endOffset = pointOffset(domBlocks[endIndex], range.endContainer, range.endOffset);
+  if (startOffset === null || endOffset === null) return { ok: false, message: "Não foi possível calcular os limites da seleção." };
+  const selectionResult = engine.setSelection({ anchor: { blockId: modelBlocks[startIndex].id, offset: startOffset }, focus: { blockId: modelBlocks[endIndex].id, offset: endOffset } });
+  if (!selectionResult.ok) return { ok: false, message: selectionResult.error.message };
+  const types: MarkType[] = ["bold", "italic", "underline", "strike", "color", "highlight", "fontSize", "fontFamily"];
+  const commands = modelBlocks.slice(startIndex, endIndex + 1).flatMap((block, relativeIndex) => {
+    const index = startIndex + relativeIndex;
+    const start = index === startIndex ? startOffset : 0;
+    const end = index === endIndex ? endOffset : logicalTextLength(block);
+    return end > start ? types.map(markType => removeMark({ blockId: block.id, start, end, markType })) : [];
+  });
+  if (!commands.length) return { ok: false, message: "Selecione pelo menos um caractere." };
+  const result = engine.exec(commands, { group: "formatting" });
+  if (!result.ok) return { ok: false, message: result.error.message };
+  const updatedBlocks = logicalTextBlocks(engine.getDocument().content);
+  for (let index = startIndex; index <= endIndex; index++) domBlocks[index].innerHTML = renderRuns(updatedBlocks[index].children);
+  return { ok: true };
+}
+
 export function syncNexusEngine(engine: ReturnType<typeof createEditor>, html: string, title: string): boolean {
   const parsed = nexusDocumentFromHtml(html, title);
   const previous = engine.getDocument();
+  if (previous.metadata.title !== title) {
+    const titleUpdate = engine.exec([setMetadata({ key: 'title', value: title })], { group: 'structural' });
+    if (!titleUpdate.ok) return false;
+  }
+  const updatedPrevious = engine.getDocument();
   const resourceIds = new Map<string, string>();
   const resources = parsed.resources.map(resource => {
-    const existing = previous.resources.find(item => item.kind === resource.kind && item.mimeType === resource.mimeType && item.data === resource.data);
+    const existing = updatedPrevious.resources.find(item => item.kind === resource.kind && item.mimeType === resource.mimeType && item.data === resource.data);
     if (!existing) return resource;
     resourceIds.set(resource.id, existing.id);
     return { ...resource, id: existing.id };
   });
-  const content = preserveStableBlockIds(previous.content, parsed.content, resourceIds);
+  const content = preserveStableBlockIds(updatedPrevious.content, parsed.content, resourceIds);
   const next: NexusDocument = {
     ...parsed,
-    id: previous.id,
-    metadata: { ...previous.metadata, title, updatedAt: systemClock() },
-    pageConfig: previous.pageConfig,
-    resources: resources.length ? resources : previous.resources,
+    id: updatedPrevious.id,
+    metadata: { ...updatedPrevious.metadata, title, updatedAt: systemClock() },
+    pageConfig: updatedPrevious.pageConfig,
+    resources: resources.length ? resources : updatedPrevious.resources,
     content,
   };
 
