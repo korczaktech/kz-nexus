@@ -2,7 +2,7 @@
 import { copyFileSync, mkdirSync, rmSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-import { loadEsbuild } from "../../scripts/esbuild-loader.mjs";
+import { loadEsbuild } from "../engine/tooling/esbuild-loader.mjs";
 
 const here = dirname(fileURLToPath(import.meta.url));
 const dist = resolve(here, "dist");
