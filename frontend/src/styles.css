@@ -2570,3 +2570,29 @@ html:has(.app-shell.editor-mode),body:has(.app-shell.editor-mode),#root:has(.app
 /* Preserve imported Word documents' original page wrappers and dimensions. */
 .app-shell.editor-mode .editor-pages-stack>.editor-page-native-docx{height:auto!important;min-height:0!important;overflow:visible!important}
 .app-shell.editor-mode .editor-pages-stack>.editor-page-native-docx .rich-editor{height:auto!important;min-height:0!important;overflow:visible!important}
+
+/* Stable editor chrome: only the page canvas scrolls; the title and settings stay pinned. */
+html:has(.app-shell.editor-mode),body:has(.app-shell.editor-mode),#root:has(.app-shell.editor-mode){height:100%;min-height:0;overflow:hidden}
+.app-shell.editor-mode{display:flex!important;flex-direction:column;height:100dvh!important;min-height:0!important;overflow:hidden!important}
+.app-shell.editor-mode .main-shell{display:flex!important;flex:1 1 auto;flex-direction:column;height:100%!important;min-height:0!important;overflow:hidden!important}
+.app-shell.editor-mode .content{display:flex!important;flex:1 1 auto;flex-direction:column;height:auto!important;min-height:0!important;overflow:hidden!important;padding:0!important;margin:0!important}
+.app-shell.editor-mode .editor-workspace{display:flex!important;flex:1 1 auto;flex-direction:column;width:100%;height:100%!important;min-height:0!important;overflow:hidden!important}
+.app-shell.editor-mode .editor-head{position:relative;z-index:20;flex:0 0 auto;display:flex;align-items:center;justify-content:center;flex-wrap:nowrap;min-height:88px;padding:14px 22px;background:#fff;color:#111827;border-bottom:1px solid #dbe1ea;box-shadow:0 2px 8px rgba(15,23,42,.05)}
+.app-shell.editor-mode .editor-title-wrap{display:flex;flex:1 1 auto;flex-direction:column;align-items:center;justify-content:center;min-width:0;max-width:none;text-align:center}
+.app-shell.editor-mode .editor-breadcrumb{color:#64748b;font-size:11px;font-weight:700;letter-spacing:.12em;text-align:center}
+.app-shell.editor-mode .editor-title{display:block;width:min(760px,70vw);max-width:100%;height:auto;margin:4px auto 0;padding:0;border:0;background:transparent;color:#111827;font-size:26px;font-weight:750;line-height:1.25;text-align:center;box-shadow:none}
+.app-shell.editor-mode .editor-title:focus{outline:2px solid #a5b4fc;outline-offset:3px;border-radius:4px}
+.app-shell.editor-mode .editor-head>.editor-actions{flex:0 0 auto}
+.app-shell.editor-mode .editor-toolbar,.app-shell.editor-mode .editor-ribbon-tabs,.app-shell.editor-mode .editor-info{position:relative;z-index:15;flex:0 0 auto}
+.app-shell.editor-mode .editor-layout{display:flex;flex:1 1 auto;flex-direction:column;min-height:0;height:auto!important;overflow:hidden!important}
+.app-shell.editor-mode .editor-body.rich-editor-body{display:grid!important;flex:1 1 auto;grid-template-columns:minmax(0,1fr) minmax(240px,290px)!important;min-height:0!important;height:auto!important;overflow:hidden!important;align-items:stretch!important}
+.app-shell.editor-mode .editor-canvas{min-width:0;min-height:0;height:100%!important;overflow:auto!important;overscroll-behavior:contain;align-items:flex-start!important;padding:24px 18px 36px}
+.app-shell.editor-mode .editor-pages-stack{width:max-content;min-width:100%;padding:0 12px 24px}
+.app-shell.editor-mode .editor-side{position:relative!important;top:auto!important;align-self:stretch;min-height:0!important;height:100%;max-height:100%;overflow-y:auto!important;overflow-x:hidden!important;overscroll-behavior:contain;border-left:1px solid var(--line)}
+.app-shell.editor-mode .editor-side .editor-files-head{position:sticky;top:0;z-index:5;background:var(--surface,#fff)}
+@media(max-width:900px){
+ .app-shell.editor-mode .editor-head{flex-wrap:wrap;gap:10px;min-height:0}
+ .app-shell.editor-mode .editor-title{width:min(100%,760px);font-size:22px}
+ .app-shell.editor-mode .editor-body.rich-editor-body{grid-template-columns:minmax(0,1fr)!important;grid-template-rows:minmax(0,1fr) auto!important}
+ .app-shell.editor-mode .editor-side{height:auto;max-height:30dvh;border-left:0;border-top:1px solid var(--line)}
+}
