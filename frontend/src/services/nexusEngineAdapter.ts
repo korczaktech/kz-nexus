@@ -227,6 +227,7 @@ export interface EngineDomContext {
   block: LogicalTextBlock;
   blockIndex: number;
   endBlockIndex: number;
+  endBlockId: string;
   endTopLevelBlock: Block;
   endTopLevelIndex: number;
   startOffset: number;
@@ -314,7 +315,7 @@ export function getEngineDomContext(
   const endTopLevelIndex = engine.getDocument().content.findIndex(block => containsLogicalBlock(block, endSelected.id));
   const endTopLevelBlock = endTopLevelIndex >= 0 ? engine.getDocument().content[endTopLevelIndex] : undefined;
   if (!endTopLevelBlock) return null;
-  return { block: selected, blockIndex: startIndex, endBlockIndex: endIndex, endTopLevelBlock, endTopLevelIndex, startOffset, endOffset, anchorBlockId: modelBlocks[anchorIndex].id, anchorOffset, focusBlockId: modelBlocks[focusIndex].id, focusOffset, topLevelBlock, topLevelIndex, list, listItemId, table, rowId, cellId, columnIndex };
+  return { block: selected, blockIndex: startIndex, endBlockIndex: endIndex, endBlockId: endSelected.id, endTopLevelBlock, endTopLevelIndex, startOffset, endOffset, anchorBlockId: modelBlocks[anchorIndex].id, anchorOffset, focusBlockId: modelBlocks[focusIndex].id, focusOffset, topLevelBlock, topLevelIndex, list, listItemId, table, rowId, cellId, columnIndex };
 }
 
 /** Re-renders the canonical model through the adapter, not through browser editing commands. */
