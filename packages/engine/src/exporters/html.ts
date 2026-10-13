@@ -49,7 +49,7 @@ export function renderBlockHtml(block: Block, resources: ResourceRef[] = []): st
     if (!resource) return "<p>[" + escapeHtml(block.alt) + "]</p>";
     const width = block.width ? ` width="${block.width}"` : "";
     const height = block.height ? ` height="${block.height}"` : "";
-    return `<img data-nexus-image-id="${escapeHtml(block.id)}" src="data:${escapeHtml(resource.mimeType)};base64,${resource.data}" alt="${escapeHtml(block.alt)}"${width}${height} />`;
+    return `<img data-nexus-image-id="${escapeHtml(block.id)}" src="data:${escapeHtml(resource.mimeType)};base64,${escapeHtml(resource.data)}" alt="${escapeHtml(block.alt)}"${width}${height} />`;
   }
   return "";
 }
