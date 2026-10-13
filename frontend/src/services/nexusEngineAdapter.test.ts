@@ -47,6 +47,12 @@ describe("Nexus editor adapter", () => {
     expect(paragraph && (paragraph.type === "paragraph" || paragraph.type === "heading") ? paragraph.children[0]!.marks : []).not.toContainEqual(expect.objectContaining({ type: "link" }));
   });
 
+  it("renders stable heading IDs for engine-backed internal links", () => {
+    const document = nexusDocumentFromHtml("<h1>Destination</h1>", "Internal link test");
+    const heading = document.content.find(block => block.type === "heading");
+    expect(heading && heading.type === "heading" ? htmlFromNexusDocument(document) : "").toContain('id="' + (heading && heading.type === "heading" ? heading.id : "") + '"');
+  });
+
   it("preserves document metadata when content is synchronized", () => {
     const engine = createEditor({ document: nexusDocumentFromHtml("<p>Text</p>", "Original title") });
     expect(syncNexusEngine(engine, "<p>Text changed</p>", "Updated title")).toBe(true);
