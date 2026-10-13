@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { createIdGenerator } from "../core/ids";
 import { createFixedClock } from "../core/clock";
-import { createDocument } from "./document";
+import { createDocument, setMetadata } from "./document";
 import { validateDocument } from "../validation/validate";
 
 describe("createDocument", () => {
@@ -18,6 +18,18 @@ describe("createDocument", () => {
 
     const result = validateDocument(doc);
     expect(result.ok).toBe(true);
+  });
+
+  it("setMetadata preserves editable document metadata", () => {
+    const generateId = createIdGenerator("n", 3);
+    const { now } = createFixedClock(2000);
+    const doc = createDocument(generateId, now, { title: "Metadata test" });
+    const result = setMetadata({ key: "author", value: "Ada Lovelace" })(doc, { generateId });
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.value.document.metadata.author).toBe("Ada Lovelace");
+    expect(result.value.document.metadata.title).toBe("Metadata test");
+    expect(validateDocument(result.value.document).ok).toBe(true);
   });
 
   it("assigns unique ids to the document and its nodes", () => {
