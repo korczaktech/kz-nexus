@@ -497,8 +497,8 @@ function blockShape(block: Block): unknown {
     }
     return groups;
   };
-  if (block.type === "paragraph") return ["paragraph", block.align ?? null, marksShape(block.children)];
-  if (block.type === "heading") return ["heading", block.level, block.align ?? null, marksShape(block.children)];
+  if (block.type === "paragraph") return ["paragraph", block.align ?? null, block.indent ?? null, marksShape(block.children)];
+  if (block.type === "heading") return ["heading", block.level, block.align ?? null, block.indent ?? null, marksShape(block.children)];
   if (block.type === "blockquote") return ["blockquote", block.children.map(blockShape)];
   if (block.type === "bulletList" || block.type === "orderedList") return [block.type, block.type === "orderedList" ? block.start : null, block.children.map(item => item.children.map(child => blockShape(child as Block)))];
   if (block.type === "table") return ["table", block.children.map(row => row.children.map(cell => cell.children.map(blockShape)))];
