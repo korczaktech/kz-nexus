@@ -9,6 +9,9 @@ import {
   deleteBlock,
   deleteText,
   insertBlockquote,
+  convertBlockToBlockquote,
+  convertBlockToList,
+  convertListType,
   insertImage,
   insertList,
   insertListItem,
@@ -470,12 +473,27 @@ export class PreviewController {
   }
 
   insertListBlock(ordered: boolean): boolean {
-    const id = this.anchorTopId();
-    return id ? this.run(ordered ? "Lista ordenada" : "Lista", [insertList({ afterBlockId: id, ordered })], "structural").ok : false;
+    const r = this.range();
+    if (!r) return false;
+    const info = r.infos[r.startIndex]!;
+    if (info.container === "top" && (info.block.type === "paragraph" || info.block.type === "heading")) {
+      return this.run(ordered ? "Converter em lista ordenada" : "Converter em lista com marcadores", [convertBlockToList({ blockId: info.block.id, ordered })], "structural").ok;
+    }
+    if (info.container === "listItem" && info.listId) {
+      return this.run(ordered ? "Converter para lista ordenada" : "Converter para lista com marcadores", [convertListType({ listId: info.listId, ordered })], "structural").ok;
+    }
+    this.notify("info", "Selecione um parágrafo ou item de lista para alterar seu tipo.");
+    return false;
   }
   insertQuote(): boolean {
-    const id = this.anchorTopId();
-    return id ? this.run("Citação", [insertBlockquote({ afterBlockId: id })], "structural").ok : false;
+    const r = this.range();
+    if (!r) return false;
+    const info = r.infos[r.startIndex]!;
+    if (info.container !== "top") {
+      this.notify("info", "Selecione um parágrafo de nível superior para convertê-lo em citação.");
+      return false;
+    }
+    return this.run("Citação", [convertBlockToBlockquote({ blockId: info.block.id })], "structural").ok;
   }
   insertRule(): boolean {
     const id = this.anchorTopId();
