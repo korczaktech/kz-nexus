@@ -30,6 +30,7 @@ import {
   setPageConfig,
   splitBlock,
   splitListItem,
+  mergeListItemWithPrevious,
   systemClock,
   type Alignment,
   type Clock,
@@ -304,7 +305,12 @@ export class PreviewController {
       if (prev.type === "paragraph" || prev.type === "heading") return this.run("Mesclar parágrafos", [mergeBlockWithPrevious({ blockId: info.block.id })], "structural").ok;
       return false;
     }
-    if (info.container !== "top") this.notify("info", "Mesclar com o bloco anterior só é suportado para parágrafos e títulos de nível superior.");
+    if (info.container === "listItem" && info.listId && info.itemId) {
+      return this.run("Mesclar item de lista", [mergeListItemWithPrevious({ listId: info.listId, itemId: info.itemId, blockId: info.block.id })], "structural").ok;
+    }
+    if (info.container === "tableCell" || info.container === "blockquote") {
+      return this.run("Mesclar parágrafos", [mergeBlockWithPrevious({ blockId: info.block.id })], "structural").ok;
+    }
     return false;
   }
 
@@ -354,9 +360,13 @@ export class PreviewController {
       cmds.push(splitListItem({ listId: startInfo.listId, itemId: startInfo.itemId, blockId, offset }));
       return this.run("Dividir item de lista", cmds, "structural").ok;
     }
+    if (startInfo.container === "tableCell" || startInfo.container === "blockquote") {
+      cmds.push(splitBlock({ blockId, offset }));
+      return this.run("Dividir parágrafo", cmds, "structural").ok;
+    }
     void blockId;
     void offset;
-    this.notify("info", "Quebra de parágrafo dentro de tabelas e citações ainda não é suportada pelo motor.");
+    this.notify("info", "Quebra de parágrafo indisponível neste contêiner.");
     return false;
   }
 
