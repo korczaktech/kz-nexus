@@ -2895,3 +2895,11 @@ html:has(.app-shell.editor-mode),body:has(.app-shell.editor-mode),#root:has(.app
   position:static!important;
   top:auto!important;
 }
+
+
+/* Document typography clarity and accessible footer alignment controls */
+.editor-page,.editor-page .rich-editor,.editor-page .editor-document-header,.editor-page .editor-document-footer{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-rendering:optimizeLegibility;font-kerning:normal;font-variant-ligatures:common-ligatures;}
+.editor-page .rich-editor{font-size:11pt;line-height:1.5;}
+.editor-page .editor-document-header,.editor-page .editor-document-footer{font-family:Arial,Helvetica,sans-serif;font-size:10pt;line-height:1.35;overflow-wrap:anywhere;}
+.editor-toolbar-group-label{font-size:11px;font-weight:600;color:var(--text-muted,#9aa8bc);padding:0 6px;white-space:nowrap;}
+.editor-tool.active{background:var(--accent-soft,rgba(100,117,255,.18));border-color:var(--accent,#6475ff);}
