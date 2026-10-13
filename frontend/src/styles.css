@@ -2740,3 +2740,55 @@ html:has(.app-shell.editor-mode),body:has(.app-shell.editor-mode),#root:has(.app
   white-space:pre-wrap;
   overflow-wrap:anywhere;
 }
+
+
+/* Header and footer behave like ordinary document text; double-click to edit in place. */
+.app-shell.editor-mode .editor-pages-stack>.editor-page .editor-document-header,
+.app-shell.editor-mode .editor-pages-stack>.editor-page .editor-document-footer{
+  display:block;
+  box-sizing:border-box;
+  min-height:12mm;
+  margin:0;
+  padding:3mm 0;
+  color:#20242d;
+  font-family:inherit;
+  font-size:11pt;
+  font-weight:400;
+  font-style:normal;
+  text-align:left;
+  line-height:1.4;
+  white-space:pre-wrap;
+  overflow-wrap:anywhere;
+  cursor:text;
+}
+.app-shell.editor-mode .editor-pages-stack>.editor-page .editor-document-header[contenteditable="true"],
+.app-shell.editor-mode .editor-pages-stack>.editor-page .editor-document-footer[contenteditable="true"]{
+  outline:1px dashed #7886ff;
+  outline-offset:2px;
+  background:rgba(120,134,255,.06);
+}
+.app-shell.editor-mode .editor-pages-stack>.editor-page .editor-document-header:empty::before{
+  content:"Cabeçalho — dê dois cliques para editar";
+  color:#9aa3b2;
+  font-size:10pt;
+  font-weight:400;
+}
+.app-shell.editor-mode .editor-pages-stack>.editor-page .editor-document-footer:empty::before{
+  content:"Rodapé — dê dois cliques para editar";
+  color:#9aa3b2;
+  font-size:10pt;
+  font-weight:400;
+}
+/* Vertical separators divide semantically different tool groups throughout the ribbon. */
+.app-shell.editor-mode .editor-toolbar .toolbar-separator{
+  display:inline-block!important;
+  align-self:stretch;
+  width:1px;
+  min-width:1px;
+  height:28px;
+  margin:4px 5px;
+  padding:0;
+  background:#596270;
+  border:0;
+  opacity:.9;
+}
