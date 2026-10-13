@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { createIdGenerator } from "../core/ids";
 import { createFixedClock } from "../core/clock";
 import { createDocument } from "./document";
-import { convertListType, insertList, insertListItem, removeListItem } from "./list";
+import { convertBlockToList, convertListType, insertList, insertListItem, removeListItem } from "./list";
 import { insertText } from "./text";
 import type { BulletList, OrderedList, Paragraph } from "../model/types";
 
@@ -13,6 +13,22 @@ function ctx() {
 function base() {
   return createDocument(createIdGenerator("n", 1), createFixedClock(0).now);
 }
+
+describe("convertBlockToList", () => {
+  it("converts a paragraph into a list without losing its text or paragraph ID", () => {
+    const d = base();
+    const paragraph = d.content[0] as Paragraph;
+    const inserted = insertText({ blockId: paragraph.id, offset: 0, text: "Preserved text" })(d, ctx());
+    if (!inserted.ok) throw inserted.error;
+    const converted = convertBlockToList({ blockId: paragraph.id, ordered: false })(inserted.value.document, ctx());
+    expect(converted.ok).toBe(true);
+    if (!converted.ok) return;
+    const list = converted.value.document.content[0] as BulletList;
+    expect(list.type).toBe("bulletList");
+    expect(list.children[0].children[0].id).toBe(paragraph.id);
+    expect((list.children[0].children[0] as Paragraph).children.map(run => run.text).join("")).toBe("Preserved text");
+  });
+});
 
 describe("insertList / convertListType", () => {
   it("inserts a bullet list after a block", () => {
