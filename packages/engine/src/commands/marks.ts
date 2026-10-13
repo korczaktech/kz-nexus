@@ -1,7 +1,7 @@
 import type { Mark, MarkType, NexusDocument, TextRun } from "../model/types";
 import { findParagraphLike, getPlainText, mapParagraphLike } from "../model/tree";
 import { engineError } from "../errors/errors";
-import { isValidColor, isValidFontSize } from "../schema/schema";
+import { isValidColor, isValidFontSize, isValidLink } from "../schema/schema";
 import { err, ok } from "../utils/result";
 import { coalesceRuns, splitRunsAt } from "./text";
 import type { Command, CommandContext } from "./types";
@@ -12,6 +12,7 @@ function validateMark(mark: Mark): string | undefined {
   }
   if (mark.type === "fontSize" && !isValidFontSize(mark.value)) return `Invalid fontSize value "${mark.value}"`;
   if (mark.type === "fontFamily" && mark.value.trim().length === 0) return "fontFamily cannot be empty";
+  if (mark.type === "link" && !isValidLink(mark.value)) return "link must be a safe http, https, mailto, or same-document anchor URL";
   return undefined;
 }
 
