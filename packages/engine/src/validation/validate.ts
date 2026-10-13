@@ -107,6 +107,9 @@ function checkParagraphLike(
     }
     checkTextRun(run, `${path}.children[${index}]`, seen, issues, limits, counter, depth + 1);
   });
+  if (node.indent !== undefined && (!Number.isFinite(node.indent) || node.indent < 0 || node.indent > 720)) {
+    issues.push({ code: "INVALID_DOCUMENT", message: `Indent out of range at ${path}`, path });
+  }
   if (node.type === "heading" && (node.level < 1 || node.level > 6)) {
     issues.push({ code: "INVALID_DOCUMENT", message: `Heading level out of range at ${path}`, path });
   }
