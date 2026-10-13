@@ -13,6 +13,8 @@ import {
   getPlainText,
   isValidLink,
   isValidColor,
+  exportHtml,
+  renderTextRunsHtml,
   type Selection,
   type Block,
   type Mark,
@@ -23,9 +25,6 @@ import {
 } from "../../../packages/engine/src/index";
 
 const nextId = createIdGenerator("nexus");
-const escapeHtml = (value: string) =>
-  value.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
-
 function marksFor(element: Element, inherited: Mark[]): Mark[] {
   const marks = [...inherited];
   const tag = element.tagName.toLowerCase();
@@ -208,43 +207,8 @@ export function nexusDocumentFromHtml(html: string, title = "Documento"): NexusD
   return { ...base, content, resources };
 }
 
-function renderRuns(runs: TextRun[]): string {
-  return runs.map(run => {
-    let text = escapeHtml(run.text).replace(/\n/g, "<br>");
-    for (const mark of run.marks) {
-      if (mark.type === "bold") text = "<strong>" + text + "</strong>";
-      else if (mark.type === "italic") text = "<em>" + text + "</em>";
-      else if (mark.type === "underline") text = "<u>" + text + "</u>";
-      else if (mark.type === "strike") text = "<s>" + text + "</s>";
-      else if (mark.type === "superscript") text = "<sup>" + text + "</sup>";
-      else if (mark.type === "subscript") text = "<sub>" + text + "</sub>";
-      else if (mark.type === "color") text = '<span style="color:' + escapeHtml(mark.value) + '">' + text + "</span>";
-      else if (mark.type === "highlight") text = '<span style="background-color:' + escapeHtml(mark.value) + '">' + text + "</span>";
-      else if (mark.type === "fontSize") text = '<span style="font-size:' + mark.value + 'px">' + text + "</span>";
-      else if (mark.type === "fontFamily") text = '<span style="font-family:' + escapeHtml(mark.value) + '">' + text + "</span>";
-      else if (mark.type === "link") text = '<a href="' + escapeHtml(mark.value) + '">' + text + "</a>";
-    }
-    return text;
-  }).join("");
-}
-
-function renderBlock(block: Block, resources: ResourceRef[] = []): string {
-  if (block.type === "paragraph") { const styles = [block.align ? `text-align:${block.align}` : "", block.indent ? `margin-left:${block.indent}pt` : ""].filter(Boolean).join(";"); const style = styles ? ' style="' + styles + '"' : ""; return "<p" + style + ">" + renderRuns(block.children) + "</p>"; }
-  if (block.type === "heading") { const styles = [block.align ? `text-align:${block.align}` : "", block.indent ? `margin-left:${block.indent}pt` : ""].filter(Boolean).join(";"); const style = styles ? ' style="' + styles + '"' : ""; return '<h' + block.level + ' id="' + escapeHtml(block.id) + '"' + style + ">" + renderRuns(block.children) + "</h" + block.level + ">"; }
-  if (block.type === "blockquote") return "<blockquote>" + block.children.map(p => renderBlock(p, resources)).join("") + "</blockquote>";
-  if (block.type === "thematicBreak") return "<hr>";
-  if (block.type === "bulletList" || block.type === "orderedList") {
-    const tag = block.type === "bulletList" ? "ul" : "ol";
-    const start = block.type === "orderedList" && block.start !== 1 ? ' start="' + block.start + '"' : "";
-    return "<" + tag + start + ">" + block.children.map(item => "<li>" + item.children.map(child => renderBlock(child as Block, resources)).join("") + "</li>").join("") + "</" + tag + ">";
-  }
-  if (block.type === "table") return "<table><tbody>" + block.children.map(row => "<tr>" + row.children.map(cell => "<td>" + cell.children.map(p => { const styles = [p.align ? `text-align:${p.align}` : "", p.indent ? `margin-left:${p.indent}pt` : ""].filter(Boolean).join(";"); const align = styles ? ' style="' + styles + '"' : ""; return "<p" + align + ">" + renderRuns(p.children) + "</p>"; }).join("") + "</td>").join("") + "</tr>").join("") + "</tbody></table>";
-  if (block.type === "image") { const resource = resources.find(item => item.id === block.resourceId); if (!resource) return "<p>[" + escapeHtml(block.alt) + "]</p>"; const width = block.width ? ` width="${block.width}"` : ""; const height = block.height ? ` height="${block.height}"` : ""; return `<img data-nexus-image-id="${escapeHtml(block.id)}" src="data:${resource.mimeType};base64,${resource.data}" alt="${escapeHtml(block.alt)}"${width}${height} />`; }
-  return "";
-}
-
 export function htmlFromNexusDocument(document: NexusDocument): string {
-  return document.content.map(block => renderBlock(block, document.resources)).join("");
+  return exportHtml(document);
 }
 
 type LogicalTextBlock = Extract<Block, { type: "paragraph" | "heading" }>;
@@ -477,7 +441,7 @@ function updateEngineMarksForDomSelection(
 
   const updatedBlocks = logicalTextBlocks(engine.getDocument().content);
   for (let index = startIndex; index <= endIndex; index++) {
-    domBlocks[index].innerHTML = renderRuns(updatedBlocks[index].children);
+    domBlocks[index].innerHTML = renderTextRunsHtml(updatedBlocks[index].children);
   }
   return { ok: true };
 }
@@ -627,7 +591,7 @@ export function removeEngineMarksForDomSelection(
   const result = engine.exec(commands, { group: "formatting" });
   if (!result.ok) return { ok: false, message: result.error.message };
   const updatedBlocks = logicalTextBlocks(engine.getDocument().content);
-  for (let index = startIndex; index <= endIndex; index++) domBlocks[index].innerHTML = renderRuns(updatedBlocks[index].children);
+  for (let index = startIndex; index <= endIndex; index++) domBlocks[index].innerHTML = renderTextRunsHtml(updatedBlocks[index].children);
   return { ok: true };
 }
 
