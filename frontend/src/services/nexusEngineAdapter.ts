@@ -7,6 +7,8 @@ import {
   writeNsx,
   toggleMark,
   applyMark,
+  replaceRange,
+  getPlainText,
   type Selection,
   type Block,
   type Mark,
@@ -134,8 +136,8 @@ function renderRuns(runs: TextRun[]): string {
 }
 
 function renderBlock(block: Block): string {
-  if (block.type === "paragraph") return "<p>" + renderRuns(block.children) + "</p>";
-  if (block.type === "heading") return "<h" + block.level + ">" + renderRuns(block.children) + "</h" + block.level + ">";
+  if (block.type === "paragraph") { const align = block.align ? ` style="text-align:${block.align}"` : ""; return "<p" + align + ">" + renderRuns(block.children) + "</p>"; }
+  if (block.type === "heading") { const align = block.align ? ` style="text-align:${block.align}"` : ""; return "<h" + block.level + align + ">" + renderRuns(block.children) + "</h" + block.level + ">"; }
   if (block.type === "blockquote") return "<blockquote>" + block.children.map(p => "<p>" + renderRuns(p.children) + "</p>").join("") + "</blockquote>";
   if (block.type === "thematicBreak") return "<hr>";
   if (block.type === "bulletList" || block.type === "orderedList") {
@@ -371,8 +373,108 @@ export function restoreEngineDomSelection(engine: ReturnType<typeof createEditor
   }
 }
 
+function preserveStableBlockIds(previous: Block[], next: Block[]): Block[] {
+  return next.map((block, index) => {
+    const old = previous[index];
+    if (!old || old.type !== block.type) return block;
+    if (block.type === "paragraph" && old.type === "paragraph") {
+      return { ...block, id: old.id, children: block.children.map((run, runIndex) => ({ ...run, id: old.children[runIndex]?.id ?? run.id })) };
+    }
+    if (block.type === "heading" && old.type === "heading") {
+      return { ...block, id: old.id, children: block.children.map((run, runIndex) => ({ ...run, id: old.children[runIndex]?.id ?? run.id })) };
+    }
+    if (block.type === "blockquote" && old.type === "blockquote") {
+      return { ...block, id: old.id, children: preserveStableBlockIds(old.children, block.children) as Extract<Block, { type: "paragraph" }>[] };
+    }
+    if ((block.type === "bulletList" || block.type === "orderedList") && (old.type === "bulletList" || old.type === "orderedList")) {
+      return { ...block, id: old.id, children: block.children.map((item, itemIndex) => {
+        const oldItem = old.children[itemIndex];
+        return { ...item, id: oldItem?.id ?? item.id, children: preserveStableBlockIds(oldItem?.children as Block[] ?? [], item.children as Block[]) as typeof item.children };
+      }) } as Block;
+    }
+    if (block.type === "table" && old.type === "table") {
+      return { ...block, id: old.id, children: block.children.map((row, rowIndex) => {
+        const oldRow = old.children[rowIndex];
+        return { ...row, id: oldRow?.id ?? row.id, children: row.children.map((cell, cellIndex) => {
+          const oldCell = oldRow?.children[cellIndex];
+          return { ...cell, id: oldCell?.id ?? cell.id, children: preserveStableBlockIds(oldCell?.children ?? [], cell.children) as typeof cell.children };
+        }) };
+      }) };
+    }
+    if (block.type === "thematicBreak" && old.type === "thematicBreak") return { ...block, id: old.id };
+    if (block.type === "image" && old.type === "image") return { ...block, id: old.id };
+    return block;
+  });
+}
+
+function blockShape(block: Block): unknown {
+  const marksShape = (runs: TextRun[]) => {
+    const groups: string[] = [];
+    for (const run of runs) {
+      const value = JSON.stringify(run.marks);
+      if (groups[groups.length - 1] !== value) groups.push(value);
+    }
+    return groups;
+  };
+  if (block.type === "paragraph") return ["paragraph", block.align ?? null, marksShape(block.children)];
+  if (block.type === "heading") return ["heading", block.level, block.align ?? null, marksShape(block.children)];
+  if (block.type === "blockquote") return ["blockquote", block.children.map(blockShape)];
+  if (block.type === "bulletList" || block.type === "orderedList") return [block.type, block.type === "orderedList" ? block.start : null, block.children.map(item => item.children.map(child => blockShape(child as Block)))];
+  if (block.type === "table") return ["table", block.children.map(row => row.children.map(cell => cell.children.map(blockShape)))];
+  if (block.type === "thematicBreak") return ["thematicBreak"];
+  return ["image", block.resourceId, block.alt];
+}
+
+function longestCommonPrefix(a: string, b: string): number {
+  let i = 0;
+  while (i < a.length && i < b.length && a[i] === b[i]) i++;
+  return i;
+}
+function longestCommonSuffix(a: string, b: string, prefix: number): number {
+  let i = 0;
+  while (i < a.length - prefix && i < b.length - prefix && a[a.length - 1 - i] === b[b.length - 1 - i]) i++;
+  return i;
+}
+
 export function syncNexusEngine(engine: ReturnType<typeof createEditor>, html: string, title: string): boolean {
-  const next = nexusDocumentFromHtml(html, title);
+  const parsed = nexusDocumentFromHtml(html, title);
+  const previous = engine.getDocument();
+  const content = preserveStableBlockIds(previous.content, parsed.content);
+  const next: NexusDocument = {
+    ...parsed,
+    id: previous.id,
+    metadata: { ...previous.metadata, title, updatedAt: systemClock() },
+    pageConfig: previous.pageConfig,
+    resources: previous.resources,
+    content,
+  };
+
+  // Ordinary typing is applied as native engine transactions so IDs and the
+  // engine's grouped undo history survive keystrokes.
+  if (JSON.stringify(previous.content.map(blockShape)) === JSON.stringify(next.content.map(blockShape))) {
+    const beforeBlocks = logicalTextBlocks(previous.content);
+    const afterBlocks = logicalTextBlocks(next.content);
+    if (beforeBlocks.length === afterBlocks.length) {
+      const commands = [];
+      for (let index = 0; index < beforeBlocks.length; index++) {
+        const beforeText = getPlainText(beforeBlocks[index]);
+        const afterText = getPlainText(afterBlocks[index]);
+        if (beforeText === afterText) continue;
+        const prefix = longestCommonPrefix(beforeText, afterText);
+        const suffix = longestCommonSuffix(beforeText, afterText, prefix);
+        commands.push(replaceRange({
+          blockId: beforeBlocks[index].id,
+          start: prefix,
+          end: beforeText.length - suffix,
+          text: afterText.slice(prefix, afterText.length - suffix),
+        }));
+      }
+      if (commands.length) {
+        const result = engine.exec(commands, { group: "typing" });
+        if (result.ok) return true;
+      } else return true;
+    }
+  }
   return engine.load(next).ok;
 }
 
