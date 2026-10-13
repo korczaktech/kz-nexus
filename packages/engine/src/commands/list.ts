@@ -1,7 +1,6 @@
 import type { Block, BulletList, ListItem, OrderedList, Paragraph } from "../model/types";
 import { findList, replaceList } from "../model/tree";
 import { engineError } from "../errors/errors";
-import { findParagraphLike, findList, replaceList } from "../model/tree";
 import { splitRunsAt } from "./text";
 import { err, ok } from "../utils/result";
 import type { Command } from "./types";
