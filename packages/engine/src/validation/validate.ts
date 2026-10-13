@@ -11,7 +11,7 @@ import type {
   Table,
   TextRun,
 } from "../model/types";
-import { KNOWN_BLOCK_TYPES, KNOWN_MARK_TYPES, isValidColor, isValidFontSize, type EngineLimits, DEFAULT_LIMITS } from "../schema/schema";
+import { KNOWN_BLOCK_TYPES, KNOWN_MARK_TYPES, isValidColor, isValidFontSize, isValidLink, type EngineLimits, DEFAULT_LIMITS } from "../schema/schema";
 import { isValidId } from "../core/ids";
 import { EngineError, engineError } from "../errors/errors";
 import { err, ok, type Result } from "../utils/result";
@@ -54,6 +54,9 @@ function checkMark(mark: Mark, path: string, issues: ValidationIssue[]): void {
   }
   if (mark.type === "fontFamily" && (typeof mark.value !== "string" || mark.value.trim().length === 0)) {
     issues.push({ code: "INVALID_DOCUMENT", message: `Invalid fontFamily at ${path}`, path });
+  }
+  if (mark.type === "link" && !isValidLink(mark.value)) {
+    issues.push({ code: "INVALID_DOCUMENT", message: `Invalid or unsafe link URL at ${path}`, path });
   }
 }
 
