@@ -38,18 +38,20 @@ describe("insertImportedBlocksAtSelection", () => {
   });
 
   it("inserts multiple structural blocks and keeps the trailing text", () => {
-    const { document, blockId } = sourceDocument("before AFTER");
+    const { document, blockId } = sourceDocument("before X after");
     const imported: Block[] = [
       { type: "paragraph", id: "import-a", children: [{ type: "text", id: "import-ar", text: "middle", marks: [] }] },
       { type: "bulletList", id: "import-list", children: [{ type: "listItem", id: "import-item", children: [{ type: "paragraph", id: "import-li-p", children: [{ type: "text", id: "import-li-run", text: "list item", marks: [] }] }] }] },
     ];
-    const result = insertImportedBlocksAtSelection({ blockId, start: 7, end: 12, blocks: imported })(document, context());
+    const result = insertImportedBlocksAtSelection({ blockId, start: 7, end: 8, blocks: imported })(document, context());
     expect(result.ok).toBe(true);
     if (!result.ok) return;
-    expect(result.value.document.content.map(block => block.type)).toEqual(["paragraph", "bulletList", "paragraph"]);
+    expect(result.value.document.content.map(block => block.type)).toEqual(["paragraph", "paragraph", "bulletList", "paragraph"]);
     expect(getPlainText(result.value.document.content[0] as Paragraph)).toBe("before ");
-    expect(getPlainText(result.value.document.content[1] as Block & { children: Array<{ children: Array<{ children: Array<{ text: string }> }> }> })).toBeDefined();
-    expect(getPlainText(result.value.document.content[2] as Paragraph)).toBe("");
+    const list = result.value.document.content[2];
+    expect(list?.type).toBe("bulletList");
+    if (list?.type === "bulletList") expect(getPlainText(list.children[0]!.children[0] as Paragraph)).toBe("list item");
+    expect(getPlainText(result.value.document.content[3] as Paragraph)).toBe(" after");
     expect(validateDocument(result.value.document).ok).toBe(true);
   });
 });
