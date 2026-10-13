@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { createIdGenerator } from "../core/ids";
 import { createFixedClock } from "../core/clock";
 import { createDocument } from "./document";
-import { convertBlockToList, convertListType, insertList, insertListItem, splitListItem, removeListItem } from "./list";
+import { convertBlockToList, convertListType, insertList, insertListItem, splitListItem, mergeListItemWithPrevious, removeListItem } from "./list";
 import { insertText } from "./text";
 import type { BulletList, OrderedList, Paragraph } from "../model/types";
 import { validateDocument } from "../validation/validate";
