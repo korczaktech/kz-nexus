@@ -52,7 +52,7 @@ export {
 } from "./commands/block";
 export { insertList, convertBlockToList, convertListType, insertListItem, removeListItem } from "./commands/list";
 export { insertTable, addTableRow, removeTableRow, addTableColumn, removeTableColumn, setCellText } from "./commands/table";
-export { insertImage, removeImage } from "./commands/image";
+export { insertImage, insertImageResource, removeImage } from "./commands/image";
 export { setPageConfig, setMetadata } from "./commands/document";
 export type { CreateDocumentOptions } from "./commands/document";
 
