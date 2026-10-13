@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { createIdGenerator } from "../core/ids";
 import { createFixedClock } from "../core/clock";
-import { createDocument } from "../commands/document";
+import { createDocument, setMetadata } from "../commands/document";
 import { insertText } from "../commands/text";
 import { applyMark } from "../commands/marks";
 import { insertList, insertListItem } from "../commands/list";
@@ -33,6 +33,15 @@ describe(".nsx round-trip", () => {
     const doc = createDocument(createIdGenerator("n", 1), createFixedClock(0).now);
     const { document } = roundTrip(doc);
     expect(getPlainText(document.content[0] as Paragraph)).toBe("");
+  });
+
+  it("preserves author metadata", () => {
+    const doc = createDocument(createIdGenerator("n", 1), createFixedClock(0).now, { title: "Metadata document" });
+    const updated = setMetadata({ key: "author", value: "Korczak Technologies" })(doc, ctx());
+    if (!updated.ok) throw updated.error;
+    const { document } = roundTrip(updated.value.document);
+    expect(document.metadata.title).toBe("Metadata document");
+    expect(document.metadata.author).toBe("Korczak Technologies");
   });
 
   it("preserves plain text content", () => {
