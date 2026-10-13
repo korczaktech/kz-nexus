@@ -1,0 +1,53 @@
+{
+  "format": "korczak-nexus",
+  "formatVersion": 1,
+  "document": {
+    "id": "fx_0001mkorf9",
+    "schemaVersion": 1,
+    "metadata": {
+      "title": "Untitled document",
+      "createdAt": 1700000000000,
+      "updatedAt": 1700000000000
+    },
+    "pageConfig": {
+      "unit": "pt",
+      "width": 612,
+      "height": 792,
+      "orientation": "portrait",
+      "margins": {
+        "top": 72,
+        "right": 72,
+        "bottom": 72,
+        "left": 72
+      }
+    },
+    "content": [
+      {
+        "type": "heading",
+        "id": "fx_000203jmyl",
+        "level": 1,
+        "children": [
+          {
+            "type": "text",
+            "id": "fx_0004zbfwwg",
+            "text": "Relatório trimestral",
+            "marks": []
+          }
+        ]
+      },
+      {
+        "type": "paragraph",
+        "id": "fx_0005yv0n0f",
+        "children": [
+          {
+            "type": "text",
+            "id": "fx_0007m28lye",
+            "text": "Este documento foi gerado pelo próprio motor Korczak Nexus, sem HTML intermediário.",
+            "marks": []
+          }
+        ]
+      }
+    ],
+    "resources": []
+  }
+}

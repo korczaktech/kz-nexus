@@ -1,17 +1,31 @@
-# Nexus Editor Engine
+# Korczak Nexus Engine
 
-Este diretório é o local oficial do motor próprio do editor Nexus.
+Motor próprio de documentos (TypeScript, headless) com formato nativo **`.nsx`**, mais um app de **preview** independente.
 
-## Responsabilidade
+- `packages/engine` — biblioteca `@korczak/nexus-engine` (modelo canônico, comandos, transações, seleção, histórico, `.nsx`).
+- `packages/engine-preview` — app que consome o motor só pela API pública.
+- `docs/` — documentação técnica · `fixtures/` — arquivos `.nsx` válidos/ inválidos · `examples/` — usos headless.
 
-O engine deve conter a lógica independente da interface: modelo canônico do documento, comandos de edição, transações, seleção, histórico undo/redo, normalização/validação, importação/exportação e leitura/escrita do formato nativo `.nsx`.
+## Requisitos
+Node 20+ (testado em 22), TypeScript, tsx. Em ambiente com rede: `npm install` (vitest/typescript/tsx fixados no `package.json`). Em ambiente offline, os links de workspace em `node_modules/@korczak/*` precisam existir (veja `docs/TESTING.md`).
 
-## Organização prevista
+## Comandos
+```
+node scripts/verify-build.mjs        # pipeline completo
+npm run build                         # motor + preview
+node packages/engine-preview/serve.mjs   # preview em http://localhost:5173 (após o build)
+node scripts/e2e-preview.mjs          # E2E em Chromium (Playwright)
+```
+Também: `npm run typecheck | lint | test | test:integration | test:nsx | test:architecture`.
 
-- `src/` — implementação TypeScript do motor e API pública.
-- `tests/` — testes unitários e de regressão do motor.
-- `package.json` — pacote `@korczak/nexus-engine`.
+## API básica
+```ts
+import { createEditor, insertText, saveNsx, openNsx } from "@korczak/nexus-engine";
+const editor = createEditor();
+const id = editor.getDocument().content[0]!.id;
+editor.exec([insertText({ blockId: id, offset: 0, text: "Olá" })]);
+const saved = saveNsx(editor.getDocument());           // Result<string>
+```
 
-O motor deve permanecer desacoplado de React e da camada visual. A integração com `frontend/src/components/Editor.tsx` deve ocorrer por um adaptador explícito, preservando o comportamento atual do editor enquanto cada recurso é migrado e validado.
-
-> A pasta foi criada como destino oficial. O código-fonte do ZIP ainda precisa ser transferido integralmente para este pacote antes de considerar o engine implementado ou integrado.
+## Estado
+Veja `docs/ROADMAP.md` e `docs/PROGRESS.md`. Não integrado a nenhum repositório remoto.

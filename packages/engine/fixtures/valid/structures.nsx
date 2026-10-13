@@ -1,0 +1,177 @@
+{
+  "format": "korczak-nexus",
+  "formatVersion": 1,
+  "document": {
+    "id": "fx_0001pxewfg",
+    "schemaVersion": 1,
+    "metadata": {
+      "title": "Untitled document",
+      "createdAt": 1700000000000,
+      "updatedAt": 1700000000000
+    },
+    "pageConfig": {
+      "unit": "pt",
+      "width": 612,
+      "height": 792,
+      "orientation": "portrait",
+      "margins": {
+        "top": 72,
+        "right": 72,
+        "bottom": 72,
+        "left": 72
+      }
+    },
+    "content": [
+      {
+        "type": "heading",
+        "id": "fx_00021e3tl0",
+        "level": 2,
+        "children": [
+          {
+            "type": "text",
+            "id": "fx_00042p3ua7",
+            "text": "Listas, citação, separador e tabela",
+            "marks": []
+          }
+        ]
+      },
+      {
+        "type": "bulletList",
+        "id": "fx_00085toytj",
+        "children": [
+          {
+            "type": "listItem",
+            "id": "fx_0005rgus26",
+            "children": [
+              {
+                "type": "paragraph",
+                "id": "fx_0006hblybt",
+                "children": [
+                  {
+                    "type": "text",
+                    "id": "fx_00099h6hfu",
+                    "text": "Item de lista com marcador",
+                    "marks": []
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "type": "blockquote",
+        "id": "fx_000c30c3xw",
+        "children": [
+          {
+            "type": "paragraph",
+            "id": "fx_000ajw6fxp",
+            "children": [
+              {
+                "type": "text",
+                "id": "fx_000dpp2gq0",
+                "text": "Uma citação dentro do documento.",
+                "marks": []
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "type": "thematicBreak",
+        "id": "fx_000eh5u81h"
+      },
+      {
+        "type": "table",
+        "id": "fx_000fskod2b",
+        "children": [
+          {
+            "type": "tableRow",
+            "id": "fx_000gvo6pct",
+            "children": [
+              {
+                "type": "tableCell",
+                "id": "fx_000hbnezhk",
+                "children": [
+                  {
+                    "type": "paragraph",
+                    "id": "fx_000iouzrk5",
+                    "children": [
+                      {
+                        "type": "text",
+                        "id": "fx_000upq8atf",
+                        "text": "L1C1",
+                        "marks": []
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "type": "tableCell",
+                "id": "fx_000ko73dt5",
+                "children": [
+                  {
+                    "type": "paragraph",
+                    "id": "fx_000liy91v0",
+                    "children": [
+                      {
+                        "type": "text",
+                        "id": "fx_000v5k0ifh",
+                        "text": "L1C2",
+                        "marks": []
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "type": "tableRow",
+            "id": "fx_000njfrrtc",
+            "children": [
+              {
+                "type": "tableCell",
+                "id": "fx_000o0f1hjh",
+                "children": [
+                  {
+                    "type": "paragraph",
+                    "id": "fx_000pvl1ufj",
+                    "children": [
+                      {
+                        "type": "text",
+                        "id": "fx_000wd8ttu6",
+                        "text": "L2C1",
+                        "marks": []
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "type": "tableCell",
+                "id": "fx_000rxq4cwc",
+                "children": [
+                  {
+                    "type": "paragraph",
+                    "id": "fx_000srp3ov9",
+                    "children": [
+                      {
+                        "type": "text",
+                        "id": "fx_000xq0m9cb",
+                        "text": "L2C2",
+                        "marks": []
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "resources": []
+  }
+}

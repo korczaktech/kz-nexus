@@ -1,0 +1,6 @@
+{
+  "truncated.nsx": "CORRUPTED_CONTENT",
+  "format.nsx": "UNSUPPORTED_FORMAT",
+  "future.nsx": "VERSION_MISMATCH",
+  "duplicate-ids.nsx": "CORRUPTED_CONTENT"
+}

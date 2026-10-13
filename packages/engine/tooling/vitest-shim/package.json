@@ -1,0 +1,1 @@
+{ "name": "vitest-shim", "private": true, "type": "module", "main": "index.js", "types": "index.d.ts" }

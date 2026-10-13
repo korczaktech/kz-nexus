@@ -1,0 +1,15 @@
+{
+  "name": "@korczak/nexus-engine-preview",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Korczak Nexus Engine Preview — standalone app that exercises the engine through its public API",
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "build": "node build.mjs",
+    "start": "node serve.mjs"
+  },
+  "dependencies": {
+    "@korczak/nexus-engine": "0.1.0"
+  }
+}

@@ -1,0 +1,137 @@
+{
+  "format": "korczak-nexus",
+  "formatVersion": 1,
+  "document": {
+    "id": "fx_0001qfl7mt",
+    "schemaVersion": 1,
+    "metadata": {
+      "title": "Untitled document",
+      "createdAt": 1700000000000,
+      "updatedAt": 1700000000000
+    },
+    "pageConfig": {
+      "unit": "pt",
+      "width": 612,
+      "height": 792,
+      "orientation": "portrait",
+      "margins": {
+        "top": 72,
+        "right": 72,
+        "bottom": 72,
+        "left": 72
+      }
+    },
+    "content": [
+      {
+        "type": "paragraph",
+        "id": "fx_0002bp74ke",
+        "children": [
+          {
+            "type": "text",
+            "id": "fx_0004jd6u38",
+            "text": "Negrito",
+            "marks": [
+              {
+                "type": "bold"
+              },
+              {
+                "type": "fontSize",
+                "value": 20
+              }
+            ]
+          },
+          {
+            "type": "text",
+            "id": "fx_0005vidfn1",
+            "text": ", ",
+            "marks": []
+          },
+          {
+            "type": "text",
+            "id": "fx_0007hyyqy7",
+            "text": "itálic",
+            "marks": [
+              {
+                "type": "italic"
+              }
+            ]
+          },
+          {
+            "type": "text",
+            "id": "fx_0008cuzlu8",
+            "text": "o,",
+            "marks": []
+          },
+          {
+            "type": "text",
+            "id": "fx_000a43s9i9",
+            "text": " sublinhado",
+            "marks": [
+              {
+                "type": "underline"
+              }
+            ]
+          },
+          {
+            "type": "text",
+            "id": "fx_000bsaherp",
+            "text": ", ",
+            "marks": []
+          },
+          {
+            "type": "text",
+            "id": "fx_000df9so7u",
+            "text": "tachado",
+            "marks": [
+              {
+                "type": "strike"
+              }
+            ]
+          },
+          {
+            "type": "text",
+            "id": "fx_000eu25n2m",
+            "text": ", co",
+            "marks": []
+          },
+          {
+            "type": "text",
+            "id": "fx_000g52qt3v",
+            "text": "r e",
+            "marks": [
+              {
+                "type": "color",
+                "value": "#d9362b"
+              }
+            ]
+          },
+          {
+            "type": "text",
+            "id": "fx_000ho77flx",
+            "text": " de",
+            "marks": []
+          },
+          {
+            "type": "text",
+            "id": "fx_000jyz7lhr",
+            "text": "staque ",
+            "marks": [
+              {
+                "type": "highlight",
+                "value": "#fff3a3"
+              }
+            ]
+          },
+          {
+            "type": "text",
+            "id": "fx_000k1esyub",
+            "text": "no mesmo parágrafo.",
+            "marks": []
+          }
+        ],
+        "align": "center"
+      }
+    ],
+    "resources": []
+  }
+}

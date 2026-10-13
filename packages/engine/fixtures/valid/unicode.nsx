@@ -1,0 +1,40 @@
+{
+  "format": "korczak-nexus",
+  "formatVersion": 1,
+  "document": {
+    "id": "fx_0001x9164u",
+    "schemaVersion": 1,
+    "metadata": {
+      "title": "Untitled document",
+      "createdAt": 1700000000000,
+      "updatedAt": 1700000000000
+    },
+    "pageConfig": {
+      "unit": "pt",
+      "width": 612,
+      "height": 792,
+      "orientation": "portrait",
+      "margins": {
+        "top": 72,
+        "right": 72,
+        "bottom": 72,
+        "left": 72
+      }
+    },
+    "content": [
+      {
+        "type": "paragraph",
+        "id": "fx_0002bzml6r",
+        "children": [
+          {
+            "type": "text",
+            "id": "fx_00042y2dhi",
+            "text": "Acentuação: ação, coração, órgão, açaí, pão de queijo 🇧🇷 😀 é (e + acento combinante)",
+            "marks": []
+          }
+        ]
+      }
+    ],
+    "resources": []
+  }
+}
