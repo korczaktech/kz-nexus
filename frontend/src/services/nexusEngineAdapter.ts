@@ -33,6 +33,8 @@ function marksFor(element: Element, inherited: Mark[]): Mark[] {
   if (tag === "i" || tag === "em") add({ type: "italic" });
   if (tag === "u") add({ type: "underline" });
   if (tag === "s" || tag === "strike" || tag === "del") add({ type: "strike" });
+  if (tag === "sup") add({ type: "superscript" });
+  if (tag === "sub") add({ type: "subscript" });
   if (tag === "a") { const href = element.getAttribute("href") ?? ""; if (isValidLink(href)) add({ type: "link", value: href }); }
   const style = (element as HTMLElement).style;
   if (style.color) add({ type: "color", value: style.color });
@@ -153,6 +155,8 @@ function renderRuns(runs: TextRun[]): string {
       else if (mark.type === "italic") text = "<em>" + text + "</em>";
       else if (mark.type === "underline") text = "<u>" + text + "</u>";
       else if (mark.type === "strike") text = "<s>" + text + "</s>";
+      else if (mark.type === "superscript") text = "<sup>" + text + "</sup>";
+      else if (mark.type === "subscript") text = "<sub>" + text + "</sub>";
       else if (mark.type === "color") text = '<span style="color:' + escapeHtml(mark.value) + '">' + text + "</span>";
       else if (mark.type === "highlight") text = '<span style="background-color:' + escapeHtml(mark.value) + '">' + text + "</span>";
       else if (mark.type === "fontSize") text = '<span style="font-size:' + mark.value + 'px">' + text + "</span>";
@@ -530,7 +534,7 @@ export function removeEngineMarksForDomSelection(
   if (anchorIndex < 0 || focusIndex < 0 || anchorOffset === null || focusOffset === null) return { ok: false, message: "Não foi possível mapear a direção da seleção." };
   const selectionResult = engine.setSelection({ anchor: { blockId: modelBlocks[anchorIndex].id, offset: anchorOffset }, focus: { blockId: modelBlocks[focusIndex].id, offset: focusOffset } });
   if (!selectionResult.ok) return { ok: false, message: selectionResult.error.message };
-  const types: MarkType[] = selectedTypes ?? ["bold", "italic", "underline", "strike", "color", "highlight", "fontSize", "fontFamily", "link"];
+  const types: MarkType[] = selectedTypes ?? ["bold", "italic", "underline", "strike", "superscript", "subscript", "color", "highlight", "fontSize", "fontFamily", "link"];
   const commands = modelBlocks.slice(startIndex, endIndex + 1).flatMap((block, relativeIndex) => {
     const index = startIndex + relativeIndex;
     const start = index === startIndex ? startOffset : 0;
