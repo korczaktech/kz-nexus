@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { createIdGenerator } from "../core/ids";
 import { createFixedClock } from "../core/clock";
 import { createDocument } from "./document";
-import { convertBlockToList, convertListType, insertList, insertListItem, removeListItem } from "./list";
+import { convertBlockToList, convertListType, insertList, insertListItem, splitListItem, removeListItem } from "./list";
 import { insertText } from "./text";
 import type { BulletList, OrderedList, Paragraph } from "../model/types";
 
@@ -27,6 +27,26 @@ describe("convertBlockToList", () => {
     expect(list.type).toBe("bulletList");
     expect(list.children[0].children[0].id).toBe(paragraph.id);
     expect((list.children[0].children[0] as Paragraph).children.map(run => run.text).join("")).toBe("Preserved text");
+  });
+});
+
+describe("splitListItem", () => {
+  it("splits a list item at the logical caret and preserves both text fragments", () => {
+    const d = base();
+    const paragraph = d.content[0] as Paragraph;
+    const insertedText = insertText({ blockId: paragraph.id, offset: 0, text: "hello world" })(d, ctx());
+    if (!insertedText.ok) throw insertedText.error;
+    const converted = convertBlockToList({ blockId: paragraph.id, ordered: false })(insertedText.value.document, ctx());
+    if (!converted.ok) throw converted.error;
+    const list = converted.value.document.content[0] as BulletList;
+    const firstItem = list.children[0];
+    const split = splitListItem({ listId: list.id, itemId: firstItem.id, blockId: paragraph.id, offset: 5 })(converted.value.document, ctx());
+    expect(split.ok).toBe(true);
+    if (!split.ok) return;
+    const result = split.value.document.content[0] as BulletList;
+    expect(result.children).toHaveLength(2);
+    expect((result.children[0].children[0] as Paragraph).children.map(run => run.text).join("")).toBe("hello");
+    expect((result.children[1].children[0] as Paragraph).children.map(run => run.text).join("")).toBe(" world");
   });
 });
 
