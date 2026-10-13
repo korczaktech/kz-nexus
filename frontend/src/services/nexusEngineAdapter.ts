@@ -6,6 +6,7 @@ import {
   systemClock,
   writeNsx,
   toggleMark,
+  applyMark,
   type Selection,
   type Block,
   type Mark,
@@ -201,6 +202,7 @@ export function toggleEngineMarkForDomSelection(
   engine: ReturnType<typeof createEditor>,
   root: HTMLElement,
   mark: Mark,
+  toggle = true,
 ): { ok: boolean; message?: string } {
   const selection = root.ownerDocument.defaultView?.getSelection();
   if (!selection || selection.isCollapsed || !selection.anchorNode || !selection.focusNode) {
@@ -242,7 +244,7 @@ export function toggleEngineMarkForDomSelection(
     const index = startIndex + relativeIndex;
     const start = index === startIndex ? startOffset : 0;
     const end = index === endIndex ? endOffset : logicalTextLength(block);
-    return end > start ? toggleMark({ blockId: block.id, start, end, mark }) : null;
+    return end > start ? (toggle ? toggleMark({ blockId: block.id, start, end, mark }) : applyMark({ blockId: block.id, start, end, mark })) : null;
   }).filter((command): command is NonNullable<typeof command> => command !== null);
   if (!commands.length) return { ok: false, message: "Selecione pelo menos um caractere." };
 
