@@ -3,7 +3,7 @@ import { createIdGenerator } from "../core/ids";
 import { createFixedClock } from "../core/clock";
 import { createDocument } from "./document";
 import { insertText } from "./text";
-import { deleteBlock, insertParagraphAfter, mergeBlockWithPrevious, setAlign, setHeadingLevel, splitBlock } from "./block";
+import { convertBlockToBlockquote, deleteBlock, insertParagraphAfter, mergeBlockWithPrevious, setAlign, setHeadingLevel, splitBlock } from "./block";
 import { getPlainText } from "../model/tree";
 import type { Paragraph } from "../model/types";
 
@@ -18,6 +18,18 @@ function setup(text: string) {
   if (!result.ok) throw result.error;
   return { document: result.value.document, blockId: p.id };
 }
+
+describe("convertBlockToBlockquote", () => {
+  it("converts a paragraph to a quote and preserves its text", () => {
+    const { document, blockId } = setup("Quoted text");
+    const result = convertBlockToBlockquote({ blockId })(document, ctx());
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.value.document.content[0].type).toBe("blockquote");
+    const quote = result.value.document.content[0];
+    if (quote.type === "blockquote") expect(getPlainText(quote.children[0])).toBe("Quoted text");
+  });
+});
 
 describe("setAlign / setHeadingLevel", () => {
   it("sets paragraph alignment", () => {
