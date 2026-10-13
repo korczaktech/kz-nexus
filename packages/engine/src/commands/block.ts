@@ -55,14 +55,15 @@ export function splitBlock(params: { blockId: string; offset: number }): Command
     if (index >= 0) {
       const block = doc.content[index];
       if (!isParagraphLike(block)) return err(engineError("UNSUPPORTED_OPERATION", `Block "${params.blockId}" cannot be split`, { path: params.blockId }));
-      try {
-        const split = splitParagraph(block as Paragraph, [block as Paragraph], 0);
-        const content = [...doc.content];
-        content.splice(index, 1, split.children[0]!, split.children[1]!);
-        return ok({ document: { ...doc, content }, selection: { blockId: split.newId, offset: 0 } });
-      } catch (error) {
-        return err(error instanceof Error ? engineError("INVALID_POSITION", error.message, { path: params.blockId }) : error as ReturnType<typeof engineError>);
-      }
+      const length = getPlainText(block).length;
+      if (params.offset < 0 || params.offset > length) return err(engineError("INVALID_POSITION", `Offset ${params.offset} out of range`, { path: params.blockId }));
+      const parts = splitRunsAt(block.children, params.offset, ctx.generateId);
+      const newId = ctx.generateId();
+      const first: Block = { ...block, children: ensureRun(parts.before) } as Block;
+      const second: Paragraph = { type: "paragraph", id: newId, align: block.align, children: ensureRun(parts.after) };
+      const content = [...doc.content];
+      content.splice(index, 1, first, second);
+      return ok({ document: { ...doc, content }, selection: { blockId: newId, offset: 0 } });
     }
     for (let topIndex = 0; topIndex < doc.content.length; topIndex++) {
       const top = doc.content[topIndex]!;
