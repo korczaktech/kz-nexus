@@ -29,8 +29,8 @@ export const KNOWN_MARK_TYPES: ReadonlySet<string> = new Set([
 
 /** Allows safe web, email, and same-document anchor links; rejects executable schemes. */
 export function isValidLink(value: string): boolean {
-  if (typeof value !== "string" || value.length === 0 || value.length > 2048 || /[\\u0000-\\u0020\\u007f]/.test(value)) return false;
-  return /^(?:https?:\\/\\/[^\\s]+|mailto:[^\\s@]+@[^\\s@]+|#[A-Za-z][A-Za-z0-9_.:-]*)$/i.test(value);
+  if (typeof value !== "string" || value.length === 0 || value.length > 2048 || /[\u0000-\u0020\u007f]/.test(value)) return false;
+  return /^(?:https?:\/\/[^\s]+|mailto:[^\s@]+@[^\s@]+|#[A-Za-z][A-Za-z0-9_.:-]*)$/i.test(value);
 }
 
 /** Safety limits applied during validation and `.nsx` parsing (Section 9.7 / 19). */
