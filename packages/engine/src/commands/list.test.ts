@@ -5,9 +5,11 @@ import { createDocument } from "./document";
 import { convertBlockToList, convertListType, insertList, insertListItem, splitListItem, removeListItem } from "./list";
 import { insertText } from "./text";
 import type { BulletList, OrderedList, Paragraph } from "../model/types";
+import { validateDocument } from "../validation/validate";
 
+const generateTestId = createIdGenerator("id", 4);
 function ctx() {
-  return { generateId: createIdGenerator("id", 4) };
+  return { generateId: generateTestId };
 }
 
 function base() {
@@ -27,6 +29,7 @@ describe("convertBlockToList", () => {
     expect(list.type).toBe("bulletList");
     expect(list.children[0].children[0].id).toBe(paragraph.id);
     expect((list.children[0].children[0] as Paragraph).children.map(run => run.text).join("")).toBe("Preserved text");
+    expect(validateDocument(converted.value.document).ok).toBe(true);
   });
 });
 
@@ -47,6 +50,7 @@ describe("splitListItem", () => {
     expect(result.children).toHaveLength(2);
     expect((result.children[0].children[0] as Paragraph).children.map(run => run.text).join("")).toBe("hello");
     expect((result.children[1].children[0] as Paragraph).children.map(run => run.text).join("")).toBe(" world");
+    expect(validateDocument(split.value.document).ok).toBe(true);
   });
 });
 
