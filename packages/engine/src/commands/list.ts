@@ -97,7 +97,7 @@ export function splitListItem(params: { listId: string; itemId: string; blockId:
     const parts = splitRunsAt(paragraph.children, params.offset, ctx.generateId);
     const ensureRun = (runs: Paragraph["children"]): Paragraph["children"] => runs.length ? runs : [{ type: "text", id: ctx.generateId(), text: "", marks: [] }];
     const firstParagraph: Paragraph = { ...paragraph, children: ensureRun(parts.before) };
-    const secondParagraph: Paragraph = { type: "paragraph", id: ctx.generateId(), children: ensureRun(parts.after) };
+    const secondParagraph: Paragraph = { type: "paragraph", id: ctx.generateId(), ...(paragraph.align !== undefined ? { align: paragraph.align } : {}), ...(paragraph.indent !== undefined ? { indent: paragraph.indent } : {}), children: ensureRun(parts.after) };
     const beforeChildren = item.children.slice(0, paragraphIndex);
     const afterChildren = item.children.slice(paragraphIndex + 1);
     const firstItem: ListItem = { ...item, children: [...beforeChildren, firstParagraph] };
