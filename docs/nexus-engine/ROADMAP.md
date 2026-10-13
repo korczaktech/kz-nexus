@@ -14,7 +14,7 @@ Estados: ✔ testado · ◐ parcial · ✘ não feito.
 | Recursos (imagens embutidas) | ✔ | Sem magic bytes |
 | Layout/paginação automática | ✘ | Só `pageConfig` |
 | Importar HTML sanitizado / Markdown / DOCX | ◐ | Colagem HTML sanitizada em seleção de parágrafo/título de nível superior, inclusive entre vários parágrafos, preserva blocos, marcas inline e imagens embutidas via comando do motor; Markdown/DOCX nativos e colagem em contêineres aninhados ainda pendentes |
-| Exportar HTML/Markdown | ◐ | Adaptador web renderiza HTML; exportadores HTML/Markdown puros no pacote do motor ainda pendentes |
+| Exportar HTML/Markdown | ◐ | Exportador HTML puro agora está no motor TypeScript e é usado pelo editor web; exportador Markdown nativo ainda pendente |
 | Preview (editor, inspetor, diagnóstico, abrir/salvar, fixtures) | ✔ | Chromium headless; sem IME real |
 | Electron / Android / iOS | ✘ | Só contratos |
 | ESLint, vitest real, medição de cobertura | ◐ | CI executa typecheck, build e Vitest de frontend, motor e preview; lint e relatório de cobertura ainda pendentes |
@@ -23,7 +23,7 @@ Estados: ✔ testado · ◐ parcial · ✘ não feito.
 
 ## Integração do editor web (13/10/2026)
 
-- Formatação inline, cores, fontes, hiperlinks, limpar formatação, desfazer/refazer, edição de texto e operações estruturais suportadas são encaminhadas ao motor TypeScript.
+- Formatação inline, cores, fontes, hiperlinks, limpar formatação, desfazer/refazer, edição de texto, colagem HTML estrutural suportada e renderização HTML são encaminhadas ao motor TypeScript.
 - Colagem HTML no editor: o adaptador remove elementos ativos, atributos de evento e URLs não seguras; o comando TypeScript `insertImportedBlocksAtSelection` insere parágrafos, títulos, listas, tabelas, citações, separadores e imagens embutidas com IDs/recursos regenerados. O suporte cobre seleção dentro de um parágrafo/título de nível superior e seleção entre vários parágrafos/títulos consecutivos; colagem em contêineres aninhados ou seleções que atravessem tabelas/listas/citações ainda cai no caminho de texto simples.
 - As verificações do workflow `Nexus Engine Frontend Integration` agora executam `npm run build && npm test` no frontend, além de typecheck/test/build do motor e preview.
 - Ainda não declarar integração completa: permanecem caminhos nativos do navegador para algumas ferramentas visuais sem representação no modelo, paginação/layout no motor, importação/exportação de formatos, mesclagem de células, migrações de schema e hosts Electron/Android/iOS.
