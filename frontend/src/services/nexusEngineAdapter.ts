@@ -11,6 +11,7 @@ import {
   setMetadata,
   replaceRange,
   getPlainText,
+  isValidLink,
   type Selection,
   type Block,
   type Mark,
@@ -32,6 +33,7 @@ function marksFor(element: Element, inherited: Mark[]): Mark[] {
   if (tag === "i" || tag === "em") add({ type: "italic" });
   if (tag === "u") add({ type: "underline" });
   if (tag === "s" || tag === "strike" || tag === "del") add({ type: "strike" });
+  if (tag === "a") { const href = element.getAttribute("href") ?? ""; if (isValidLink(href)) add({ type: "link", value: href }); }
   const style = (element as HTMLElement).style;
   if (style.color) add({ type: "color", value: style.color });
   if (style.backgroundColor) add({ type: "highlight", value: style.backgroundColor });
@@ -155,6 +157,7 @@ function renderRuns(runs: TextRun[]): string {
       else if (mark.type === "highlight") text = '<span style="background-color:' + escapeHtml(mark.value) + '">' + text + "</span>";
       else if (mark.type === "fontSize") text = '<span style="font-size:' + mark.value + 'px">' + text + "</span>";
       else if (mark.type === "fontFamily") text = '<span style="font-family:' + escapeHtml(mark.value) + '">' + text + "</span>";
+      else if (mark.type === "link") text = '<a href="' + escapeHtml(mark.value) + '">' + text + "</a>";
     }
     return text;
   }).join("");
@@ -526,7 +529,7 @@ export function removeEngineMarksForDomSelection(
   if (anchorIndex < 0 || focusIndex < 0 || anchorOffset === null || focusOffset === null) return { ok: false, message: "Não foi possível mapear a direção da seleção." };
   const selectionResult = engine.setSelection({ anchor: { blockId: modelBlocks[anchorIndex].id, offset: anchorOffset }, focus: { blockId: modelBlocks[focusIndex].id, offset: focusOffset } });
   if (!selectionResult.ok) return { ok: false, message: selectionResult.error.message };
-  const types: MarkType[] = ["bold", "italic", "underline", "strike", "color", "highlight", "fontSize", "fontFamily"];
+  const types: MarkType[] = ["bold", "italic", "underline", "strike", "color", "highlight", "fontSize", "fontFamily", "link"];
   const commands = modelBlocks.slice(startIndex, endIndex + 1).flatMap((block, relativeIndex) => {
     const index = startIndex + relativeIndex;
     const start = index === startIndex ? startOffset : 0;
