@@ -106,6 +106,20 @@ export function deleteBlock(params: { blockId: string }): Command {
   };
 }
 
+/** Converts a top-level paragraph or heading into a blockquote without discarding its text or marks. */
+export function convertBlockToBlockquote(params: { blockId: string }): Command {
+  return (doc) => {
+    const index = findTopLevelIndex(doc.content, params.blockId);
+    if (index === -1) return err(engineError("NODE_NOT_FOUND", `Top-level block "${params.blockId}" not found`, { path: params.blockId }));
+    const source = doc.content[index];
+    if (!isParagraphLike(source)) return err(engineError("UNSUPPORTED_OPERATION", "Only a paragraph or heading can be converted into a blockquote", { path: params.blockId }));
+    const paragraph: Paragraph = { type: "paragraph", id: source.id, align: source.align, children: source.children };
+    const content = [...doc.content];
+    content[index] = { type: "blockquote", id: source.id, children: [paragraph] };
+    return ok({ document: { ...doc, content }, selection: { blockId: paragraph.id, offset: 0 } });
+  };
+}
+
 export function insertBlockquote(params: { afterBlockId: string }): Command {
   return (doc, ctx) => {
     const index = findTopLevelIndex(doc.content, params.afterBlockId);
