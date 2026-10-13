@@ -72,15 +72,17 @@ function indentInPoints(node: Element): number | undefined {
 function makeParagraph(node: Element, type: "paragraph" | "heading" = "paragraph"): Extract<Block, { type: "paragraph" }> | Extract<Block, { type: "heading" }> {
   const children = inlineRuns(node);
   const runs = children.length ? children : [{ type: "text" as const, id: nextId(), text: "", marks: [] }];
+  const align = (node as HTMLElement).style.textAlign;
+  const indent = indentInPoints(node);
+  const alignment = align && ["left", "start", "center", "right", "end", "justify"].includes(align)
+    ? { align: align === "left" ? "start" as const : align === "right" ? "end" as const : align as "start" | "end" | "center" | "justify" }
+    : {};
+  const indentation = indent !== undefined ? { indent } : {};
   if (type === "heading") {
     const level = Math.min(6, Math.max(1, Number(node.tagName.slice(1)) || 1)) as 1 | 2 | 3 | 4 | 5 | 6;
-    const align = (node as HTMLElement).style.textAlign;
-  const indent = indentInPoints(node);
-    const indent = indentInPoints(node);
-    return { type: "heading", id: nextId(), level, ...(align && ["left", "start", "center", "right", "end", "justify"].includes(align) ? { align: align === "left" ? "start" : align === "right" ? "end" : align as "start" | "center" | "end" | "justify" } : {}), ...(indent !== undefined ? { indent } : {}), children: runs };
+    return { type: "heading", id: nextId(), level, ...alignment, ...indentation, children: runs };
   }
-  const align = (node as HTMLElement).style.textAlign;
-  return { type: "paragraph", id: nextId(), ...(align && ["left", "start", "center", "right", "end", "justify"].includes(align) ? { align: align === "left" ? "start" : align === "right" ? "end" : align as "start" | "center" | "end" | "justify" } : {}), children: runs };
+  return { type: "paragraph", id: nextId(), ...alignment, ...indentation, children: runs };
 }
 
 function listBlock(element: Element): Extract<Block, { type: "bulletList" | "orderedList" }> {
