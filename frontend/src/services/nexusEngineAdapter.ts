@@ -226,6 +226,9 @@ function logicalTextLength(block: LogicalTextBlock): number {
 export interface EngineDomContext {
   block: LogicalTextBlock;
   blockIndex: number;
+  endBlockIndex: number;
+  endTopLevelBlock: Block;
+  endTopLevelIndex: number;
   startOffset: number;
   endOffset: number;
   anchorBlockId: string;
@@ -243,6 +246,14 @@ export interface EngineDomContext {
 }
 
 /** Maps the browser selection to stable model IDs before a command is dispatched. */
+function containsLogicalBlock(block: Block, targetId: string): boolean {
+  if (block.id === targetId) return true;
+  if (block.type === "blockquote") return block.children.some(child => child.id === targetId);
+  if (block.type === "bulletList" || block.type === "orderedList") return block.children.some(item => item.children.some(child => containsLogicalBlock(child as Block, targetId)));
+  if (block.type === "table") return block.children.some(row => row.children.some(cell => cell.children.some(child => child.id === targetId)));
+  return false;
+}
+
 export function getEngineDomContext(
   engine: ReturnType<typeof createEditor>,
   root: HTMLElement,
@@ -299,7 +310,11 @@ export function getEngineDomContext(
   };
   engine.getDocument().content.some((block, index) => visit(block, index));
   if (!topLevelBlock) return null;
-  return { block: selected, blockIndex: startIndex, startOffset, endOffset, anchorBlockId: modelBlocks[anchorIndex].id, anchorOffset, focusBlockId: modelBlocks[focusIndex].id, focusOffset, topLevelBlock, topLevelIndex, list, listItemId, table, rowId, cellId, columnIndex };
+  const endSelected = modelBlocks[endIndex];
+  const endTopLevelIndex = engine.getDocument().content.findIndex(block => containsLogicalBlock(block, endSelected.id));
+  const endTopLevelBlock = endTopLevelIndex >= 0 ? engine.getDocument().content[endTopLevelIndex] : undefined;
+  if (!endTopLevelBlock) return null;
+  return { block: selected, blockIndex: startIndex, endBlockIndex: endIndex, endTopLevelBlock, endTopLevelIndex, startOffset, endOffset, anchorBlockId: modelBlocks[anchorIndex].id, anchorOffset, focusBlockId: modelBlocks[focusIndex].id, focusOffset, topLevelBlock, topLevelIndex, list, listItemId, table, rowId, cellId, columnIndex };
 }
 
 /** Re-renders the canonical model through the adapter, not through browser editing commands. */
