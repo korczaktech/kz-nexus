@@ -27,6 +27,13 @@ describe("Nexus editor adapter", () => {
     expect(htmlFromNexusDocument(document)).toContain('src="data:image/png;base64,aGVsbG8="');
   });
 
+  it("preserves multiple paragraphs inside a table cell", () => {
+    const document = nexusDocumentFromHtml("<table><tbody><tr><td><p>First</p><p>Second</p></td></tr></tbody></table>", "Table test");
+    const table = document.content.find(block => block.type === "table");
+    expect(table && table.type === "table" ? table.children[0]!.children[0]!.children.map(paragraph => getPlainText(paragraph)).join("|") : "").toBe("First|Second");
+    expect(htmlFromNexusDocument(document)).toContain("<p>First</p><p>Second</p>");
+  });
+
   it("preserves document metadata when content is synchronized", () => {
     const engine = createEditor({ document: nexusDocumentFromHtml("<p>Text</p>", "Original title") });
     expect(syncNexusEngine(engine, "<p>Text changed</p>", "Updated title")).toBe(true);
