@@ -32,6 +32,18 @@ describe("applyMark / removeMark / toggleMark", () => {
     }
   });
 
+  it("accepts safe hyperlinks and rejects executable schemes", () => {
+    const { document, blockId } = setup("OpenAI");
+    const valid = applyMark({ blockId, start: 0, end: 6, mark: { type: "link", value: "https://example.com/docs" } })(document, ctx());
+    expect(valid.ok).toBe(true);
+    if (valid.ok) {
+      const paragraph = valid.value.document.content[0] as Paragraph;
+      expect(paragraph.children[0]!.marks).toContainEqual({ type: "link", value: "https://example.com/docs" });
+    }
+    const invalid = applyMark({ blockId, start: 0, end: 6, mark: { type: "link", value: "javascript:alert(1)" } })(document, ctx());
+    expect(invalid.ok).toBe(false);
+  });
+
   it("toggleMark adds the mark when not fully applied, removes when fully applied", () => {
     const { document, blockId } = setup("Hello");
     const once = toggleMark({ blockId, start: 0, end: 5, mark: { type: "italic" } })(document, ctx());
