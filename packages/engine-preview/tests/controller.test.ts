@@ -186,15 +186,17 @@ describe("preview ↔ engine integration", () => {
     }
   });
 
-  it("unsupported contexts surface an informative notice instead of silently succeeding", () => {
+  it("splits paragraphs inside table cells through the engine", () => {
     const c = newController();
-    c.insertText("x");
     c.insertTableBlock(1, 1);
-    caretAt(c, collectTextBlocks(c.document).findIndex((i) => i.container === "tableCell"), 0);
-    const count = c.notices.length;
-    expect(c.splitAtCaret()).toBe(false);
-    expect(c.notices.length).toBe(count + 1);
-    expect(c.notices.at(-1)?.kind).toBe("info");
+    const cellIndex = collectTextBlocks(c.document).findIndex((i) => i.container === "tableCell");
+    caretAt(c, cellIndex, 0);
+    c.insertText("cell text");
+    caretAt(c, cellIndex, 4);
+    expect(c.splitAtCaret()).toBe(true);
+    const table = c.document.content.find(block => block.type === "table");
+    expect(table && table.type === "table" ? table.children[0]!.children[0]!.children : []).toHaveLength(2);
+    expect(c.validationIssues()).toEqual([]);
   });
 
   it("'exported' is only claimed when the host confirms the hand-off", () => {
