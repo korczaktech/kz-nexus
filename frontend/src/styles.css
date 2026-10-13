@@ -2880,3 +2880,18 @@ html:has(.app-shell.editor-mode),body:has(.app-shell.editor-mode),#root:has(.app
 
 /* Let the editor sidebar flow with the page instead of scrolling in a fixed-height panel. */
 .editor-body.rich-editor-body .editor-side{max-height:none;overflow:visible}
+
+
+/* Propriedades do documento: ampliar apenas esta sidebar e fazer o cabeçalho rolar com o conteúdo. */
+@media(min-width:901px){
+  .app-shell.editor-mode .editor-body.rich-editor-body{
+    grid-template-columns:minmax(0,1fr) minmax(320px,340px)!important;
+  }
+  .app-shell.editor-mode .editor-body.rich-editor-body .editor-side{
+    min-width:320px!important;
+  }
+}
+.app-shell.editor-mode .editor-side .editor-files-head{
+  position:static!important;
+  top:auto!important;
+}
