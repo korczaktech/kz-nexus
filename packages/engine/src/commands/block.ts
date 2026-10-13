@@ -40,23 +40,68 @@ export function setHeadingLevel(params: { blockId: string; level: 1 | 2 | 3 | 4 
 export function splitBlock(params: { blockId: string; offset: number }): Command {
   return (doc, ctx) => {
     const index = findTopLevelIndex(doc.content, params.blockId);
-    if (index === -1) return err(engineError("NODE_NOT_FOUND", `Top-level block "${params.blockId}" not found`, { path: params.blockId }));
-    const block = doc.content[index];
-    if (!isParagraphLike(block)) {
-      return err(engineError("UNSUPPORTED_OPERATION", `Block "${params.blockId}" cannot be split`, { path: params.blockId }));
-    }
-    const length = getPlainText(block).length;
-    if (params.offset < 0 || params.offset > length) {
-      return err(engineError("INVALID_POSITION", `Offset ${params.offset} out of range`, { path: params.blockId }));
-    }
-    const { before, after } = splitRunsAt(block.children, params.offset, ctx.generateId);
     const ensureRun = (runs: TextRun[]): TextRun[] => (runs.length > 0 ? runs : [{ type: "text", id: ctx.generateId(), text: "", marks: [] }]);
-    const newBlockId = ctx.generateId();
-    const first: Block = { ...block, children: ensureRun(before) } as Block;
-    const second: Paragraph = { type: "paragraph", id: newBlockId, align: block.align, children: ensureRun(after) };
-    const content = [...doc.content];
-    content.splice(index, 1, first, second);
-    return ok({ document: { ...doc, content }, selection: { blockId: newBlockId, offset: 0 } });
+    const splitParagraph = (block: Paragraph, containerChildren: Paragraph[], childIndex: number): { children: Paragraph[]; newId: string } => {
+      const length = getPlainText(block).length;
+      if (params.offset < 0 || params.offset > length) throw engineError("INVALID_POSITION", `Offset ${params.offset} out of range`, { path: params.blockId });
+      const { before, after } = splitRunsAt(block.children, params.offset, ctx.generateId);
+      const newId = ctx.generateId();
+      const first: Paragraph = { ...block, children: ensureRun(before) };
+      const second: Paragraph = { type: "paragraph", id: newId, align: block.align, children: ensureRun(after) };
+      const children = [...containerChildren];
+      children.splice(childIndex, 1, first, second);
+      return { children, newId };
+    };
+    if (index >= 0) {
+      const block = doc.content[index];
+      if (!isParagraphLike(block)) return err(engineError("UNSUPPORTED_OPERATION", `Block "${params.blockId}" cannot be split`, { path: params.blockId }));
+      try {
+        const split = splitParagraph(block as Paragraph, [block as Paragraph], 0);
+        const content = [...doc.content];
+        content.splice(index, 1, split.children[0]!, split.children[1]!);
+        return ok({ document: { ...doc, content }, selection: { blockId: split.newId, offset: 0 } });
+      } catch (error) {
+        return err(error instanceof Error ? engineError("INVALID_POSITION", error.message, { path: params.blockId }) : error as ReturnType<typeof engineError>);
+      }
+    }
+    for (let topIndex = 0; topIndex < doc.content.length; topIndex++) {
+      const top = doc.content[topIndex]!;
+      if (top.type === "blockquote") {
+        const childIndex = top.children.findIndex(child => child.id === params.blockId);
+        if (childIndex < 0) continue;
+        try {
+          const split = splitParagraph(top.children[childIndex]!, top.children, childIndex);
+          const content = [...doc.content];
+          content[topIndex] = { ...top, children: split.children };
+          return ok({ document: { ...doc, content }, selection: { blockId: split.newId, offset: 0 } });
+        } catch (error) {
+          return err(error instanceof Error ? engineError("INVALID_POSITION", error.message, { path: params.blockId }) : error as ReturnType<typeof engineError>);
+        }
+      }
+      if (top.type === "table") {
+        for (let rowIndex = 0; rowIndex < top.children.length; rowIndex++) {
+          const row = top.children[rowIndex]!;
+          for (let cellIndex = 0; cellIndex < row.children.length; cellIndex++) {
+            const cell = row.children[cellIndex]!;
+            const childIndex = cell.children.findIndex(child => child.id === params.blockId);
+            if (childIndex < 0) continue;
+            try {
+              const split = splitParagraph(cell.children[childIndex]!, cell.children, childIndex);
+              const rows = [...top.children];
+              const cells = [...row.children];
+              cells[cellIndex] = { ...cell, children: split.children };
+              rows[rowIndex] = { ...row, children: cells };
+              const content = [...doc.content];
+              content[topIndex] = { ...top, children: rows };
+              return ok({ document: { ...doc, content }, selection: { blockId: split.newId, offset: 0 } });
+            } catch (error) {
+              return err(error instanceof Error ? engineError("INVALID_POSITION", error.message, { path: params.blockId }) : error as ReturnType<typeof engineError>);
+            }
+          }
+        }
+      }
+    }
+    return err(engineError("NODE_NOT_FOUND", `Text block "${params.blockId}" not found`, { path: params.blockId }));
   };
 }
 
@@ -64,19 +109,54 @@ export function splitBlock(params: { blockId: string; offset: number }): Command
 export function mergeBlockWithPrevious(params: { blockId: string }): Command {
   return (doc) => {
     const index = findTopLevelIndex(doc.content, params.blockId);
-    if (index <= 0) {
-      return err(engineError("UNSUPPORTED_OPERATION", "No previous block to merge with", { path: params.blockId }));
+    if (index > 0) {
+      const current = doc.content[index];
+      const previous = doc.content[index - 1];
+      if (!isParagraphLike(current) || !isParagraphLike(previous)) return err(engineError("UNSUPPORTED_OPERATION", "Only adjacent paragraphs/headings can be merged", { path: params.blockId }));
+      const mergeOffset = getPlainText(previous).length;
+      const merged = { ...previous, children: [...previous.children, ...current.children] };
+      const content = [...doc.content];
+      content.splice(index - 1, 2, merged);
+      return ok({ document: { ...doc, content }, selection: { blockId: previous.id, offset: mergeOffset } });
     }
-    const current = doc.content[index];
-    const previous = doc.content[index - 1];
-    if (!isParagraphLike(current) || !isParagraphLike(previous)) {
-      return err(engineError("UNSUPPORTED_OPERATION", "Only paragraphs/headings can be merged", { path: params.blockId }));
+    for (let topIndex = 0; topIndex < doc.content.length; topIndex++) {
+      const top = doc.content[topIndex]!;
+      if (top.type === "blockquote") {
+        const childIndex = top.children.findIndex(child => child.id === params.blockId);
+        if (childIndex <= 0) continue;
+        const previous = top.children[childIndex - 1]!;
+        const current = top.children[childIndex]!;
+        const mergeOffset = getPlainText(previous).length;
+        const children = [...top.children];
+        children.splice(childIndex - 1, 2, { ...previous, children: [...previous.children, ...current.children] });
+        const content = [...doc.content];
+        content[topIndex] = { ...top, children };
+        return ok({ document: { ...doc, content }, selection: { blockId: previous.id, offset: mergeOffset } });
+      }
+      if (top.type === "table") {
+        for (let rowIndex = 0; rowIndex < top.children.length; rowIndex++) {
+          const row = top.children[rowIndex]!;
+          for (let cellIndex = 0; cellIndex < row.children.length; cellIndex++) {
+            const cell = row.children[cellIndex]!;
+            const childIndex = cell.children.findIndex(child => child.id === params.blockId);
+            if (childIndex <= 0) continue;
+            const previous = cell.children[childIndex - 1]!;
+            const current = cell.children[childIndex]!;
+            const mergeOffset = getPlainText(previous).length;
+            const children = [...cell.children];
+            children.splice(childIndex - 1, 2, { ...previous, children: [...previous.children, ...current.children] });
+            const rows = [...top.children];
+            const cells = [...row.children];
+            cells[cellIndex] = { ...cell, children };
+            rows[rowIndex] = { ...row, children: cells };
+            const content = [...doc.content];
+            content[topIndex] = { ...top, children: rows };
+            return ok({ document: { ...doc, content }, selection: { blockId: previous.id, offset: mergeOffset } });
+          }
+        }
+      }
     }
-    const mergeOffset = getPlainText(previous).length;
-    const merged = { ...previous, children: [...previous.children, ...current.children] };
-    const content = [...doc.content];
-    content.splice(index - 1, 2, merged);
-    return ok({ document: { ...doc, content }, selection: { blockId: previous.id, offset: mergeOffset } });
+    return err(engineError("UNSUPPORTED_OPERATION", "No previous paragraph exists in this container", { path: params.blockId }));
   };
 }
 
