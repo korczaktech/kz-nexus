@@ -48,6 +48,7 @@ export {
   insertParagraphAfter,
   deleteBlock,
   insertBlockquote,
+  convertBlockToBlockquote,
   insertThematicBreak,
 } from "./commands/block";
 export { insertList, convertBlockToList, convertListType, insertListItem, removeListItem } from "./commands/list";
