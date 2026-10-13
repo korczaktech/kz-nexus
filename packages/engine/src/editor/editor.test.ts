@@ -111,6 +111,13 @@ describe("Editor", () => {
     expect(editor.getDocument().resources).toHaveLength(0);
   });
 
+  it("no-op normalization does not create a history step", () => {
+    const editor = newEditor();
+    const before = editor.getHistoryInfo();
+    editor.normalize();
+    expect(editor.getHistoryInfo()).toEqual(before);
+  });
+
   it("throws if used after dispose()", () => {
     const editor = newEditor();
     editor.dispose();
