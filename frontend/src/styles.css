@@ -2720,3 +2720,23 @@ html:has(.app-shell.editor-mode),body:has(.app-shell.editor-mode),#root:has(.app
 .app-shell.editor-mode .editor-toolbar .editor-tool{min-width:38px;min-height:38px;padding:8px!important}
 .app-shell.editor-mode .editor-ribbon-tabs button{width:auto!important;min-width:0!important;height:38px!important;padding:0 13px!important;font-size:12px;font-weight:600;letter-spacing:.01em}
 .app-shell.editor-mode .editor-ribbon-tabs button svg{display:none!important}
+
+
+/* Document header: readable, dark, and centered within the page header area. */
+.app-shell.editor-mode .editor-pages-stack>.editor-page .editor-document-header{
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  box-sizing:border-box;
+  min-height:18mm;
+  padding:3mm 10mm 2mm;
+  margin:0;
+  text-align:center;
+  color:#20242d;
+  font-family:inherit;
+  font-size:14pt;
+  font-weight:600;
+  line-height:1.25;
+  white-space:pre-wrap;
+  overflow-wrap:anywhere;
+}
