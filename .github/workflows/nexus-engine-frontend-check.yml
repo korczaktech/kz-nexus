@@ -33,3 +33,5 @@ jobs:
       - name: Typecheck, test and build engine
         working-directory: packages/engine
         run: npm run typecheck && npm test && npm run build
+      - name: Typecheck and build engine preview
+        run: packages/engine/node_modules/.bin/tsc -p packages/engine-preview/tsconfig.json --noEmit && node packages/engine-preview/build.mjs
