@@ -1,0 +1,163 @@
+name: Import Nexus Engine ZIP
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/import-nexus-engine.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  import-engine:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout main
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Extract engine source from repository ZIP
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -f korczak-nexus-engine.zip
+          rm -rf /tmp/nexus-engine-import
+          mkdir -p /tmp/nexus-engine-import
+          unzip -q korczak-nexus-engine.zip -d /tmp/nexus-engine-import
+          SRC=/tmp/nexus-engine-import/korczak-nexus-engine
+          test -f "$SRC/packages/engine/src/index.ts"
+          test -f "$SRC/packages/engine/package.json"
+
+          mkdir -p packages/engine
+          rm -rf packages/engine/src packages/engine/tests packages/engine/fixtures packages/engine/examples packages/engine/docs packages/engine/tooling
+          cp -R "$SRC/packages/engine/src" packages/engine/src
+          cp -R "$SRC/fixtures" packages/engine/fixtures
+          cp -R "$SRC/examples" packages/engine/examples
+          cp -R "$SRC/docs" packages/engine/docs
+          cp -R "$SRC/tools" packages/engine/tooling
+          cp "$SRC/packages/engine/tsconfig.json" packages/engine/tsconfig.json
+          cp "$SRC/packages/engine/tsconfig.build.json" packages/engine/tsconfig.build.json
+          cp "$SRC/tsconfig.base.json" packages/engine/tsconfig.base.json
+          cp "$SRC/README.md" packages/engine/README.md
+          cp "$SRC/scripts/"* packages/engine/tooling/
+
+          cat > packages/engine/package.json <<'EOF'
+          {
+            "name": "@korczak/nexus-engine",
+            "version": "0.1.0",
+            "private": true,
+            "type": "module",
+            "description": "Motor próprio e headless do editor Korczak Nexus, com formato nativo .nsx",
+            "main": "./dist/index.js",
+            "types": "./dist/index.d.ts",
+            "exports": {
+              ".": {
+                "types": "./dist/index.d.ts",
+                "import": "./dist/index.js",
+                "default": "./dist/index.js"
+              }
+            },
+            "files": ["dist"],
+            "scripts": {
+              "typecheck": "tsc -p tsconfig.json --noEmit",
+              "build": "node build.mjs",
+              "test": "vitest run"
+            },
+            "devDependencies": {
+              "esbuild": "0.25.5",
+              "typescript": "5.9.3",
+              "vitest": "3.2.4"
+            }
+          }
+          EOF
+
+          cat > packages/engine/tsconfig.json <<'EOF'
+          {
+            "extends": "./tsconfig.base.json",
+            "compilerOptions": {
+              "lib": ["ES2022"],
+              "types": [],
+              "noEmit": true
+            },
+            "include": ["src/**/*.ts"]
+          }
+          EOF
+
+          cat > packages/engine/tsconfig.build.json <<'EOF'
+          {
+            "extends": "./tsconfig.base.json",
+            "compilerOptions": {
+              "lib": ["ES2022"],
+              "types": [],
+              "outDir": "dist",
+              "rootDir": "src"
+            },
+            "include": ["src/**/*.ts"],
+            "exclude": ["src/**/*.test.ts"]
+          }
+          EOF
+
+          cat > packages/engine/build.mjs <<'EOF'
+          import { build } from "esbuild";
+          import { spawnSync } from "node:child_process";
+          import { rmSync } from "node:fs";
+          import { fileURLToPath } from "node:url";
+          import { dirname, resolve } from "node:path";
+          import { createRequire } from "node:module";
+
+          const here = dirname(fileURLToPath(import.meta.url));
+          const require = createRequire(import.meta.url);
+          rmSync(resolve(here, "dist"), { recursive: true, force: true });
+          await build({
+            entryPoints: [resolve(here, "src/index.ts")],
+            outfile: resolve(here, "dist/index.js"),
+            bundle: true,
+            format: "esm",
+            platform: "neutral",
+            target: "es2022",
+            sourcemap: true,
+            legalComments: "none"
+          });
+          const tscBin = require.resolve("typescript/bin/tsc");
+          const result = spawnSync(process.execPath, [tscBin, "-p", resolve(here, "tsconfig.build.json"), "--emitDeclarationOnly", "--declaration"], { stdio: "inherit", cwd: here });
+          if (result.status !== 0) process.exit(result.status ?? 1);
+          console.log("Nexus Engine build concluído.");
+          EOF
+
+          mkdir -p docs/nexus-engine
+          cp "$SRC"/docs/* docs/nexus-engine/
+          cp "$SRC/README.md" docs/nexus-engine/README.md
+          if [ -d "$SRC/packages/engine-preview" ]; then
+            rm -rf packages/engine-preview
+            cp -R "$SRC/packages/engine-preview" packages/engine-preview
+          fi
+          if [ -d "$SRC/scripts" ]; then
+            mkdir -p packages/engine/tooling/scripts
+            cp "$SRC"/scripts/* packages/engine/tooling/scripts/
+          fi
+
+      - name: Install dependencies and verify engine
+        working-directory: packages/engine
+        run: |
+          npm install --no-audit --no-fund
+          npm run typecheck
+          npm test
+          npm run build
+
+      - name: Commit imported engine
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add packages/engine packages/engine-preview docs/nexus-engine
+          if git diff --cached --quiet; then
+            echo "Nenhuma alteração para importar."
+            exit 0
+          fi
+          git commit -m "Import Nexus Engine source from ZIP"
+          git push origin main
