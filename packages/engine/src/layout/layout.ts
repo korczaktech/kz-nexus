@@ -8,7 +8,7 @@
 import type { Alignment, Block, Heading, NexusDocument, PageConfig, Paragraph, TextRun } from "../model/types";
 
 export interface TextMetrics {
-  measureText(text: string, fontSize: number, fontFamily: string): number;
+  measureText(text: string, fontSize: number, fontFamily: string, marks?: TextRun["marks"]): number;
   lineHeight?(fontSize: number, fontFamily: string): number;
 }
 export interface LayoutOptions {
@@ -137,7 +137,7 @@ function blockTextLayout(block: Paragraph | Heading, x: number, y: number, width
       let stop = cursor + 1;
       while (stop < end && charStyle[stop]?.runIndex === style.runIndex) stop++;
       const chunk = source.slice(cursor, stop);
-      total += options.metrics ? options.metrics.measureText(chunk, style.fontSize, style.fontFamily) : defaultMeasure(chunk, style.fontSize);
+      total += options.metrics ? options.metrics.measureText(chunk, style.fontSize, style.fontFamily, block.children[style.runIndex]?.marks || []) : defaultMeasure(chunk, style.fontSize);
       cursor = stop;
     }
     return total;
