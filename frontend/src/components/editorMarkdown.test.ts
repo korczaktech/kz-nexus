@@ -1,6 +1,7 @@
 import {afterEach,describe,expect,it,vi} from 'vitest';
 import {Window} from 'happy-dom';
-import {htmlToMarkdown,markdownToHtml} from './Editor';
+import {htmlToMarkdown} from './Editor';
+import {markdownToHtml} from './markdown';
 
 describe('Markdown export and import round-trip',()=>{
   let window:Window;
