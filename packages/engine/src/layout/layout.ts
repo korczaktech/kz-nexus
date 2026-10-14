@@ -223,7 +223,7 @@ function plainBlockText(block: Block): string {
     const renderItems = (items: Array<{ children: Array<any> }>, depth: number, ordered: boolean, start: number): string[] =>
       items.flatMap((item, index) => {
         const marker = ordered ? String(start + index) + "." : "•";
-        const prefix = "  ".repeat(depth) + marker + " ";
+        const prefix = "↳ ".repeat(depth) + marker + " ";
         const own = item.children.flatMap((child: any) => child.type === "paragraph" ? [prefix + textOf(child.children)]
           : child.type === "bulletList" ? renderItems(child.children, depth + 1, false, 1)
           : child.type === "orderedList" ? renderItems(child.children, depth + 1, true, child.start) : []);
