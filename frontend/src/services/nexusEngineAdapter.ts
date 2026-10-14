@@ -48,8 +48,10 @@ function marksFor(element: Element, inherited: Mark[]): Mark[] {
   const comment = tag === "span" ? element.getAttribute("data-kz-comment") : null;
   if (comment && comment.trim().length <= 2000) add({ type: "comment", value: comment });
   const style = (element as HTMLElement).style;
-  if (style.color) add({ type: "color", value: style.color });
-  if (style.backgroundColor && !comment) add({ type: "highlight", value: style.backgroundColor });
+  const textColor = cssColorToHex(style.color);
+  const fillColor = cssColorToHex(style.backgroundColor);
+  if (textColor) add({ type: "color", value: textColor });
+  if (fillColor && !comment) add({ type: "highlight", value: fillColor });
   if (style.fontSize) {
     const size = Number.parseFloat(style.fontSize);
     if (Number.isFinite(size) && size > 0 && size <= 200) add({ type: "fontSize", value: size });
@@ -157,8 +159,10 @@ function sanitizeImportedHtml(parsed: Document): void {
         const style = (element as HTMLElement).style;
         for (const property of Array.from(style)) {
           const value = style.getPropertyValue(property).trim();
+          const normalizedColor = property === "color" || property === "background-color" ? cssColorToHex(value) : undefined;
+          if (normalizedColor) style.setProperty(property, normalizedColor);
           const valid = allowedStyles.has(property) && (
-            (property === "color" || property === "background-color") ? isValidColor(value) :
+            (property === "color" || property === "background-color") ? normalizedColor !== undefined :
             property === "font-size" ? /^(?:\d+(?:\.\d+)?)(?:px|pt|em|rem|%)$/i.test(value) && Number.parseFloat(value) > 0 && Number.parseFloat(value) <= 200 :
             property === "font-family" ? /^[\w\s,'"()-]{1,120}$/.test(value) :
             property === "text-align" ? /^(?:left|right|center|justify|start|end)$/i.test(value) :
