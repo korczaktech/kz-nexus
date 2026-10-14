@@ -80,11 +80,17 @@ function makeParagraph(node: Element, type: "paragraph" | "heading" = "paragraph
     ? { align: align === "left" ? "start" as const : align === "right" ? "end" as const : align as "start" | "end" | "center" | "justify" }
     : {};
   const indentation = indent !== undefined ? { indent } : {};
+  const css = (node as HTMLElement).style;
+  const toPoints = (value: string): number | undefined => { if (!value) return undefined; const number = Number.parseFloat(value); if (!Number.isFinite(number) || number < 0) return undefined; return value.trim().endsWith("pt") ? number : value.trim().endsWith("px") ? number * 0.75 : number; };
+  const spacingBefore = toPoints(css.marginTop);
+  const spacingAfter = toPoints(css.marginBottom);
+  const lineSpacingValue = Number.parseFloat(css.lineHeight);
+  const spacing = { ...(spacingBefore ? { spacingBefore } : {}), ...(spacingAfter ? { spacingAfter } : {}), ...(Number.isFinite(lineSpacingValue) && lineSpacingValue >= 0.5 && lineSpacingValue <= 4 ? { lineSpacing: lineSpacingValue } : {}) };
   if (type === "heading") {
     const level = Math.min(6, Math.max(1, Number(node.tagName.slice(1)) || 1)) as 1 | 2 | 3 | 4 | 5 | 6;
-    return { type: "heading", id: nextId(), level, ...alignment, ...indentation, children: runs };
+    return { type: "heading", id: nextId(), level, ...alignment, ...indentation, ...spacing, children: runs };
   }
-  return { type: "paragraph", id: nextId(), ...alignment, ...indentation, children: runs };
+  return { type: "paragraph", id: nextId(), ...alignment, ...indentation, ...spacing, children: runs };
 }
 
 function listBlock(element: Element): Extract<Block, { type: "bulletList" | "orderedList" }> {
