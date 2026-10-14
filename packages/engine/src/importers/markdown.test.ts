@@ -9,7 +9,7 @@ describe("importMarkdown", () => {
   it("imports headings, inline marks, links, lists, tables, quotes and rules", () => {
     const document = importMarkdown(
       "# Title\n\n**bold** and [link](https://example.com)\n\n- one\n- two\n\n| A | B |\n| --- | --- |\n| x | y |\n\n> quote\n\n---",
-      createIdGenerator("markdown-import", 1),
+      createIdGenerator("markdownimport", 1),
       createFixedClock(0).now,
       { title: "Imported" },
     );
@@ -28,7 +28,7 @@ describe("importMarkdown", () => {
   });
 
   it("imports safe embedded image data and ignores remote image URLs", () => {
-    const document = importMarkdown("![safe](data:image/png;base64,aGVsbG8=)\n\n![remote](https://example.com/image.png)", createIdGenerator("markdown-images", 1), createFixedClock(0).now);
+    const document = importMarkdown("![safe](data:image/png;base64,aGVsbG8=)\n\n![remote](https://example.com/image.png)", createIdGenerator("markdownimages", 1), createFixedClock(0).now);
     expect(document.resources).toHaveLength(1);
     expect(document.content[0]?.type).toBe("image");
     expect(document.content[1]?.type).toBe("paragraph");
