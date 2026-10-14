@@ -93,13 +93,17 @@ describe("nested split/merge", () => {
 describe("setParagraphStyle", () => {
   it("stores spacing and line-height in the engine document and rejects invalid values", () => {
     const { document, blockId } = setup("Paragraph");
-    const styled = setParagraphStyle({ blockId, spacingBefore: 6, spacingAfter: 12, lineSpacing: 1.5 })(document, ctx());
+    const styled = setParagraphStyle({ blockId, spacingBefore: 6, spacingAfter: 12, lineSpacing: 1.5, backgroundColor: "#fff2a8", borderColor: "#6475ff", borderWidth: 0.75, padding: 4.5 })(document, ctx());
     expect(styled.ok).toBe(true);
     if (styled.ok) {
       const paragraph = styled.value.document.content[0] as Paragraph;
       expect(paragraph.spacingBefore).toBe(6);
       expect(paragraph.spacingAfter).toBe(12);
       expect(paragraph.lineSpacing).toBe(1.5);
+      expect(paragraph.backgroundColor).toBe("#fff2a8");
+      expect(paragraph.borderColor).toBe("#6475ff");
+      expect(paragraph.borderWidth).toBe(0.75);
+      expect(paragraph.padding).toBe(4.5);
     }
     const invalid = setParagraphStyle({ blockId, lineSpacing: 9 })(document, ctx());
     expect(invalid.ok).toBe(false);
