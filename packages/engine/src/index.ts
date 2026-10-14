@@ -66,6 +66,9 @@ export { insertImportedBlocksAtSelection } from "./commands/importedBlocks";
 export { setPageConfig, setMetadata } from "./commands/document";
 export type { CreateDocumentOptions } from "./commands/document";
 
+export { updateEditorObject } from "./commands/objects";
+export type { EditorObjectPatch } from "./commands/objects";
+
 // Transactions
 export { applyTransaction } from "./transactions/transaction";
 export type { TransactionOutcome } from "./transactions/transaction";
