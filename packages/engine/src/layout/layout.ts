@@ -334,8 +334,8 @@ export function layoutDocument(document: NexusDocument, options: LayoutOptions =
     if (blockIndex > 0 && (isForced.has(block.id) || ((block.type === "paragraph" || block.type === "heading") && (block as { pageBreakBefore?: boolean }).pageBreakBefore))) nextPage();
     if (block.type === "thematicBreak") {
       if (block.kind === "pageBreak") {
-        if (blockIndex > 0 || cursorY > content.y) nextPage();
         addBlock(block, { x: content.x, y: cursorY, width: content.width, height: 0 }, []);
+        if (blockIndex > 0 || cursorY > content.y) nextPage();
         return;
       }
       const h = 1;
