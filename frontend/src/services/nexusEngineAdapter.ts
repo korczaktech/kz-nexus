@@ -126,6 +126,8 @@ function makeParagraph(node: Element, type: "paragraph" | "heading" = "paragraph
     ...(["rectangle", "ellipse", "triangle"].includes(objectShape || "") ? { shape: objectShape as "rectangle" | "ellipse" | "triangle" } : {}),
     ...(objectStroke ? { stroke: objectStroke } : {}),
     ...(objectFill ? { fill: objectFill } : {}),
+    ...(Number.isFinite(objectWidth) && objectWidth >= 1 && objectWidth <= 2000 ? { width: objectWidth } : {}),
+    ...(Number.isFinite(objectHeight) && objectHeight >= 1 && objectHeight <= 2000 ? { height: objectHeight } : {}),
   } : undefined);
   const spacing = { ...(spacingBefore ? { spacingBefore } : {}), ...(spacingAfter ? { spacingAfter } : {}), ...(Number.isFinite(lineSpacingValue) && lineSpacingValue >= 0.5 && lineSpacingValue <= 4 ? { lineSpacing: lineSpacingValue } : {}), ...(backgroundColor ? { backgroundColor } : {}), ...(borderColor && borderWidth ? { borderColor, borderWidth } : {}), ...(paddingValue ? { padding: paddingValue } : {}), ...(editorObject ? { editorObject } : {}) };
   if (type === "heading") {
