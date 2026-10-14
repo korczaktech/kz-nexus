@@ -8,12 +8,12 @@ import { exportHtml } from "./html";
 import type { Paragraph } from "../model/types";
 
 function context() {
-  return { generateId: createIdGenerator("html-test", 4) };
+  return { generateId: createIdGenerator("htmltest", 4) };
 }
 
 describe("exportHtml", () => {
   it("renders engine marks and escapes text and attributes", () => {
-    const document = createDocument(createIdGenerator("html-doc", 1), createFixedClock(0).now);
+    const document = createDocument(createIdGenerator("htmldoc", 1), createFixedClock(0).now);
     const paragraph = document.content[0] as Paragraph;
     const inserted = insertText({ blockId: paragraph.id, offset: 0, text: "<hello & world>" })(document, context());
     if (!inserted.ok) throw inserted.error;
