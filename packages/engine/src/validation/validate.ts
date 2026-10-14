@@ -113,6 +113,9 @@ function checkParagraphLike(
   if (node.indent !== undefined && (!Number.isFinite(node.indent) || node.indent < 0 || node.indent > 720)) {
     issues.push({ code: "INVALID_DOCUMENT", message: `Indent out of range at ${path}`, path });
   }
+  if (node.spacingBefore !== undefined && (!Number.isFinite(node.spacingBefore) || node.spacingBefore < 0 || node.spacingBefore > 720)) issues.push({ code: "INVALID_DOCUMENT", message: `Spacing before out of range at ${path}`, path });
+  if (node.spacingAfter !== undefined && (!Number.isFinite(node.spacingAfter) || node.spacingAfter < 0 || node.spacingAfter > 720)) issues.push({ code: "INVALID_DOCUMENT", message: `Spacing after out of range at ${path}`, path });
+  if (node.lineSpacing !== undefined && (!Number.isFinite(node.lineSpacing) || node.lineSpacing < 0.5 || node.lineSpacing > 4)) issues.push({ code: "INVALID_DOCUMENT", message: `Line spacing out of range at ${path}`, path });
   if (node.type === "heading" && (node.level < 1 || node.level > 6)) {
     issues.push({ code: "INVALID_DOCUMENT", message: `Heading level out of range at ${path}`, path });
   }
