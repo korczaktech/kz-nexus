@@ -1,5 +1,5 @@
 import type { Alignment, Block, NexusDocument, Paragraph, TextRun } from "../model/types";
-import { findParagraphLike, getPlainText, isParagraphLike, mapParagraphLike } from "../model/tree";
+import { findParagraphLike, getPlainText, isParagraphLike, updateParagraphLike } from "../model/tree";
 import { splitRunsAt } from "./text";
 import { engineError } from "../errors/errors";
 import { isValidColor } from "../schema/schema";
@@ -32,7 +32,7 @@ export function setAlign(params: { blockId: string; align: Alignment }): Command
   return (doc) => {
     const node = findParagraphLike(doc.content, params.blockId);
     if (!node) return err(engineError("NODE_NOT_FOUND", `Block "${params.blockId}" not found`, { path: params.blockId }));
-    const content = mapParagraphLike(doc.content, (n) => (n.id === params.blockId ? { ...n, align: params.align } : n));
+    const content = updateParagraphLike(doc.content, params.blockId, (n) => (n.id === params.blockId ? { ...n, align: params.align } : n));
     return ok({ document: { ...doc, content } });
   };
 }
@@ -45,7 +45,7 @@ export function setIndent(params: { blockId: string; indent: number }): Command 
     }
     const node = findParagraphLike(doc.content, params.blockId);
     if (!node) return err(engineError("NODE_NOT_FOUND", `Block "${params.blockId}" not found`, { path: params.blockId }));
-    const content = mapParagraphLike(doc.content, current => current.id === params.blockId ? { ...current, indent: params.indent || undefined } : current);
+    const content = updateParagraphLike(doc.content, params.blockId, current => current.id === params.blockId ? { ...current, indent: params.indent || undefined } : current);
     return ok({ document: { ...doc, content } });
   };
 }
@@ -80,7 +80,7 @@ export function setParagraphStyle(params: {
     if (params.padding !== undefined && (!Number.isFinite(params.padding) || params.padding < 0 || params.padding > 100)) return err(engineError("INVALID_DOCUMENT", "padding must be between 0 and 100 points", { path: params.blockId }));
     const node = findParagraphLike(doc.content, params.blockId);
     if (!node) return err(engineError("NODE_NOT_FOUND", `Block "${params.blockId}" not found`, { path: params.blockId }));
-    const content = mapParagraphLike(doc.content, current => current.id === params.blockId ? {
+    const content = updateParagraphLike(doc.content, params.blockId, current => current.id === params.blockId ? {
       ...current,
       ...(params.spacingBefore !== undefined ? { spacingBefore: params.spacingBefore || undefined } : {}),
       ...(params.spacingAfter !== undefined ? { spacingAfter: params.spacingAfter || undefined } : {}),
