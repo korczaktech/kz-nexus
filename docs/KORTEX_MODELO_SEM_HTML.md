@@ -111,6 +111,29 @@ artificial. O leitor rejeita versões futuras e mantém erros explícitos quando
 migração necessária não está registrada. Quando a versão 2 for definida, o marco de
 migração deverá incluir fixtures reais da versão 1 e expectativas do documento migrado.
 
+
+## Validação integral da persistência — marco 11
+
+A fronteira de persistência nativa ganhou cobertura explícita para as classes de
+falha que precisam permanecer distinguíveis para a interface: conteúdo vazio ou
+JSON inválido, formato não reconhecido, versão futura do envelope, versão futura
+do schema e limite de tamanho excedido. Os testes verificam os códigos de erro
+esperados, para que uma limitação de segurança não seja apresentada como simples
+corrupção de arquivo.
+
+O ciclo válido de codificação e decodificação continua comparando o documento
+canônico completo, incluindo identidade, metadados, configuração de página e
+conteúdo. A identificação da extensão nativa .nsx também cobre espaços externos,
+maiúsculas/minúsculas e caminhos Windows/POSIX, sem aceitar extensões adicionais
+como .nsx.backup.
+
+Esta etapa valida automaticamente a fronteira do formato nativo; não comprova
+sozinha toda a experiência de edição. Continuam pendentes testes manuais reais no
+navegador para composição IME, cursor/seleção após operações estruturais, edição
+de células, redimensionamento e movimentação de imagens, paginação e persistência
+após recarregar. Esses cenários não devem ser declarados aprovados apenas porque
+a suíte automatizada passa.
+
 ## Limite conhecido
 
 A integração ainda não é 100% independente de HTML/DOM: a superfície visual
