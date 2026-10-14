@@ -76,7 +76,7 @@ describe("native layout engine", () => {
     expect(kept?.rect.height).toBeLessThanOrEqual(result.pages[kept!.pageIndex]!.content.height);
   });
 
-  it("reports oversized table rows without silently splitting their cells", () => {
+  it("splits oversized table rows at line boundaries without losing cell text", () => {
     const table: Block = { type: "table", id: "oversized-table", children: [{
       type: "tableRow", id: "oversized-row", children: [{
         type: "tableCell", id: "oversized-cell", children: [{
@@ -90,8 +90,13 @@ describe("native layout engine", () => {
       unit: "pt", width: 100, height: 100, orientation: "portrait",
       margins: { top: 10, right: 10, bottom: 10, left: 10 }
     }), { metrics });
-    expect(result.diagnostics.some(item => item.code === "OVERSIZED_BLOCK" && item.blockId === "oversized-table")).toBe(true);
-    expect(result.pages.flatMap(page => page.blocks).some(block => block.blockId === "oversized-table" && (block.table?.rows.length || 0) === 1)).toBe(true);
+    const fragments = result.pages.flatMap(page => page.blocks.filter(block => block.blockId === "oversized-table"));
+    const rendered = fragments.flatMap(fragment => fragment.table?.rows || []).flatMap(row => row.cells).flatMap(cell => cell.lines.map(line => line.text)).join(" ");
+    expect(fragments.length).toBeGreaterThan(1);
+    expect(fragments[0].continued).toBe(false);
+    expect(fragments.slice(1).every(fragment => fragment.continued === true)).toBe(true);
+    expect(rendered).toContain("wide text");
+    expect(rendered).toContain("wide");
   });
 
   it("marks only table fragments after the first as continued", () => {
@@ -181,7 +186,7 @@ describe("native layout engine", () => {
     const quote: Block = { type: "blockquote", id: "long-quote", children: [
       { type: "paragraph", id: "long-quote-p", children: [{ type: "text", id: "long-quote-run", text: longText, marks: [] }] }
     ] };
-    const smallPage = { unit: "pt" as const, width: 160, height: 55, orientation: "portrait" as const, margins: { top: 5, right: 10, bottom: 5, left: 10 } };
+    const smallPage = { unit: "pt" as const, width: 160, height: 55, orientation: "landscape" as const, margins: { top: 5, right: 10, bottom: 5, left: 10 } };
     const result = layoutDocument(documentWith([quote], smallPage), { metrics });
     const fragments = result.pages.flatMap(page => page.blocks.filter(block => block.blockId === "long-quote"));
     const rendered = fragments.flatMap(fragment => fragment.children || []).flatMap(child => child.lines.map(line => line.text)).join(" ");
