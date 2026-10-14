@@ -205,7 +205,7 @@ describe("native layout engine", () => {
         ] }
       ] }
     ] };
-    const smallPage = { unit: "pt" as const, width: 160, height: 55, orientation: "portrait" as const, margins: { top: 5, right: 10, bottom: 5, left: 10 } };
+    const smallPage = { unit: "pt" as const, width: 160, height: 55, orientation: "landscape" as const, margins: { top: 5, right: 10, bottom: 5, left: 10 } };
     const result = layoutDocument(documentWith([table], smallPage), { metrics });
     const fragments = result.pages.flatMap(page => page.blocks.filter(block => block.blockId === "long-table"));
     const rendered = fragments.flatMap(fragment => fragment.table?.rows || []).flatMap(row => row.cells).flatMap(cell => cell.lines.map(line => line.text)).join(" ");
@@ -224,7 +224,7 @@ describe("native layout engine", () => {
         { type: "paragraph", id: "long-item-p", children: [{ type: "text", id: "long-item-run", text: longText, marks: [] }] }
       ] }
     ] };
-    const smallPage = { unit: "pt" as const, width: 160, height: 55, orientation: "portrait" as const, margins: { top: 5, right: 10, bottom: 5, left: 10 } };
+    const smallPage = { unit: "pt" as const, width: 160, height: 55, orientation: "landscape" as const, margins: { top: 5, right: 10, bottom: 5, left: 10 } };
     const result = layoutDocument(documentWith([list], smallPage), { metrics });
     const listFragments = result.pages.flatMap(page => page.blocks.filter(block => block.blockId === "long-list"));
     const itemFragments = listFragments.flatMap(fragment => fragment.children || []);
