@@ -186,7 +186,7 @@ describe("native layout engine", () => {
     const fragments = result.pages.flatMap(page => page.blocks.filter(block => block.blockId === "long-quote"));
     const rendered = fragments.flatMap(fragment => fragment.children || []).flatMap(child => child.lines.map(line => line.text)).join(" ");
     expect(result.pageCount).toBeGreaterThan(1);
-    expect(rendered.replace(/\\s+/g, " ").trim()).toContain("one two three");
+    expect(rendered.trim()).toContain("one two three");
     expect(rendered).toContain("twentyfive");
     expect(fragments.every(fragment => fragment.rect.y + fragment.rect.height <= smallPage.height - smallPage.margins.bottom + 0.001)).toBe(true);
   });
