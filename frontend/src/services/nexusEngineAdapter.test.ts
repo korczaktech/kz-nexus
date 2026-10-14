@@ -166,12 +166,12 @@ describe("Nexus editor adapter", () => {
   });
 
   it("round-trips native text-box and shape metadata without flattening them to images", () => {
-    const source = '<p data-kz-object="textBox" data-kz-object-label="Caixa" data-kz-object-stroke="#64748b" data-kz-object-fill="#f8fafc" style="border:1px solid #64748b;padding:12px">Texto editável</p><p data-kz-object="shape" data-kz-object-shape="ellipse" data-kz-object-label="Círculo" data-kz-object-stroke="#2563eb">Forma</p>';
+    const source = '<p data-kz-object="textBox" data-kz-object-label="Caixa" data-kz-object-stroke="#64748b" data-kz-object-fill="#f8fafc" data-kz-object-width="320" data-kz-object-height="72" style="border:1px solid #64748b;padding:12px">Texto editável</p><p data-kz-object="shape" data-kz-object-shape="ellipse" data-kz-object-label="Círculo" data-kz-object-stroke="#2563eb">Forma</p>';
     const document = nexusDocumentFromHtml(source, "Editable objects");
-    expect(document.content[0]).toMatchObject({ type: "paragraph", editorObject: { kind: "textBox", label: "Caixa", stroke: "#64748b", fill: "#f8fafc" } });
+    expect(document.content[0]).toMatchObject({ type: "paragraph", editorObject: { kind: "textBox", label: "Caixa", stroke: "#64748b", fill: "#f8fafc", width: 320, height: 72 } });
     expect(document.content[1]).toMatchObject({ type: "paragraph", editorObject: { kind: "shape", shape: "ellipse", label: "Círculo", stroke: "#2563eb" } });
     const html = htmlFromNexusDocument(document);
-    expect(html).toContain('data-kz-object="textBox"');
+    expect(html).toContain('data-kz-object="textBox"');\n    expect(html).toContain('data-kz-object-width="320"');
     expect(html).toContain('data-kz-object-shape="ellipse"');
     const reopened = nexusDocumentFromHtml(html, "Editable objects");
     expect(reopened.content[0]).toMatchObject({ type: "paragraph", editorObject: { kind: "textBox", label: "Caixa" } });
