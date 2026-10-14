@@ -70,14 +70,14 @@ class DocumentCreateRequest(APIModel):
     description: str = Field(default="", max_length=2000)
     folder_id: str | None = None
     content: str | None = None
-    native_content: str | None = Field(default=None, max_length=2000000)
+    native_content: str | None = Field(default=None, max_length=26214400)
 
 
 class DocumentSaveRequest(APIModel):
     name: str = Field(min_length=1, max_length=255)
     document_type: str = Field(min_length=1, max_length=80)
     content: str | None = Field(default=None, max_length=2000000)
-    native_content: str | None = Field(default=None, max_length=2000000)
+    native_content: str | None = Field(default=None, max_length=26214400)
     base_version_id: str | None = None
 
 
@@ -108,7 +108,7 @@ class DocumentResponse(ResponseModel):
 
 class VersionCreateRequest(APIModel):
     content: str | None = None
-    native_content: str | None = Field(default=None, max_length=2000000)
+    native_content: str | None = Field(default=None, max_length=26214400)
 
 
 class VersionResponse(ResponseModel):
