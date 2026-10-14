@@ -122,7 +122,7 @@ function tableBlock(element: Element): Extract<Block, { type: "table" }> {
 
 function sanitizeImportedHtml(parsed: Document): void {
   parsed.querySelectorAll("script,style,iframe,object,embed,form,input,button,textarea,select,option,link,meta,base,svg,math,template").forEach(node => node.remove());
-  const allowedStyles = new Set(["color", "background-color", "font-size", "font-family", "text-align", "margin-left", "width", "height"]);
+  const allowedStyles = new Set(["color", "background-color", "font-size", "font-family", "text-align", "margin-left", "margin-top", "margin-bottom", "line-height", "width", "height"]);
   parsed.body.querySelectorAll("*").forEach(element => {
     for (const attribute of Array.from(element.attributes)) {
       const name = attribute.name.toLowerCase();
