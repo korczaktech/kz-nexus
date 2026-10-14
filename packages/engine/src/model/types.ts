@@ -45,6 +45,8 @@ export interface Paragraph {
   spacingAfter?: number;
   /** Unitless line-height multiplier (0.5–4). */
   lineSpacing?: number;
+  /** Optional stable HTML anchor for internal links such as footnotes. */
+  anchorId?: string;
   /** Optional paragraph background and border styling. */
   backgroundColor?: string;
   borderColor?: string;
