@@ -23,7 +23,16 @@ export interface LayoutOptions {
   keepParagraphsTogether?: boolean;
 }
 export interface LayoutRect { x: number; y: number; width: number; height: number }
-export interface LayoutLine { text: string; x: number; y: number; width: number; height: number; startOffset: number; endOffset: number; align?: Alignment }
+export interface LayoutTextRun {
+  text: string;
+  startOffset: number;
+  endOffset: number;
+  fontSize: number;
+  fontFamily: string;
+  marks: TextRun["marks"];
+  width: number;
+}
+export interface LayoutLine { text: string; x: number; y: number; width: number; height: number; startOffset: number; endOffset: number; align?: Alignment; runs?: LayoutTextRun[] }
 export interface LayoutBlock {
   blockId: string;
   type: Block["type"];
@@ -113,24 +122,99 @@ function validPage(page: PageConfig): boolean {
     && page.width > m.left + m.right && page.height > m.top + m.bottom;
 }
 function blockTextLayout(block: Paragraph | Heading, x: number, y: number, width: number, options: LayoutOptions): {lines: LayoutLine[];height:number} {
-  const fallback = block.type === "heading" ? HEADING_SIZES[block.level] : safeNumber(options.fontSize, DEFAULT_FONT);
-  const size = fontSizeOf(block, fallback);
-  const family = options.fontFamily || "Arial";
+  const fallbackSize = block.type === "heading" ? HEADING_SIZES[block.level] : safeNumber(options.fontSize, DEFAULT_FONT);
+  const familyFallback = options.fontFamily || "Arial";
   const available = Math.max(1, width - safeNumber(block.indent, 0) - safeNumber(block.padding, 0) * 2 - safeNumber(block.borderWidth, 0) * 2);
-  const wrapped = wrapText(textOf(block.children), available, size, family, options.metrics);
-  const natural = options.metrics?.lineHeight?.(size, family) ?? size * 1.2;
-  const lineHeight = natural * safeNumber(block.lineSpacing, 1);
-  const align = block.align || "start";
-  const lines = wrapped.map((line, index) => {
-    const indent = safeNumber(block.indent, 0) + (index === 0 ? safeNumber(block.firstLineIndent, 0) : safeNumber(block.hangingIndent, 0));
-    const availableLineWidth = Math.max(1, available - indent);
-    const alignedX = align === "center" ? x + safeNumber(block.indent, 0) + (available - line.width) / 2
-      : align === "end" ? x + safeNumber(block.indent, 0) + available - line.width : x + indent;
-    return { text: line.text, x: alignedX, y: y + safeNumber(block.padding, 0) + index * lineHeight,
-      width: align === "justify" && index < wrapped.length - 1 ? availableLineWidth : line.width, height: lineHeight,
-      startOffset: line.start, endOffset: line.end, align };
+  const source = textOf(block.children);
+  const charStyle: Array<{runIndex:number;fontSize:number;fontFamily:string}> = [];
+  block.children.forEach((run, runIndex) => {
+    const sizeMark = run.marks.find(mark => mark.type === "fontSize");
+    const familyMark = run.marks.find(mark => mark.type === "fontFamily");
+    const fontSize = sizeMark && sizeMark.type === "fontSize" ? Math.max(1, sizeMark.value) : fallbackSize;
+    const fontFamily = familyMark && familyMark.type === "fontFamily" ? familyMark.value : familyFallback;
+    for (let i = 0; i < run.text.length; i++) charStyle.push({ runIndex, fontSize, fontFamily });
   });
-  return { lines, height: Math.max(lineHeight, wrapped.length * lineHeight) + safeNumber(block.padding, 0) * 2 + safeNumber(block.borderWidth, 0) * 2 };
+  const measureRange = (start:number, end:number):number => {
+    let total = 0, cursor = start;
+    while (cursor < end) {
+      const style = charStyle[cursor] || { runIndex: 0, fontSize: fallbackSize, fontFamily: familyFallback };
+      let stop = cursor + 1;
+      while (stop < end && charStyle[stop]?.runIndex === style.runIndex) stop++;
+      const chunk = source.slice(cursor, stop);
+      total += options.metrics ? options.metrics.measureText(chunk, style.fontSize, style.fontFamily) : defaultMeasure(chunk, style.fontSize);
+      cursor = stop;
+    }
+    return total;
+  };
+  const buildRuns = (start:number,end:number):LayoutTextRun[] => {
+    const result:LayoutTextRun[]=[];
+    let cursor=start;
+    while(cursor<end){
+      const style=charStyle[cursor]||{runIndex:0,fontSize:fallbackSize,fontFamily:familyFallback};
+      let stop=cursor+1;
+      while(stop<end&&charStyle[stop]?.runIndex===style.runIndex)stop++;
+      const original=block.children[style.runIndex];
+      const marks=original?.marks||[];
+      result.push({text:source.slice(cursor,stop),startOffset:cursor,endOffset:stop,fontSize:style.fontSize,fontFamily:style.fontFamily,marks,width:measureRange(cursor,stop)});
+      cursor=stop;
+    }
+    return result;
+  };
+  const wrapped:Array<{text:string;start:number;end:number;width:number;runs:LayoutTextRun[];height:number}>=[];
+  const paragraphs=source.split("\n");
+  let globalOffset=0;
+  for(const paragraph of paragraphs){
+    if(!paragraph.length){
+      const size=fallbackSize, natural=options.metrics?.lineHeight?.(size,familyFallback)??size*1.2;
+      wrapped.push({text:"",start:globalOffset,end:globalOffset,width:0,runs:[],height:natural*safeNumber(block.lineSpacing,1)});
+      globalOffset+=1;continue;
+    }
+    const tokens=paragraph.match(/\S+\s*/g)||[paragraph];
+    let lineStart=globalOffset,lineEnd=globalOffset,lineText="";
+    const pushLine=(start:number,end:number,text:string)=>{
+      const clean=text.trimEnd();
+      const actualEnd=start+clean.length;
+      const runs=buildRuns(start,actualEnd);
+      const naturalHeights=runs.map(run=>options.metrics?.lineHeight?.(run.fontSize,run.fontFamily)??run.fontSize*1.2);
+      const height=(naturalHeights.length?Math.max(...naturalHeights):((options.metrics?.lineHeight?.(fallbackSize,familyFallback)??fallbackSize*1.2)))*safeNumber(block.lineSpacing,1);
+      wrapped.push({text:clean,start,end:actualEnd,width:measureRange(start,actualEnd),runs,height});
+    };
+    let tokenOffset=globalOffset;
+    for(const token of tokens){
+      let candidate=lineText+token;
+      if(lineText&&measureRange(lineStart,tokenOffset+token.length)>available){
+        pushLine(lineStart,tokenOffset,lineText);
+        lineStart=tokenOffset;lineText="";candidate=token.trimStart();
+      }
+      if(!lineText&&measureRange(tokenOffset,tokenOffset+token.trimEnd().length)>available){
+        let pieceStart=tokenOffset,piece="";
+        for(let i=0;i<token.trimEnd().length;i++){
+          const char=token.trimEnd()[i];
+          if(piece&&measureRange(pieceStart,pieceStart+piece.length+1)>available){
+            pushLine(pieceStart,pieceStart+piece.length,piece);
+            pieceStart+=piece.length;piece=char;
+          }else piece+=char;
+        }
+        lineStart=pieceStart;lineText=piece;
+        if(token.endsWith(" "))lineText+=" ";
+      }else lineText+=lineText?token:token.trimStart();
+      tokenOffset+=token.length;
+    }
+    pushLine(lineStart,tokenOffset,lineText);
+    globalOffset+=paragraph.length+1;
+  }
+  const align = block.align || "start";
+  let yOffset=safeNumber(block.padding,0);
+  const lines=wrapped.map((line,index)=>{
+    const indent=safeNumber(block.indent,0)+(index===0?safeNumber(block.firstLineIndent,0):safeNumber(block.hangingIndent,0));
+    const alignedX=align==="center"?x+safeNumber(block.indent,0)+(available-line.width)/2
+      :align==="end"?x+safeNumber(block.indent,0)+available-line.width:x+indent;
+    const result:LayoutLine={text:line.text,x:alignedX,y:y+yOffset,width:align==="justify"&&index<wrapped.length-1?Math.max(1,available-indent):line.width,
+      height:line.height,startOffset:line.start,endOffset:line.end,align,runs:line.runs};
+    yOffset+=line.height;
+    return result;
+  });
+  return {lines,height:Math.max(wrapped.reduce((sum,line)=>sum+line.height,0),options.metrics?.lineHeight?.(fallbackSize,familyFallback)??fallbackSize*1.2)+safeNumber(block.padding,0)*2+safeNumber(block.borderWidth,0)*2};
 }
 function plainBlockText(block: Block): string {
   if (block.type === "paragraph" || block.type === "heading") return textOf(block.children);
