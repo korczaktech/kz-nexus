@@ -365,13 +365,26 @@ export function layoutDocument(document: NexusDocument, options: LayoutOptions =
       let lineOffset = 0;
       let firstFragment = true;
       while (lineOffset < measured.lines.length) {
-        const available = content.y + content.height - cursorY;
-        if (available < lineHeight && cursorY > content.y) nextPage();
-        const usable = content.y + content.height - cursorY;
-        const fitCount = Math.max(1, Math.floor((usable + 0.001) / lineHeight));
-        const count = Math.min(fitCount, measured.lines.length - lineOffset);
-        const fragmentLines = measured.lines.slice(lineOffset, lineOffset + count).map(line => ({ ...line, y: cursorY + (line.y - measured.lines[0].y) }));
-        const fragmentHeight = Math.max(lineHeight, count * lineHeight);
+        let available = content.y + content.height - cursorY;
+        if (available < measured.lines[lineOffset].height && cursorY > content.y) {
+          nextPage();
+          available = content.y + content.height - cursorY;
+        }
+        const firstLineY = measured.lines[lineOffset].y;
+        let count = 0;
+        let fragmentHeight = 0;
+        while (lineOffset + count < measured.lines.length) {
+          const nextHeight = measured.lines[lineOffset + count].height;
+          if (count > 0 && fragmentHeight + nextHeight > available + 0.001) break;
+          if (count === 0 && nextHeight > available && cursorY > content.y) break;
+          fragmentHeight += nextHeight;
+          count += 1;
+        }
+        if (count === 0) {
+          nextPage();
+          continue;
+        }
+        const fragmentLines = measured.lines.slice(lineOffset, lineOffset + count).map(line => ({ ...line, y: cursorY + (line.y - firstLineY) }));
         addBlock(block, { x: content.x, y: cursorY, width: content.width, height: fragmentHeight }, fragmentLines, { continued: !firstFragment });
         cursorY += fragmentHeight;
         lineOffset += count;
