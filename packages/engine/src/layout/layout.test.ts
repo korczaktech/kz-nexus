@@ -51,7 +51,7 @@ describe("native layout engine", () => {
 
   it("keeps a heading with the first line of its following paragraph", () => {
     const heading: Block = { type: "heading", id: "h", level: 1, children: [{ type: "text", id: "hr", text: "Section", marks: [] }] };
-    const result = layoutDocument(documentWith([paragraph("lead", "Lead text"), heading, paragraph("body", "Body text")], {
+    const result = layoutDocument(documentWith([paragraph("lead", "Lead text Lead text Lead text"), heading, paragraph("body", "Body text")], {
       unit: "pt", width: 160, height: 100, orientation: "portrait",
       margins: { top: 10, right: 10, bottom: 10, left: 10 }
     }), { metrics, keepHeadingsWithNext: true });
@@ -93,7 +93,7 @@ describe("native layout engine", () => {
     ] };
     const result = layoutDocument(documentWith([mixed]), { metrics });
     const line = result.pages[0].blocks[0].lines[0];
-    expect(line.height).toBeGreaterThanOrEqual(28.8);
+    expect(line.height).toBeCloseTo(28.8, 5);
     expect(line.runs).toHaveLength(2);
     expect(line.runs?.[0].fontSize).toBe(8);
     expect(line.runs?.[1].fontSize).toBe(24);
