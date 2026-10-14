@@ -293,6 +293,11 @@ export function insertBlockquote(params: { afterBlockId: string }): Command {
   };
 }
 
+/** Inserts an explicit page boundary as a native document node. */
+export function insertPageBreak(params: { afterBlockId: string }): Command {
+  return insertThematicBreak({ ...params, kind: "pageBreak" });
+}
+
 export function insertThematicBreak(params: { afterBlockId: string; kind?: "rule" | "pageBreak" }): Command {
   return (doc, ctx) => {
     const index = findTopLevelIndex(doc.content, params.afterBlockId);
