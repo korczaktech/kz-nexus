@@ -11,7 +11,7 @@ export const CURRENT_SCHEMA_VERSION = 1;
 
 export type Alignment = "start" | "center" | "end" | "justify";
 
-export type MarkType = "bold" | "italic" | "underline" | "strike" | "superscript" | "subscript" | "color" | "highlight" | "fontSize" | "fontFamily" | "link";
+export type MarkType = "bold" | "italic" | "underline" | "strike" | "superscript" | "subscript" | "color" | "highlight" | "fontSize" | "fontFamily" | "link" | "comment";
 
 export type Mark =
   | { type: "bold" }
@@ -24,7 +24,8 @@ export type Mark =
   | { type: "highlight"; value: string }
   | { type: "fontSize"; value: number }
   | { type: "fontFamily"; value: string }
-  | { type: "link"; value: string };
+  | { type: "link"; value: string }
+  | { type: "comment"; value: string };
 
 export interface TextRun {
   type: "text";
