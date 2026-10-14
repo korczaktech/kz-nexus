@@ -63,7 +63,7 @@ describe("native layout engine", () => {
 
   it("keeps a paragraph together when it fits on a fresh page", () => {
     const result = layoutDocument(documentWith([
-      paragraph("lead-together", "Lead text Lead text Lead text"),
+      paragraph("lead-together", "Lead text Lead text Lead text Lead text Lead text"),
       paragraph("together", "A short paragraph")
     ], {
       unit: "pt", width: 100, height: 100, orientation: "portrait",
