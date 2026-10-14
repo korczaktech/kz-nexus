@@ -134,4 +134,24 @@ describe("Nexus editor adapter", () => {
     expect(engine.getDocument().metadata.title).toBe("Updated title");
     engine.dispose();
   });
+  it("migrates a mixed legacy HTML document into a stable native model and back", () => {
+    const legacyHtml = '<h1 id="intro">Introdução</h1><p>Texto <strong>forte</strong> e <a href="https://example.com">link</a>.</p><ul><li>um</li><li>dois</li></ul><blockquote><p>citação antiga</p></blockquote><table><tbody><tr><td><p>A</p></td><td><p>B</p></td></tr></tbody></table><hr><img src="data:image/png;base64,aGVsbG8=" alt="marca" width="64" height="32">';
+    const migrated = nexusDocumentFromHtml(legacyHtml, "Documento legado");
+    expect(migrated.content.map(block => block.type)).toEqual([
+      "heading", "paragraph", "bulletList", "blockquote", "table", "thematicBreak", "image",
+    ]);
+    const engine = createEditor({ document: migrated });
+    const nativeSnapshot = engine.getDocument();
+    const projected = htmlFromNexusDocument(nativeSnapshot);
+    const reopened = nexusDocumentFromHtml(projected, "Documento legado");
+    expect(reopened.content.map(block => block.type)).toEqual(nativeSnapshot.content.map(block => block.type));
+    expect(reopened.metadata.title).toBe("Documento legado");
+    expect(reopened.resources).toHaveLength(1);
+    expect(reopened.content.find(block => block.type === "image")).toMatchObject({ type: "image", alt: "marca", width: 64, height: 32 });
+    expect(projected).toContain("Introdução");
+    expect(projected).toContain("citação antiga");
+    expect(projected).toContain("https://example.com");
+    engine.dispose();
+  });
+
 });
