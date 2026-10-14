@@ -340,16 +340,41 @@ function selectionBody(root: HTMLElement, node: Node | null): HTMLElement | null
   return body && (root === body || root.contains(body)) ? body : null;
 }
 
+function domNodeTextLength(node: Node): number {
+  if (node.nodeType === Node.TEXT_NODE) return node.textContent?.length ?? 0;
+  if (node instanceof Element && node.tagName.toLowerCase() === "br") return 1;
+  let length = 0;
+  node.childNodes.forEach(child => { length += domNodeTextLength(child); });
+  return length;
+}
+
+function offsetWithinNode(node: Node, offset: number): number {
+  if (node.nodeType === Node.TEXT_NODE) {
+    return Math.max(0, Math.min(node.textContent?.length ?? 0, offset));
+  }
+  if (node instanceof Element && node.tagName.toLowerCase() === "br") return offset > 0 ? 1 : 0;
+  let length = 0;
+  const limit = Math.max(0, Math.min(node.childNodes.length, offset));
+  for (let index = 0; index < limit; index++) length += domNodeTextLength(node.childNodes[index]!);
+  return length;
+}
+
+/** DOM offsets must count BR elements as the newline characters stored by Kortex. */
 function pointOffset(block: HTMLElement, node: Node, offset: number): number | null {
   if (!block.contains(node) && block !== node) return null;
-  try {
-    const range = block.ownerDocument.createRange();
-    range.selectNodeContents(block);
-    range.setEnd(node, offset);
-    return range.toString().length;
-  } catch {
-    return null;
+  let current: Node = node;
+  let total = offsetWithinNode(current, offset);
+  while (current !== block) {
+    let sibling = current.previousSibling;
+    while (sibling) {
+      total += domNodeTextLength(sibling);
+      sibling = sibling.previousSibling;
+    }
+    const parent = current.parentNode;
+    if (!parent) return null;
+    current = parent;
   }
+  return total;
 }
 
 function logicalTextLength(block: LogicalTextBlock): number {
@@ -561,17 +586,30 @@ export function restoreEngineDomSelection(engine: ReturnType<typeof createEditor
   // Refuse to restore to a wrong paragraph if the DOM projection is stale.
   if (domBlocks.length !== modelBlocks.length) return;
   const findPoint = (block: HTMLElement, offset: number): { node: Node; offset: number } => {
-    const walker = block.ownerDocument.createTreeWalker(block, NodeFilter.SHOW_TEXT);
     let remaining = Math.max(0, offset);
-    let last: Node = block;
-    while (walker.nextNode()) {
-      const node = walker.currentNode;
-      last = node;
-      const length = node.textContent?.length ?? 0;
-      if (remaining <= length) return { node, offset: remaining };
-      remaining -= length;
-    }
-    return last === block ? { node: block, offset: block.childNodes.length } : { node: last, offset: last.textContent?.length ?? 0 };
+    const visit = (node: Node): { node: Node; offset: number } | null => {
+      if (node.nodeType === Node.TEXT_NODE) {
+        const length = node.textContent?.length ?? 0;
+        if (remaining <= length) return { node, offset: remaining };
+        remaining -= length;
+        return null;
+      }
+      if (node instanceof Element && node.tagName.toLowerCase() === "br") {
+        const parent = node.parentNode;
+        if (!parent) return null;
+        const index = Array.prototype.indexOf.call(parent.childNodes, node) as number;
+        if (remaining === 0) return { node: parent, offset: index };
+        if (remaining === 1) return { node: parent, offset: index + 1 };
+        remaining -= 1;
+        return null;
+      }
+      for (const child of Array.from(node.childNodes)) {
+        const point = visit(child);
+        if (point) return point;
+      }
+      return null;
+    };
+    return visit(block) ?? { node: block, offset: block.childNodes.length };
   };
   const resolve = (point: Selection["anchor"]) => {
     const index = modelBlocks.findIndex(block => block.id === point.blockId);
