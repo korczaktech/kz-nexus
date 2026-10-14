@@ -368,26 +368,30 @@ export function layoutDocument(document: NexusDocument, options: LayoutOptions =
       let lineOffset = 0;
       let firstFragment = true;
       while (lineOffset < measured.lines.length) {
-        let available = content.y + content.height - cursorY;
+        const topInset = firstFragment ? safeNumber(block.padding, 0) + safeNumber(block.borderWidth, 0) : 0;
+        let available = content.y + content.height - cursorY - topInset;
         if (available < measured.lines[lineOffset].height && cursorY > content.y) {
           nextPage();
-          available = content.y + content.height - cursorY;
+          available = content.y + content.height - cursorY - topInset;
         }
         const firstLineY = measured.lines[lineOffset].y;
         let count = 0;
-        let fragmentHeight = 0;
+        let lineHeightSum = 0;
         while (lineOffset + count < measured.lines.length) {
           const nextHeight = measured.lines[lineOffset + count].height;
-          if (count > 0 && fragmentHeight + nextHeight > available + 0.001) break;
+          if (count > 0 && lineHeightSum + nextHeight > available + 0.001) break;
           if (count === 0 && nextHeight > available && cursorY > content.y) break;
-          fragmentHeight += nextHeight;
+          lineHeightSum += nextHeight;
           count += 1;
         }
         if (count === 0) {
           nextPage();
           continue;
         }
-        const fragmentLines = measured.lines.slice(lineOffset, lineOffset + count).map(line => ({ ...line, y: cursorY + (line.y - firstLineY) }));
+        const isLastFragment = lineOffset + count >= measured.lines.length;
+        const bottomInset = isLastFragment ? safeNumber(block.padding, 0) + safeNumber(block.borderWidth, 0) : 0;
+        const fragmentHeight = topInset + lineHeightSum + bottomInset;
+        const fragmentLines = measured.lines.slice(lineOffset, lineOffset + count).map(line => ({ ...line, y: cursorY + topInset + (line.y - firstLineY) }));
         addBlock(block, { x: content.x, y: cursorY, width: content.width, height: fragmentHeight }, fragmentLines, { continued: !firstFragment });
         cursorY += fragmentHeight;
         lineOffset += count;
