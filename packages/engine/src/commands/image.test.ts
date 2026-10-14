@@ -3,7 +3,7 @@ import { createDocument } from "./document";
 import { createEditor } from "../editor/editor";
 import { createIdGenerator } from "../core/ids";
 import { createFixedClock } from "../core/clock";
-import { insertImageResource, removeImage } from "./image";
+import { insertImageResource, removeImage, updateImage } from "./image";
 import { validateDocument } from "../validation/validate";
 import type { Paragraph } from "../model/types";
 
@@ -32,6 +32,22 @@ describe("insertImageResource", () => {
         expect(validateDocument(editor.getDocument()).ok).toBe(true);
       }
     }
+    editor.dispose();
+  });
+  it("updates image alt text and dimensions in the canonical model", () => {
+    const document = createDocument(createIdGenerator("imgdoc", 1), createFixedClock(0).now);
+    const paragraph = document.content[0] as Paragraph;
+    const editor = createEditor({ document, idGenerator: createIdGenerator("imgid", 1), clock: createFixedClock(1).now });
+    const inserted = editor.exec([insertImageResource({ afterBlockId: paragraph.id, mimeType: "image/png", data: "aGVsbG8=", alt: "Old alt" })]);
+    expect(inserted.ok).toBe(true);
+    const image = editor.getDocument().content.find(block => block.type === "image");
+    if (!image || image.type !== "image") throw new Error("Expected image block");
+    const updated = editor.exec([updateImage({ blockId: image.id, alt: "New alt", width: 320, height: 180 })]);
+    expect(updated.ok).toBe(true);
+    const savedImage = editor.getDocument().content.find(block => block.id === image.id);
+    expect(savedImage).toMatchObject({ type: "image", alt: "New alt", width: 320, height: 180 });
+    expect(validateDocument(editor.getDocument()).ok).toBe(true);
+    expect(editor.exec([updateImage({ blockId: image.id, width: 0 })]).ok).toBe(false);
     editor.dispose();
   });
 });
