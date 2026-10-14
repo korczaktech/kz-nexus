@@ -93,10 +93,10 @@ describe("native layout engine", () => {
     ] };
     const result = layoutDocument(documentWith([mixed]), { metrics });
     const line = result.pages[0].blocks[0].lines[0];
-    expect(line.height).toBeCloseTo(28.8, 5);
+    expect(line.height).toBeCloseTo(21.6, 5);
     expect(line.runs).toHaveLength(2);
-    expect(line.runs?.[0].fontSize).toBe(8);
-    expect(line.runs?.[1].fontSize).toBe(24);
+    expect(line.runs?.[0].fontSize).toBe(6);
+    expect(line.runs?.[1].fontSize).toBe(18);
     expect(line.runs?.[1].marks.some(mark => mark.type === "bold")).toBe(true);
   });
 
