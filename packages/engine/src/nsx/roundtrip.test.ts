@@ -6,7 +6,7 @@ import { insertText } from "../commands/text";
 import { applyMark } from "../commands/marks";
 import { insertList, insertListItem } from "../commands/list";
 import { insertTable, setCellText } from "../commands/table";
-import { setHeadingLevel } from "../commands/block";
+import { setHeadingLevel, setAlign, setIndent, setParagraphStyle, insertBlockquote, insertThematicBreak } from "../commands/block";
 import { addResource } from "../resources/resources";
 import { insertImage } from "../commands/image";
 import { writeNsx } from "./writer";
@@ -132,6 +132,84 @@ describe(".nsx round-trip", () => {
     if (!withText.ok) throw withText.error;
     const { document } = roundTrip(withText.value.document);
     expect(getPlainText(document.content[0] as Paragraph)).toBe(text);
+  });
+
+  it("preserves every supported inline mark and mark value", () => {
+    const commandCtx = ctx();
+    const doc = createDocument(createIdGenerator("marks", 1), createFixedClock(0).now);
+    const text = "abcdefghijkl";
+    const inserted = insertText({ blockId: doc.content[0].id, offset: 0, text })(doc, commandCtx);
+    if (!inserted.ok) throw inserted.error;
+    const marks = [
+      { type: "bold" }, { type: "italic" }, { type: "underline" }, { type: "strike" },
+      { type: "superscript" }, { type: "subscript" }, { type: "color", value: "#123456" },
+      { type: "highlight", value: "#abcdef" }, { type: "fontSize", value: 18 },
+      { type: "fontFamily", value: "Arial" }, { type: "link", value: "https://example.com" },
+      { type: "comment", value: "review this text" },
+    ] as const;
+    let current = inserted.value.document;
+    for (const [index, mark] of marks.entries()) {
+      const result = applyMark({ blockId: doc.content[0].id, start: index, end: index + 1, mark })(current, commandCtx);
+      if (!result.ok) throw result.error;
+      current = result.value.document;
+    }
+    const { document } = roundTrip(current);
+    const paragraph = document.content[0] as Paragraph;
+    for (const [index, mark] of marks.entries()) {
+      expect(paragraph.children.find(run => run.text.includes(text[index]))?.marks).toContainEqual(mark);
+    }
+  });
+
+  it("preserves paragraph layout, indentation, and alignment fields", () => {
+    const commandCtx = ctx();
+    const doc = createDocument(createIdGenerator("layout", 1), createFixedClock(0).now);
+    const blockId = doc.content[0].id;
+    const aligned = setAlign({ blockId, align: "justify" })(doc, commandCtx);
+    if (!aligned.ok) throw aligned.error;
+    const indented = setIndent({ blockId, indent: 24 })(aligned.value.document, commandCtx);
+    if (!indented.ok) throw indented.error;
+    const styled = setParagraphStyle({
+      blockId, spacingBefore: 8, spacingAfter: 12, lineSpacing: 1.5,
+      backgroundColor: "#ffffff", borderColor: "#123456", borderWidth: 2,
+      padding: 6, firstLineIndent: 18, hangingIndent: 4,
+    })(indented.value.document, commandCtx);
+    if (!styled.ok) throw styled.error;
+    const { document } = roundTrip(styled.value.document);
+    expect(document.content[0]).toMatchObject({
+      type: "paragraph", align: "justify", indent: 24,
+      spacingBefore: 8, spacingAfter: 12, lineSpacing: 1.5,
+      backgroundColor: "#ffffff", borderColor: "#123456", borderWidth: 2,
+      padding: 6, firstLineIndent: 18, hangingIndent: 4,
+    });
+  });
+
+  it("preserves blockquotes and thematic breaks", () => {
+    const commandCtx = ctx();
+    const doc = createDocument(createIdGenerator("blocks", 1), createFixedClock(0).now);
+    const quoteResult = insertBlockquote({ afterBlockId: doc.content[0].id })(doc, commandCtx);
+    if (!quoteResult.ok) throw quoteResult.error;
+    const quote = quoteResult.value.document.content[1];
+    if (quote.type !== "blockquote") throw new Error("Expected blockquote");
+    const quoteText = insertText({ blockId: quote.children[0].id, offset: 0, text: "Quoted content" })(quoteResult.value.document, commandCtx);
+    if (!quoteText.ok) throw quoteText.error;
+    const separatorResult = insertThematicBreak({ afterBlockId: quote.id })(quoteText.value.document, commandCtx);
+    if (!separatorResult.ok) throw separatorResult.error;
+    const { document } = roundTrip(separatorResult.value.document);
+    expect(document.content[1].type).toBe("blockquote");
+    if (document.content[1].type === "blockquote") {
+      expect(getPlainText(document.content[1].children[0])).toBe("Quoted content");
+    }
+    expect(document.content[2].type).toBe("thematicBreak");
+  });
+
+  it("keeps stable IDs and metadata through repeated round-trips", () => {
+    const doc = createDocument(createIdGenerator("stable", 1), createFixedClock(0).now, { title: "Stable IDs" });
+    const first = roundTrip(doc).document;
+    const second = roundTrip(first).document;
+    expect(second.id).toBe(first.id);
+    expect(second.content.map(block => block.id)).toEqual(first.content.map(block => block.id));
+    expect(second.metadata).toEqual(first.metadata);
+    expect(second.pageConfig).toEqual(first.pageConfig);
   });
 
   it("produces a readable envelope with the expected format identifiers", () => {
