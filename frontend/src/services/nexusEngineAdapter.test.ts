@@ -67,6 +67,14 @@ describe("Nexus editor adapter", () => {
     expect(html).toContain("padding:4.5pt");
   });
 
+  it("preserves safe paragraph anchors for internal note links", () => {
+    const document = nexusDocumentFromHtml('<p id="note_0001abcd">Footnote target</p><p><a href="#note_0001abcd">1</a></p>', "Anchor test");
+    const paragraph = document.content[0];
+    expect(paragraph && paragraph.type === "paragraph" ? paragraph.anchorId : undefined).toBe("note_0001abcd");
+    expect(htmlFromNexusDocument(document)).toContain('<p id="note_0001abcd">Footnote target</p>');
+    expect(htmlFromNexusDocument(document)).toContain('href="#note_0001abcd"');
+  });
+
   it("round-trips comment annotations through the engine document", () => {
     const document = nexusDocumentFromHtml('<p><span data-kz-comment="Review this" title="Comentário: Review this">Important</span></p>', "Comment test");
     const paragraph = document.content[0];
