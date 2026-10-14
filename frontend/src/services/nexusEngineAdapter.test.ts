@@ -171,7 +171,8 @@ describe("Nexus editor adapter", () => {
     expect(document.content[0]).toMatchObject({ type: "paragraph", editorObject: { kind: "textBox", label: "Caixa", stroke: "#64748b", fill: "#f8fafc", width: 320, height: 72 } });
     expect(document.content[1]).toMatchObject({ type: "paragraph", editorObject: { kind: "shape", shape: "ellipse", label: "Círculo", stroke: "#2563eb" } });
     const html = htmlFromNexusDocument(document);
-    expect(html).toContain('data-kz-object="textBox"');\n    expect(html).toContain('data-kz-object-width="320"');
+    expect(html).toContain('data-kz-object="textBox"');
+    expect(html).toContain('data-kz-object-width="320"');
     expect(html).toContain('data-kz-object-shape="ellipse"');
     const reopened = nexusDocumentFromHtml(html, "Editable objects");
     expect(reopened.content[0]).toMatchObject({ type: "paragraph", editorObject: { kind: "textBox", label: "Caixa" } });
