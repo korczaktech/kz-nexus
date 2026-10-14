@@ -129,7 +129,7 @@ function blockTextLayout(block: Paragraph | Heading, x: number, y: number, width
 }
 function plainBlockText(block: Block): string {
   if (block.type === "paragraph" || block.type === "heading") return textOf(block.children);
-  if (block.type === "blockquote") return block.children.map(textOf).join("\n");
+  if (block.type === "blockquote") return block.children.map(paragraph => textOf(paragraph.children)).join("\n");
   if (block.type === "bulletList" || block.type === "orderedList") return block.children.map(item => item.children.map(child => child.type === "paragraph" ? textOf(child.children) : "").join("\n")).join("\n");
   if (block.type === "table") return block.children.map(row => row.children.map(cell => cell.children.map(p => textOf(p.children)).join("\n")).join(" | ")).join("\n");
   if (block.type === "image") return block.alt;
