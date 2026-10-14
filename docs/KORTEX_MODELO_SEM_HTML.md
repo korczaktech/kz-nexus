@@ -90,6 +90,27 @@ A validação final deste marco exige CI verde e teste manual no navegador: inse
 redimensionar, mover, salvar, recarregar e exportar; e editar células de tabela, adicionar
 ou remover linhas/colunas, mover a tabela e confirmar a persistência.
 
+## Round-trip e compatibilidade — marco 10
+
+A suíte de ida e volta `.nsx` cobre agora conteúdo vazio e Unicode (incluindo emoji e
+caracteres combinantes), metadados, configuração da página, IDs estáveis, títulos,
+parágrafos, todas as marcas inline suportadas, alinhamento, recuo, espaçamento,
+entrelinha, fundo/borda/padding, listas, tabelas e texto de células, citações,
+separadores e imagens. Para imagens, a verificação compara também o MIME type e os
+bytes Base64 do recurso incorporado, além do texto alternativo e dimensões.
+
+O caminho de compatibilidade legado é testado separadamente: HTML antigo misto é
+importado para o modelo tipado, projetado de volta em HTML e reimportado, verificando
+a estrutura de títulos, listas, citações, tabelas, separadores e imagens, além de links
+seguros e recursos incorporados. A importação HTML não transforma o HTML em formato
+nativo; após a migração, o modelo Kortex continua sendo serializado em `.nsx`.
+
+A versão atual do envelope `.nsx` é a 1. Ainda não existe uma versão anterior do próprio
+envelope que possa ser migrada para a versão 1, portanto não foi criada uma migração
+artificial. O leitor rejeita versões futuras e mantém erros explícitos quando uma
+migração necessária não está registrada. Quando a versão 2 for definida, o marco de
+migração deverá incluir fixtures reais da versão 1 e expectativas do documento migrado.
+
 ## Limite conhecido
 
 A integração ainda não é 100% independente de HTML/DOM: a superfície visual
