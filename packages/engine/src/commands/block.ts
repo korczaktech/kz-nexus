@@ -10,6 +10,24 @@ function findTopLevelIndex(blocks: Block[], blockId: string): number {
   return blocks.findIndex((block) => block.id === blockId);
 }
 
+/**
+ * Moves a top-level block one position without changing its identity or content.
+ * This is intended for structural objects such as tables, images and dividers.
+ */
+export function moveBlock(params: { blockId: string; direction: "up" | "down" }): Command {
+  return (doc) => {
+    const index = findTopLevelIndex(doc.content, params.blockId);
+    if (index < 0) return err(engineError("NODE_NOT_FOUND", `Top-level block "${params.blockId}" not found`, { path: params.blockId }));
+    const target = params.direction === "up" ? index - 1 : index + 1;
+    if (target < 0 || target >= doc.content.length) {
+      return err(engineError("INVALID_POSITION", "Block cannot be moved beyond the document boundary", { path: params.blockId }));
+    }
+    const content = [...doc.content];
+    [content[index], content[target]] = [content[target]!, content[index]!];
+    return ok({ document: { ...doc, content } });
+  };
+}
+
 export function setAlign(params: { blockId: string; align: Alignment }): Command {
   return (doc) => {
     const node = findParagraphLike(doc.content, params.blockId);
