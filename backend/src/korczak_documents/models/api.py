@@ -1,9 +1,29 @@
 from datetime import datetime
-from pydantic import BaseModel, ConfigDict, Field
+import json
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 
 class APIModel(BaseModel):
     model_config = ConfigDict(extra="forbid")
+
+    @field_validator("native_content", check_fields=False)
+    @classmethod
+    def validate_native_content(cls, value: str | None) -> str | None:
+        if value is None:
+            return value
+        try:
+            envelope = json.loads(value)
+        except (TypeError, json.JSONDecodeError) as exc:
+            raise ValueError("native_content precisa ser um envelope NSX JSON válido") from exc
+        if (
+            not isinstance(envelope, dict)
+            or envelope.get("format") != "korczak-nexus"
+            or not isinstance(envelope.get("formatVersion"), int)
+            or envelope.get("formatVersion", 0) < 1
+            or not isinstance(envelope.get("document"), dict)
+        ):
+            raise ValueError("native_content precisa conter um envelope Kortex NSX válido")
+        return value
 
 
 class ResponseModel(BaseModel):
