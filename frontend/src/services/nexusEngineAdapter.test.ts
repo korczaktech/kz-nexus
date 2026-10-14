@@ -1,7 +1,7 @@
 // @vitest-environment happy-dom
 import { describe, expect, it } from "vitest";
 import { createEditor, getPlainText } from "../../../packages/engine/src/index";
-import { getEngineDomContext, htmlFromNexusDocument, nexusDocumentFromHtml, syncNexusEngine } from "./nexusEngineAdapter";
+import { getEngineDomContext, htmlFromNexusDocument, nexusDocumentFromHtml, restoreEngineDomSelection, syncNexusEngine } from "./nexusEngineAdapter";
 import type { Paragraph } from "../../../packages/engine/src/model/types";
 
 describe("Nexus editor adapter", () => {
@@ -52,6 +52,30 @@ describe("Nexus editor adapter", () => {
       startOffset: 3,
       endOffset: 3,
     });
+    root.remove();
+    engine.dispose();
+  });
+
+  it("maps DOM line breaks to Kortex newline offsets and restores the caret", () => {
+    const engine = createEditor({ document: nexusDocumentFromHtml("<p>one<br>two</p>", "Line break mapping test") });
+    const root = document.createElement("div");
+    root.innerHTML = '<div class="rich-editor"><p>one<br>two</p></div>';
+    document.body.append(root);
+    const selection = window.getSelection();
+    const secondText = root.querySelector(".rich-editor p")!.lastChild!;
+    const range = document.createRange();
+    range.setStart(secondText, 1);
+    range.collapse(true);
+    selection!.removeAllRanges();
+    selection!.addRange(range);
+    expect(getEngineDomContext(engine, root)).toMatchObject({ startOffset: 5, endOffset: 5 });
+
+    const block = engine.getDocument().content[0]!;
+    if (block.type !== "paragraph") throw new Error("Expected paragraph");
+    expect(engine.setSelection({ anchor: { blockId: block.id, offset: 5 }, focus: { blockId: block.id, offset: 5 } }).ok).toBe(true);
+    restoreEngineDomSelection(engine, root);
+    expect(selection!.anchorNode).toBe(secondText);
+    expect(selection!.anchorOffset).toBe(1);
     root.remove();
     engine.dispose();
   });
