@@ -24,6 +24,7 @@ function renderInline(runs: TextRun[]): string {
       else if (mark.type === "fontSize") text = '<span style="font-size:' + mark.value + 'px">' + text + "</span>";
       else if (mark.type === "fontFamily") text = '<span style="font-family:' + escapeHtmlAttribute(mark.value) + '">' + text + "</span>";
       else if (mark.type === "link") text = "[" + text + "](" + mark.value.replace(/[()\s]/g, match => encodeURIComponent(match)) + ")";
+      else if (mark.type === "comment") text = '<span data-kz-comment="' + escapeHtmlAttribute(mark.value) + '">' + text + "</span>";
     }
     return text;
   }).join("");
