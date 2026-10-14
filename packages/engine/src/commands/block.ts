@@ -2,6 +2,7 @@ import type { Alignment, Block, NexusDocument, Paragraph, TextRun } from "../mod
 import { findParagraphLike, getPlainText, isParagraphLike, mapParagraphLike } from "../model/tree";
 import { splitRunsAt } from "./text";
 import { engineError } from "../errors/errors";
+import { isValidColor } from "../schema/schema";
 import { err, ok } from "../utils/result";
 import type { Command } from "./types";
 
@@ -37,6 +38,10 @@ export function setParagraphStyle(params: {
   spacingBefore?: number;
   spacingAfter?: number;
   lineSpacing?: number;
+  backgroundColor?: string;
+  borderColor?: string;
+  borderWidth?: number;
+  padding?: number;
 }): Command {
   return (doc) => {
     for (const [name, value] of [["spacingBefore", params.spacingBefore], ["spacingAfter", params.spacingAfter]] as const) {
@@ -47,6 +52,10 @@ export function setParagraphStyle(params: {
     if (params.lineSpacing !== undefined && (!Number.isFinite(params.lineSpacing) || params.lineSpacing < 0.5 || params.lineSpacing > 4)) {
       return err(engineError("INVALID_DOCUMENT", "lineSpacing must be between 0.5 and 4", { path: params.blockId }));
     }
+    if (params.backgroundColor !== undefined && !isValidColor(params.backgroundColor)) return err(engineError("INVALID_DOCUMENT", "backgroundColor must be a hex color", { path: params.blockId }));
+    if (params.borderColor !== undefined && !isValidColor(params.borderColor)) return err(engineError("INVALID_DOCUMENT", "borderColor must be a hex color", { path: params.blockId }));
+    if (params.borderWidth !== undefined && (!Number.isFinite(params.borderWidth) || params.borderWidth < 0 || params.borderWidth > 20)) return err(engineError("INVALID_DOCUMENT", "borderWidth must be between 0 and 20 points", { path: params.blockId }));
+    if (params.padding !== undefined && (!Number.isFinite(params.padding) || params.padding < 0 || params.padding > 100)) return err(engineError("INVALID_DOCUMENT", "padding must be between 0 and 100 points", { path: params.blockId }));
     const node = findParagraphLike(doc.content, params.blockId);
     if (!node) return err(engineError("NODE_NOT_FOUND", `Block "${params.blockId}" not found`, { path: params.blockId }));
     const content = mapParagraphLike(doc.content, current => current.id === params.blockId ? {
@@ -54,6 +63,10 @@ export function setParagraphStyle(params: {
       ...(params.spacingBefore !== undefined ? { spacingBefore: params.spacingBefore || undefined } : {}),
       ...(params.spacingAfter !== undefined ? { spacingAfter: params.spacingAfter || undefined } : {}),
       ...(params.lineSpacing !== undefined ? { lineSpacing: params.lineSpacing === 1 ? undefined : params.lineSpacing } : {}),
+      ...(params.backgroundColor !== undefined ? { backgroundColor: params.backgroundColor } : {}),
+      ...(params.borderColor !== undefined ? { borderColor: params.borderColor } : {}),
+      ...(params.borderWidth !== undefined ? { borderWidth: params.borderWidth || undefined } : {}),
+      ...(params.padding !== undefined ? { padding: params.padding || undefined } : {}),
     } : current);
     return ok({ document: { ...doc, content } });
   };
