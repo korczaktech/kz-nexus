@@ -70,6 +70,7 @@ class DocumentCreateRequest(APIModel):
     description: str = Field(default="", max_length=2000)
     folder_id: str | None = None
     content: str | None = None
+    native_content: str | None = Field(default=None, max_length=2000000)
 
 
 class DocumentSaveRequest(APIModel):
