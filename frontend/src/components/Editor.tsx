@@ -448,7 +448,7 @@ export function Editor({document,versions,onSave,onClose,onConflict}:{document:D
   const engine=nexusEngineRef.current;
   if(!engine)return;
   const context=engineContext();
-  const blockId=selectedImageId||((context?.topLevelBlock.type==='table'||context?.topLevelBlock.type==='image'||context?.topLevelBlock.type==='thematicBreak')?context.topLevelBlock.id:'');
+  const structuralBlock=context?.topLevelBlock;const blockId=selectedImageId||(structuralBlock&&['table','image','thematicBreak'].includes(structuralBlock.type)?structuralBlock.id:'');
   if(!blockId){setMessage('Selecione uma imagem ou posicione o cursor dentro de uma tabela para mover o bloco.');return}
   if(commitEngineCommands([moveBlock({blockId,direction})]))setMessage(direction==='up'?'Bloco movido para cima no modelo Kortex.':'Bloco movido para baixo no modelo Kortex.');
  }
