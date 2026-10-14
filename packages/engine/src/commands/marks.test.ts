@@ -100,6 +100,18 @@ describe("applyMark / removeMark / toggleMark", () => {
     expect(result.ok).toBe(false);
   });
 
+  it("applies and validates comment annotations", () => {
+    const { document, blockId } = setup("Important text");
+    const result = applyMark({ blockId, start: 0, end: 9, mark: { type: "comment", value: "Review this" } })(document, ctx());
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      const paragraph = result.value.document.content[0] as Paragraph;
+      expect(paragraph.children[0]!.marks).toContainEqual({ type: "comment", value: "Review this" });
+    }
+    const invalid = applyMark({ blockId, start: 0, end: 9, mark: { type: "comment", value: " " } })(document, ctx());
+    expect(invalid.ok).toBe(false);
+  });
+
   it("supports overlapping marks of different types", () => {
     const { document, blockId } = setup("Hello world");
     const bold = applyMark({ blockId, start: 0, end: 5, mark: { type: "bold" } })(document, ctx());
