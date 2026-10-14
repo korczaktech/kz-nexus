@@ -154,3 +154,92 @@ export function insertImportedBlocksAtSelection(params: {
     return ok({ document: { ...doc, content, resources: [...doc.resources, ...resources] }, selection });
   };
 }
+
+
+function plainLength(block: Paragraph): number {
+  return block.children.reduce((total, run) => total + run.text.length, 0);
+}
+
+/**
+ * Inserts rich paragraph content into a paragraph nested inside a quote, list item,
+ * or table cell. The parent container's schema is preserved; unsupported structural
+ * blocks are rejected instead of silently flattening them.
+ */
+export function insertImportedBlocksAtNestedSelection(params: {
+  blockId: string;
+  start: number;
+  end: number;
+  blocks: Block[];
+}): Command {
+  return (doc, ctx) => {
+    const incoming = params.blocks;
+    if (!incoming.length || incoming.some(block => block.type !== "paragraph" && block.type !== "heading")) {
+      return err(engineError("UNSUPPORTED_OPERATION", "Nested rich paste currently accepts paragraph and heading blocks only"));
+    }
+    let found = false;
+    let selection: { blockId: string; offset: number } | undefined;
+    const makeParagraph = (block: Paragraph | Heading, id: string): Paragraph => ({
+      type: "paragraph",
+      id,
+      ...(block.align ? { align: block.align } : {}),
+      ...(block.indent !== undefined ? { indent: block.indent } : {}),
+      ...(block.spacingBefore !== undefined ? { spacingBefore: block.spacingBefore } : {}),
+      ...(block.spacingAfter !== undefined ? { spacingAfter: block.spacingAfter } : {}),
+      ...(block.lineSpacing !== undefined ? { lineSpacing: block.lineSpacing } : {}),
+      children: block.children.map(run => ({ ...run, id: ctx.generateId(), marks: run.marks.map(mark => ({ ...mark } as Mark)) })),
+    });
+    const insertAtParagraphs = (paragraphs: Paragraph[]): Paragraph[] => {
+      const index = paragraphs.findIndex(paragraph => paragraph.id === params.blockId);
+      if (index < 0) return paragraphs;
+      if (found) return paragraphs;
+      found = true;
+      const source = paragraphs[index]!;
+      const length = plainLength(source);
+      if (params.start < 0 || params.end < params.start || params.end > length) throw engineError("INVALID_POSITION", "Nested rich paste selection is outside the text block", { path: params.blockId });
+      const left = splitRuns(source.children, params.start, ctx.generateId);
+      const right = splitRuns(left.after, params.end - params.start, ctx.generateId);
+      const prefix = left.before;
+      const suffix = right.after;
+      const cloned = incoming.map(block => makeParagraph(block, ctx.generateId()));
+      const replacement: Paragraph[] = [];
+      if (prefix.some(run => run.text.length)) replacement.push({ ...source, children: prefix });
+      if (cloned.length) replacement.push(...cloned);
+      if (suffix.some(run => run.text.length)) {
+        const last = replacement[replacement.length - 1];
+        if (last) replacement[replacement.length - 1] = { ...last, children: [...last.children, ...suffix] };
+        else replacement.push({ ...source, children: suffix });
+      }
+      if (!replacement.length) replacement.push({ ...source, children: [{ type: "text", id: ctx.generateId(), text: "", marks: [] }] });
+      if (!prefix.some(run => run.text.length) && replacement[0]) replacement[0] = { ...replacement[0], id: source.id };
+      paragraphs.splice(index, 1, ...replacement);
+      const last = replacement[replacement.length - 1]!;
+      selection = { blockId: last.id, offset: plainLength(last) - (suffix.reduce((total, run) => total + run.text.length, 0)) };
+      return paragraphs;
+    };
+    const visit = (block: Block): Block => {
+      if (block.type === "blockquote") return { ...block, children: insertAtParagraphs([...block.children]) };
+      if (block.type === "bulletList" || block.type === "orderedList") {
+        return { ...block, children: block.children.map(item => ({ ...item, children: item.children.map(child => {
+          if (child.type === "paragraph") {
+            const next = insertAtParagraphs([child]);
+            return next;
+          }
+          return visit(child) as typeof child;
+        }).flat() })) } as Block;
+      }
+      if (block.type === "table") return { ...block, children: block.children.map(row => ({ ...row, children: row.children.map(cell => ({ ...cell, children: insertAtParagraphs([...cell.children]) })) })) };
+      return block;
+    };
+    let content: Block[];
+    try {
+      content = doc.content.map(block => {
+        if (block.type === "paragraph" || block.type === "heading") return block;
+        return visit(block);
+      });
+    } catch (error) {
+      return err(error instanceof Error && "code" in error ? error as ReturnType<typeof engineError> : engineError("INVALID_POSITION", error instanceof Error ? error.message : "Nested paste failed"));
+    }
+    if (!found) return err(engineError("NODE_NOT_FOUND", `Nested text block "${params.blockId}" was not found`, { path: params.blockId }));
+    return ok({ document: { ...doc, content }, ...(selection ? { selection } : {}) });
+  };
+}
