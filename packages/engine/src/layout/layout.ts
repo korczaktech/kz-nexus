@@ -5,7 +5,7 @@
  * browser, desktop or mobile host can use its actual font renderer. The
  * fallback measurer is deterministic and intentionally approximate.
  */
-import type { Alignment, Block, Blockquote, BulletList, Heading, ListItem, NexusDocument, OrderedList, PageConfig, Paragraph, TextRun } from "../model/types";
+import type { Alignment, Block, BulletList, Heading, ListItem, NexusDocument, OrderedList, PageConfig, Paragraph, TextRun } from "../model/types";
 
 export interface TextMetrics {
   measureText(text: string, fontSize: number, fontFamily: string, marks?: TextRun["marks"]): number;
