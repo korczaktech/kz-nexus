@@ -26,7 +26,7 @@ export function renderTextRunsHtml(runs: TextRun[]): string {
 }
 
 function renderParagraph(block: Extract<Block, { type: "paragraph" | "heading" }>): string {
-  const styles = [block.align ? `text-align:${block.align}` : "", block.indent ? `margin-left:${block.indent}pt` : "", block.spacingBefore ? `margin-top:${block.spacingBefore}pt` : "", block.spacingAfter ? `margin-bottom:${block.spacingAfter}pt` : "", block.lineSpacing ? `line-height:${block.lineSpacing}` : ""].filter(Boolean).join(";");
+  const styles = [block.align ? `text-align:${block.align}` : "", block.indent ? `margin-left:${block.indent}pt` : "", block.spacingBefore ? `margin-top:${block.spacingBefore}pt` : "", block.spacingAfter ? `margin-bottom:${block.spacingAfter}pt` : "", block.lineSpacing ? `line-height:${block.lineSpacing}` : "", block.backgroundColor ? `background-color:${block.backgroundColor}` : "", block.borderColor && block.borderWidth ? `border:${block.borderWidth}pt solid ${block.borderColor}` : "", block.padding ? `padding:${block.padding}pt` : ""].filter(Boolean).join(";");
   const style = styles ? ' style="' + escapeHtml(styles) + '"' : "";
   if (block.type === "paragraph") return "<p" + style + ">" + renderTextRunsHtml(block.children) + "</p>";
   return '<h' + block.level + ' id="' + escapeHtml(block.id) + '"' + style + ">" + renderTextRunsHtml(block.children) + "</h" + block.level + ">";
