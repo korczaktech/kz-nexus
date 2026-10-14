@@ -1,3 +1,5 @@
+import asyncio
+
 from pymongo import ASCENDING, DESCENDING
 
 from .collections import COLLECTIONS
@@ -14,6 +16,11 @@ INDEX_DEFINITIONS = {
 }
 
 
+async def _read_indexes(collection) -> list[dict]:
+    cursor = await collection.list_indexes()
+    return await cursor.to_list(length=None)
+
+
 async def _ensure_index(
     collection,
     keys,
@@ -22,13 +29,14 @@ async def _ensure_index(
     unique: bool = False,
     expire_after_seconds: int | None = None,
     sparse: bool = False,
+    existing_indexes: list[dict] | None = None,
 ) -> None:
-    """Create an index and replace an older incompatible index on the same keys."""
+    """Ensure an index, reusing the caller's current index snapshot when available."""
     requested_keys = dict(keys if isinstance(keys, list) else [(keys, ASCENDING)])
-    cursor = await collection.list_indexes()
-    existing = await cursor.to_list(length=None)
+    if existing_indexes is None:
+        existing_indexes = await _read_indexes(collection)
 
-    for index in existing:
+    for index in list(existing_indexes):
         if index.get("name") == "_id_":
             continue
         if dict(index.get("key", {})) != requested_keys:
@@ -44,74 +52,95 @@ async def _ensure_index(
             return
 
         await collection.drop_index(index["name"])
+        existing_indexes.remove(index)
 
     options = {"name": name, "unique": unique, "sparse": sparse}
     if expire_after_seconds is not None:
         options["expireAfterSeconds"] = expire_after_seconds
     await collection.create_index(keys, **options)
+    existing_indexes.append({
+        "name": name,
+        "key": requested_keys,
+        "unique": unique,
+        "sparse": sparse,
+        **({"expireAfterSeconds": expire_after_seconds} if expire_after_seconds is not None else {}),
+    })
 
 
 async def ensure_indexes(database) -> None:
-    """Create all indexes required by the application, idempotently."""
+    """Create all required indexes with one parallel metadata read per collection."""
+    collections = {name: database[name] for name in COLLECTIONS}
+    snapshots = await asyncio.gather(*(_read_indexes(collections[name]) for name in COLLECTIONS))
+    existing_by_collection = dict(zip(COLLECTIONS, snapshots, strict=True))
+
+    # Reuse each snapshot and update it as indexes are created or replaced.
     for collection_name in COLLECTIONS:
-        collection = database[collection_name]
         await _ensure_index(
-            collection,
+            collections[collection_name],
             INDEX_DEFINITIONS[collection_name],
             name=f"{collection_name}_lookup",
+            existing_indexes=existing_by_collection[collection_name],
         )
 
     await _ensure_index(
-        database["etiquetas"],
+        collections["etiquetas"],
         [("owner_id", ASCENDING), ("name", ASCENDING)],
         name="tag_owner_name_unique",
         unique=True,
+        existing_indexes=existing_by_collection["etiquetas"],
     )
 
     # IDs are application-generated UUIDs and must remain unique at the database layer.
     for collection_name in COLLECTIONS:
         await _ensure_index(
-            database[collection_name],
+            collections[collection_name],
             "id",
             name="id_unique",
             unique=True,
             sparse=True,
+            existing_indexes=existing_by_collection[collection_name],
         )
 
     # Session records are looked up by the SHA-256 token hash.
     await _ensure_index(
-        database["sessoes"],
+        collections["sessoes"],
         "token_hash",
         name="session_token_hash_unique",
         unique=True,
+        existing_indexes=existing_by_collection["sessoes"],
     )
     await _ensure_index(
-        database["sessoes"],
+        collections["sessoes"],
         "expires_at",
         name="session_expiry",
         expire_after_seconds=0,
+        existing_indexes=existing_by_collection["sessoes"],
     )
 
     # Full-text search used by /api/v1/search.
     await _ensure_index(
-        database["documentos"],
+        collections["documentos"],
         [("name", "text"), ("description", "text"), ("document_type", "text")],
         name="document_search_text",
+        existing_indexes=existing_by_collection["documentos"],
     )
     await _ensure_index(
-        database["versoes"],
+        collections["versoes"],
         [("content", "text")],
         name="version_content_search_text",
+        existing_indexes=existing_by_collection["versoes"],
     )
 
     # Audit queries by actor/resource and chronological order.
     await _ensure_index(
-        database["eventos"],
+        collections["eventos"],
         [("actor_id", ASCENDING), ("created_at", DESCENDING)],
         name="audit_actor_created_at",
+        existing_indexes=existing_by_collection["eventos"],
     )
     await _ensure_index(
-        database["eventos"],
+        collections["eventos"],
         [("resource", ASCENDING), ("created_at", DESCENDING)],
         name="audit_resource_created_at",
+        existing_indexes=existing_by_collection["eventos"],
     )
