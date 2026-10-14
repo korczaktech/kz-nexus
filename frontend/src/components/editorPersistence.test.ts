@@ -1,5 +1,5 @@
 import {describe,expect,it} from 'vitest';
-import {clearDraft,draftKey,preserveDraft,recoverDraft,saveWithDraftFallback,clearNativeDraft,nativeDraftKey,preserveNativeDraft,recoverNativeDraft,type DraftStorage} from './editorPersistence';
+import {clearDraft,draftKey,preserveDraft,recoverDraft,saveWithDraftFallback,clearNativeDraft,nativeDraftKey,preserveNativeDraft,recoverNativeDraft,resolveNativeDraftPayload,type DraftStorage} from './editorPersistence';
 
 function storage():DraftStorage{
   const data=new Map<string,string>();
@@ -36,6 +36,13 @@ describe('proteção de rascunho da Fase 8',()=>{
     const result=await saveWithDraftFallback(s,'doc-4','alteração local',async()=> 'conflict',value=>value==='saved');
     expect(result).toBe('conflict');
     expect(recoverDraft(s,'doc-4')).toBe('alteração local');
+  });
+  it('prioriza o rascunho nativo local mesmo sem um rascunho HTML',()=>{
+    const local='payload-local-nsx';
+    const server='payload-servidor-nsx';
+    expect(resolveNativeDraftPayload(local,server)).toBe(local);
+    expect(resolveNativeDraftPayload(null,server)).toBe(server);
+    expect(resolveNativeDraftPayload(null,null)).toBeNull();
   });
   it('preserva e remove o payload nativo do Kortex separadamente do HTML',()=>{
     const s=storage();
