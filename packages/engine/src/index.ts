@@ -43,6 +43,7 @@ export { applyMark, removeMark, toggleMark } from "./commands/marks";
 export {
   setAlign,
   setIndent,
+  setParagraphStyle,
   setHeadingLevel,
   splitBlock,
   mergeBlockWithPrevious,
