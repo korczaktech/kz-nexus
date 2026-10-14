@@ -24,7 +24,7 @@ describe("Kortex model persistence (.nsx)", () => {
     expect(result.value).not.toMatch(/<\/?(?:html|body|p|div)(?:\s|>)/i);
   });
 
-  it("round-trips identity, metadata, page configuration, content and resources", () => {
+  it("round-trips identity, metadata, page configuration and document content", () => {
     const document = createDocument({
       title: "Kortex source of truth",
       pageConfig: {
