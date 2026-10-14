@@ -275,6 +275,7 @@ export function layoutDocument(document: NexusDocument, options: LayoutOptions =
       const naturalHeight = safeNumber(block.height, resource ? naturalWidth * 0.75 : 24);
       const scale = Math.min(1, content.width / Math.max(1, naturalWidth));
       const w = naturalWidth * scale, h = naturalHeight * scale;
+      if (h > content.height) diagnostics.push({ code: "OVERSIZED_BLOCK", message: "Imagem maior que a área útil da página; reduzida apenas à largura disponível.", blockId: block.id });
       if (cursorY > content.y && cursorY + h > content.y + content.height) nextPage();
       addBlock(block, { x: content.x, y: cursorY, width: w, height: h }, []);
       cursorY += h + 8; return;
@@ -336,6 +337,7 @@ export function layoutDocument(document: NexusDocument, options: LayoutOptions =
       let measured = blockTextLayout(block, content.x, 0, content.width, options);
       const lineHeight = measured.lines[0]?.height || safeNumber(options.fontSize, DEFAULT_FONT) * 1.2;
       const totalHeight = measured.height;
+      if (measured.lines.some(line => line.height > content.height)) diagnostics.push({ code: "OVERSIZED_BLOCK", message: "Linha de texto maior que a área útil da página; mantida íntegra para evitar perda de conteúdo.", blockId: block.id });
       const remaining = content.y + content.height - cursorY;
       let headingKeepHeight = 0;
       if (options.keepHeadingsWithNext && block.type === "heading") {
