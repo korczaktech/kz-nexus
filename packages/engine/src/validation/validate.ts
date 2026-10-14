@@ -58,6 +58,9 @@ function checkMark(mark: Mark, path: string, issues: ValidationIssue[]): void {
   if (mark.type === "link" && !isValidLink(mark.value)) {
     issues.push({ code: "INVALID_DOCUMENT", message: `Invalid or unsafe link URL at ${path}`, path });
   }
+  if (mark.type === "comment" && (typeof mark.value !== "string" || !mark.value.trim() || mark.value.length > 2000)) {
+    issues.push({ code: "INVALID_DOCUMENT", message: `Invalid comment mark at ${path}`, path });
+  }
 }
 
 function checkTextRun(
