@@ -8,6 +8,7 @@
 
 export type EngineErrorCode =
   | "INVALID_DOCUMENT"
+  | "DUPLICATE_ID"
   | "NODE_NOT_FOUND"
   | "INVALID_POSITION"
   | "UNSUPPORTED_OPERATION"
