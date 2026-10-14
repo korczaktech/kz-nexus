@@ -72,10 +72,6 @@ function safeNumber(value: unknown, fallback: number): number {
   return typeof value === "number" && Number.isFinite(value) ? value : fallback;
 }
 function textOf(runs: TextRun[]): string { return runs.map(run => run.text).join(""); }
-function fontSizeOf(block: Paragraph | Heading, fallback: number): number {
-  const sizes = block.children.flatMap(run => run.marks.filter(mark => mark.type === "fontSize").map(mark => mark.type === "fontSize" ? mark.value : fallback));
-  return sizes.length ? Math.max(1, sizes[0]) : fallback;
-}
 function wrapText(text: string, maxWidth: number, fontSize: number, fontFamily: string, metrics?: TextMetrics): Array<{text:string;start:number;end:number;width:number}> {
   const measure = (value: string) => metrics ? metrics.measureText(value, fontSize, fontFamily) : defaultMeasure(value, fontSize);
   const result: Array<{text:string;start:number;end:number;width:number}> = [];
