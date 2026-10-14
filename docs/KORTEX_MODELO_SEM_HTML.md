@@ -73,6 +73,23 @@ palavras. A conclusão funcional ainda depende da CI e de regressões de intera�
 no navegador, principalmente IME, seleções complexas em blocos aninhados e
 navegação por teclado.
 
+## Estruturas nativas — marco 9
+
+Tabelas e imagens permanecem como nós tipados do `NexusDocument`; os bytes das imagens
+são recursos incorporados e referenciados por ID, não dependem de caminhos locais ou
+de URLs temporárias. A exportação HTML projeta esses recursos como data URLs, enquanto
+o envelope `.nsx` salva o bloco, dimensões, texto alternativo e recurso para recuperação.
+
+O motor oferece comandos para atualizar texto alternativo/dimensões de imagens e mover
+blocos de nível superior (incluindo tabelas, imagens e divisores) sem recriar IDs ou
+perder conteúdo. O editor expõe controles para redimensionar/remover imagens e mover
+uma imagem selecionada ou a tabela sob o cursor. Os testes cobrem movimento estrutural,
+validação de dimensões e preservação das dimensões da imagem no ciclo `.nsx`.
+
+A validação final deste marco exige CI verde e teste manual no navegador: inserir imagem,
+redimensionar, mover, salvar, recarregar e exportar; e editar células de tabela, adicionar
+ou remover linhas/colunas, mover a tabela e confirmar a persistência.
+
 ## Limite conhecido
 
 A integração ainda não é 100% independente de HTML/DOM: a superfície visual
