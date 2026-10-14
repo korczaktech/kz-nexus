@@ -342,9 +342,11 @@ export function layoutDocument(document: NexusDocument, options: LayoutOptions =
       const resource = document.resources.find(item => item.id === block.resourceId);
       const naturalWidth = safeNumber(block.width, Math.min(content.width, 240));
       const naturalHeight = safeNumber(block.height, resource ? naturalWidth * 0.75 : 24);
-      const scale = Math.min(1, content.width / Math.max(1, naturalWidth));
+      // Fit the image to both page dimensions, not only its width. This avoids
+      // silently placing a very tall image outside the printable area.
+      const scale = Math.min(1, content.width / Math.max(1, naturalWidth), content.height / Math.max(1, naturalHeight));
       const w = naturalWidth * scale, h = naturalHeight * scale;
-      if (h > content.height) diagnostics.push({ code: "OVERSIZED_BLOCK", message: "Imagem maior que a área útil da página; reduzida apenas à largura disponível.", blockId: block.id });
+      if (scale < 1) diagnostics.push({ code: "OVERSIZED_BLOCK", message: "Imagem reduzida proporcionalmente para caber na área útil da página.", blockId: block.id });
       if (cursorY > content.y && cursorY + h > content.y + content.height) nextPage();
       addBlock(block, { x: content.x, y: cursorY, width: w, height: h }, []);
       cursorY += h + 8; return;
@@ -419,17 +421,56 @@ export function layoutDocument(document: NexusDocument, options: LayoutOptions =
         const x = content.x + 14;
         const availableWidth = Math.max(1, content.width - 14);
         const measured = blockTextLayout(paragraph, x, cursorY, availableWidth, options);
-        if (measured.height > content.height) diagnostics.push({ code: "OVERSIZED_BLOCK",
-          message: "Parágrafo de citação maior que a área útil da página; mantido íntegro para preservar seus estilos.", blockId: paragraph.id });
         const spacing = safeNumber(paragraph.spacingAfter, 6);
-        if (cursorY > content.y && cursorY + measured.height + spacing > content.y + content.height) {
-          flushQuote();
-          nextPage();
-          fragmentStartY = cursorY;
+        let lineOffset = 0;
+        let firstFragment = true;
+        while (lineOffset < measured.lines.length) {
+          const topInset = firstFragment ? safeNumber(paragraph.padding, 0) + safeNumber(paragraph.borderWidth, 0) : 0;
+          let available = content.y + content.height - cursorY - topInset;
+          if (available < measured.lines[lineOffset].height && cursorY > content.y) {
+            flushQuote();
+            nextPage();
+            fragmentStartY = cursorY;
+            available = content.y + content.height - cursorY - topInset;
+          }
+          let count = 0;
+          let lineHeightSum = 0;
+          while (lineOffset + count < measured.lines.length) {
+            const nextHeight = measured.lines[lineOffset + count].height;
+            if (count > 0 && lineHeightSum + nextHeight > available + 0.001) break;
+            if (count === 0 && nextHeight > available && cursorY > content.y) break;
+            lineHeightSum += nextHeight;
+            count += 1;
+          }
+          if (count === 0) {
+            // A single glyph line can be taller than the page only when the
+            // document uses an extreme font size; place it once and diagnose it.
+            count = 1;
+            lineHeightSum = measured.lines[lineOffset].height;
+            diagnostics.push({ code: "OVERSIZED_BLOCK", message: "Uma linha da citação é maior que a área útil da página e não pode ser dividida.", blockId: paragraph.id });
+          }
+          const isLastFragment = lineOffset + count >= measured.lines.length;
+          const bottomInset = isLastFragment ? safeNumber(paragraph.padding, 0) + safeNumber(paragraph.borderWidth, 0) : 0;
+          const fragmentHeight = topInset + lineHeightSum + bottomInset;
+          const firstLineY = measured.lines[lineOffset].y;
+          const lines = measured.lines.slice(lineOffset, lineOffset + count).map(line => ({
+            ...line, y: cursorY + topInset + (line.y - firstLineY)
+          }));
+          fragmentChildren.push({
+            blockId: paragraph.id, type: "paragraph", pageIndex: page.index,
+            rect: { x, y: cursorY, width: availableWidth, height: fragmentHeight }, lines,
+            style: styleForParagraph(paragraph)
+          });
+          cursorY += fragmentHeight;
+          lineOffset += count;
+          firstFragment = false;
+          if (lineOffset < measured.lines.length) {
+            flushQuote();
+            nextPage();
+            fragmentStartY = cursorY;
+          }
         }
-        const child = paragraphChild(paragraph, x, cursorY, availableWidth);
-        fragmentChildren.push(child);
-        cursorY += child.rect.height + spacing;
+        cursorY += spacing;
         lastSpacing = spacing;
       }
       flushQuote();
