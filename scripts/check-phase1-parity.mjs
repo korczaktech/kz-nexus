@@ -3,6 +3,7 @@ import path from 'node:path';
 
 const root = process.cwd();
 const read = (file) => fs.readFileSync(path.join(root, file), 'utf8');
+const readIfExists = (file) => fs.existsSync(path.join(root, file)) ? read(file) : '';
 
 const files = {
   web: read('frontend/src/App.tsx'),
@@ -16,12 +17,12 @@ const files = {
   cloudStorage: read('frontend/src/services/cloudStorage.ts'),
   sheetsFormatting: read('frontend/src/services/googleSheetsFormatting.ts'),
   slidesFormatting: read('frontend/src/services/googleSlidesFormatting.ts'),
-  androidNative: read('android/app/src/main/java/com/korczak/documents/MainActivity.kt'),
-  androidApi: read('android/app/src/main/java/com/korczak/documents/ApiClient.kt'),
-  androidStorage: read('android/app/src/main/java/com/korczak/documents/StorageManager.kt'),
-  androidManifest: read('android/app/src/main/AndroidManifest.xml'),
-  androidUpdater: read('android/app/src/main/java/com/korczak/documents/Updater.kt'),
-  ios: read('ios/KZDocuments/ContentView.swift')
+  androidNative: readIfExists('android/app/src/main/java/com/korczak/documents/MainActivity.kt'),
+  androidApi: readIfExists('android/app/src/main/java/com/korczak/documents/ApiClient.kt'),
+  androidStorage: readIfExists('android/app/src/main/java/com/korczak/documents/StorageManager.kt'),
+  androidManifest: readIfExists('android/app/src/main/AndroidManifest.xml'),
+  androidUpdater: readIfExists('android/app/src/main/java/com/korczak/documents/Updater.kt'),
+  ios: readIfExists('ios/KZDocuments/ContentView.swift')
 };
 
 const nativeAssetPath = path.join(
@@ -97,8 +98,16 @@ const checks = [
   ['iOS: current Nexus URL', files.ios.includes('https://nexus.korczaktech.com.br/')]
 ];
 
-const failed = checks.filter(([, ok]) => !ok);
-for (const [name, ok] of checks) {
+const androidTargetPresent = fs.existsSync(path.join(root, 'android/app/src/main/java/com/korczak/documents/MainActivity.kt'));
+const iosTargetPresent = fs.existsSync(path.join(root, 'ios/KZDocuments/ContentView.swift'));
+// This repository can be deployed as web-only. Platform parity checks are only
+// meaningful when the corresponding native application target is present.
+const activeChecks = checks.filter(([name]) =>
+  (androidTargetPresent || !String(name).startsWith('Android:')) &&
+  (iosTargetPresent || !String(name).startsWith('iOS:'))
+);
+const failed = activeChecks.filter(([, ok]) => !ok);
+for (const [name, ok] of activeChecks) {
   console.log(`${ok ? 'PASS' : 'FAIL'} — ${name}`);
 }
 
@@ -107,4 +116,4 @@ if (failed.length) {
   process.exit(1);
 }
 
-console.log(`Fase 1: ${checks.length} verificações estáticas de integração passaram. Os testes comportamentais são executados separadamente pelo Vitest.`);
+console.log(`Fase 1: ${activeChecks.length} verificações estáticas de integração passaram. Os testes comportamentais são executados separadamente pelo Vitest.`);
