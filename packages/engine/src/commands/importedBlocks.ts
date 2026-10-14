@@ -213,7 +213,7 @@ export function insertImportedBlocksAtNestedSelection(params: {
       if (!prefix.some(run => run.text.length) && replacement[0]) replacement[0] = { ...replacement[0], id: source.id };
       paragraphs.splice(index, 1, ...replacement);
       const last = replacement[replacement.length - 1]!;
-      selection = { blockId: last.id, offset: plainLength(last) - (suffix.reduce((total, run) => total + run.text.length, 0)) };
+      selection = { blockId: last.id, offset: plainLength(last) - suffix.reduce((total, run) => total + run.text.length, 0) };
       return paragraphs;
     };
     const visit = (block: Block): Block => {
