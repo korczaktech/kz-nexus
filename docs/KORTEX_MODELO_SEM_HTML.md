@@ -40,6 +40,10 @@ segurança do Kortex.
   integrações e versões antigas do cliente.
 - O histórico de versões grava e restaura os dois campos, permitindo recuperar o
   modelo nativo junto com sua projeção HTML.
+- O histórico de desfazer/refazer de compatibilidade mantém snapshots `.nsx` do
+  `NexusDocument`, não snapshots HTML. Ao restaurar um snapshot nativo, o editor
+  carrega o modelo e regenera a projeção visual. Snapshots HTML antigos ainda são
+  aceitos como fallback de migração.
 - As preferências de layout do editor (página, margens, cabeçalho, rodapé e fonte)
   também são serializadas como metadado `editorLayout` no modelo Kortex; o
   comentário HTML de layout permanece apenas para compatibilidade com clientes antigos.
@@ -56,13 +60,11 @@ continua usando `contentEditable`, e a composição de texto por IME (por exempl
 teclados de idiomas asiáticos) ainda precisa reconciliar a composição final com o
 modelo. O DOM serve como projeção e como ponte limitada para essa composição;
 salvamento e exportação NSX usam o modelo Kortex como fonte. O paginador ainda
-organiza nós DOM para exibição e o histórico de compatibilidade mantém snapshots
-HTML para recuperar fluxos legados.
+organiza nós DOM para exibição e snapshots HTML antigos só são aceitos como fallback de migração do histórico.
 
 ## Próximas etapas seguras
 
-1. Fazer com que todos os comandos de edição alterem primeiro `NexusDocument`.
-2. Usar o HTML somente como projeção de visualização e adaptador de importação/exportação.
-3. Fazer com que seleção, formatação, tabelas, imagens e paginação operem primeiro sobre comandos do Kortex.
-4. Adicionar testes de ida e volta para todos os blocos, marcas, recursos e versões legadas.
-5. Só remover o caminho legado depois de confirmar compatibilidade com documentos existentes.
+1. Fechar as lacunas restantes de edição em que ferramentas auxiliares ainda modificam DOM diretamente.
+2. Fazer com que seleção, formatação, tabelas, imagens e paginação operem primeiro sobre comandos do Kortex.
+3. Adicionar testes de ida e volta para todos os blocos, marcas, recursos e versões legadas.
+4. Remover gradualmente os fallbacks HTML do histórico depois de confirmar compatibilidade com documentos existentes.
