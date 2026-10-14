@@ -57,7 +57,9 @@ describe("Kortex model persistence (.nsx)", () => {
     expect(decoded.ok).toBe(true);
     if (!decoded.ok) return;
     expect(decoded.value.metadata.title).toBe("Português — 日本語 — 😀");
-    expect(getPlainText(decoded.value.content[0]!)).toBe(firstBlock.children[0]!.text);
+    const decodedFirstBlock = decoded.value.content[0];
+    if (!decodedFirstBlock || decodedFirstBlock.type !== "paragraph") throw new Error("Expected round-tripped paragraph");
+    expect(getPlainText(decodedFirstBlock)).toBe(firstBlock.children[0]!.text);
   });
 
   it("applies the engine size limits consistently on write and read", () => {
