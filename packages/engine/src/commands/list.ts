@@ -75,6 +75,15 @@ export function convertBlocksToList(params: { blockIds: string[]; ordered: boole
         id: block.id,
         ...(block.align !== undefined ? { align: block.align } : {}),
         ...(block.indent !== undefined ? { indent: block.indent } : {}),
+        ...("firstLineIndent" in block && block.firstLineIndent !== undefined ? { firstLineIndent: block.firstLineIndent } : {}),
+        ...("hangingIndent" in block && block.hangingIndent !== undefined ? { hangingIndent: block.hangingIndent } : {}),
+        ...(block.spacingBefore !== undefined ? { spacingBefore: block.spacingBefore } : {}),
+        ...(block.spacingAfter !== undefined ? { spacingAfter: block.spacingAfter } : {}),
+        ...(block.lineSpacing !== undefined ? { lineSpacing: block.lineSpacing } : {}),
+        ...(block.backgroundColor !== undefined ? { backgroundColor: block.backgroundColor } : {}),
+        ...(block.borderColor !== undefined ? { borderColor: block.borderColor } : {}),
+        ...(block.borderWidth !== undefined ? { borderWidth: block.borderWidth } : {}),
+        ...(block.padding !== undefined ? { padding: block.padding } : {}),
         children: block.children,
       };
       return { type: "listItem", id: ctx.generateId(), children: [paragraph] };
