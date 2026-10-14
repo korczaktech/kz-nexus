@@ -342,9 +342,11 @@ export function layoutDocument(document: NexusDocument, options: LayoutOptions =
       const resource = document.resources.find(item => item.id === block.resourceId);
       const naturalWidth = safeNumber(block.width, Math.min(content.width, 240));
       const naturalHeight = safeNumber(block.height, resource ? naturalWidth * 0.75 : 24);
-      const scale = Math.min(1, content.width / Math.max(1, naturalWidth));
+      // Fit the image to both page dimensions, not only its width. This avoids
+      // silently placing a very tall image outside the printable area.
+      const scale = Math.min(1, content.width / Math.max(1, naturalWidth), content.height / Math.max(1, naturalHeight));
       const w = naturalWidth * scale, h = naturalHeight * scale;
-      if (h > content.height) diagnostics.push({ code: "OVERSIZED_BLOCK", message: "Imagem maior que a área útil da página; reduzida apenas à largura disponível.", blockId: block.id });
+      if (scale < 1) diagnostics.push({ code: "OVERSIZED_BLOCK", message: "Imagem reduzida proporcionalmente para caber na área útil da página.", blockId: block.id });
       if (cursorY > content.y && cursorY + h > content.y + content.height) nextPage();
       addBlock(block, { x: content.x, y: cursorY, width: w, height: h }, []);
       cursorY += h + 8; return;
@@ -377,18 +379,88 @@ export function layoutDocument(document: NexusDocument, options: LayoutOptions =
         fragmentRows = []; fragmentHeight = 0;
       };
       for (const row of rowLayouts) {
+        if (row.height > content.height) {
+          // Keep a pathological row's text intact by splitting the row between
+          // line boundaries. Each page fragment retains every cell and line.
+          if (cursorY > content.y) {
+            flushTableFragment();
+            nextPage();
+            fragmentStartY = cursorY;
+          }
+          const cellLines = row.cells.map((cell, cellIndex) => {
+            let localY = 4;
+            const lines: LayoutLine[] = [];
+            for (const paragraph of cell.paragraphs) {
+              lines.push(...paragraph.lines.map(line => ({
+                ...line,
+                x: cell.x + 4 + (line.x - (content.x + cellIndex * colWidth + 4)),
+                y: localY + line.y
+              })));
+              localY += paragraph.height;
+            }
+            return { cell, lines };
+          });
+          const allLines = cellLines.flatMap(item => item.lines);
+          const allLineBottoms = allLines.map(line => line.y + line.height);
+          let offset = 0;
+          while (offset < row.height - 0.001) {
+            const available = content.y + content.height - cursorY;
+            if (available <= 0.001) {
+              flushTableFragment();
+              nextPage();
+              fragmentStartY = cursorY;
+              continue;
+            }
+            let nextOffset = Math.min(row.height, offset + available);
+            const safeBoundaries = allLineBottoms.filter(bottom =>
+              bottom > offset + 0.001 && bottom <= offset + available + 0.001 &&
+              allLines.every(line => !(line.y < bottom - 0.001 && line.y + line.height > bottom + 0.001))
+            );
+            const boundary = safeBoundaries.reduce((best, bottom) => Math.max(best, bottom), offset);
+            if (boundary > offset + 0.001) {
+              nextOffset = Math.min(row.height, boundary);
+              // Keep the final bottom padding with the last line fragment.
+              if (row.height - nextOffset <= 8) nextOffset = row.height;
+            }
+            const chunkHeight = Math.max(0.001, nextOffset - offset);
+            const rowY = cursorY;
+            const cells = cellLines.map(({ cell, lines }) => ({
+              cellId: cell.cellId,
+              rect: { x: cell.x, y: rowY, width: cell.width, height: chunkHeight },
+              lines: lines.filter(line => line.y < nextOffset && line.y + line.height > offset)
+                .map(line => ({ ...line, y: rowY + line.y - offset }))
+            }));
+            if (cells.some(cell => cell.lines.some(line => line.height > content.height))) {
+              diagnostics.push({ code: "OVERSIZED_BLOCK", message: "Uma linha de texto dentro de uma célula é maior que a área útil da página.", blockId: block.id });
+            }
+            fragmentRows.push({
+              rowId: row.rowId,
+              rect: { x: content.x, y: rowY, width: content.width, height: chunkHeight },
+              cells
+            });
+            cursorY += chunkHeight;
+            fragmentHeight += chunkHeight;
+            // Emit a row fragment at each page boundary; table.continued marks
+            // every fragment after the first one.
+            const remaining = row.height - nextOffset;
+            offset = nextOffset;
+            if (remaining > 0.001) {
+              flushTableFragment();
+              nextPage();
+              fragmentStartY = cursorY;
+            }
+          }
+          continue;
+        }
         if (cursorY > content.y && cursorY + row.height > content.y + content.height) {
           flushTableFragment(); nextPage(); fragmentStartY = cursorY;
         }
-        // An individual row taller than a page is kept intact and reported. Hosts
-        // can inspect its line metrics and choose a more advanced cell-splitting UI.
-        if (row.height > content.height) diagnostics.push({ code: "OVERSIZED_BLOCK", message: "Linha de tabela maior que a área útil da página; mantida íntegra para não corromper células.", blockId: block.id });
         const rowY = cursorY;
         const cells = row.cells.map(cell => {
           let cellY = rowY + 4;
           const lines: LayoutLine[] = [];
           for (const paragraph of cell.paragraphs) {
-            lines.push(...paragraph.lines.map(line => ({ ...line, x: cell.x + 4 + (line.x - (content.x + (row.cells.indexOf(cell)) * colWidth + 4)), y: cellY + (line.y - 0) })));
+            lines.push(...paragraph.lines.map(line => ({ ...line, x: cell.x + 4 + (line.x - (content.x + (row.cells.indexOf(cell)) * colWidth + 4)), y: cellY + line.y })));
             cellY += paragraph.height;
           }
           return { cellId: cell.cellId, rect: { x: cell.x, y: rowY, width: cell.width, height: row.height }, lines };
@@ -419,17 +491,56 @@ export function layoutDocument(document: NexusDocument, options: LayoutOptions =
         const x = content.x + 14;
         const availableWidth = Math.max(1, content.width - 14);
         const measured = blockTextLayout(paragraph, x, cursorY, availableWidth, options);
-        if (measured.height > content.height) diagnostics.push({ code: "OVERSIZED_BLOCK",
-          message: "Parágrafo de citação maior que a área útil da página; mantido íntegro para preservar seus estilos.", blockId: paragraph.id });
         const spacing = safeNumber(paragraph.spacingAfter, 6);
-        if (cursorY > content.y && cursorY + measured.height + spacing > content.y + content.height) {
-          flushQuote();
-          nextPage();
-          fragmentStartY = cursorY;
+        let lineOffset = 0;
+        let firstFragment = true;
+        while (lineOffset < measured.lines.length) {
+          const topInset = firstFragment ? safeNumber(paragraph.padding, 0) + safeNumber(paragraph.borderWidth, 0) : 0;
+          let available = content.y + content.height - cursorY - topInset;
+          if (available < measured.lines[lineOffset].height && cursorY > content.y) {
+            flushQuote();
+            nextPage();
+            fragmentStartY = cursorY;
+            available = content.y + content.height - cursorY - topInset;
+          }
+          let count = 0;
+          let lineHeightSum = 0;
+          while (lineOffset + count < measured.lines.length) {
+            const nextHeight = measured.lines[lineOffset + count].height;
+            if (count > 0 && lineHeightSum + nextHeight > available + 0.001) break;
+            if (count === 0 && nextHeight > available && cursorY > content.y) break;
+            lineHeightSum += nextHeight;
+            count += 1;
+          }
+          if (count === 0) {
+            // A single glyph line can be taller than the page only when the
+            // document uses an extreme font size; place it once and diagnose it.
+            count = 1;
+            lineHeightSum = measured.lines[lineOffset].height;
+            diagnostics.push({ code: "OVERSIZED_BLOCK", message: "Uma linha da citação é maior que a área útil da página e não pode ser dividida.", blockId: paragraph.id });
+          }
+          const isLastFragment = lineOffset + count >= measured.lines.length;
+          const bottomInset = isLastFragment ? safeNumber(paragraph.padding, 0) + safeNumber(paragraph.borderWidth, 0) : 0;
+          const fragmentHeight = topInset + lineHeightSum + bottomInset;
+          const firstLineY = measured.lines[lineOffset].y;
+          const lines = measured.lines.slice(lineOffset, lineOffset + count).map(line => ({
+            ...line, y: cursorY + topInset + (line.y - firstLineY)
+          }));
+          fragmentChildren.push({
+            blockId: paragraph.id, type: "paragraph", pageIndex: page.index,
+            rect: { x, y: cursorY, width: availableWidth, height: fragmentHeight }, lines,
+            style: styleForParagraph(paragraph)
+          });
+          cursorY += fragmentHeight;
+          lineOffset += count;
+          firstFragment = false;
+          if (lineOffset < measured.lines.length) {
+            flushQuote();
+            nextPage();
+            fragmentStartY = cursorY;
+          }
         }
-        const child = paragraphChild(paragraph, x, cursorY, availableWidth);
-        fragmentChildren.push(child);
-        cursorY += child.rect.height + spacing;
+        cursorY += spacing;
         lastSpacing = spacing;
       }
       flushQuote();
@@ -459,9 +570,99 @@ export function layoutDocument(document: NexusDocument, options: LayoutOptions =
           nextPage();
           fragmentStartY = cursorY;
         }
-        if (itemHeight > content.height) diagnostics.push({ code: "OVERSIZED_BLOCK",
-          message: "Item de lista maior que a área útil da página; mantido íntegro e preservando a estrutura aninhada.", blockId: item.id });
         const marker = block.type === "orderedList" ? String(block.start + index) + "." : "•";
+        if (itemHeight > content.height && item.children.every(child => child.type === "paragraph")) {
+          // Oversized plain-text list items can span pages. Preserve the list
+          // item structure on each page and show the marker only on its first part.
+          if (cursorY > content.y) {
+            flushList();
+            nextPage();
+            fragmentStartY = cursorY;
+          }
+          let itemStartY = cursorY;
+          let itemChildren: LayoutBlock[] = [];
+          let firstItemFragment = true;
+          const finishItemFragment = () => {
+            if (!itemChildren.length) return;
+            fragmentChildren.push({
+              blockId: item.id, type: "listItem", pageIndex: page.index,
+              rect: { x: content.x, y: itemStartY, width: content.width, height: Math.max(12, cursorY - itemStartY) },
+              lines: [], children: itemChildren, marker: firstItemFragment ? marker : undefined, depth: 0
+            });
+            itemChildren = [];
+            firstItemFragment = false;
+          };
+          for (const paragraph of item.children) {
+            if (paragraph.type !== "paragraph") continue;
+            const x = content.x + 18;
+            const availableWidth = Math.max(1, content.width - 18);
+            const measured = blockTextLayout(paragraph, x, cursorY, availableWidth, options);
+            let lineOffset = 0;
+            let firstParagraphFragment = true;
+            while (lineOffset < measured.lines.length) {
+              const topInset = firstParagraphFragment ? safeNumber(paragraph.padding, 0) + safeNumber(paragraph.borderWidth, 0) : 0;
+              let available = content.y + content.height - cursorY - topInset;
+              if (available < measured.lines[lineOffset].height && cursorY > content.y) {
+                finishItemFragment();
+                flushList();
+                nextPage();
+                fragmentStartY = cursorY;
+                itemStartY = cursorY;
+                available = content.y + content.height - cursorY - topInset;
+              }
+              let count = 0;
+              let lineHeightSum = 0;
+              while (lineOffset + count < measured.lines.length) {
+                const nextHeight = measured.lines[lineOffset + count].height;
+                if (count > 0 && lineHeightSum + nextHeight > available + 0.001) break;
+                if (count === 0 && nextHeight > available && cursorY > content.y) break;
+                lineHeightSum += nextHeight;
+                count += 1;
+              }
+              if (count === 0) {
+                finishItemFragment();
+                flushList();
+                nextPage();
+                fragmentStartY = cursorY;
+                itemStartY = cursorY;
+                available = content.height;
+                count = 1;
+                lineHeightSum = measured.lines[lineOffset].height;
+                diagnostics.push({ code: "OVERSIZED_BLOCK", message: "Uma linha de texto de item de lista excede a área útil da página.", blockId: item.id });
+              }
+              const isLastFragment = lineOffset + count >= measured.lines.length;
+              const bottomInset = isLastFragment ? safeNumber(paragraph.padding, 0) + safeNumber(paragraph.borderWidth, 0) : 0;
+              const fragmentHeight = topInset + lineHeightSum + bottomInset;
+              const firstLineY = measured.lines[lineOffset].y;
+              const lines = measured.lines.slice(lineOffset, lineOffset + count).map(line => ({
+                ...line, y: cursorY + topInset + (line.y - firstLineY)
+              }));
+              itemChildren.push({
+                blockId: paragraph.id, type: "paragraph", pageIndex: page.index,
+                rect: { x, y: cursorY, width: availableWidth, height: fragmentHeight }, lines,
+                style: styleForParagraph(paragraph)
+              });
+              cursorY += fragmentHeight;
+              lineOffset += count;
+              firstParagraphFragment = false;
+              if (lineOffset < measured.lines.length) {
+                finishItemFragment();
+                flushList();
+                nextPage();
+                fragmentStartY = cursorY;
+                itemStartY = cursorY;
+              }
+            }
+            const paragraphSpacing = safeNumber(paragraph.spacingAfter, 6);
+            cursorY += Math.min(paragraphSpacing, Math.max(0, content.y + content.height - cursorY));
+          }
+          finishItemFragment();
+          cursorY += 2;
+          lastSpacing = 2;
+          continue;
+        }
+        if (itemHeight > content.height) diagnostics.push({ code: "OVERSIZED_BLOCK",
+          message: "Item de lista com listas aninhadas maior que a área útil da página; a estrutura é preservada, mas a divisão automática ainda não é suportada.", blockId: item.id });
         const laidOut = buildListItem(item, marker, 0, cursorY);
         fragmentChildren.push(laidOut.block);
         cursorY += laidOut.height + 2;
