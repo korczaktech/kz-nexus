@@ -42,6 +42,8 @@ export function setParagraphStyle(params: {
   borderColor?: string;
   borderWidth?: number;
   padding?: number;
+  firstLineIndent?: number;
+  hangingIndent?: number;
 }): Command {
   return (doc) => {
     for (const [name, value] of [["spacingBefore", params.spacingBefore], ["spacingAfter", params.spacingAfter]] as const) {
@@ -55,6 +57,8 @@ export function setParagraphStyle(params: {
     if (params.backgroundColor !== undefined && !isValidColor(params.backgroundColor)) return err(engineError("INVALID_DOCUMENT", "backgroundColor must be a hex color", { path: params.blockId }));
     if (params.borderColor !== undefined && !isValidColor(params.borderColor)) return err(engineError("INVALID_DOCUMENT", "borderColor must be a hex color", { path: params.blockId }));
     if (params.borderWidth !== undefined && (!Number.isFinite(params.borderWidth) || params.borderWidth < 0 || params.borderWidth > 20)) return err(engineError("INVALID_DOCUMENT", "borderWidth must be between 0 and 20 points", { path: params.blockId }));
+    if (params.firstLineIndent !== undefined && (!Number.isFinite(params.firstLineIndent) || params.firstLineIndent < 0 || params.firstLineIndent > 200)) return err(engineError("INVALID_DOCUMENT", "firstLineIndent must be between 0 and 200 points", { path: params.blockId }));
+    if (params.hangingIndent !== undefined && (!Number.isFinite(params.hangingIndent) || params.hangingIndent < 0 || params.hangingIndent > 200)) return err(engineError("INVALID_DOCUMENT", "hangingIndent must be between 0 and 200 points", { path: params.blockId }));
     if (params.padding !== undefined && (!Number.isFinite(params.padding) || params.padding < 0 || params.padding > 100)) return err(engineError("INVALID_DOCUMENT", "padding must be between 0 and 100 points", { path: params.blockId }));
     const node = findParagraphLike(doc.content, params.blockId);
     if (!node) return err(engineError("NODE_NOT_FOUND", `Block "${params.blockId}" not found`, { path: params.blockId }));
@@ -67,6 +71,8 @@ export function setParagraphStyle(params: {
       ...(params.borderColor !== undefined ? { borderColor: params.borderColor } : {}),
       ...(params.borderWidth !== undefined ? { borderWidth: params.borderWidth || undefined } : {}),
       ...(params.padding !== undefined ? { padding: params.padding || undefined } : {}),
+      ...(params.firstLineIndent !== undefined ? { firstLineIndent: params.firstLineIndent || undefined } : {}),
+      ...(params.hangingIndent !== undefined ? { hangingIndent: params.hangingIndent || undefined } : {}),
     } : current);
     return ok({ document: { ...doc, content } });
   };
