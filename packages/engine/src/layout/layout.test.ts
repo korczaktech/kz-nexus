@@ -77,11 +77,12 @@ describe("native layout engine", () => {
   });
 
   it("splits oversized table rows at line boundaries without losing cell text", () => {
+    const sourceText = Array.from({ length: 100 }, () => "wide text").join(" ");
     const table: Block = { type: "table", id: "oversized-table", children: [{
       type: "tableRow", id: "oversized-row", children: [{
         type: "tableCell", id: "oversized-cell", children: [{
           type: "paragraph", id: "oversized-p", children: [{
-            type: "text", id: "oversized-run", text: Array.from({ length: 100 }, () => "wide text").join(" "), marks: []
+            type: "text", id: "oversized-run", text: sourceText, marks: []
           }]
         }]
       }]
@@ -95,8 +96,7 @@ describe("native layout engine", () => {
     expect(fragments.length).toBeGreaterThan(1);
     expect(fragments[0].continued).toBe(false);
     expect(fragments.slice(1).every(fragment => fragment.continued === true)).toBe(true);
-    expect(rendered).toContain("wide text");
-    expect(rendered).toContain("wide");
+    expect(rendered.trim().split(" ")).toEqual(sourceText.split(" "));
   });
 
   it("marks only table fragments after the first as continued", () => {
@@ -191,8 +191,7 @@ describe("native layout engine", () => {
     const fragments = result.pages.flatMap(page => page.blocks.filter(block => block.blockId === "long-quote"));
     const rendered = fragments.flatMap(fragment => fragment.children || []).flatMap(child => child.lines.map(line => line.text)).join(" ");
     expect(result.pageCount).toBeGreaterThan(1);
-    expect(rendered.trim()).toContain("one two three");
-    expect(rendered).toContain("twentyfive");
+    expect(rendered.trim().split(" ")).toEqual(longText.split(" "));
     expect(fragments.every(fragment => fragment.rect.y + fragment.rect.height <= smallPage.height - smallPage.margins.bottom + 0.001)).toBe(true);
   });
 
@@ -212,8 +211,7 @@ describe("native layout engine", () => {
     expect(fragments.length).toBeGreaterThan(1);
     expect(fragments[0].continued).toBe(false);
     expect(fragments.slice(1).every(fragment => fragment.continued === true)).toBe(true);
-    expect(rendered).toContain("alpha bravo");
-    expect(rendered).toContain("yankee zulu");
+    expect(rendered.trim().split(" ")).toEqual(longText.split(" "));
     expect(fragments.every(fragment => fragment.rect.y + fragment.rect.height <= smallPage.height - smallPage.margins.bottom + 0.001)).toBe(true);
   });
 
@@ -232,8 +230,7 @@ describe("native layout engine", () => {
     expect(listFragments.length).toBeGreaterThan(1);
     expect(itemFragments[0].marker).toBe("1.");
     expect(itemFragments.slice(1).every(item => !item.marker)).toBe(true);
-    expect(rendered).toContain("one two three");
-    expect(rendered).toContain("thirtynine forty");
+    expect(rendered.trim().split(" ")).toEqual(longText.split(" "));
     expect(listFragments.every(fragment => fragment.rect.y + fragment.rect.height <= smallPage.height - smallPage.margins.bottom + 0.001)).toBe(true);
   });
 
