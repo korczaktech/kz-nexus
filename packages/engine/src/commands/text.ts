@@ -34,10 +34,13 @@ function splitRunsAt(runs: TextRun[], offset: number, generateId: () => string):
 
 function sameMarks(a: Mark[], b: Mark[]): boolean {
   if (a.length !== b.length) return false;
-  const key = (m: Mark): string => JSON.stringify(m);
-  const sa = a.map(key).sort();
-  const sb = b.map(key).sort();
-  return sa.every((value, index) => value === sb[index]);
+  // Marks are small discriminated unions; a compact key avoids repeated
+  // JSON serialization while preserving order-independent equality.
+  const key = (mark: Mark): string =>
+    "value" in mark ? `${mark.type}:${typeof mark.value}:${mark.value}` : mark.type;
+  const left = a.map(key).sort();
+  const right = b.map(key).sort();
+  return left.every((value, index) => value === right[index]);
 }
 
 /**
