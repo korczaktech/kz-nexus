@@ -12,7 +12,7 @@ import type {EditorLayoutSettings} from './editorLayoutMetadata';
 import {parseRtfToHtml} from './editorRtf';
 import {mergeDocumentContent} from './editorMerge';
 import {createEditor, createIdGenerator, systemClock, type Mark, type Block, getPlainText, applyMark, setAlign, setIndent, setParagraphStyle, setHeadingLevel, convertBlockToBlockquote, insertBlockquote, insertThematicBreak, insertParagraphAfter, splitBlock, mergeBlockWithPrevious, deleteBlock, convertBlockToList, convertListType, splitListItem, mergeListItemWithPrevious, insertTable as engineInsertTable, addTableRow, removeTableRow, addTableColumn, removeTableColumn, insertListItem, removeListItem, insertImageResource, insertImportedBlocksAtSelection, removeImage, setPageConfig, setMetadata, insertText, deleteText, replaceRange, exportPlainText, exportHtml as exportEngineHtml, exportMarkdown, importPlainText, importMarkdown} from '../../../packages/engine/src/index';
-import {deserializeNexusHtml,nexusDocumentFromHtml,serializeNexusHtml,syncNexusEngine,toggleEngineMarkForDomSelection,applyEngineMarksForDomSelection,removeEngineMarksForDomSelection,removeEngineLinkForDomSelection,restoreEngineDomSelection,getEngineDomContext,htmlFromNexusDocument} from '../services/nexusEngineAdapter';
+import {deserializeNexusHtml,nexusDocumentFromHtml,serializeNexusHtml,syncNexusEngine,toggleEngineMarkForDomSelection,applyEngineMarksForDomSelection,removeEngineMarksForDomSelection,removeEngineLinkForDomSelection,restoreEngineDomSelection,getEngineDomContext,getEngineTextBlocks,htmlFromNexusDocument} from '../services/nexusEngineAdapter';
 import {decodeNexusDocument,encodeNexusDocument} from '../services/nexusDocumentPersistence';
 import {normalizeTextRange,wordDeletionRange} from './editorSelection';
 
@@ -401,13 +401,11 @@ export function Editor({document,versions,onSave,onClose,onConflict}:{document:D
  function runEngineStructure(command:string,value?:string){const engine=nexusEngineRef.current;if(!engine)return false;const context=engineContext();if(!context)return false;const top=context.topLevelBlock;const topId=top.id;const blockId=context.block.id;
   if(command==='justifyLeft'||command==='justifyCenter'||command==='justifyRight'||command==='justifyFull'){
    const align=command==='justifyLeft'?'start':command==='justifyCenter'?'center':command==='justifyRight'?'end':'justify';
-   const doc=engine.getDocument(),selected=doc.content.slice(context.topLevelIndex,context.endTopLevelIndex+1);
-   const targets=selected.length>1&&selected.every((item):item is Extract<Block,{type:'paragraph'|'heading'}>=>item.type==='paragraph'||item.type==='heading')?selected:[context.block];
+   const targets=getEngineTextBlocks(engine).slice(context.blockIndex,context.endBlockIndex+1);
    return commitEngineCommands(targets.map(item=>setAlign({blockId:item.id,align})),'formatting')
   }
   if(command==='indent'||command==='outdent'){
-   const doc=engine.getDocument(),selected=doc.content.slice(context.topLevelIndex,context.endTopLevelIndex+1);
-   const targets=selected.length>1&&selected.every((item):item is Extract<Block,{type:'paragraph'|'heading'}>=>item.type==='paragraph'||item.type==='heading')?selected:[context.block];
+   const targets=getEngineTextBlocks(engine).slice(context.blockIndex,context.endBlockIndex+1);
    return commitEngineCommands(targets.map(item=>setIndent({blockId:item.id,indent:Math.max(0,Math.min(720,(item.indent??0)+(command==='indent'?36:-36)))})),'formatting')
   }
   if(command==='formatBlock'){
