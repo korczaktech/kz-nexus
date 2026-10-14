@@ -45,7 +45,6 @@ export interface LayoutResult {
   pageCount: number;
   diagnostics: Array<{ code: "OVERSIZED_BLOCK" | "INVALID_PAGE_CONFIG"; message: string; blockId?: string }>;
 }
-const PT_PER_INCH = 72;
 const DEFAULT_FONT = 11;
 const HEADING_SIZES: Record<number, number> = { 1: 24, 2: 20, 3: 16, 4: 14, 5: 12, 6: 11 };
 
@@ -181,53 +180,80 @@ export function layoutDocument(document: NexusDocument, options: LayoutOptions =
     if (block.type === "table") {
       const columnCount = Math.max(1, ...block.children.map(row => row.children.length));
       const colWidth = content.width / columnCount;
-      const rows: NonNullable<LayoutBlock["table"]>["rows"] = [];
-      let totalHeight = 0;
-      for (const row of block.children) {
+      const rowLayouts = block.children.map(row => {
         const cells = row.children.map((cell, cellIndex) => {
-          const cellLines: LayoutLine[] = [];
-          let cellHeight = 8;
-          for (const paragraph of cell.children) {
-            const measured = blockTextLayout(paragraph, content.x + cellIndex * colWidth + 4, cursorY + totalHeight + cellHeight, Math.max(1, colWidth - 8), options);
-            cellLines.push(...measured.lines); cellHeight += measured.height;
-          }
-          return { cellId: cell.id, rect: { x: content.x + cellIndex * colWidth, y: cursorY + totalHeight, width: colWidth, height: cellHeight }, lines: cellLines, _height: cellHeight };
+          const measuredParagraphs = cell.children.map(paragraph => blockTextLayout(
+            paragraph, content.x + cellIndex * colWidth + 4, 0, Math.max(1, colWidth - 8), options
+          ));
+          const cellHeight = 8 + measuredParagraphs.reduce((sum, item) => sum + item.height, 0);
+          return { cellId: cell.id, x: content.x + cellIndex * colWidth, width: colWidth, height: cellHeight, paragraphs: measuredParagraphs };
         });
-        const rowHeight = Math.max(24, ...cells.map(cell => cell._height));
-        rows.push({ rowId: row.id, rect: { x: content.x, y: cursorY + totalHeight, width: content.width, height: rowHeight }, cells: cells.map(({cellId,rect,lines})=>({cellId,rect:{...rect,height:rowHeight},lines})) });
-        totalHeight += rowHeight;
+        return { rowId: row.id, height: Math.max(24, ...cells.map(cell => cell.height)), cells };
+      });
+      let fragmentRows: NonNullable<LayoutBlock["table"]>["rows"] = [];
+      let fragmentStartY = cursorY;
+      let fragmentHeight = 0;
+      const flushTableFragment = () => {
+        if (!fragmentRows.length) return;
+        page.blocks.push({
+          blockId: block.id, type: "table", pageIndex: page.index,
+          rect: { x: content.x, y: fragmentStartY, width: content.width, height: fragmentHeight },
+          lines: [], table: { rows: fragmentRows }, continued: fragmentStartY !== cursorY || fragmentRows.length < rowLayouts.length
+        });
+        fragmentRows = []; fragmentHeight = 0;
+      };
+      for (const row of rowLayouts) {
+        if (cursorY > content.y && cursorY + row.height > content.y + content.height) {
+          flushTableFragment(); nextPage(); fragmentStartY = cursorY;
+        }
+        // An individual row taller than a page is kept intact and reported. Hosts
+        // can inspect its line metrics and choose a more advanced cell-splitting UI.
+        if (row.height > content.height) diagnostics.push({ code: "OVERSIZED_BLOCK", message: "Linha de tabela maior que a área útil da página; mantida íntegra para não corromper células.", blockId: block.id });
+        const rowY = cursorY;
+        const cells = row.cells.map(cell => {
+          let cellY = rowY + 4;
+          const lines: LayoutLine[] = [];
+          for (const paragraph of cell.paragraphs) {
+            lines.push(...paragraph.lines.map(line => ({ ...line, x: cell.x + 4 + (line.x - (content.x + (row.cells.indexOf(cell)) * colWidth + 4)), y: cellY + (line.y - 0) })));
+            cellY += paragraph.height;
+          }
+          return { cellId: cell.cellId, rect: { x: cell.x, y: rowY, width: cell.width, height: row.height }, lines };
+        });
+        fragmentRows.push({ rowId: row.rowId, rect: { x: content.x, y: rowY, width: content.width, height: row.height }, cells });
+        cursorY += row.height; fragmentHeight += row.height;
       }
-      if (cursorY > content.y && cursorY + totalHeight > content.y + content.height) nextPage();
-      // Rows are kept intact. If a table exceeds a page, it is moved to the next page
-      // when possible; oversized tables are split only at row boundaries.
-      let tableY = cursorY;
-      const positionedRows: typeof rows = [];
-      for (const row of rows) {
-        if (tableY > content.y && tableY + row.rect.height > content.y + content.height) { nextPage(); tableY = cursorY; }
-        const dy = tableY - row.rect.y;
-        positionedRows.push({ ...row, rect: { ...row.rect, y: tableY }, cells: row.cells.map(cell => ({ ...cell, rect: { ...cell.rect, y: cell.rect.y + dy }, lines: cell.lines.map(line => ({ ...line, y: line.y + dy })) })) });
-        tableY += row.rect.height;
-      }
-      const lastPageIndex = page.index;
-      const tableBlock: LayoutBlock = { blockId: block.id, type: "table", pageIndex: lastPageIndex, rect: { x: content.x, y: cursorY, width: content.width, height: totalHeight }, lines: [], table: { rows: positionedRows } };
-      page.blocks.push(tableBlock);
-      cursorY = tableY + 8;
+      flushTableFragment();
+      cursorY += 8;
       return;
     }
     if (block.type === "paragraph" || block.type === "heading") {
       const spacingBefore = safeNumber(block.spacingBefore, block.type === "heading" ? 8 : 0);
       const spacingAfter = safeNumber(block.spacingAfter, block.type === "heading" ? 5 : 6);
-      const measured = blockTextLayout(block, content.x, cursorY + spacingBefore, content.width, options);
+      let measured = blockTextLayout(block, content.x, 0, content.width, options);
+      const lineHeight = measured.lines[0]?.height || safeNumber(options.fontSize, DEFAULT_FONT) * 1.2;
+      const totalHeight = measured.height;
       const remaining = content.y + content.height - cursorY;
-      if (cursorY > content.y && measured.height + spacingBefore + spacingAfter > remaining && (options.keepParagraphsTogether || (options.keepHeadingsWithNext && block.type === "heading"))) {
-        nextPage();
-      } else if (cursorY > content.y && measured.height + spacingBefore > remaining) {
-        nextPage();
+      if (cursorY > content.y && totalHeight + spacingBefore + spacingAfter > remaining && (options.keepParagraphsTogether || (options.keepHeadingsWithNext && block.type === "heading"))) nextPage();
+      cursorY += spacingBefore;
+      measured = blockTextLayout(block, content.x, cursorY, content.width, options);
+      let lineOffset = 0;
+      let firstFragment = true;
+      while (lineOffset < measured.lines.length) {
+        const available = content.y + content.height - cursorY;
+        if (available < lineHeight && cursorY > content.y) nextPage();
+        const usable = content.y + content.height - cursorY;
+        const fitCount = Math.max(1, Math.floor((usable + 0.001) / lineHeight));
+        const count = Math.min(fitCount, measured.lines.length - lineOffset);
+        const fragmentLines = measured.lines.slice(lineOffset, lineOffset + count).map(line => ({ ...line, y: cursorY + (line.y - measured.lines[0].y) }));
+        const fragmentHeight = Math.max(lineHeight, count * lineHeight);
+        addBlock(block, { x: content.x, y: cursorY, width: content.width, height: fragmentHeight }, fragmentLines, { continued: !firstFragment });
+        cursorY += fragmentHeight;
+        lineOffset += count;
+        firstFragment = false;
+        if (lineOffset < measured.lines.length) nextPage();
       }
-      const positioned = blockTextLayout(block, content.x, cursorY + spacingBefore, content.width, options);
-      if (positioned.height > content.height) diagnostics.push({ code: "OVERSIZED_BLOCK", message: "Bloco de texto maior que a área útil da página; as linhas permanecem disponíveis para o host paginar.", blockId: block.id });
-      addBlock(block, { x: content.x, y: cursorY + spacingBefore, width: content.width, height: positioned.height }, positioned.lines);
-      cursorY += spacingBefore + positioned.height + spacingAfter;
+      if (measured.lines.length === 0) cursorY += lineHeight;
+      cursorY += spacingAfter;
       return;
     }
     const text = plainBlockText(block);
