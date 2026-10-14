@@ -86,6 +86,20 @@ describe("native layout engine", () => {
     expect(endLine.align).toBe("end");
   });
 
+  it("measures mixed font sizes per run and retains run-level layout metrics", () => {
+    const mixed: Block = { type: "paragraph", id: "mixed", children: [
+      { type: "text", id: "small-run", text: "small ", marks: [{ type: "fontSize", value: 8 }] },
+      { type: "text", id: "large-run", text: "LARGE", marks: [{ type: "fontSize", value: 24 }, { type: "bold" }] }
+    ] };
+    const result = layoutDocument(documentWith([mixed]), { metrics });
+    const line = result.pages[0].blocks[0].lines[0];
+    expect(line.height).toBeGreaterThanOrEqual(28.8);
+    expect(line.runs).toHaveLength(2);
+    expect(line.runs?.[0].fontSize).toBe(8);
+    expect(line.runs?.[1].fontSize).toBe(24);
+    expect(line.runs?.[1].marks.some(mark => mark.type === "bold")).toBe(true);
+  });
+
   it("retains ordered, unordered, nested list markers and blockquote prefixes", () => {
     const nested: Block = { type: "orderedList", id: "list", start: 3, children: [
       { type: "listItem", id: "item-1", children: [
