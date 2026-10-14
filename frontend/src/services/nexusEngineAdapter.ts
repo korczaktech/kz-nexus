@@ -97,9 +97,11 @@ function makeParagraph(node: Element, type: "paragraph" | "heading" = "paragraph
   const spacingAfter = toPoints(css.marginBottom);
   const lineSpacingValue = Number.parseFloat(css.lineHeight);
   const backgroundColor = css.backgroundColor && isValidColor(css.backgroundColor) ? css.backgroundColor : undefined;
-  const borderMatch = /^([0-9.]+)(px|pt) solid (#[0-9a-f]{3}(?:[0-9a-f]{3})?|rgb\(\s*\d{1,3}\s*,\s*\d{1,3}\s*,\s*\d{1,3}\s*\))$/i.exec(css.border);
-  const borderWidth = borderMatch ? Number(borderMatch[1]) * (borderMatch[2].toLowerCase() === "px" ? 0.75 : 1) : undefined;
-  const borderColor = borderMatch ? cssColorToHex(borderMatch[3]) : undefined;
+  const borderWidthRaw = css.borderTopWidth || css.borderWidth;
+  const borderWidthMatch = /^([0-9.]+)(px|pt)$/i.exec(borderWidthRaw);
+  const borderStyle = css.borderTopStyle || css.borderStyle;
+  const borderWidth = borderStyle === "solid" && borderWidthMatch ? Number(borderWidthMatch[1]) * (borderWidthMatch[2].toLowerCase() === "px" ? 0.75 : 1) : undefined;
+  const borderColor = borderStyle === "solid" ? cssColorToHex(css.borderTopColor || css.borderColor) : undefined;
   const paddingValue = toPoints(css.padding);
   const spacing = { ...(spacingBefore ? { spacingBefore } : {}), ...(spacingAfter ? { spacingAfter } : {}), ...(Number.isFinite(lineSpacingValue) && lineSpacingValue >= 0.5 && lineSpacingValue <= 4 ? { lineSpacing: lineSpacingValue } : {}), ...(backgroundColor ? { backgroundColor } : {}), ...(borderColor && borderWidth ? { borderColor, borderWidth } : {}), ...(paddingValue ? { padding: paddingValue } : {}) };
   if (type === "heading") {
@@ -138,7 +140,7 @@ function tableBlock(element: Element): Extract<Block, { type: "table" }> {
 
 function sanitizeImportedHtml(parsed: Document): void {
   parsed.querySelectorAll("script,style,iframe,object,embed,form,input,button,textarea,select,option,link,meta,base,svg,math,template").forEach(node => node.remove());
-  const allowedStyles = new Set(["color", "background-color", "font-size", "font-family", "text-align", "margin-left", "margin-top", "margin-bottom", "line-height", "border", "padding", "width", "height"]);
+  const allowedStyles = new Set(["color", "background-color", "font-size", "font-family", "text-align", "margin-left", "margin-top", "margin-bottom", "line-height", "border", "border-top-width", "border-top-style", "border-top-color", "border-right-width", "border-right-style", "border-right-color", "border-bottom-width", "border-bottom-style", "border-bottom-color", "border-left-width", "border-left-style", "border-left-color", "padding", "width", "height"]);
   parsed.body.querySelectorAll("*").forEach(element => {
     for (const attribute of Array.from(element.attributes)) {
       const name = attribute.name.toLowerCase();
@@ -159,15 +161,17 @@ function sanitizeImportedHtml(parsed: Document): void {
         const style = (element as HTMLElement).style;
         for (const property of Array.from(style)) {
           const value = style.getPropertyValue(property).trim();
-          const normalizedColor = property === "color" || property === "background-color" ? cssColorToHex(value) : undefined;
+          const isBorderColor = /^border-(?:top|right|bottom|left)-color$/.test(property);
+          const normalizedColor = property === "color" || property === "background-color" || isBorderColor ? cssColorToHex(value) : undefined;
           if (normalizedColor) style.setProperty(property, normalizedColor);
           const valid = allowedStyles.has(property) && (
-            (property === "color" || property === "background-color") ? normalizedColor !== undefined :
+            (property === "color" || property === "background-color" || isBorderColor) ? normalizedColor !== undefined :
             property === "font-size" ? /^(?:\d+(?:\.\d+)?)(?:px|pt|em|rem|%)$/i.test(value) && Number.parseFloat(value) > 0 && Number.parseFloat(value) <= 200 :
             property === "font-family" ? /^[\w\s,'"()-]{1,120}$/.test(value) :
             property === "text-align" ? /^(?:left|right|center|justify|start|end)$/i.test(value) :
             property === "line-height" ? /^(?:\d+(?:\.\d+)?)(?:px|pt|em|rem|%)?$/i.test(value) && Number.parseFloat(value) >= 0.5 && Number.parseFloat(value) <= 4 :
             property === "border" ? /^\d+(?:\.\d+)?(?:px|pt) solid (?:#[0-9a-f]{3}(?:[0-9a-f]{3})?|rgb\(\s*\d{1,3}\s*,\s*\d{1,3}\s*,\s*\d{1,3}\s*\))$/i.test(value) :
+            property.endsWith("-style") && property.startsWith("border-") ? value === "solid" :
             /^(?:\d+(?:\.\d+)?)(?:px|pt|mm|cm|in|%)$/i.test(value)
           );
           if (!valid) style.removeProperty(property);
