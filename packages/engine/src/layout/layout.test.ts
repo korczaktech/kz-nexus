@@ -167,6 +167,30 @@ describe("native layout engine", () => {
     expect(quoteLayout.children?.[0].lines[0].runs?.[0].marks.some(mark => mark.type === "italic")).toBe(true);
   });
 
+  it("fits oversized images to both dimensions of the printable page", () => {
+    const image: Block = { type: "image", id: "tall-image", resourceId: "missing-resource", alt: "Tall image", width: 100, height: 500 };
+    const result = layoutDocument(documentWith([image]), { metrics });
+    const placed = result.pages[0].blocks.find(block => block.blockId === "tall-image")!;
+    expect(placed.rect.width).toBeCloseTo(36, 5);
+    expect(placed.rect.height).toBeCloseTo(180, 5);
+    expect(result.diagnostics.some(item => item.code === "OVERSIZED_BLOCK" && item.blockId === "tall-image")).toBe(true);
+  });
+
+  it("splits long blockquote paragraphs across pages without dropping lines", () => {
+    const longText = "one two three four five six seven eight nine ten eleven twelve thirteen fourteen fifteen sixteen seventeen eighteen nineteen twenty twentyone twentytwo twentythree twentyfour twentyfive";
+    const quote: Block = { type: "blockquote", id: "long-quote", children: [
+      { type: "paragraph", id: "long-quote-p", children: [{ type: "text", id: "long-quote-run", text: longText, marks: [] }] }
+    ] };
+    const smallPage = { unit: "pt" as const, width: 160, height: 55, orientation: "portrait" as const, margins: { top: 5, right: 10, bottom: 5, left: 10 } };
+    const result = layoutDocument(documentWith([quote], smallPage), { metrics });
+    const fragments = result.pages.flatMap(page => page.blocks.filter(block => block.blockId === "long-quote"));
+    const rendered = fragments.flatMap(fragment => fragment.children || []).flatMap(child => child.lines.map(line => line.text)).join(" ");
+    expect(result.pageCount).toBeGreaterThan(1);
+    expect(rendered.replace(/\\s+/g, " ").trim()).toContain("one two three");
+    expect(rendered).toContain("twentyfive");
+    expect(fragments.every(fragment => fragment.rect.y + fragment.rect.height <= smallPage.height - smallPage.margins.bottom + 0.001)).toBe(true);
+  });
+
   it("reports invalid page geometry and safely uses a default page", () => {
     const invalid = { unit: "pt" as const, width: 100, height: 100, orientation: "portrait" as const, margins: { top: 80, right: 80, bottom: 80, left: 80 } };
     const result = layoutDocument(documentWith([paragraph("p", "fallback")], invalid), { metrics });
