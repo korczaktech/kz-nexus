@@ -154,4 +154,28 @@ describe("Nexus editor adapter", () => {
     engine.dispose();
   });
 
+  it("round-trips native page breaks through the editor model and HTML projection", () => {
+    const document = nexusDocumentFromHtml('<p>Before</p><div data-kz-page-break="true" style="break-before:page"></div><p>After</p>', "Page break test");
+    expect(document.content.map(block => block.type)).toEqual(["paragraph", "thematicBreak", "paragraph"]);
+    const pageBreak = document.content[1];
+    expect(pageBreak && pageBreak.type === "thematicBreak" ? pageBreak.kind : undefined).toBe("pageBreak");
+    const html = htmlFromNexusDocument(document);
+    expect(html).toContain('data-kz-page-break="true"');
+    const reopened = nexusDocumentFromHtml(html, "Page break test");
+    expect(reopened.content[1]).toMatchObject({ type: "thematicBreak", kind: "pageBreak" });
+  });
+
+  it("round-trips native text-box and shape metadata without flattening them to images", () => {
+    const source = '<p data-kz-object="textBox" data-kz-object-label="Caixa" data-kz-object-stroke="#64748b" data-kz-object-fill="#f8fafc" style="border:1px solid #64748b;padding:12px">Texto editável</p><p data-kz-object="shape" data-kz-object-shape="ellipse" data-kz-object-label="Círculo" data-kz-object-stroke="#2563eb">Forma</p>';
+    const document = nexusDocumentFromHtml(source, "Editable objects");
+    expect(document.content[0]).toMatchObject({ type: "paragraph", editorObject: { kind: "textBox", label: "Caixa", stroke: "#64748b", fill: "#f8fafc" } });
+    expect(document.content[1]).toMatchObject({ type: "paragraph", editorObject: { kind: "shape", shape: "ellipse", label: "Círculo", stroke: "#2563eb" } });
+    const html = htmlFromNexusDocument(document);
+    expect(html).toContain('data-kz-object="textBox"');
+    expect(html).toContain('data-kz-object-shape="ellipse"');
+    const reopened = nexusDocumentFromHtml(html, "Editable objects");
+    expect(reopened.content[0]).toMatchObject({ type: "paragraph", editorObject: { kind: "textBox", label: "Caixa" } });
+    expect(reopened.content[1]).toMatchObject({ type: "paragraph", editorObject: { kind: "shape", shape: "ellipse" } });
+  });
+
 });
