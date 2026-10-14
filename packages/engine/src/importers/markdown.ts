@@ -50,7 +50,7 @@ function splitCells(line: string): string[] {
 }
 
 function isTableDivider(line: string): boolean {
-  return /^\s*\|?\s*:?-{3,}:?\s*(?:\|\s*:?-{3,}:?\s*)+\|?\s*$/.test(line);
+  return /^\s*\|?\s*:?-{3,}:?\s*(?:\|\s*:?-{3,}:?\s*)*\|?\s*$/.test(line);
 }
 
 function isBlockStart(lines: string[], index: number): boolean {
