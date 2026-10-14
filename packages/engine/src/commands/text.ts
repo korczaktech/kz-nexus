@@ -1,5 +1,5 @@
 import type { Mark, NexusDocument, TextRun } from "../model/types";
-import { findParagraphLike, getPlainText, mapParagraphLike } from "../model/tree";
+import { findParagraphLike, getPlainText, updateParagraphLike } from "../model/tree";
 import { engineError } from "../errors/errors";
 import { err, ok } from "../utils/result";
 import type { Command } from "./types";
@@ -76,9 +76,9 @@ export function insertText(params: { blockId: string; offset: number; text: stri
     if (params.offset < 0 || params.offset > currentLength) {
       return err(engineError("INVALID_POSITION", `Offset ${params.offset} out of range [0, ${currentLength}]`, { path: params.blockId }));
     }
-    const content = mapParagraphLike(doc.content, (n) =>
+    const content = updateParagraphLike(doc.content, params.blockId, (n) =>
       n.id === params.blockId ? { ...n, children: rebuildRuns(n.children, params.offset, params.offset, params.text, ctx) } : n,
-    );
+    ).blocks;
     return ok({ document: { ...doc, content }, selection: { blockId: params.blockId, offset: params.offset + params.text.length } });
   };
 }
@@ -93,9 +93,9 @@ export function deleteText(params: { blockId: string; start: number; end: number
       return err(engineError("INVALID_POSITION", `Invalid range [${params.start}, ${params.end}]`, { path: params.blockId }));
     }
     const { start, end } = params;
-    const content = mapParagraphLike(doc.content, (n) =>
+    const content = updateParagraphLike(doc.content, params.blockId, (n) =>
       n.id === params.blockId ? { ...n, children: rebuildRuns(n.children, start, end, "", ctx) } : n,
-    );
+    ).blocks;
     return ok({ document: { ...doc, content }, selection: { blockId: params.blockId, offset: start } });
   };
 }
@@ -109,9 +109,9 @@ export function replaceRange(params: { blockId: string; start: number; end: numb
     if (params.start < 0 || params.end > currentLength || params.start > params.end) {
       return err(engineError("INVALID_POSITION", `Invalid range [${params.start}, ${params.end}]`, { path: params.blockId }));
     }
-    const content = mapParagraphLike(doc.content, (n) =>
+    const content = updateParagraphLike(doc.content, params.blockId, (n) =>
       n.id === params.blockId ? { ...n, children: rebuildRuns(n.children, params.start, params.end, params.text, ctx) } : n,
-    );
+    ).blocks;
     return ok({ document: { ...doc, content }, selection: { blockId: params.blockId, offset: params.start + params.text.length } });
   };
 }
