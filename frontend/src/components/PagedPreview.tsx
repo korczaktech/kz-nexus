@@ -63,7 +63,7 @@ export function PagedPreview({
         diagnostics: [reason instanceof Error ? reason.message : "Falha na análise geométrica nativa."],
       });
     }
-  }, [document, html, css]);
+  }, [document]);
 
   useEffect(() => {
     let cancelled = false;
