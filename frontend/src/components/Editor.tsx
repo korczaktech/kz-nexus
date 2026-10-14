@@ -281,7 +281,7 @@ export function Editor({document,versions,onSave,onClose,onConflict}:{document:D
    let context=engineContext();
    if(!context)return;
    if(inputType==='insertLineBreak'){exec('insertText','\\n');return}
-   if(context.startOffset!==context.endOffset){exec('insertText','');context=engineContext();if(!context)return}
+   if(context.blockIndex!==context.endBlockIndex||context.startOffset!==context.endOffset){exec('insertText','');context=engineContext();if(!context)return}
    if(context.list){runEngineStructure('splitListItem');return}
    if(context.block.type==='paragraph'||context.block.type==='heading'){runEngineStructure('splitBlock');return}
    setMessage('Este contêiner ainda não aceita quebra de parágrafo pelo motor Kortex.');return;
@@ -291,7 +291,7 @@ export function Editor({document,versions,onSave,onClose,onConflict}:{document:D
    const context=engineContext(),engine=nexusEngineRef.current;
    if(!context||!engine)return;
    const {start,end}=normalizeTextRange(context.startOffset,context.endOffset);
-   if(start!==end){exec('insertText','');return}
+   if(context.blockIndex!==context.endBlockIndex||start!==end){exec('insertText','');return}
    const text=getPlainText(context.block);
    let from=start,to=start;
    if(inputType==='deleteContentBackward')from=Math.max(0,start-1);
