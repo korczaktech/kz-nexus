@@ -583,7 +583,7 @@ export function removeEngineMarksForDomSelection(
   if (anchorIndex < 0 || focusIndex < 0 || anchorOffset === null || focusOffset === null) return { ok: false, message: "Não foi possível mapear a direção da seleção." };
   const selectionResult = engine.setSelection({ anchor: { blockId: modelBlocks[anchorIndex].id, offset: anchorOffset }, focus: { blockId: modelBlocks[focusIndex].id, offset: focusOffset } });
   if (!selectionResult.ok) return { ok: false, message: selectionResult.error.message };
-  const types: MarkType[] = selectedTypes ?? ["bold", "italic", "underline", "strike", "superscript", "subscript", "color", "highlight", "fontSize", "fontFamily", "link"];
+  const types: MarkType[] = selectedTypes ?? ["bold", "italic", "underline", "strike", "superscript", "subscript", "color", "highlight", "fontSize", "fontFamily", "link", "comment"];
   const commands = modelBlocks.slice(startIndex, endIndex + 1).flatMap((block, relativeIndex) => {
     const index = startIndex + relativeIndex;
     const start = index === startIndex ? startOffset : 0;
