@@ -280,6 +280,11 @@ function logicalTextBlocks(blocks: Block[]): LogicalTextBlock[] {
   return result;
 }
 
+/** Returns the canonical text blocks in the same logical order used for DOM selection mapping. */
+export function getEngineTextBlocks(engine: ReturnType<typeof createEditor>): Array<Extract<Block, { type: "paragraph" | "heading" }>> {
+  return logicalTextBlocks(engine.getDocument().content);
+}
+
 function domTextBlocks(root: HTMLElement): HTMLElement[] {
   const selector = "p,h1,h2,h3,h4,h5,h6,li,td,th,blockquote";
   return Array.from(root.querySelectorAll<HTMLElement>(selector)).filter(element => {
