@@ -21,7 +21,7 @@ describe("Kortex model persistence (.nsx)", () => {
     expect(result.value).toContain('"format": "korczak-nexus"');
     expect(result.value).toContain('"formatVersion":');
     expect(result.value).toContain('"document":');
-    expect(result.value).not.toMatch(/<\\/?(?:html|body|p|div)(?:\\s|>)/i);
+    expect(result.value).not.toMatch(/<\/?(?:html|body|p|div)(?:\s|>)/i);
   });
 
   it("round-trips the identity, metadata, page configuration, content and resources", () => {
@@ -48,7 +48,7 @@ describe("Kortex model persistence (.nsx)", () => {
     const document = createDocument({ title: "Português — 日本語 — 😀" });
     const firstBlock = document.content[0];
     if (!firstBlock || firstBlock.type !== "paragraph") throw new Error("Expected default paragraph");
-    firstBlock.children[0]!.text = "Ação, coração, 你好, 😀 e acentos combinados: e\\u0301";
+    firstBlock.children[0]!.text = "Ação, coração, 你好, 😀 e acentos combinados: e\u0301";
 
     const encoded = encodeNexusDocument(document);
     expect(encoded.ok).toBe(true);
@@ -84,7 +84,7 @@ describe("Kortex model persistence (.nsx)", () => {
     expect(NSX_FILE_EXTENSION).toBe(".nsx");
     expect(isNsxFilename("report.nsx")).toBe(true);
     expect(isNsxFilename("REPORT.NSX")).toBe(true);
-    expect(isNsxFilename("C:\\\\docs\\\\report.nsx")).toBe(true);
+    expect(isNsxFilename("C:\\docs\\report.nsx")).toBe(true);
     expect(isNsxFilename("/home/user/report.nsx")).toBe(true);
     expect(isNsxFilename("report.html")).toBe(false);
     expect(isNsxFilename(".nsx")).toBe(false);
