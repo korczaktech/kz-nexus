@@ -204,7 +204,22 @@ export function CanvasPage({ page, pageCount, document, headerText, footerText, 
 
     const imageCache = new Map<string, HTMLImageElement>();
     let cancelled = false;
-    const imageResources = document.resources.filter(resource => resource.kind === "image");
+    // Do not decode every document image on every page. Only load resources
+    // referenced by image blocks that are actually present on this page.
+    const pageImageIds = new Set<string>();
+    const collectImageIds = (blocks: LayoutBlock[]) => {
+      for (const block of blocks) {
+        if (block.type === "image") {
+          const model = findTopLevelBlock(document, block.blockId);
+          if (model?.type === "image") pageImageIds.add(model.resourceId);
+        }
+        if (block.children?.length) collectImageIds(block.children);
+      }
+    };
+    collectImageIds(page.blocks);
+    const imageResources = document.resources.filter(
+      resource => resource.kind === "image" && pageImageIds.has(resource.id),
+    );
     for (const resource of imageResources) {
       const image = new Image();
       imageCache.set(resource.id, image);
