@@ -11,3 +11,8 @@ export async function saveWithDraftFallback<T>(storage:DraftStorage,id:string,co
 export function preserveNativeDraft(storage:DraftStorage,id:string,payload:string){storage.setItem(nativeDraftKey(id),payload)}
 export function recoverNativeDraft(storage:DraftStorage,id:string){return storage.getItem(nativeDraftKey(id))}
 export function clearNativeDraft(storage:DraftStorage,id:string){storage.removeItem(nativeDraftKey(id))}
+
+/** Prefer a recoverable local Kortex payload over the last server version. */
+export function resolveNativeDraftPayload(localPayload:string|null,persistedPayload:string|null|undefined):string|null{
+  return localPayload!==null?localPayload:(persistedPayload??null);
+}
