@@ -124,12 +124,17 @@ describe("native layout engine", () => {
       { type: "text", id: "small-run", text: "small ", marks: [{ type: "fontSize", value: 8 }] },
       { type: "text", id: "large-run", text: "LARGE", marks: [{ type: "fontSize", value: 24 }, { type: "bold" }] }
     ] };
-    const result = layoutDocument(documentWith([mixed]), { metrics });
+    const styledMetrics: TextMetrics = {
+      measureText: (text, size) => text.length * size * 0.5,
+      lineHeight: size => size * 1.2
+    };
+    const result = layoutDocument(documentWith([mixed]), { metrics: styledMetrics });
     const line = result.pages[0].blocks[0].lines[0];
     expect(line.height).toBeCloseTo(21.6, 5);
     expect(line.runs).toHaveLength(2);
     expect(line.runs?.[0].fontSize).toBe(6);
     expect(line.runs?.[1].fontSize).toBe(18);
+    expect(line.runs?.[1].width).toBeGreaterThan(line.runs?.[0].width || 0);
     expect(line.runs?.[1].marks.some(mark => mark.type === "bold")).toBe(true);
   });
 
