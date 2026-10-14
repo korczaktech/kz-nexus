@@ -32,7 +32,7 @@ export function setAlign(params: { blockId: string; align: Alignment }): Command
   return (doc) => {
     const node = findParagraphLike(doc.content, params.blockId);
     if (!node) return err(engineError("NODE_NOT_FOUND", `Block "${params.blockId}" not found`, { path: params.blockId }));
-    const content = updateParagraphLike(doc.content, params.blockId, (n) => (n.id === params.blockId ? { ...n, align: params.align } : n));
+    const content = updateParagraphLike(doc.content, params.blockId, (n) => (n.id === params.blockId ? { ...n, align: params.align } : n)).blocks;
     return ok({ document: { ...doc, content } });
   };
 }
@@ -45,7 +45,7 @@ export function setIndent(params: { blockId: string; indent: number }): Command 
     }
     const node = findParagraphLike(doc.content, params.blockId);
     if (!node) return err(engineError("NODE_NOT_FOUND", `Block "${params.blockId}" not found`, { path: params.blockId }));
-    const content = updateParagraphLike(doc.content, params.blockId, current => current.id === params.blockId ? { ...current, indent: params.indent || undefined } : current);
+    const content = updateParagraphLike(doc.content, params.blockId, current => current.id === params.blockId ? { ...current, indent: params.indent || undefined } : current).blocks;
     return ok({ document: { ...doc, content } });
   };
 }
@@ -91,7 +91,7 @@ export function setParagraphStyle(params: {
       ...(params.padding !== undefined ? { padding: params.padding || undefined } : {}),
       ...(params.firstLineIndent !== undefined ? { firstLineIndent: params.firstLineIndent || undefined } : {}),
       ...(params.hangingIndent !== undefined ? { hangingIndent: params.hangingIndent || undefined } : {}),
-    } : current);
+    } : current).blocks;
     return ok({ document: { ...doc, content } });
   };
 }
