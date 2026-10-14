@@ -83,9 +83,10 @@ export function PagedPreview({html,css,onClose,document,useNativeLayout=true,hea
     if(!document){setNativeLayout(null);return}
     try{
       const canvas=window.document.createElement('canvas');
-      const context=canvas.getContext('2d');
+      let context:CanvasRenderingContext2D|null=null;
+      try{context=canvas.getContext('2d')}catch{context=null}
       const metrics:TextMetrics|undefined=context?{
-        measureText:(text,size,family)=>{context.font=(size*96/72)+'px '+family;return context.measureText(text).width*72/96},
+        measureText:(text,size,family)=>{context!.font=(size*96/72)+'px '+family;return context!.measureText(text).width*72/96},
         lineHeight:(size)=>size*1.2
       }:undefined;
       const result=layoutDocument(document,{fontFamily:'Arial',metrics,keepHeadingsWithNext:true,keepParagraphsTogether:true});
