@@ -234,6 +234,45 @@ describe("native layout engine", () => {
     expect(listFragments.every(fragment => fragment.rect.y + fragment.rect.height <= smallPage.height - smallPage.margins.bottom + 0.001)).toBe(true);
   });
 
+  it("paginates oversized nested list items at line boundaries without flattening or losing markers", () => {
+    const nestedTexts = [
+      "nested alpha bravo charlie delta",
+      "nested echo foxtrot golf hotel",
+      "nested india juliet kilo lima",
+      "nested mike november oscar papa",
+      "nested quebec romeo sierra tango",
+      "nested uniform victor whiskey xray",
+      "nested yankee zulu alpha bravo",
+      "nested charlie delta echo foxtrot",
+      "nested golf hotel india juliet",
+      "nested kilo lima mike november"
+    ];
+    const list: Block = { type: "orderedList", id: "outer-list", start: 4, children: [
+      { type: "listItem", id: "outer-item", children: [
+        paragraph("outer-p", "Outer item introduction"),
+        { type: "bulletList", id: "inner-list", children: nestedTexts.map((text, index) => ({
+          type: "listItem" as const, id: "inner-item-" + index, children: [paragraph("inner-p-" + index, text)]
+        })) }
+      ] }
+    ] };
+    const smallPage = { unit: "pt" as const, width: 160, height: 65, orientation: "landscape" as const, margins: { top: 5, right: 10, bottom: 5, left: 10 } };
+    const result = layoutDocument(documentWith([list], smallPage), { metrics });
+    const fragments = result.pages.flatMap(page => page.blocks.filter(block => block.blockId === "outer-list"));
+    const visit = (blocks: typeof result.pages[number]["blocks"]): typeof result.pages[number]["blocks"] =>
+      blocks.flatMap(block => [block, ...visit(block.children || [])]);
+    const allNodes = result.pages.flatMap(page => visit(page.blocks));
+    const rendered = allNodes.filter(block => block.type === "paragraph").flatMap(block => block.lines.map(line => line.text)).join(" ");
+    expect(fragments.length).toBeGreaterThan(1);
+    expect(allNodes.some(block => block.blockId === "inner-list" && block.type === "bulletList")).toBe(true);
+    expect(rendered.replace(/\\s+/g, " ").trim()).toContain("Outer item introduction");
+    for (const text of nestedTexts) expect(rendered).toContain(text);
+    expect(allNodes.filter(block => block.blockId === "outer-item" && block.marker).map(block => block.marker)).toEqual(["4."]);
+    for (let index = 0; index < nestedTexts.length; index++) {
+      expect(allNodes.filter(block => block.blockId === "inner-item-" + index && block.marker).map(block => block.marker)).toEqual(["•"]);
+    }
+    expect(result.pages.every(page => page.blocks.every(block => block.rect.y + block.rect.height <= page.content.y + page.content.height + 0.001))).toBe(true);
+  });
+
   it("reports invalid page geometry and safely uses a default page", () => {
     const invalid = { unit: "pt" as const, width: 100, height: 100, orientation: "portrait" as const, margins: { top: 80, right: 80, bottom: 80, left: 80 } };
     const result = layoutDocument(documentWith([paragraph("p", "fallback")], invalid), { metrics });
