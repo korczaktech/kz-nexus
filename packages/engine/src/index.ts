@@ -57,6 +57,7 @@ export {
   insertBlockquote,
   convertBlockToBlockquote,
   insertThematicBreak,
+  insertPageBreak,
 } from "./commands/block";
 export { insertList, convertBlockToList, convertBlocksToList, convertListType, insertListItem, splitListItem, mergeListItemWithPrevious, removeListItem } from "./commands/list";
 export { insertTable, addTableRow, removeTableRow, addTableColumn, removeTableColumn, setCellText } from "./commands/table";
