@@ -40,6 +40,10 @@ export interface Paragraph {
   align?: Alignment;
   /** Left paragraph indent in points. */
   indent?: number;
+  /** First-line indent in points, independent of the paragraph's left edge. */
+  firstLineIndent?: number;
+  /** Hanging indent in points; text after the first line is inset. */
+  hangingIndent?: number;
   /** Spacing before and after the paragraph in points. */
   spacingBefore?: number;
   spacingAfter?: number;
