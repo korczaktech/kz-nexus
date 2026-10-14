@@ -109,14 +109,14 @@ describe(".nsx round-trip", () => {
     const commandCtx = ctx();
     const added = addResource(doc, { kind: "image", mimeType: "image/png", data: "aGVsbG8=" }, commandCtx.generateId);
     if (!added.ok) throw added.error;
-    const withImage = insertImage({ afterBlockId: doc.content[0].id, resourceId: added.value.resource.id, alt: "logo" })(
+    const withImage = insertImage({ afterBlockId: doc.content[0].id, resourceId: added.value.resource.id, alt: "logo", width: 640, height: 480 })(
       added.value.document,
       commandCtx,
     );
     if (!withImage.ok) throw withImage.error;
     const { document } = roundTrip(withImage.value.document);
     expect(document.resources).toHaveLength(1);
-    expect(document.content[1].type).toBe("image");
+    expect(document.content[1]).toMatchObject({ type: "image", alt: "logo", width: 640, height: 480 });
   });
 
   it("preserves metadata", () => {
