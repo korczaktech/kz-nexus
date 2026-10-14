@@ -5,7 +5,7 @@
  * browser, desktop or mobile host can use its actual font renderer. The
  * fallback measurer is deterministic and intentionally approximate.
  */
-import type { Block, Heading, NexusDocument, PageConfig, Paragraph, TextRun } from "../model/types";
+import type { Alignment, Block, Heading, NexusDocument, PageConfig, Paragraph, TextRun } from "../model/types";
 
 export interface TextMetrics {
   measureText(text: string, fontSize: number, fontFamily: string): number;
@@ -23,7 +23,7 @@ export interface LayoutOptions {
   keepParagraphsTogether?: boolean;
 }
 export interface LayoutRect { x: number; y: number; width: number; height: number }
-export interface LayoutLine { text: string; x: number; y: number; width: number; height: number; startOffset: number; endOffset: number }
+export interface LayoutLine { text: string; x: number; y: number; width: number; height: number; startOffset: number; endOffset: number; align?: Alignment }
 export interface LayoutBlock {
   blockId: string;
   type: Block["type"];
@@ -120,17 +120,33 @@ function blockTextLayout(block: Paragraph | Heading, x: number, y: number, width
   const wrapped = wrapText(textOf(block.children), available, size, family, options.metrics);
   const natural = options.metrics?.lineHeight?.(size, family) ?? size * 1.2;
   const lineHeight = natural * safeNumber(block.lineSpacing, 1);
-  const lines = wrapped.map((line, index) => ({
-    text: line.text, x: x + safeNumber(block.indent, 0) + (index === 0 ? safeNumber(block.firstLineIndent, 0) : safeNumber(block.hangingIndent, 0)),
-    y: y + safeNumber(block.padding, 0) + index * lineHeight, width: line.width, height: lineHeight,
-    startOffset: line.start, endOffset: line.end
-  }));
+  const align = block.align || "start";
+  const lines = wrapped.map((line, index) => {
+    const indent = safeNumber(block.indent, 0) + (index === 0 ? safeNumber(block.firstLineIndent, 0) : safeNumber(block.hangingIndent, 0));
+    const availableLineWidth = Math.max(1, available - indent);
+    const alignedX = align === "center" ? x + safeNumber(block.indent, 0) + (available - line.width) / 2
+      : align === "end" ? x + safeNumber(block.indent, 0) + available - line.width : x + indent;
+    return { text: line.text, x: alignedX, y: y + safeNumber(block.padding, 0) + index * lineHeight,
+      width: align === "justify" && index < wrapped.length - 1 ? availableLineWidth : line.width, height: lineHeight,
+      startOffset: line.start, endOffset: line.end, align };
+  });
   return { lines, height: Math.max(lineHeight, wrapped.length * lineHeight) + safeNumber(block.padding, 0) * 2 + safeNumber(block.borderWidth, 0) * 2 };
 }
 function plainBlockText(block: Block): string {
   if (block.type === "paragraph" || block.type === "heading") return textOf(block.children);
-  if (block.type === "blockquote") return block.children.map(paragraph => textOf(paragraph.children)).join("\n");
-  if (block.type === "bulletList" || block.type === "orderedList") return block.children.map(item => item.children.map(child => child.type === "paragraph" ? textOf(child.children) : "").join("\n")).join("\n");
+  if (block.type === "blockquote") return block.children.map(paragraph => "│ " + textOf(paragraph.children)).join("\n");
+  if (block.type === "bulletList" || block.type === "orderedList") {
+    const renderItems = (items: Array<{ children: Array<any> }>, depth: number, ordered: boolean, start: number): string[] =>
+      items.flatMap((item, index) => {
+        const marker = ordered ? String(start + index) + "." : "•";
+        const prefix = "  ".repeat(depth) + marker + " ";
+        const own = item.children.flatMap((child: any) => child.type === "paragraph" ? [prefix + textOf(child.children)]
+          : child.type === "bulletList" ? renderItems(child.children, depth + 1, false, 1)
+          : child.type === "orderedList" ? renderItems(child.children, depth + 1, true, child.start) : []);
+        return own.length ? own : [prefix];
+      });
+    return renderItems(block.children, 0, block.type === "orderedList", block.type === "orderedList" ? block.start : 1).join("\n");
+  }
   if (block.type === "table") return block.children.map(row => row.children.map(cell => cell.children.map(p => textOf(p.children)).join("\n")).join(" | ")).join("\n");
   if (block.type === "image") return block.alt;
   return "";
@@ -195,13 +211,15 @@ export function layoutDocument(document: NexusDocument, options: LayoutOptions =
       let fragmentRows: NonNullable<LayoutBlock["table"]>["rows"] = [];
       let fragmentStartY = cursorY;
       let fragmentHeight = 0;
+      let fragmentIndex = 0;
       const flushTableFragment = () => {
         if (!fragmentRows.length) return;
         page.blocks.push({
           blockId: block.id, type: "table", pageIndex: page.index,
           rect: { x: content.x, y: fragmentStartY, width: content.width, height: fragmentHeight },
-          lines: [], table: { rows: fragmentRows }, continued: fragmentStartY !== cursorY || fragmentRows.length < rowLayouts.length
+          lines: [], table: { rows: fragmentRows }, continued: fragmentIndex > 0
         });
+        fragmentIndex += 1;
         fragmentRows = []; fragmentHeight = 0;
       };
       for (const row of rowLayouts) {
@@ -235,7 +253,29 @@ export function layoutDocument(document: NexusDocument, options: LayoutOptions =
       const lineHeight = measured.lines[0]?.height || safeNumber(options.fontSize, DEFAULT_FONT) * 1.2;
       const totalHeight = measured.height;
       const remaining = content.y + content.height - cursorY;
-      if (cursorY > content.y && totalHeight + spacingBefore + spacingAfter > remaining && (options.keepParagraphsTogether || (options.keepHeadingsWithNext && block.type === "heading"))) nextPage();
+      let headingKeepHeight = 0;
+      if (options.keepHeadingsWithNext && block.type === "heading") {
+        const following = document.content[blockIndex + 1];
+        if (following) {
+          if (following.type === "paragraph" || following.type === "heading") {
+            const followingLayout = blockTextLayout(following, content.x, 0, content.width, options);
+            headingKeepHeight = followingLayout.lines[0]?.height || safeNumber(options.fontSize, DEFAULT_FONT) * 1.2;
+          } else if (following.type === "table") {
+            headingKeepHeight = 24;
+          } else if (following.type === "image") {
+            const resource = document.resources.find(item => item.id === following.resourceId);
+            const naturalWidth = safeNumber(following.width, Math.min(content.width, 240));
+            headingKeepHeight = Math.min(safeNumber(following.height, resource ? naturalWidth * 0.75 : 24), content.height);
+          } else {
+            headingKeepHeight = safeNumber(options.fontSize, DEFAULT_FONT) * 1.25;
+          }
+        }
+      }
+      const mustKeepHeadingWithNext = options.keepHeadingsWithNext && block.type === "heading"
+        && headingKeepHeight > 0 && totalHeight + spacingBefore + spacingAfter + headingKeepHeight > remaining;
+      const mustKeepParagraph = options.keepParagraphsTogether && totalHeight <= content.height
+        && totalHeight + spacingBefore + spacingAfter > remaining;
+      if (cursorY > content.y && (mustKeepHeadingWithNext || mustKeepParagraph)) nextPage();
       cursorY += spacingBefore;
       measured = blockTextLayout(block, content.x, cursorY, content.width, options);
       let lineOffset = 0;
@@ -263,7 +303,7 @@ export function layoutDocument(document: NexusDocument, options: LayoutOptions =
     const lineHeight = safeNumber(options.fontSize, DEFAULT_FONT) * 1.25;
     const blockHeight = Math.max(lineHeight, measured.length * lineHeight) + 8;
     if (cursorY > content.y && cursorY + blockHeight > content.y + content.height) nextPage();
-    const lines = measured.map((line,index)=>({text:line.text,x:content.x+20,y:cursorY+index*lineHeight,width:line.width,height:lineHeight,startOffset:line.start,endOffset:line.end}));
+    const lines = measured.map((line,index)=>({text:line.text,x:content.x+20+(/^│ /.test(line.text)?8:/^\s{2,}/.test(line.text)?Math.min(48,line.text.match(/^\s*/)?.[0].length||0)*4:0),y:cursorY+index*lineHeight,width:line.width,height:lineHeight,startOffset:line.start,endOffset:line.end,align:"start" as const}));
     addBlock(block, { x: content.x, y: cursorY, width: content.width, height: blockHeight }, lines);
     cursorY += blockHeight + 6;
   });
