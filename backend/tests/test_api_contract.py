@@ -1,7 +1,8 @@
+import json
 from fastapi.testclient import TestClient
 
 from korczak_documents.main import app
-from korczak_documents.models.api import RegisterRequest
+from korczak_documents.models.api import DocumentSaveRequest, RegisterRequest
 from korczak_documents.routes import router as api_router
 
 
@@ -81,3 +82,33 @@ def test_validation_error_uses_standard_contract() -> None:
     response = TestClient(app).post("/api/v1/auth/register", json={"name": "", "email": "bad", "password": "x"})
     assert response.status_code == 422
     assert response.json()["error"]["code"] == "validation_error"
+
+
+
+def test_native_kortex_payload_requires_a_valid_nsx_envelope() -> None:
+    payload = json.dumps({
+        "format": "korczak-nexus",
+        "formatVersion": 1,
+        "document": {"id": "doc-test", "schemaVersion": 1},
+    })
+    request = DocumentSaveRequest(
+        name="Teste Kortex",
+        document_type="nsx",
+        content="<p>Projeção</p>",
+        native_content=payload,
+        base_version_id=None,
+    )
+    assert request.native_content == payload
+
+    try:
+        DocumentSaveRequest(
+            name="Teste inválido",
+            document_type="nsx",
+            content="<p>Projeção</p>",
+            native_content="<p>não é NSX</p>",
+            base_version_id=None,
+        )
+    except Exception as exc:
+        assert "native_content" in str(exc)
+    else:
+        raise AssertionError("Payload HTML não pode ser aceito como documento NSX")
