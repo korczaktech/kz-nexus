@@ -587,7 +587,7 @@ function preserveStableBlockIds(previous: Block[], next: Block[], resourceIds: M
         }) };
       }) };
     }
-    if (block.type === "thematicBreak" && old.type === "thematicBreak") return { ...block, id: old.id };
+    if (block.type === "thematicBreak" && old.type === "thematicBreak") return { ...block, id: old.id, kind: block.kind ?? old.kind };
     if (block.type === "image" && old.type === "image") return { ...block, id: old.id, resourceId: resourceIds.get(block.resourceId) ?? block.resourceId };
     return block;
   });
@@ -602,12 +602,12 @@ function blockShape(block: Block): unknown {
     }
     return groups;
   };
-  if (block.type === "paragraph") return ["paragraph", block.align ?? null, block.indent ?? null, block.anchorId ?? null, block.spacingBefore ?? null, block.spacingAfter ?? null, block.lineSpacing ?? null, block.backgroundColor ?? null, block.borderColor ?? null, block.borderWidth ?? null, block.padding ?? null, marksShape(block.children)];
-  if (block.type === "heading") return ["heading", block.level, block.align ?? null, block.indent ?? null, block.spacingBefore ?? null, block.spacingAfter ?? null, block.lineSpacing ?? null, block.backgroundColor ?? null, block.borderColor ?? null, block.borderWidth ?? null, block.padding ?? null, marksShape(block.children)];
+  if (block.type === "paragraph") return ["paragraph", block.align ?? null, block.indent ?? null, block.anchorId ?? null, block.spacingBefore ?? null, block.spacingAfter ?? null, block.lineSpacing ?? null, block.backgroundColor ?? null, block.borderColor ?? null, block.borderWidth ?? null, block.padding ?? null, block.editorObject ?? null, marksShape(block.children)];
+  if (block.type === "heading") return ["heading", block.level, block.align ?? null, block.indent ?? null, block.spacingBefore ?? null, block.spacingAfter ?? null, block.lineSpacing ?? null, block.backgroundColor ?? null, block.borderColor ?? null, block.borderWidth ?? null, block.padding ?? null, block.editorObject ?? null, marksShape(block.children)];
   if (block.type === "blockquote") return ["blockquote", block.children.map(blockShape)];
   if (block.type === "bulletList" || block.type === "orderedList") return [block.type, block.type === "orderedList" ? block.start : null, block.children.map(item => item.children.map(child => blockShape(child as Block)))];
   if (block.type === "table") return ["table", block.children.map(row => row.children.map(cell => cell.children.map(blockShape)))];
-  if (block.type === "thematicBreak") return ["thematicBreak"];
+  if (block.type === "thematicBreak") return ["thematicBreak", block.kind ?? "rule"];
   return ["image", block.resourceId, block.alt];
 }
 
