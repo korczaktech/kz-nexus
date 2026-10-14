@@ -42,6 +42,7 @@ export { insertText, deleteText, replaceRange } from "./commands/text";
 export { applyMark, removeMark, toggleMark } from "./commands/marks";
 export {
   setAlign,
+  moveBlock,
   setIndent,
   setParagraphStyle,
   setHeadingLevel,
@@ -55,7 +56,7 @@ export {
 } from "./commands/block";
 export { insertList, convertBlockToList, convertBlocksToList, convertListType, insertListItem, splitListItem, mergeListItemWithPrevious, removeListItem } from "./commands/list";
 export { insertTable, addTableRow, removeTableRow, addTableColumn, removeTableColumn, setCellText } from "./commands/table";
-export { insertImage, insertImageResource, removeImage } from "./commands/image";
+export { insertImage, insertImageResource, updateImage, removeImage } from "./commands/image";
 export { insertImportedBlocksAtSelection } from "./commands/importedBlocks";
 export { setPageConfig, setMetadata } from "./commands/document";
 export type { CreateDocumentOptions } from "./commands/document";
