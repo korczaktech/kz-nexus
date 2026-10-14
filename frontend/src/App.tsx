@@ -133,14 +133,14 @@ function DocumentTable({docs,onSelect,onAction,onPermanent}:{docs:DocumentItem[]
 }
 
 function Home({user,docs,notes,onNew,onSelect,onAction,setView}:{user:User;docs:DocumentItem[];notes:Notification[];onNew:()=>void;onSelect:(d:DocumentItem)=>void;onAction:(d:DocumentItem)=>void;setView:(v:View)=>void}){
-  const[voiceListening,setVoiceListening]=useState(false),[voiceText,setVoiceText]=useState(''),[voiceLevel,setVoiceLevel]=useState(0);
-  const streamRef=useRef<MediaStream|null>(null),audioCtxRef=useRef<AudioContext|null>(null),rafRef=useRef<number|null>(null),recognitionRef=useRef<any>(null),barsRef=useRef<HTMLSpanElement[]>([]);
+  const[voiceListening,setVoiceListening]=useState(false),[voiceText,setVoiceText]=useState('');
+  const streamRef=useRef<MediaStream|null>(null),audioCtxRef=useRef<AudioContext|null>(null),rafRef=useRef<number|null>(null),recognitionRef=useRef<any>(null),barsRef=useRef<HTMLSpanElement[]>([]),voiceLevelRef=useRef<HTMLElement|null>(null);
   function stopVoice(){
     if(recognitionRef.current){try{recognitionRef.current.stop()}catch{} recognitionRef.current=null}
     if(rafRef.current!==null){cancelAnimationFrame(rafRef.current);rafRef.current=null}
     streamRef.current?.getTracks().forEach(t=>t.stop());streamRef.current=null;
     if(audioCtxRef.current){try{audioCtxRef.current.close()}catch{} audioCtxRef.current=null}
-    setVoiceListening(false);setVoiceLevel(0);
+    setVoiceListening(false);if(voiceLevelRef.current)voiceLevelRef.current.style.transform='scaleX(.08)';
     barsRef.current.forEach((el,i)=>{if(el)el.style.transform='scaleY(.12)'});
   }
   useEffect(()=>()=>stopVoice(),[]);
@@ -159,7 +159,7 @@ function Home({user,docs,notes,onNew,onSelect,onAction,setView}:{user:User;docs:
         const animate=()=>{
           analyser.getByteFrequencyData(data);
           let sum=0;for(let i=0;i<data.length;i++)sum+=data[i];
-          const level=Math.min(1,sum/data.length/92);setVoiceLevel(level);
+          const level=Math.min(1,sum/data.length/92);if(voiceLevelRef.current)voiceLevelRef.current.style.transform='scaleX('+Math.max(.08,level)+')';
           barsRef.current.forEach((el,i)=>{
             if(!el)return;
             const index=Math.min(data.length-1,Math.floor((i/data.length)*data.length*1.7));
@@ -225,7 +225,7 @@ function Home({user,docs,notes,onNew,onSelect,onAction,setView}:{user:User;docs:
           <div className="card-title"><div><p className="eyebrow">CONTROLE POR VOZ</p><h2>Fale com o Nexus</h2></div><span className="voice-badge">BETA</span></div>
           <div className="voice-main">
             <button className={'voice-mic '+(voiceListening?'listening':'')} onClick={toggleVoice} aria-label={voiceListening?'Parar microfone':'Ativar microfone'}><Icon name="mic" size={28}/><span>{voiceListening?'Parar':'Microfone'}</span></button>
-            <div className="voice-copy"><strong>{voiceListening?'Voz conectada':'Pronto para ouvir'}</strong><p>{voiceText||'Ative o microfone e fale naturalmente. A frequência acompanha sua voz.'}</p><div className="voice-level"><i style={{transform:'scaleX('+Math.max(.08,voiceLevel)+')'}}/></div></div>
+            <div className="voice-copy"><strong>{voiceListening?'Voz conectada':'Pronto para ouvir'}</strong><p>{voiceText||'Ative o microfone e fale naturalmente. A frequência acompanha sua voz.'}</p><div className="voice-level"><i ref={voiceLevelRef}/></div></div>
           </div>
           <div className="morok-unavailable"><span className="morok-mark">M</span><div><strong>Morok AI ainda não está disponível</strong><small>O microfone e a captura de voz já estão funcionando; a inteligência conversacional será integrada posteriormente.</small></div></div>
         </section>
