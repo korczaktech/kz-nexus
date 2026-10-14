@@ -43,6 +43,8 @@ describe('proteção de rascunho da Fase 8',()=>{
     expect(resolveNativeDraftPayload(local,server)).toBe(local);
     expect(resolveNativeDraftPayload(null,server)).toBe(server);
     expect(resolveNativeDraftPayload(null,null)).toBeNull();
+    expect(resolveNativeDraftPayload('invalid-local',server,payload=>payload.startsWith('payload-'))).toBe(server);
+    expect(resolveNativeDraftPayload('invalid-local',null,payload=>payload.startsWith('payload-'))).toBeNull();
   });
   it('preserva e remove o payload nativo do Kortex separadamente do HTML',()=>{
     const s=storage();

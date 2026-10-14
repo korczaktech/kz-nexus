@@ -13,6 +13,8 @@ export function recoverNativeDraft(storage:DraftStorage,id:string){return storag
 export function clearNativeDraft(storage:DraftStorage,id:string){storage.removeItem(nativeDraftKey(id))}
 
 /** Prefer a recoverable local Kortex payload over the last server version. */
-export function resolveNativeDraftPayload(localPayload:string|null,persistedPayload:string|null|undefined):string|null{
-  return localPayload!==null?localPayload:(persistedPayload??null);
+export function resolveNativeDraftPayload(localPayload:string|null,persistedPayload:string|null|undefined,isValid:(payload:string)=>boolean=()=>true):string|null{
+  if(localPayload!==null&&isValid(localPayload))return localPayload;
+  if(typeof persistedPayload==='string'&&isValid(persistedPayload))return persistedPayload;
+  return null;
 }
