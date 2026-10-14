@@ -184,6 +184,7 @@ function sanitizeImportedHtml(parsed: Document): void {
             property === "font-family" ? /^[\w\s,'"()-]{1,120}$/.test(value) :
             property === "text-align" ? /^(?:left|right|center|justify|start|end)$/i.test(value) :
             property === "line-height" ? /^(?:\d+(?:\.\d+)?)(?:px|pt|em|rem|%)?$/i.test(value) && Number.parseFloat(value) >= 0.5 && Number.parseFloat(value) <= 4 :
+            property === "text-indent" ? /^-?(?:\d+(?:\.\d+)?)(?:px|pt|mm|cm|in|%)$/i.test(value) && Math.abs(Number.parseFloat(value)) <= 200 :
             property === "border" ? /^\d+(?:\.\d+)?(?:px|pt) solid (?:#[0-9a-f]{3}(?:[0-9a-f]{3})?|rgb\(\s*\d{1,3}\s*,\s*\d{1,3}\s*,\s*\d{1,3}\s*\))$/i.test(value) :
             property.endsWith("-style") && property.startsWith("border-") ? value === "solid" :
             /^(?:\d+(?:\.\d+)?)(?:px|pt|mm|cm|in|%)$/i.test(value)
