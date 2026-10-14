@@ -194,7 +194,7 @@ async def create_document(payload: DocumentCreateRequest, user=Depends(current_u
         if target_folder.get("status") == "deleted":
             raise AppError("A pasta de destino está na lixeira.", "folder_deleted", 409)
     document = await repo.create_document(user["id"], payload.model_dump())
-    if payload.content is not None:
+    if payload.content is not None or payload.native_content is not None:
         version = await repo.create_version(document["id"], user["id"], payload.content, 1, payload.native_content)
         document = await repo.get_document(document["id"])
     await repo.log_event(user["id"], "document.created", {"document_id": document["id"]})
