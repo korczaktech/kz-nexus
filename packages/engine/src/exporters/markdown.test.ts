@@ -9,9 +9,9 @@ import type { Paragraph } from "../model/types";
 
 describe("exportMarkdown", () => {
   it("preserves formatting and escapes Markdown punctuation", () => {
-    const document = createDocument(createIdGenerator("markdown-doc", 1), createFixedClock(0).now);
+    const document = createDocument(createIdGenerator("markdowndoc", 1), createFixedClock(0).now);
     const paragraph = document.content[0] as Paragraph;
-    const ctx = { generateId: createIdGenerator("markdown-test", 3) };
+    const ctx = { generateId: createIdGenerator("markdowntest", 3) };
     const inserted = insertText({ blockId: paragraph.id, offset: 0, text: "hello *world* |" })(document, ctx);
     if (!inserted.ok) throw inserted.error;
     const marked = applyMark({ blockId: paragraph.id, start: 0, end: 15, mark: { type: "bold" } })(inserted.value.document, ctx);
@@ -22,7 +22,7 @@ describe("exportMarkdown", () => {
   });
 
   it("renders headings, ordered lists, tables and embedded images", () => {
-    const document = createDocument(createIdGenerator("markdown-structures", 1), createFixedClock(0).now);
+    const document = createDocument(createIdGenerator("markdownstructures", 1), createFixedClock(0).now);
     const heading = { type: "heading" as const, id: "heading-1", level: 2 as const, children: [{ type: "text" as const, id: "heading-run", text: "Title", marks: [] }] };
     const list = { type: "orderedList" as const, id: "ordered-1", start: 3, children: [{ type: "listItem" as const, id: "item-1", children: [{ type: "paragraph" as const, id: "item-p", children: [{ type: "text" as const, id: "item-run", text: "first", marks: [] }] }] }] };
     const table = { type: "table" as const, id: "table-1", children: [{ type: "tableRow" as const, id: "row-1", children: [{ type: "tableCell" as const, id: "cell-1", children: [{ type: "paragraph" as const, id: "cell-p", children: [{ type: "text" as const, id: "cell-run", text: "A|B", marks: [] }] }] }] }] };
