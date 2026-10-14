@@ -61,6 +61,39 @@ describe("native layout engine", () => {
     expect(bodyBlock?.pageIndex).toBe(headingBlock?.pageIndex);
   });
 
+  it("keeps a paragraph together when it fits on a fresh page", () => {
+    const result = layoutDocument(documentWith([
+      paragraph("lead-together", "Lead text Lead text Lead text"),
+      paragraph("together", "A short paragraph")
+    ], {
+      unit: "pt", width: 100, height: 100, orientation: "portrait",
+      margins: { top: 10, right: 10, bottom: 10, left: 10 }
+    }), { metrics, keepParagraphsTogether: true });
+    const lead = result.pages.flatMap(page => page.blocks).find(block => block.blockId === "lead-together");
+    const kept = result.pages.flatMap(page => page.blocks).find(block => block.blockId === "together");
+    expect(kept?.pageIndex).toBeGreaterThanOrEqual(lead?.pageIndex || 0);
+    expect(kept?.continued).toBeFalsy();
+    expect(kept?.rect.height).toBeLessThanOrEqual(result.pages[kept!.pageIndex]!.content.height);
+  });
+
+  it("reports oversized table rows without silently splitting their cells", () => {
+    const table: Block = { type: "table", id: "oversized-table", children: [{
+      type: "tableRow", id: "oversized-row", children: [{
+        type: "tableCell", id: "oversized-cell", children: [{
+          type: "paragraph", id: "oversized-p", children: [{
+            type: "text", id: "oversized-run", text: Array.from({ length: 100 }, () => "wide text").join(" "), marks: []
+          }]
+        }]
+      }]
+    }] };
+    const result = layoutDocument(documentWith([table], {
+      unit: "pt", width: 100, height: 100, orientation: "portrait",
+      margins: { top: 10, right: 10, bottom: 10, left: 10 }
+    }), { metrics });
+    expect(result.diagnostics.some(item => item.code === "OVERSIZED_BLOCK" && item.blockId === "oversized-table")).toBe(true);
+    expect(result.pages.flatMap(page => page.blocks).some(block => block.blockId === "oversized-table" && (block.table?.rows.length || 0) === 1)).toBe(true);
+  });
+
   it("marks only table fragments after the first as continued", () => {
     const table: Block = { type: "table", id: "continued-table", children: Array.from({ length: 12 }, (_, r) => ({
       type: "tableRow" as const, id: "ct-r" + r, children: [{ type: "tableCell" as const, id: "ct-c" + r, children: [
