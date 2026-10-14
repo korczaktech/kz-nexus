@@ -1,5 +1,5 @@
 import {describe,expect,it} from 'vitest';
-import {clearDraft,draftKey,preserveDraft,recoverDraft,saveWithDraftFallback,type DraftStorage} from './editorPersistence';
+import {clearDraft,draftKey,preserveDraft,recoverDraft,saveWithDraftFallback,clearNativeDraft,nativeDraftKey,preserveNativeDraft,recoverNativeDraft,type DraftStorage} from './editorPersistence';
 
 function storage():DraftStorage{
   const data=new Map<string,string>();
@@ -36,5 +36,15 @@ describe('proteção de rascunho da Fase 8',()=>{
     const result=await saveWithDraftFallback(s,'doc-4','alteração local',async()=> 'conflict',value=>value==='saved');
     expect(result).toBe('conflict');
     expect(recoverDraft(s,'doc-4')).toBe('alteração local');
+  });
+  it('preserva e remove o payload nativo do Kortex separadamente do HTML',()=>{
+    const s=storage();
+    preserveDraft(s,'doc-native','<p>Projeção HTML</p>');
+    preserveNativeDraft(s,'doc-native','{"format":"korczak-nexus","document":{}}');
+    expect(recoverDraft(s,'doc-native')).toBe('<p>Projeção HTML</p>');
+    expect(recoverNativeDraft(s,'doc-native')).toBe('{"format":"korczak-nexus","document":{}}');
+    expect(nativeDraftKey('doc-native')).toBe('kzdoc:native-draft:doc-native');
+    clearNativeDraft(s,'doc-native');
+    expect(recoverNativeDraft(s,'doc-native')).toBeNull();
   });
 });
