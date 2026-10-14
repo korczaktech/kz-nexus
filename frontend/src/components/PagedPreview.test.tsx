@@ -9,8 +9,14 @@ const documentModel: NexusDocument = {
   id: "preview-doc",
   schemaVersion: 1,
   metadata: { title: "Kortex preview test" },
-  pageConfig: { unit: "pt", width: 612, height: 792, orientation: "portrait", margins: { top: 36, right: 36, bottom: 36, left: 36 } },
-  content: [{ type: "paragraph", id: "preview-p", children: [{ type: "text", id: "preview-run", text: "Native Kortex preview", marks: [] }] }],
+  pageConfig: {
+    unit: "pt", width: 612, height: 792, orientation: "portrait",
+    margins: { top: 36, right: 36, bottom: 36, left: 36 },
+  },
+  content: [{
+    type: "paragraph", id: "preview-p",
+    children: [{ type: "text", id: "preview-run", text: "Native Kortex preview", marks: [] }],
+  }],
   resources: [],
 };
 
@@ -18,25 +24,42 @@ const structuredDocument: NexusDocument = {
   ...documentModel,
   id: "structured-preview",
   content: [
-    { type: "orderedList", id: "list", start: 3, children: [
-      { type: "listItem", id: "item", children: [
-        { type: "paragraph", id: "item-p", children: [{ type: "text", id: "item-run", text: "First item", marks: [{ type: "bold" }] }] },
-        { type: "bulletList", id: "nested-list", children: [
-          { type: "listItem", id: "nested-item", children: [
-            { type: "paragraph", id: "nested-p", children: [{ type: "text", id: "nested-run", text: "Nested item", marks: [{ type: "italic" }] }] },
-          }],
-        }],
+    {
+      type: "orderedList", id: "list", start: 3,
+      children: [{
+        type: "listItem", id: "item",
+        children: [
+          {
+            type: "paragraph", id: "item-p",
+            children: [{ type: "text", id: "item-run", text: "First item", marks: [{ type: "bold" }] }],
+          },
+          {
+            type: "bulletList", id: "nested-list",
+            children: [{
+              type: "listItem", id: "nested-item",
+              children: [{
+                type: "paragraph", id: "nested-p",
+                children: [{ type: "text", id: "nested-run", text: "Nested item", marks: [{ type: "italic" }] }],
+              }],
+            }],
+          },
+        ],
       }],
     },
-    { type: "blockquote", id: "quote", children: [
-      { type: "paragraph", id: "quote-p", children: [{ type: "text", id: "quote-run", text: "Quoted text", marks: [{ type: "italic" }] }] },
-    ] },
+    {
+      type: "blockquote", id: "quote",
+      children: [{
+        type: "paragraph", id: "quote-p",
+        children: [{ type: "text", id: "quote-run", text: "Quoted text", marks: [{ type: "italic" }] }],
+      }],
+    },
   ],
 };
 
 describe("Kortex Canvas native preview", () => {
   let host: HTMLDivElement | undefined;
   let root: ReturnType<typeof createRoot> | undefined;
+
   afterEach(async () => {
     if (root) await act(async () => { root?.unmount(); });
     host?.remove();
@@ -58,8 +81,9 @@ describe("Kortex Canvas native preview", () => {
       }));
     });
     await act(async () => { await Promise.resolve(); });
+
     expect(host.querySelector('[data-renderer="canvas-2d"]')).not.toBeNull();
-    const canvases = [...(host.querySelectorAll("canvas.kortex-canvas-page") as NodeListOf<HTMLCanvasElement>)];
+    const canvases = [...host.querySelectorAll("canvas.kortex-canvas-page")];
     expect(canvases.length).toBeGreaterThan(0);
     const pageLabel = canvases[0]?.getAttribute("aria-label") ?? "";
     expect(pageLabel).toContain("3.");
@@ -84,6 +108,7 @@ describe("Kortex Canvas native preview", () => {
       }));
     });
     await act(async () => { await Promise.resolve(); });
+
     const page = host.querySelector("canvas.kortex-canvas-page");
     expect(page).not.toBeNull();
     expect(page?.getAttribute("aria-label")).toContain("Native Kortex preview");
