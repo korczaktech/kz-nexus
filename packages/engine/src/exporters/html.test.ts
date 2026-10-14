@@ -12,6 +12,18 @@ function context() {
 }
 
 describe("exportHtml", () => {
+  it("exports paragraph spacing and line-height from engine fields", () => {
+    const document = createDocument(createIdGenerator("spacingdoc", 1), createFixedClock(0).now);
+    const paragraph = document.content[0] as Paragraph;
+    const inserted = insertText({ blockId: paragraph.id, offset: 0, text: "Spaced" })(document, context());
+    if (!inserted.ok) throw inserted.error;
+    const styled = { ...inserted.value.document, content: [{ ...paragraph, spacingBefore: 6, spacingAfter: 12, lineSpacing: 1.5, children: (inserted.value.document.content[0] as Paragraph).children }] };
+    const html = exportHtml(styled);
+    expect(html).toContain("margin-top:6pt");
+    expect(html).toContain("margin-bottom:12pt");
+    expect(html).toContain("line-height:1.5");
+  });
+
   it("renders engine marks and escapes text and attributes", () => {
     const document = createDocument(createIdGenerator("htmldoc", 1), createFixedClock(0).now);
     const paragraph = document.content[0] as Paragraph;
