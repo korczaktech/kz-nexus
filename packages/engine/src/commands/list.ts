@@ -49,6 +49,44 @@ export function convertBlockToList(params: { blockId: string; ordered: boolean }
   };
 }
 
+/** Converts a contiguous selection of top-level paragraphs/headings into one list. */
+export function convertBlocksToList(params: { blockIds: string[]; ordered: boolean }): Command {
+  return (doc, ctx) => {
+    if (!params.blockIds.length) return err(engineError("INVALID_DOCUMENT", "At least one block must be selected"));
+    const indices = params.blockIds.map(id => doc.content.findIndex(block => block.id === id));
+    if (indices.some(index => index < 0)) return err(engineError("NODE_NOT_FOUND", "A selected block was not found"));
+    const first = Math.min(...indices);
+    const last = Math.max(...indices);
+    if (last - first + 1 !== indices.length || new Set(indices).size !== indices.length) {
+      return err(engineError("INVALID_POSITION", "Selected blocks must be contiguous and unique"));
+    }
+    const sourceBlocks = doc.content.slice(first, last + 1);
+    if (sourceBlocks.some(block => block.type !== "paragraph" && block.type !== "heading")) {
+      return err(engineError("UNSUPPORTED_OPERATION", "Only consecutive paragraphs and headings can be converted into a list"));
+    }
+    const selectedIds = new Set(params.blockIds);
+    if (sourceBlocks.some(block => !selectedIds.has(block.id))) {
+      return err(engineError("INVALID_POSITION", "Selected blocks must follow document order"));
+    }
+    const items: ListItem[] = sourceBlocks.map(block => {
+      const paragraph: Paragraph = {
+        type: "paragraph",
+        id: block.id,
+        ...(block.align !== undefined ? { align: block.align } : {}),
+        ...(block.indent !== undefined ? { indent: block.indent } : {}),
+        children: block.children,
+      };
+      return { type: "listItem", id: ctx.generateId(), children: [paragraph] };
+    });
+    const list: Block = params.ordered
+      ? { type: "orderedList", id: ctx.generateId(), start: 1, children: items }
+      : { type: "bulletList", id: ctx.generateId(), children: items };
+    const content = [...doc.content];
+    content.splice(first, sourceBlocks.length, list);
+    return ok({ document: { ...doc, content }, selection: { blockId: items[0]!.children[0]!.id, offset: 0 } });
+  };
+}
+
 /** Converts a list between bullet and ordered, preserving its items. */
 export function convertListType(params: { listId: string; ordered: boolean }): Command {
   return (doc) => {
