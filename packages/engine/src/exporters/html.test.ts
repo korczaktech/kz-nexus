@@ -18,12 +18,15 @@ describe("exportHtml", () => {
     const paragraph = document.content[0] as Paragraph;
     const inserted = insertText({ blockId: paragraph.id, offset: 0, text: "Spaced" })(document, context());
     if (!inserted.ok) throw inserted.error;
-    const styled = setParagraphStyle({ blockId: paragraph.id, spacingBefore: 6, spacingAfter: 12, lineSpacing: 1.5 })(inserted.value.document, context());
+    const styled = setParagraphStyle({ blockId: paragraph.id, spacingBefore: 6, spacingAfter: 12, lineSpacing: 1.5, backgroundColor: "#fff2a8", borderColor: "#6475ff", borderWidth: 0.75, padding: 4.5 })(inserted.value.document, context());
     if (!styled.ok) throw styled.error;
     const html = exportHtml(styled.value.document);
     expect(html).toContain("margin-top:6pt");
     expect(html).toContain("margin-bottom:12pt");
     expect(html).toContain("line-height:1.5");
+    expect(html).toContain("background-color:#fff2a8");
+    expect(html).toContain("border:0.75pt solid #6475ff");
+    expect(html).toContain("padding:4.5pt");
   });
 
   it("renders engine marks and escapes text and attributes", () => {
