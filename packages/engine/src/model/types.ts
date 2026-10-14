@@ -53,6 +53,8 @@ export interface Paragraph {
   anchorId?: string;
   /** Optional paragraph background and border styling. */
   backgroundColor?: string;
+  /** Optional semantic editor object rendered and exported as an editable block. */
+  editorObject?: { kind: "note" | "textBox" | "shape"; label?: string; shape?: "rectangle" | "ellipse" | "triangle"; fill?: string; stroke?: string; width?: number; height?: number };
   borderColor?: string;
   borderWidth?: number;
   padding?: number;
@@ -92,6 +94,8 @@ export interface Blockquote {
 export interface ThematicBreak {
   type: "thematicBreak";
   id: string;
+  /** A page break is a first-class structural node, not a CSS-only placeholder. */
+  kind?: "rule" | "pageBreak";
 }
 
 export type ListItemContent = Paragraph | BulletList | OrderedList;
