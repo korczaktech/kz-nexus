@@ -13,6 +13,7 @@ function validateMark(mark: Mark): string | undefined {
   if (mark.type === "fontSize" && !isValidFontSize(mark.value)) return `Invalid fontSize value "${mark.value}"`;
   if (mark.type === "fontFamily" && mark.value.trim().length === 0) return "fontFamily cannot be empty";
   if (mark.type === "link" && !isValidLink(mark.value)) return "link must be a safe http, https, mailto, or same-document anchor URL";
+  if (mark.type === "comment" && (!mark.value.trim() || mark.value.length > 2000)) return "comment must contain 1 to 2000 characters";
   return undefined;
 }
 
