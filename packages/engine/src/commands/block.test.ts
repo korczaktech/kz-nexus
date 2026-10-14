@@ -104,6 +104,14 @@ describe("setParagraphStyle", () => {
       expect(paragraph.borderColor).toBe("#6475ff");
       expect(paragraph.borderWidth).toBe(0.75);
       expect(paragraph.padding).toBe(4.5);
+      const inserted = insertParagraphAfter({ blockId })(styled.value.document, ctx());
+      expect(inserted.ok).toBe(true);
+      if (inserted.ok) {
+        const nextParagraph = inserted.value.document.content[1] as Paragraph;
+        expect(nextParagraph.backgroundColor).toBe("#fff2a8");
+        expect(nextParagraph.borderColor).toBe("#6475ff");
+        expect(nextParagraph.lineSpacing).toBe(1.5);
+      }
     }
     const invalid = setParagraphStyle({ blockId, lineSpacing: 9 })(document, ctx());
     expect(invalid.ok).toBe(false);
