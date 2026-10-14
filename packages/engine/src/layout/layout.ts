@@ -207,8 +207,9 @@ function blockTextLayout(block: Paragraph | Heading, x: number, y: number, width
   let yOffset=safeNumber(block.padding,0);
   const lines=wrapped.map((line,index)=>{
     const indent=safeNumber(block.indent,0)+(index===0?safeNumber(block.firstLineIndent,0):safeNumber(block.hangingIndent,0));
-    const alignedX=align==="center"?x+safeNumber(block.indent,0)+(available-line.width)/2
-      :align==="end"?x+safeNumber(block.indent,0)+available-line.width:x+indent;
+    const leftInset=safeNumber(block.padding,0)+safeNumber(block.borderWidth,0);
+    const alignedX=align==="center"?x+leftInset+safeNumber(block.indent,0)+(available-line.width)/2
+      :align==="end"?x+leftInset+safeNumber(block.indent,0)+available-line.width:x+leftInset+indent;
     const result:LayoutLine={text:line.text,x:alignedX,y:y+yOffset,width:align==="justify"&&index<wrapped.length-1?Math.max(1,available-indent):line.width,
       height:line.height,startOffset:line.start,endOffset:line.end,align,runs:line.runs};
     yOffset+=line.height;
