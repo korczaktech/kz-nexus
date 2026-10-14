@@ -14,7 +14,7 @@ function run(text: string, marks: Mark[], generateId: IdGenerator): TextRun {
 
 function inlineRuns(source: string, generateId: IdGenerator, inherited: Mark[] = []): TextRun[] {
   const result: TextRun[] = [];
-  const token = /\*\*[^*]+\*\*|__[^_]+__|~~[^~]+~~|\*[^*\n]+\*|_[^_\n]+_|\[[^\]]+\]\([^)]+\)|<u>.*?<\/u>|<br\s*\/?\s*>/gi;
+  const token = /\*\*[^*]+\*\*|__[^_]+__|~~[^~]+~~|\*[^*\n]+\*|_[^_\n]+_|\[[^\]]+\]\([^)]+\)|<u>.*?<\/u>|<span\s+data-kz-comment="[^"]*">.*?<\/span>|<br\s*\/?\s*>/gi;
   let cursor = 0;
   for (const match of source.matchAll(token)) {
     const index = match.index ?? 0;
@@ -27,6 +27,12 @@ function inlineRuns(source: string, generateId: IdGenerator, inherited: Mark[] =
       result.push(...inlineRuns(value.slice(2, -2), generateId, [...inherited, { type: "strike" }]));
     } else if (value.startsWith("<u>")) {
       result.push(...inlineRuns(value.slice(3, -4), generateId, [...inherited, { type: "underline" }]));
+    } else if (value.startsWith("<span") && value.includes("data-kz-comment")) {
+      const comment = /data-kz-comment="([^"]*)"/.exec(value)?.[1] ?? "";
+      const inner = value.replace(/^<span\s+data-kz-comment="[^"]*">/i, "").replace(/<\/span>$/i, "");
+      const decoded = comment.replace(/&quot;/g, '"').replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&amp;/g, "&");
+      if (decoded.trim() && decoded.length <= 2000) result.push(...inlineRuns(inner, generateId, [...inherited, { type: "comment", value: decoded }]));
+      else result.push(run(value, inherited, generateId));
     } else if (value.startsWith("*") || value.startsWith("_")) {
       result.push(...inlineRuns(value.slice(1, -1), generateId, [...inherited, { type: "italic" }]));
     } else {
