@@ -97,11 +97,12 @@ function makeParagraph(node: Element, type: "paragraph" | "heading" = "paragraph
   const spacingAfter = toPoints(css.marginBottom);
   const lineSpacingValue = Number.parseFloat(css.lineHeight);
   const backgroundColor = css.backgroundColor && isValidColor(css.backgroundColor) ? css.backgroundColor : undefined;
-  const borderWidthRaw = css.borderTopWidth || css.borderWidth;
+  const borderShorthandMatch = /^([0-9.]+)(px|pt) solid (#[0-9a-f]{3}(?:[0-9a-f]{3})?|rgb\(\s*\d{1,3}\s*,\s*\d{1,3}\s*,\s*\d{1,3}\s*\))$/i.exec(css.border);
+  const borderWidthRaw = css.borderTopWidth || css.borderWidth || (borderShorthandMatch ? borderShorthandMatch[1] + borderShorthandMatch[2] : "");
   const borderWidthMatch = /^([0-9.]+)(px|pt)$/i.exec(borderWidthRaw);
-  const borderStyle = css.borderTopStyle || css.borderStyle;
+  const borderStyle = css.borderTopStyle || css.borderStyle || (borderShorthandMatch ? "solid" : "");
   const borderWidth = borderStyle === "solid" && borderWidthMatch ? Number(borderWidthMatch[1]) * (borderWidthMatch[2].toLowerCase() === "px" ? 0.75 : 1) : undefined;
-  const borderColor = borderStyle === "solid" ? cssColorToHex(css.borderTopColor || css.borderColor) : undefined;
+  const borderColor = borderStyle === "solid" ? cssColorToHex(css.borderTopColor || css.borderColor || borderShorthandMatch?.[3] || "") : undefined;
   const paddingValue = toPoints(css.padding);
   const spacing = { ...(spacingBefore ? { spacingBefore } : {}), ...(spacingAfter ? { spacingAfter } : {}), ...(Number.isFinite(lineSpacingValue) && lineSpacingValue >= 0.5 && lineSpacingValue <= 4 ? { lineSpacing: lineSpacingValue } : {}), ...(backgroundColor ? { backgroundColor } : {}), ...(borderColor && borderWidth ? { borderColor, borderWidth } : {}), ...(paddingValue ? { padding: paddingValue } : {}) };
   if (type === "heading") {
