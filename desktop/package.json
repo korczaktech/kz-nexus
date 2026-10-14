@@ -7,17 +7,19 @@
   "type": "module",
   "main": "src/main.js",
   "scripts": {
-    "start": "electron .",
+    "start": "npm run build:engine && electron .",
     "test": "node --test",
-    "build": "electron-builder --dir",
-    "dist": "electron-builder",
-    "dist:win": "electron-builder --win nsis",
-    "dist:mac": "electron-builder --mac dmg",
-    "dist:linux": "electron-builder --linux"
+    "build": "npm run build:engine && electron-builder --dir",
+    "dist": "npm run build:engine && electron-builder",
+    "dist:win": "npm run build:engine && electron-builder --win nsis",
+    "dist:mac": "npm run build:engine && electron-builder --mac dmg",
+    "dist:linux": "npm run build:engine && electron-builder --linux",
+    "build:engine": "node scripts/build-engine.mjs"
   },
   "devDependencies": {
     "electron": "^38.1.2",
-    "electron-builder": "^26.0.12"
+    "electron-builder": "^26.0.12",
+    "esbuild": "0.25.5"
   },
   "build": {
     "appId": "com.korczaktech.nexus.desktop",
