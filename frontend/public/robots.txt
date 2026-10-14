@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+Disallow: /api/
+Sitemap: https://nexus.korczaktech.com.br/sitemap.xml
