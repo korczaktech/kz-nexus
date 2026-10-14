@@ -122,8 +122,9 @@ function prepareImportedHtml(source:string):{html:string;layout:Partial<EditorLa
   }
   const pageBox=allCss.match(/@top-(left|center|right)\s*\{[^}]*content\s*:\s*["']([^"']*)["']/i);
   if(pageBox){layout.headerAlign=pageBox[1].toLowerCase() as 'left'|'center'|'right';layout.headerText=pageBox[2]}
-  const footerBox=allCss.match(/@bottom-(left|center|right)\s*\{[^}]*content\s*:\s*["']([^"']*)["']/i);
-  if(footerBox){layout.footerAlign=footerBox[1].toLowerCase() as 'left'|'center'|'right';layout.footerText=footerBox[2]}
+  const footerBoxes=[...allCss.matchAll(/@bottom-(left|center|right)\s*\{([^}]*)\}/gi)];
+  const footerBox=footerBoxes.find(match=>!/counter\s*\(\s*page\s*\)/i.test(match[2])&&/content\s*:\s*["'][^"']*["']/i.test(match[2]));
+  if(footerBox){const text=footerBox[2].match(/content\s*:\s*["']([^"']*)["']/i);if(text){layout.footerAlign=footerBox[1].toLowerCase() as 'left'|'center'|'right';layout.footerText=text[1]}}
   parsed.querySelectorAll('style,link,meta,script,iframe,object,embed,form').forEach(node=>node.remove());
   const body=parsed.body.innerHTML||source;
   return {html:sanitizeHtml(body),layout};
