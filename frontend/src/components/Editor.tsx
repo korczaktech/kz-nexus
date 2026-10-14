@@ -261,7 +261,7 @@ export function Editor({document,versions,onSave,onClose,onConflict}:{document:D
  useEffect(()=>{const f=(e:BeforeUnloadEvent)=>{if(['dirty','saving','conflict'].includes(state)){e.preventDefault();e.returnValue=true}};window.addEventListener('beforeunload',f);return()=>window.removeEventListener('beforeunload',f)},[state]);
  useEffect(()=>()=>{if(timer.current)window.clearTimeout(timer.current)},[]);
  useEffect(()=>{const t=plainText(readEditorHtml()||content).trim();setWordCount(t?t.split(/\s+/).length:0)},[content]);
- function markDirty(html?:string,syncEngine=false){const next=sanitizeHtml(html??(readEditorHtml()||content));if(next===lastHtml.current)return;if(syncEngine&&!syncNexusEngine(nexusEngineRef.current!,next,name)){try{preserveDraft(localStorage,document.id,next)}catch{}setState('error');setMessage('O Kortex não conseguiu interpretar a alteração. O rascunho local foi preservado.');return}lastHtml.current=next;setContent(next);setState('dirty');setMessage('Alterações não salvas');if(history.current[history.current.length-1]!==next){history.current.push(next);if(history.current.length>150)history.current.shift()}future.current=[]}
+ function markDirty(html?:string,_syncEngine=false){const next=sanitizeHtml(html??(readEditorHtml()||content));if(next===lastHtml.current)return;lastHtml.current=next;setContent(next);setState('dirty');setMessage('Alterações não salvas');if(history.current[history.current.length-1]!==next){history.current.push(next);if(history.current.length>150)history.current.shift()}future.current=[]}
  const compositionActive=useRef(false);
  function handleEditorBeforeInput(event:{nativeEvent:Event;preventDefault:()=>void}){
   if(readOnly){event.preventDefault();return}
