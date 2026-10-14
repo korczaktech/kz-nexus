@@ -134,6 +134,24 @@ de células, redimensionamento e movimentação de imagens, paginação e persis
 após recarregar. Esses cenários não devem ser declarados aprovados apenas porque
 a suíte automatizada passa.
 
+
+## Política de eventos de composição IME — marco 12
+
+A decisão de tratar um evento como parte da composição foi extraída para
+`frontend/src/components/editorComposition.ts` e conectada ao handler
+`beforeinput` do editor. Enquanto a composição estiver ativa, ou o evento
+indicar `isComposing`, `insertCompositionText` ou `insertFromComposition`,
+o evento é adiado para não transformar texto provisório em comandos comuns de
+digitação. Eventos normais voltam ao caminho de comandos do motor após a
+composição.
+
+Os testes unitários cobrem cada condição e o retorno ao caminho normal. Isso
+valida a política de roteamento, mas não simula por completo um teclado IME real
+nem a ordem específica de eventos de cada navegador. A reconciliação final da
+composição e a preservação de cursor/seleção ainda exigem validação manual em
+navegadores e dispositivos reais; este marco não declara o IME integralmente
+resolvido.
+
 ## Limite conhecido
 
 A integração ainda não é 100% independente de HTML/DOM: a superfície visual
