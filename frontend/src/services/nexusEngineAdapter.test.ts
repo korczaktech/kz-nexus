@@ -67,6 +67,17 @@ describe("Nexus editor adapter", () => {
     expect(html).toContain("padding:4.5pt");
   });
 
+  it("round-trips first-line and hanging indents through the engine adapter", () => {
+    const document = nexusDocumentFromHtml('<p style="text-indent:18pt">First line</p><p style="padding-left:18pt;text-indent:-18pt">Hanging line</p>', "Indent test");
+    const first = document.content[0];
+    const hanging = document.content[1];
+    expect(first && (first.type === "paragraph" || first.type === "heading") ? first.firstLineIndent : undefined).toBe(18);
+    expect(hanging && (hanging.type === "paragraph" || hanging.type === "heading") ? hanging.hangingIndent : undefined).toBe(18);
+    const html = htmlFromNexusDocument(document);
+    expect(html).toContain("text-indent:18pt");
+    expect(html).toContain("padding-left:18pt;text-indent:-18pt");
+  });
+
   it("preserves safe paragraph anchors for internal note links", () => {
     const document = nexusDocumentFromHtml('<p id="note_0001abcd">Footnote target</p><p><a href="#note_0001abcd">1</a></p>', "Anchor test");
     const paragraph = document.content[0];
