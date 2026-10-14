@@ -1,3 +1,6 @@
+import { Window } from "happy-dom";
+const testWindow = new Window();
+globalThis.DOMParser = testWindow.DOMParser;
 import test from "node:test";
 import assert from "node:assert/strict";
 import { htmlToNexusDocument, exportNexusFile, importNexusFile, nexusDocumentToHtml, layoutNexusDocument } from "./engine-bridge.js";
