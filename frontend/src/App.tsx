@@ -103,6 +103,7 @@ function Auth({done,onGuest,initialRegister=false}:{done:(u:User)=>void;onGuest:
       <Button>{recovery?'Enviar recuperação':register?'Criar conta':'Entrar'}</Button>
     </form>
     <div className="auth-links"><button className="text-button" onClick={()=>setRecovery(!recovery)}>{recovery?'Voltar':'Recuperar acesso'}</button><button className="text-button" onClick={()=>{setRecovery(false);setRegister(!register)}}>{register?'Já tenho conta':'Criar conta'}</button></div><button type="button" className="text-button guest-entry" onClick={onGuest}>Continuar sem conta</button><p className="auth-subtitle guest-note">Você poderá navegar pelo aplicativo. Para criar ou editar documentos e conectar o Drive, entre na sua conta.</p>
+    <nav className="auth-public-links" aria-label="Informações públicas do Korczak Nexus"><a href="/sobre/">Sobre o Nexus</a><a href="/recursos/">Recursos</a><a href="/privacy">Privacidade</a><a href="/terms">Termos de Uso</a></nav>
   </section></main>
 }
 
