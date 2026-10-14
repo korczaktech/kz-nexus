@@ -15,6 +15,7 @@ import {createEditor, createIdGenerator, systemClock, type Mark, type Block, get
 import {deserializeNexusHtml,nexusDocumentFromHtml,serializeNexusHtml,syncNexusEngine,toggleEngineMarkForDomSelection,applyEngineMarksForDomSelection,removeEngineMarksForDomSelection,removeEngineLinkForDomSelection,restoreEngineDomSelection,getEngineDomContext,getEngineTextBlocks,htmlFromNexusDocument} from '../services/nexusEngineAdapter';
 import {decodeNexusDocument,encodeNexusDocument} from '../services/nexusDocumentPersistence';
 import {characterDeletionRange,normalizeTextRange,wordDeletionRange} from './editorSelection';
+import {isCompositionInput} from './editorComposition';
 
 type RibbonGlyphName='bold'|'indent-more'|'indent-increase'|'clear-format'|'zoom-out'|'zoom-in'|'pages'|'reading'|'link'|'image'|'table'|'rule'|'page-break'|'text-color'|'highlight'|'word-count'|'import-doc'|'extension-export'|'extension-image'|'exit'|'print-document'|'share-document'|'document-properties'|'password-shield'|'compare-versions'|'cut-selection'|'copy-selection'|'paste-selection'|'paste-plain'|'find-next'|'find-previous'|'replace-next'|'replace-all'|'repeat-action'|'select-word'|'select-line'|'select-paragraph'|'select-block'|'font-increase'|'font-decrease'|'superscript'|'subscript'|'format-painter'|'line-spacing'|'paragraph-spacing'|'first-line-indent'|'hanging-indent'|'paragraph-border'|'paragraph-fill'|'custom-style';
 function RibbonGlyph({name}:{name:RibbonGlyphName}){
@@ -271,7 +272,7 @@ export function Editor({document,versions,onSave,onClose,onConflict}:{document:D
   if(readOnly){event.preventDefault();return}
   const inputEvent=event.nativeEvent as InputEvent;
   const inputType=inputEvent.inputType||'';
-  if(compositionActive.current||inputEvent.isComposing||inputType==='insertCompositionText'||inputType==='insertFromComposition')return;
+  if(isCompositionInput(compositionActive.current,inputType,inputEvent.isComposing))return;
   if(inputType==='insertText'||inputType==='insertReplacementText'){
    if(inputEvent.data===null)return;
    event.preventDefault();exec('insertText',inputEvent.data);return;
