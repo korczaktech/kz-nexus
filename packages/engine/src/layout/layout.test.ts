@@ -191,6 +191,27 @@ describe("native layout engine", () => {
     expect(fragments.every(fragment => fragment.rect.y + fragment.rect.height <= smallPage.height - smallPage.margins.bottom + 0.001)).toBe(true);
   });
 
+  it("splits oversized table rows across pages without losing cell text", () => {
+    const longText = "alpha bravo charlie delta echo foxtrot golf hotel india juliet kilo lima mike november oscar papa quebec romeo sierra tango uniform victor whiskey xray yankee zulu alpha bravo charlie delta echo foxtrot golf hotel india juliet kilo lima mike november oscar papa quebec romeo sierra tango uniform victor whiskey xray yankee zulu";
+    const table: Block = { type: "table", id: "long-table", children: [
+      { type: "tableRow", id: "long-row", children: [
+        { type: "tableCell", id: "long-cell", children: [
+          { type: "paragraph", id: "long-cell-p", children: [{ type: "text", id: "long-cell-run", text: longText, marks: [] }] }
+        ] }
+      ] }
+    ] };
+    const smallPage = { unit: "pt" as const, width: 160, height: 55, orientation: "portrait" as const, margins: { top: 5, right: 10, bottom: 5, left: 10 } };
+    const result = layoutDocument(documentWith([table], smallPage), { metrics });
+    const fragments = result.pages.flatMap(page => page.blocks.filter(block => block.blockId === "long-table"));
+    const rendered = fragments.flatMap(fragment => fragment.table?.rows || []).flatMap(row => row.cells).flatMap(cell => cell.lines.map(line => line.text)).join(" ");
+    expect(fragments.length).toBeGreaterThan(1);
+    expect(fragments[0].continued).toBe(false);
+    expect(fragments.slice(1).every(fragment => fragment.continued === true)).toBe(true);
+    expect(rendered).toContain("alpha bravo");
+    expect(rendered).toContain("yankee zulu");
+    expect(fragments.every(fragment => fragment.rect.y + fragment.rect.height <= smallPage.height - smallPage.margins.bottom + 0.001)).toBe(true);
+  });
+
   it("reports invalid page geometry and safely uses a default page", () => {
     const invalid = { unit: "pt" as const, width: 100, height: 100, orientation: "portrait" as const, margins: { top: 80, right: 80, bottom: 80, left: 80 } };
     const result = layoutDocument(documentWith([paragraph("p", "fallback")], invalid), { metrics });
