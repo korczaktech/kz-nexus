@@ -220,7 +220,9 @@ export function insertParagraphAfter(params: { blockId: string }): Command {
     const index = findTopLevelIndex(doc.content, params.blockId);
     if (index === -1) return err(engineError("NODE_NOT_FOUND", `Top-level block "${params.blockId}" not found`, { path: params.blockId }));
     const newId = ctx.generateId();
-    const paragraph: Paragraph = { type: "paragraph", id: newId, children: [{ type: "text", id: ctx.generateId(), text: "", marks: [] }] };
+    const source = doc.content[index]!;
+    const inherited = isParagraphLike(source) ? { ...(source.align !== undefined ? { align: source.align } : {}), ...(source.indent !== undefined ? { indent: source.indent } : {}), ...(source.spacingBefore !== undefined ? { spacingBefore: source.spacingBefore } : {}), ...(source.spacingAfter !== undefined ? { spacingAfter: source.spacingAfter } : {}), ...(source.lineSpacing !== undefined ? { lineSpacing: source.lineSpacing } : {}), ...(source.backgroundColor !== undefined ? { backgroundColor: source.backgroundColor } : {}), ...(source.borderColor !== undefined ? { borderColor: source.borderColor } : {}), ...(source.borderWidth !== undefined ? { borderWidth: source.borderWidth } : {}), ...(source.padding !== undefined ? { padding: source.padding } : {}) } : {};
+    const paragraph: Paragraph = { type: "paragraph", id: newId, ...inherited, children: [{ type: "text", id: ctx.generateId(), text: "", marks: [] }] };
     const content = [...doc.content];
     content.splice(index + 1, 0, paragraph);
     return ok({ document: { ...doc, content }, selection: { blockId: newId, offset: 0 } });
