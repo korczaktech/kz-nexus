@@ -400,7 +400,8 @@ export function layoutDocument(document: NexusDocument, options: LayoutOptions =
             }
             return { cell, lines };
           });
-          const allLineBottoms = cellLines.flatMap(item => item.lines.map(line => line.y + line.height));
+          const allLines = cellLines.flatMap(item => item.lines);
+          const allLineBottoms = allLines.map(line => line.y + line.height);
           let offset = 0;
           while (offset < row.height - 0.001) {
             const available = content.y + content.height - cursorY;
@@ -411,9 +412,11 @@ export function layoutDocument(document: NexusDocument, options: LayoutOptions =
               continue;
             }
             let nextOffset = Math.min(row.height, offset + available);
-            const boundary = allLineBottoms
-              .filter(bottom => bottom > offset + 0.001 && bottom <= offset + available + 0.001)
-              .reduce((best, bottom) => Math.max(best, bottom), offset);
+            const safeBoundaries = allLineBottoms.filter(bottom =>
+              bottom > offset + 0.001 && bottom <= offset + available + 0.001 &&
+              allLines.every(line => !(line.y < bottom - 0.001 && line.y + line.height > bottom + 0.001))
+            );
+            const boundary = safeBoundaries.reduce((best, bottom) => Math.max(best, bottom), offset);
             if (boundary > offset + 0.001) nextOffset = Math.min(row.height, boundary);
             const chunkHeight = Math.max(0.001, nextOffset - offset);
             const rowY = cursorY;
