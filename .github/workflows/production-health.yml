@@ -2,7 +2,7 @@ name: Production API Health Monitor
 
 on:
   schedule:
-    - cron: "*/15 * * * *"
+    - cron: "0 */6 * * *"
   workflow_dispatch:
 
 permissions:
