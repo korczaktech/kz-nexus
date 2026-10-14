@@ -85,7 +85,7 @@ export function PagedPreview({html,css,onClose,document,useNativeLayout=true,hea
       const canvas=window.document.createElement('canvas');
       const context=canvas.getContext('2d');
       const metrics:TextMetrics|undefined=context?{
-        measureText:(text,size,family)=>{context.font=size+'px '+family;return context.measureText(text).width*72/96},
+        measureText:(text,size,family)=>{context.font=(size*96/72)+'px '+family;return context.measureText(text).width*72/96},
         lineHeight:(size)=>size*1.2
       }:undefined;
       const result=layoutDocument(document,{fontFamily:'Arial',metrics,keepHeadingsWithNext:true,keepParagraphsTogether:true});
