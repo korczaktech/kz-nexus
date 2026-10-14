@@ -32,7 +32,7 @@ export function setIndent(params: { blockId: string; indent: number }): Command 
   };
 }
 
-/** Sets paragraph spacing and line-height values in the canonical document model. */
+/** Sets paragraph spacing, line-height, background, border, and padding in the canonical document model. */
 export function setParagraphStyle(params: {
   blockId: string;
   spacingBefore?: number;
