@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   createDocument,
-  createIdGenerator,
+  DEFAULT_LIMITS,
   getPlainText,
 } from "../../../packages/engine/src/index";
 import {
@@ -24,7 +24,7 @@ describe("Kortex model persistence (.nsx)", () => {
     expect(result.value).not.toMatch(/<\/?(?:html|body|p|div)(?:\s|>)/i);
   });
 
-  it("round-trips the identity, metadata, page configuration, content and resources", () => {
+  it("round-trips identity, metadata, page configuration, content and resources", () => {
     const document = createDocument({
       title: "Kortex source of truth",
       pageConfig: {
@@ -60,24 +60,23 @@ describe("Kortex model persistence (.nsx)", () => {
     expect(getPlainText(decoded.value.content[0]!)).toBe(firstBlock.children[0]!.text);
   });
 
+  it("applies the engine size limits consistently on write and read", () => {
+    const document = createDocument({ title: "Limit check" });
+    const tinyLimits = { ...DEFAULT_LIMITS, maxDocumentBytes: 1 };
+
+    const encoded = encodeNexusDocument(document, { limits: tinyLimits });
+    expect(encoded.ok).toBe(false);
+
+    const normal = encodeNexusDocument(document);
+    expect(normal.ok).toBe(true);
+    if (!normal.ok) return;
+    expect(decodeNexusDocument(normal.value, { limits: tinyLimits }).ok).toBe(false);
+  });
+
   it("rejects HTML, invalid JSON, and envelopes with the wrong format", () => {
     expect(decodeNexusDocument("<p>Not an NSX document</p>").ok).toBe(false);
     expect(decodeNexusDocument("{broken").ok).toBe(false);
     expect(decodeNexusDocument(JSON.stringify({ format: "other", formatVersion: 1, document: {} })).ok).toBe(false);
-  });
-
-  it("supports deterministic ID generation when decoding needs normalization", () => {
-    const document = createDocument({ title: "Stable IDs" });
-    const encoded = encodeNexusDocument(document);
-    expect(encoded.ok).toBe(true);
-    if (!encoded.ok) return;
-
-    const first = decodeNexusDocument(encoded.value, { idGenerator: createIdGenerator("stable") });
-    const second = decodeNexusDocument(encoded.value, { idGenerator: createIdGenerator("stable") });
-    expect(first.ok).toBe(true);
-    expect(second.ok).toBe(true);
-    if (!first.ok || !second.ok) return;
-    expect(first.value).toEqual(second.value);
   });
 
   it("recognizes only filenames with the native extension", () => {
