@@ -14,7 +14,7 @@ import {mergeDocumentContent} from './editorMerge';
 import {createEditor, createIdGenerator, systemClock, type Mark, type Block, getPlainText, applyMark, setAlign, setIndent, setParagraphStyle, setHeadingLevel, convertBlockToBlockquote, insertBlockquote, insertThematicBreak, insertParagraphAfter, splitBlock, mergeBlockWithPrevious, deleteBlock, convertBlockToList, convertBlocksToList, convertListType, splitListItem, mergeListItemWithPrevious, insertTable as engineInsertTable, addTableRow, removeTableRow, addTableColumn, removeTableColumn, insertListItem, removeListItem, insertImageResource, insertImportedBlocksAtSelection, removeImage, setPageConfig, setMetadata, insertText, deleteText, replaceRange, exportPlainText, exportHtml as exportEngineHtml, exportMarkdown, importPlainText, importMarkdown} from '../../../packages/engine/src/index';
 import {deserializeNexusHtml,nexusDocumentFromHtml,serializeNexusHtml,syncNexusEngine,toggleEngineMarkForDomSelection,applyEngineMarksForDomSelection,removeEngineMarksForDomSelection,removeEngineLinkForDomSelection,restoreEngineDomSelection,getEngineDomContext,getEngineTextBlocks,htmlFromNexusDocument} from '../services/nexusEngineAdapter';
 import {decodeNexusDocument,encodeNexusDocument} from '../services/nexusDocumentPersistence';
-import {normalizeTextRange,wordDeletionRange} from './editorSelection';
+import {characterDeletionRange,normalizeTextRange,wordDeletionRange} from './editorSelection';
 
 type RibbonGlyphName='bold'|'indent-more'|'indent-increase'|'clear-format'|'zoom-out'|'zoom-in'|'pages'|'reading'|'link'|'image'|'table'|'rule'|'page-break'|'text-color'|'highlight'|'word-count'|'import-doc'|'extension-export'|'extension-image'|'exit'|'print-document'|'share-document'|'document-properties'|'password-shield'|'compare-versions'|'cut-selection'|'copy-selection'|'paste-selection'|'paste-plain'|'find-next'|'find-previous'|'replace-next'|'replace-all'|'repeat-action'|'select-word'|'select-line'|'select-paragraph'|'select-block'|'font-increase'|'font-decrease'|'superscript'|'subscript'|'format-painter'|'line-spacing'|'paragraph-spacing'|'first-line-indent'|'hanging-indent'|'paragraph-border'|'paragraph-fill'|'custom-style';
 function RibbonGlyph({name}:{name:RibbonGlyphName}){
@@ -294,8 +294,8 @@ export function Editor({document,versions,onSave,onClose,onConflict}:{document:D
    if(context.blockIndex!==context.endBlockIndex||start!==end){exec('insertText','');return}
    const text=getPlainText(context.block);
    let from=start,to=start;
-   if(inputType==='deleteContentBackward')from=Math.max(0,start-1);
-   else if(inputType==='deleteContentForward')to=Math.min(text.length,start+1);
+   if(inputType==='deleteContentBackward'){({start:from,end:to}=characterDeletionRange(text,start,'backward'))}
+   else if(inputType==='deleteContentForward'){({start:from,end:to}=characterDeletionRange(text,start,'forward'))}
    else if(inputType==='deleteWordBackward'){({start:from,end:to}=wordDeletionRange(text,start,'backward'))}
    else if(inputType==='deleteWordForward'){({start:from,end:to}=wordDeletionRange(text,start,'forward'))}
    else if(inputType==='deleteSoftLineBackward')from=0;
