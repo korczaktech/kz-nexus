@@ -116,6 +116,7 @@ describe(".nsx round-trip", () => {
     if (!withImage.ok) throw withImage.error;
     const { document } = roundTrip(withImage.value.document);
     expect(document.resources).toHaveLength(1);
+    expect(document.resources[0]).toMatchObject({ kind: "image", mimeType: "image/png", data: "aGVsbG8=", byteLength: 5 });
     expect(document.content[1]).toMatchObject({ type: "image", alt: "logo", width: 640, height: 480 });
   });
 
