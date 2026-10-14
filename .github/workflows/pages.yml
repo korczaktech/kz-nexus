@@ -83,6 +83,13 @@ jobs:
           test -f dist/index.html
           test -f dist/icons/nexus-icon-192.png
           test -f dist/icons/nexus-icon-512.png
+          test -f dist/robots.txt
+          test -f dist/sitemap.xml
+          test -f dist/sobre/index.html
+          test -f dist/recursos/index.html
+          grep -q 'Korczak Nexus' dist/index.html
+          grep -q 'nexus.korczaktech.com.br/sitemap.xml' dist/robots.txt
+          grep -q '<urlset' dist/sitemap.xml
           # GitHub Pages needs a 404 fallback for React routes like /privacy and /terms.
           cp dist/index.html dist/404.html
           test -f dist/404.html
