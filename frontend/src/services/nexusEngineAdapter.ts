@@ -312,12 +312,32 @@ export function getEngineTextBlocks(engine: ReturnType<typeof createEditor>): Ar
 }
 
 function domTextBlocks(root: HTMLElement): HTMLElement[] {
+  // The page shell also contains editable layout fields for headers and
+  // footers. Only text blocks inside the actual document bodies participate
+  // in the engine's logical block index.
+  const bodies = root.matches(".rich-editor")
+    ? [root]
+    : Array.from(root.querySelectorAll<HTMLElement>(".rich-editor"));
   const selector = "p,h1,h2,h3,h4,h5,h6,li,td,th,blockquote";
-  return Array.from(root.querySelectorAll<HTMLElement>(selector)).filter(element => {
-    const tag = element.tagName.toLowerCase();
-    if (!["li", "td", "th", "blockquote"].includes(tag)) return true;
-    return !Array.from(element.children).some(child => /^(P|H[1-6])$/.test(child.tagName));
+  const containers = new Set(["li", "td", "th", "blockquote"]);
+  return bodies.flatMap(body => {
+    const candidates = Array.from(body.querySelectorAll<HTMLElement>(selector));
+    return candidates.filter(element => {
+      if (!containers.has(element.tagName.toLowerCase())) return true;
+      // A container with nested text blocks is structural, not a text block
+      // itself. This handles table cells and lists that wrap paragraphs in
+      // additional DIV/UL/OL layers instead of only direct P children.
+      return !candidates.some(child => child !== element && element.contains(child));
+    });
   });
+}
+
+function selectionBody(root: HTMLElement, node: Node | null): HTMLElement | null {
+  const element = node instanceof HTMLElement
+    ? node
+    : node?.parentElement ?? null;
+  const body = element?.closest<HTMLElement>(".rich-editor") ?? null;
+  return body && (root === body || root.contains(body)) ? body : null;
 }
 
 function pointOffset(block: HTMLElement, node: Node, offset: number): number | null {
@@ -376,6 +396,10 @@ export function getEngineDomContext(
   if (!selection?.rangeCount || !selection.anchorNode || !selection.focusNode) return null;
   const range = selection.getRangeAt(0);
   if (!root.contains(range.startContainer) || !root.contains(range.endContainer)) return null;
+  // Header/footer selection must never be mapped to a stale body paragraph.
+  // Cross-page body selections are allowed, but both endpoints must be in a
+  // real editable body managed by the engine.
+  if (!selectionBody(root, selection.anchorNode) || !selectionBody(root, selection.focusNode)) return null;
   const domBlocks = domTextBlocks(root);
   const modelBlocks = logicalTextBlocks(engine.getDocument().content);
   if (!domBlocks.length || domBlocks.length !== modelBlocks.length) return null;
@@ -468,6 +492,9 @@ function updateEngineMarksForDomSelection(
   if (!range || !root.contains(range.startContainer) || !root.contains(range.endContainer)) {
     return { ok: false, message: "A seleção precisa estar dentro do documento." };
   }
+  if (!selectionBody(root, selection.anchorNode) || !selectionBody(root, selection.focusNode)) {
+    return { ok: false, message: "Selecione o texto no corpo do documento. Cabeçalhos e rodapés são campos de layout separados." };
+  }
 
   const domBlocks = domTextBlocks(root);
   const modelBlocks = logicalTextBlocks(engine.getDocument().content);
@@ -531,6 +558,8 @@ export function restoreEngineDomSelection(engine: ReturnType<typeof createEditor
   if (!logical) return;
   const modelBlocks = logicalTextBlocks(engine.getDocument().content);
   const domBlocks = domTextBlocks(root);
+  // Refuse to restore to a wrong paragraph if the DOM projection is stale.
+  if (domBlocks.length !== modelBlocks.length) return;
   const findPoint = (block: HTMLElement, offset: number): { node: Node; offset: number } => {
     const walker = block.ownerDocument.createTreeWalker(block, NodeFilter.SHOW_TEXT);
     let remaining = Math.max(0, offset);
