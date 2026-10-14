@@ -570,9 +570,98 @@ export function layoutDocument(document: NexusDocument, options: LayoutOptions =
           nextPage();
           fragmentStartY = cursorY;
         }
-        if (itemHeight > content.height) diagnostics.push({ code: "OVERSIZED_BLOCK",
-          message: "Item de lista maior que a área útil da página; mantido íntegro e preservando a estrutura aninhada.", blockId: item.id });
         const marker = block.type === "orderedList" ? String(block.start + index) + "." : "•";
+        if (itemHeight > content.height && item.children.every(child => child.type === "paragraph")) {
+          // Oversized plain-text list items can span pages. Preserve the list
+          // item structure on each page and show the marker only on its first part.
+          if (cursorY > content.y) {
+            flushList();
+            nextPage();
+            fragmentStartY = cursorY;
+          }
+          let itemStartY = cursorY;
+          let itemChildren: LayoutBlock[] = [];
+          let firstItemFragment = true;
+          const finishItemFragment = () => {
+            if (!itemChildren.length) return;
+            fragmentChildren.push({
+              blockId: item.id, type: "listItem", pageIndex: page.index,
+              rect: { x: content.x, y: itemStartY, width: content.width, height: Math.max(12, cursorY - itemStartY) },
+              lines: [], children: itemChildren, marker: firstItemFragment ? marker : undefined, depth: 0
+            });
+            itemChildren = [];
+            firstItemFragment = false;
+          };
+          for (const paragraph of item.children) {
+            if (paragraph.type !== "paragraph") continue;
+            const x = content.x + 18;
+            const availableWidth = Math.max(1, content.width - 18);
+            const measured = blockTextLayout(paragraph, x, cursorY, availableWidth, options);
+            let lineOffset = 0;
+            let firstParagraphFragment = true;
+            while (lineOffset < measured.lines.length) {
+              const topInset = firstParagraphFragment ? safeNumber(paragraph.padding, 0) + safeNumber(paragraph.borderWidth, 0) : 0;
+              let available = content.y + content.height - cursorY - topInset;
+              if (available < measured.lines[lineOffset].height && cursorY > content.y) {
+                finishItemFragment();
+                flushList();
+                nextPage();
+                fragmentStartY = cursorY;
+                itemStartY = cursorY;
+                available = content.y + content.height - cursorY - topInset;
+              }
+              let count = 0;
+              let lineHeightSum = 0;
+              while (lineOffset + count < measured.lines.length) {
+                const nextHeight = measured.lines[lineOffset + count].height;
+                if (count > 0 && lineHeightSum + nextHeight > available + 0.001) break;
+                if (count === 0 && nextHeight > available && cursorY > content.y) break;
+                lineHeightSum += nextHeight;
+                count += 1;
+              }
+              if (count === 0) {
+                finishItemFragment();
+                flushList();
+                nextPage();
+                fragmentStartY = cursorY;
+                itemStartY = cursorY;
+                available = content.height;
+                count = 1;
+                lineHeightSum = measured.lines[lineOffset].height;
+                diagnostics.push({ code: "OVERSIZED_BLOCK", message: "Uma linha de texto de item de lista excede a área útil da página.", blockId: item.id });
+              }
+              const isLastFragment = lineOffset + count >= measured.lines.length;
+              const bottomInset = isLastFragment ? safeNumber(paragraph.padding, 0) + safeNumber(paragraph.borderWidth, 0) : 0;
+              const fragmentHeight = topInset + lineHeightSum + bottomInset;
+              const firstLineY = measured.lines[lineOffset].y;
+              const lines = measured.lines.slice(lineOffset, lineOffset + count).map(line => ({
+                ...line, y: cursorY + topInset + (line.y - firstLineY)
+              }));
+              itemChildren.push({
+                blockId: paragraph.id, type: "paragraph", pageIndex: page.index,
+                rect: { x, y: cursorY, width: availableWidth, height: fragmentHeight }, lines,
+                style: styleForParagraph(paragraph)
+              });
+              cursorY += fragmentHeight;
+              lineOffset += count;
+              firstParagraphFragment = false;
+              if (lineOffset < measured.lines.length) {
+                finishItemFragment();
+                flushList();
+                nextPage();
+                fragmentStartY = cursorY;
+                itemStartY = cursorY;
+              }
+            }
+            cursorY += safeNumber(paragraph.spacingAfter, 6);
+          }
+          finishItemFragment();
+          cursorY += 2;
+          lastSpacing = 2;
+          continue;
+        }
+        if (itemHeight > content.height) diagnostics.push({ code: "OVERSIZED_BLOCK",
+          message: "Item de lista com listas aninhadas maior que a área útil da página; a estrutura é preservada, mas a divisão automática ainda não é suportada.", blockId: item.id });
         const laidOut = buildListItem(item, marker, 0, cursorY);
         fragmentChildren.push(laidOut.block);
         cursorY += laidOut.height + 2;
