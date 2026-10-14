@@ -48,6 +48,13 @@ describe("Nexus editor adapter", () => {
     expect(htmlFromNexusDocument(document)).toContain("<p>First</p><p>Second</p>");
   });
 
+  it("round-trips comment annotations through the engine document", () => {
+    const document = nexusDocumentFromHtml('<p><span data-kz-comment="Review this" title="Comentário: Review this">Important</span></p>', "Comment test");
+    const paragraph = document.content[0];
+    expect(paragraph && (paragraph.type === "paragraph" || paragraph.type === "heading") ? paragraph.children[0]!.marks : []).toContainEqual({ type: "comment", value: "Review this" });
+    expect(htmlFromNexusDocument(document)).toContain('data-kz-comment="Review this"');
+  });
+
   it("round-trips safe hyperlinks through the engine document", () => {
     const document = nexusDocumentFromHtml('<p><a href="https://example.com/docs">Read docs</a></p>', "Link test");
     const paragraph = document.content[0];
