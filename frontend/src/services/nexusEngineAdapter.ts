@@ -36,6 +36,7 @@ function marksFor(element: Element, inherited: Mark[]): Mark[] {
   if (tag === "sup") add({ type: "superscript" });
   if (tag === "sub") add({ type: "subscript" });
   if (tag === "a") { const href = element.getAttribute("href") ?? ""; if (isValidLink(href)) add({ type: "link", value: href }); }
+  if (tag === "span") { const comment = element.getAttribute("data-kz-comment"); if (comment && comment.trim().length <= 2000) add({ type: "comment", value: comment }); }
   const style = (element as HTMLElement).style;
   if (style.color) add({ type: "color", value: style.color });
   if (style.backgroundColor) add({ type: "highlight", value: style.backgroundColor });
@@ -151,6 +152,7 @@ function sanitizeImportedHtml(parsed: Document): void {
         if (!/^\d{1,4}$/.test(attribute.value) || Number(attribute.value) < 1 || Number(attribute.value) > 4096) element.removeAttribute(attribute.name);
         continue;
       }
+      if (name === "data-kz-comment") { if (element.tagName.toLowerCase() !== "span" || !attribute.value.trim() || attribute.value.length > 2000) element.removeAttribute(attribute.name); continue; }
       if (["alt", "title", "start", "colspan", "rowspan"].includes(name)) continue;
       element.removeAttribute(attribute.name);
     }
