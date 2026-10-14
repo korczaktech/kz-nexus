@@ -5,7 +5,7 @@
  * browser, desktop or mobile host can use its actual font renderer. The
  * fallback measurer is deterministic and intentionally approximate.
  */
-import type { Alignment, Block, Heading, NexusDocument, PageConfig, Paragraph, TextRun } from "../model/types";
+import type { Alignment, Block, Blockquote, BulletList, Heading, ListItem, NexusDocument, OrderedList, PageConfig, Paragraph, TextRun } from "../model/types";
 
 export interface TextMetrics {
   measureText(text: string, fontSize: number, fontFamily: string, marks?: TextRun["marks"]): number;
@@ -266,8 +266,68 @@ export function layoutDocument(document: NexusDocument, options: LayoutOptions =
   };
   let page = makePage(), cursorY = content.y;
   const nextPage = () => { page = makePage(); cursorY = content.y; };
+  const styleForParagraph = (block: Paragraph | Heading): LayoutBlockStyle => ({
+    backgroundColor: block.backgroundColor, borderColor: block.borderColor,
+    borderWidth: block.borderWidth, padding: block.padding, align: block.align
+  });
   const addBlock = (block: Block, rect: LayoutRect, lines: LayoutLine[], extra: Partial<LayoutBlock> = {}) => {
-    page.blocks.push({ blockId: block.id, type: block.type, pageIndex: page.index, rect, lines, ...extra });
+    const style = block.type === "paragraph" || block.type === "heading" ? styleForParagraph(block) : undefined;
+    page.blocks.push({ blockId: block.id, type: block.type, pageIndex: page.index, rect, lines, ...(style ? { style } : {}), ...extra });
+  };
+  const paragraphChild = (paragraph: Paragraph, x: number, y: number, width: number): LayoutBlock => {
+    const measured = blockTextLayout(paragraph, x, y, width, options);
+    return { blockId: paragraph.id, type: "paragraph", pageIndex: page.index,
+      rect: { x, y, width, height: measured.height }, lines: measured.lines, style: styleForParagraph(paragraph) };
+  };
+  const listItemHeight = (item: ListItem, depth: number): number => {
+    let total = 4;
+    for (const child of item.children) {
+      if (child.type === "paragraph") {
+        total += safeNumber(child.spacingBefore, 0) + blockTextLayout(child, 0, 0,
+          Math.max(1, content.width - (depth + 1) * 18), options).height + safeNumber(child.spacingAfter, 6);
+      } else {
+        total += listHeight(child, depth + 1);
+      }
+    }
+    return Math.max(12, total);
+  };
+  const listHeight = (list: BulletList | OrderedList, depth: number): number =>
+    list.children.reduce((sum, item) => sum + listItemHeight(item, depth) + 2, 0);
+  const buildListItem = (item: ListItem, marker: string, depth: number, y: number): { block: LayoutBlock; height: number } => {
+    const children: LayoutBlock[] = [];
+    let childY = y + 2;
+    for (const child of item.children) {
+      if (child.type === "paragraph") {
+        childY += safeNumber(child.spacingBefore, 0);
+        const x = content.x + (depth + 1) * 18;
+        const width = Math.max(1, content.width - (depth + 1) * 18);
+        const laidOut = paragraphChild(child, x, childY, width);
+        children.push(laidOut);
+        childY += laidOut.rect.height + safeNumber(child.spacingAfter, 6);
+      } else {
+        const nested = buildListNode(child, depth + 1, childY);
+        children.push(nested.block);
+        childY += nested.height;
+      }
+    }
+    const height = Math.max(12, childY - y + 2);
+    return { block: { blockId: item.id, type: "listItem", pageIndex: page.index,
+      rect: { x: content.x + depth * 18, y, width: Math.max(1, content.width - depth * 18), height },
+      lines: [], children, marker, depth }, height };
+  };
+  const buildListNode = (list: BulletList | OrderedList, depth: number, y: number): { block: LayoutBlock; height: number } => {
+    const children: LayoutBlock[] = [];
+    let childY = y;
+    list.children.forEach((item, index) => {
+      const marker = list.type === "orderedList" ? String(list.start + index) + "." : "•";
+      const laidOut = buildListItem(item, marker, depth, childY);
+      children.push(laidOut.block);
+      childY += laidOut.height + 2;
+    });
+    const height = Math.max(0, childY - y);
+    return { block: { blockId: list.id, type: list.type, pageIndex: page.index,
+      rect: { x: content.x + depth * 18, y, width: Math.max(1, content.width - depth * 18), height },
+      lines: [], children, depth }, height };
   };
   const isForced = new Set(options.breakBefore || []);
   document.content.forEach((block, blockIndex) => {
