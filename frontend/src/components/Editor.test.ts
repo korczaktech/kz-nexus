@@ -21,6 +21,10 @@ describe('Fase 8 - editor',()=>{
     expect(resolveEditorInitialHtml(null,'<p>LEGACY_CONTENT</p>')).toBe('<p>LEGACY_CONTENT</p>');
     expect(resolveEditorInitialHtml(null,null)).toBe('');
   });
+
+  it('does not mask a corrupt native payload with stale HTML',()=>{
+    expect(resolveEditorInitialHtml(null,'<p>STALE_HTML</p>',true)).toBe('');
+  });
   it('renderiza conteúdo formatado sem interpretar HTML bruto',()=>{
     const html=markdownToHtml('# Título\n\n**forte** e *itálico*\n\n- item');
     expect(html).toContain('<h1>Título</h1>');
