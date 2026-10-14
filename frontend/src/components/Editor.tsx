@@ -11,7 +11,7 @@ import {attachLayoutMetadata,parseLayoutMetadata,stripLayoutMetadata} from './ed
 import type {EditorLayoutSettings} from './editorLayoutMetadata';
 import {parseRtfToHtml} from './editorRtf';
 import {mergeDocumentContent} from './editorMerge';
-import {createEditor, createIdGenerator, systemClock, type Mark, type Block, getPlainText, applyMark, setAlign, setIndent, setParagraphStyle, setHeadingLevel, convertBlockToBlockquote, insertBlockquote, insertThematicBreak, insertParagraphAfter, splitBlock, mergeBlockWithPrevious, deleteBlock, moveBlock, convertBlockToList, convertBlocksToList, convertListType, splitListItem, mergeListItemWithPrevious, insertTable as engineInsertTable, addTableRow, removeTableRow, addTableColumn, removeTableColumn, insertListItem, removeListItem, insertImageResource, insertImportedBlocksAtSelection, updateImage, removeImage, setPageConfig, setMetadata, insertText, deleteText, replaceRange, exportPlainText, exportHtml as exportEngineHtml, exportMarkdown, importPlainText, importMarkdown} from '../../../packages/engine/src/index';
+import {createEditor, createIdGenerator, systemClock, type Mark, type Block, type NexusDocument, getPlainText, applyMark, setAlign, setIndent, setParagraphStyle, setHeadingLevel, convertBlockToBlockquote, insertBlockquote, insertThematicBreak, insertParagraphAfter, splitBlock, mergeBlockWithPrevious, deleteBlock, moveBlock, convertBlockToList, convertBlocksToList, convertListType, splitListItem, mergeListItemWithPrevious, insertTable as engineInsertTable, addTableRow, removeTableRow, addTableColumn, removeTableColumn, insertListItem, removeListItem, insertImageResource, insertImportedBlocksAtSelection, updateImage, removeImage, setPageConfig, setMetadata, insertText, deleteText, replaceRange, exportPlainText, exportHtml as exportEngineHtml, exportMarkdown, importPlainText, importMarkdown} from '../../../packages/engine/src/index';
 import {deserializeNexusHtml,nexusDocumentFromHtml,serializeNexusHtml,syncNexusEngine,toggleEngineMarkForDomSelection,applyEngineMarksForDomSelection,removeEngineMarksForDomSelection,removeEngineLinkForDomSelection,restoreEngineDomSelection,getEngineDomContext,getEngineTextBlocks,htmlFromNexusDocument} from '../services/nexusEngineAdapter';
 import {decodeNexusDocument,encodeNexusDocument} from '../services/nexusDocumentPersistence';
 import {characterDeletionRange,normalizeTextRange,wordDeletionRange} from './editorSelection';
@@ -185,7 +185,7 @@ function parseRtf(source:string){return parseRtfToHtml(source)}
  * The validated native model is authoritative whenever it exists. Legacy HTML
  * is only a migration fallback for documents that predate native NSX storage.
  */
-export function resolveEditorInitialHtml(nativeDocument:import('../../../packages/engine/src/index').NexusDocument|null,legacyHtml:string|null|undefined):string{
+export function resolveEditorInitialHtml(nativeDocument:NexusDocument|null,legacyHtml:string|null|undefined):string{
  return stripLayoutMetadata(nativeDocument?htmlFromNexusDocument(nativeDocument):(legacyHtml||''));
 }
 export function Editor({document,versions,onSave,onClose,onConflict}:{document:DocumentItem;versions:Version[];onSave:(data:{name:string;document_type:string;content:string;native_content:string;base_version_id:string|null})=>Promise<'saved'|'conflict'>;onClose:()=>void;onConflict:()=>Promise<DocumentItem>}){
