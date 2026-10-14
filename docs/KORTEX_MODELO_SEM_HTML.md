@@ -35,6 +35,8 @@ segurança do Kortex.
 - A importação e exportação de arquivos `.nsx` usam a API nativa do motor.
 - O salvamento é interrompido se a sincronização HTML → Kortex falhar; não deve
   enviar um snapshot nativo possivelmente desatualizado.
+- Rascunhos locais guardam a projeção HTML e o payload nativo separadamente; a
+  recuperação prioriza o modelo Kortex quando os dois estão disponíveis.
 
 ## Limite conhecido
 
@@ -48,6 +50,6 @@ migração separada das operações de entrada, seleção, histórico e layout.
 
 1. Fazer com que todos os comandos de edição alterem primeiro `NexusDocument`.
 2. Usar o HTML somente como projeção de visualização e adaptador de importação/exportação.
-3. Persistir rascunhos locais com o payload nativo além da projeção HTML.
+3. Fazer com que seleção, formatação, tabelas, imagens e paginação operem primeiro sobre comandos do Kortex.
 4. Adicionar testes de ida e volta para todos os blocos, marcas, recursos e versões legadas.
 5. Só remover o caminho legado depois de confirmar compatibilidade com documentos existentes.
