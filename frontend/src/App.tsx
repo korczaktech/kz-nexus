@@ -241,6 +241,30 @@ function Home({user,docs,notes,onNew,onSelect,onAction,setView}:{user:User;docs:
 }
 function PublicLegalPage({kind}:{kind:'privacy'|'terms'}) {
   const privacy=kind==='privacy';
+  useEffect(()=>{
+    const title=privacy?'Política de Privacidade | Korczak Nexus':'Termos de Uso | Korczak Nexus';
+    const description=privacy
+      ?'Leia como o Korczak Nexus, da Korczak Technologies, trata dados pessoais, documentos, armazenamento e integrações.'
+      :'Consulte os Termos de Uso do Korczak Nexus, editor de documentos desenvolvido pela Korczak Technologies.';
+    document.title=title;
+    let meta=document.querySelector<HTMLMetaElement>('meta[name="description"]');
+    if(!meta){meta=document.createElement('meta');meta.name='description';document.head.appendChild(meta)}
+    meta.content=description;
+    let canonical=document.querySelector<HTMLLinkElement>('link[rel="canonical"]');
+    if(!canonical){canonical=document.createElement('link');canonical.rel='canonical';document.head.appendChild(canonical)}
+    canonical.href=`https://nexus.korczaktech.com.br/${privacy?'privacy':'terms'}`;
+    const setMeta=(selector:string,attribute:string,value:string)=>{
+      let item=document.querySelector<HTMLMetaElement>(selector);
+      if(!item){item=document.createElement('meta');item.setAttribute(attribute,selector.includes('property=')?selector.match(/property="([^"]+)"/)?.[1]||'':selector.match(/name="([^"]+)"/)?.[1]||'');document.head.appendChild(item)}
+      item.content=value;
+    };
+    setMeta('meta[property="og:title"]','property',title);
+    setMeta('meta[property="og:description"]','property',description);
+    setMeta('meta[property="og:url"]','property',canonical.href);
+    setMeta('meta[name="twitter:title"]','name',title);
+    setMeta('meta[name="twitter:description"]','name',description);
+    return ()=>{};
+  },[privacy]);
   return <main className="public-legal-shell">
     <article className="public-legal-document">
       <a className="public-legal-brand" href="/" aria-label="Korczak Nexus — início"><img src={nexusLogo} alt="Korczak Nexus"/><span><strong>KORCZAK</strong><small>NEXUS</small></span></a>
