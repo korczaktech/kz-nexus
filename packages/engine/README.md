@@ -28,4 +28,4 @@ const saved = saveNsx(editor.getDocument());           // Result<string>
 ```
 
 ## Estado
-Veja `docs/ROADMAP.md` e `docs/PROGRESS.md`. Não integrado a nenhum repositório remoto.
+Veja `docs/ROADMAP.md` e `docs/PROGRESS.md`. O motor está integrado ao editor web no repositório `korczaktech/kz-nexus`; confira a matriz de requisitos para os recursos ainda parciais.
