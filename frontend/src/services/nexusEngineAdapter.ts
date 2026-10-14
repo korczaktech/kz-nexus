@@ -86,8 +86,8 @@ function makeParagraph(node: Element, type: "paragraph" | "heading" = "paragraph
   const spacingAfter = toPoints(css.marginBottom);
   const lineSpacingValue = Number.parseFloat(css.lineHeight);
   const backgroundColor = css.backgroundColor && isValidColor(css.backgroundColor) ? css.backgroundColor : undefined;
-  const borderMatch = /^([0-9.]+)px solid (#[0-9a-f]{3}(?:[0-9a-f]{3})?)$/i.exec(css.border);
-  const borderWidth = borderMatch ? Number(borderMatch[1]) * 0.75 : undefined;
+  const borderMatch = /^([0-9.]+)(px|pt) solid (#[0-9a-f]{3}(?:[0-9a-f]{3})?)$/i.exec(css.border);
+  const borderWidth = borderMatch ? Number(borderMatch[1]) * (borderMatch[2].toLowerCase() === "px" ? 0.75 : 1) : undefined;
   const borderColor = borderMatch?.[2];
   const paddingValue = toPoints(css.padding);
   const spacing = { ...(spacingBefore ? { spacingBefore } : {}), ...(spacingAfter ? { spacingAfter } : {}), ...(Number.isFinite(lineSpacingValue) && lineSpacingValue >= 0.5 && lineSpacingValue <= 4 ? { lineSpacing: lineSpacingValue } : {}), ...(backgroundColor ? { backgroundColor } : {}), ...(borderColor && borderWidth ? { borderColor, borderWidth } : {}), ...(paddingValue ? { padding: paddingValue } : {}) };
@@ -154,7 +154,7 @@ function sanitizeImportedHtml(parsed: Document): void {
             property === "font-family" ? /^[\w\s,'"()-]{1,120}$/.test(value) :
             property === "text-align" ? /^(?:left|right|center|justify|start|end)$/i.test(value) :
             property === "line-height" ? /^(?:\d+(?:\.\d+)?)(?:px|pt|em|rem|%)?$/i.test(value) && Number.parseFloat(value) >= 0.5 && Number.parseFloat(value) <= 4 :
-            property === "border" ? /^\d+(?:\.\d+)?px solid #[0-9a-f]{3}(?:[0-9a-f]{3})?$/i.test(value) :
+            property === "border" ? /^\d+(?:\.\d+)?(?:px|pt) solid #[0-9a-f]{3}(?:[0-9a-f]{3})?$/i.test(value) :
             /^(?:\d+(?:\.\d+)?)(?:px|pt|mm|cm|in|%)$/i.test(value)
           );
           if (!valid) style.removeProperty(property);
