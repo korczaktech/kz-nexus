@@ -49,6 +49,63 @@ describe("native layout engine", () => {
     expect(fragments.flatMap(fragment => fragment.table?.rows || []).map(row => row.rowId)).toHaveLength(12);
   });
 
+  it("keeps a heading with the first line of its following paragraph", () => {
+    const heading: Block = { type: "heading", id: "h", level: 1, children: [{ type: "text", id: "hr", text: "Section", marks: [] }] };
+    const result = layoutDocument(documentWith([paragraph("lead", "Lead text"), heading, paragraph("body", "Body text")], {
+      unit: "pt", width: 160, height: 100, orientation: "portrait",
+      margins: { top: 10, right: 10, bottom: 10, left: 10 }
+    }), { metrics, keepHeadingsWithNext: true });
+    const headingBlock = result.pages.flatMap(page => page.blocks).find(block => block.blockId === "h");
+    const bodyBlock = result.pages.flatMap(page => page.blocks).find(block => block.blockId === "body");
+    expect(headingBlock?.pageIndex).toBe(1);
+    expect(bodyBlock?.pageIndex).toBe(headingBlock?.pageIndex);
+  });
+
+  it("marks only table fragments after the first as continued", () => {
+    const table: Block = { type: "table", id: "continued-table", children: Array.from({ length: 12 }, (_, r) => ({
+      type: "tableRow" as const, id: "ct-r" + r, children: [{ type: "tableCell" as const, id: "ct-c" + r, children: [
+        { type: "paragraph" as const, id: "ct-p" + r, children: [{ type: "text" as const, id: "ct-run" + r, text: "cell value", marks: [] }] }
+      ] }]
+    })) };
+    const result = layoutDocument(documentWith([table]), { metrics });
+    const fragments = result.pages.flatMap(page => page.blocks.filter(block => block.blockId === "continued-table"));
+    expect(fragments.length).toBeGreaterThan(1);
+    expect(fragments[0].continued).toBe(false);
+    expect(fragments.slice(1).every(fragment => fragment.continued === true)).toBe(true);
+  });
+
+  it("applies paragraph alignment to line geometry", () => {
+    const centered: Block = { type: "paragraph", id: "center", align: "center", children: [{ type: "text", id: "center-run", text: "Hi", marks: [] }] };
+    const ended: Block = { type: "paragraph", id: "end", align: "end", children: [{ type: "text", id: "end-run", text: "Hi", marks: [] }] };
+    const result = layoutDocument(documentWith([centered, ended]), { metrics });
+    const centerLine = result.pages[0].blocks.find(block => block.blockId === "center")!.lines[0];
+    const endLine = result.pages[0].blocks.find(block => block.blockId === "end")!.lines[0];
+    expect(centerLine.x).toBeGreaterThan(10);
+    expect(centerLine.align).toBe("center");
+    expect(endLine.x).toBeGreaterThan(centerLine.x);
+    expect(endLine.align).toBe("end");
+  });
+
+  it("retains ordered, unordered, nested list markers and blockquote prefixes", () => {
+    const nested: Block = { type: "orderedList", id: "list", start: 3, children: [
+      { type: "listItem", id: "item-1", children: [
+        { type: "paragraph", id: "item-p", children: [{ type: "text", id: "item-r", text: "First", marks: [] }] },
+        { type: "bulletList", id: "nested-list", children: [
+          { type: "listItem", id: "nested-item", children: [{ type: "paragraph", id: "nested-p", children: [{ type: "text", id: "nested-r", text: "Nested", marks: [] }] }] }
+        ] }
+      ] }
+    ] };
+    const quote: Block = { type: "blockquote", id: "quote", children: [
+      { type: "paragraph", id: "quote-p", children: [{ type: "text", id: "quote-r", text: "Quoted", marks: [] }] }
+    ] };
+    const result = layoutDocument(documentWith([nested, quote]), { metrics });
+    const listText = result.pages[0].blocks.find(block => block.blockId === "list")!.lines.map(line => line.text).join("\\n");
+    const quoteText = result.pages[0].blocks.find(block => block.blockId === "quote")!.lines.map(line => line.text).join("\\n");
+    expect(listText).toContain("3. First");
+    expect(listText).toContain("• Nested");
+    expect(quoteText).toContain("│ Quoted");
+  });
+
   it("reports invalid page geometry and safely uses a default page", () => {
     const invalid = { unit: "pt" as const, width: 100, height: 100, orientation: "portrait" as const, margins: { top: 80, right: 80, bottom: 80, left: 80 } };
     const result = layoutDocument(documentWith([paragraph("p", "fallback")], invalid), { metrics });
