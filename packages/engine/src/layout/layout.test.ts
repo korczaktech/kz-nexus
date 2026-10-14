@@ -268,13 +268,13 @@ describe("native layout engine", () => {
     const rendered = allNodes.filter(block => block.type === "paragraph").flatMap(block => block.lines.map(line => line.text)).join(" ");
     expect(fragments.length).toBeGreaterThan(1);
     expect(allNodes.some(block => block.blockId === "inner-list" && block.type === "bulletList")).toBe(true);
-    expect(rendered.replace(/\s+/g, " ").trim()).toContain("Outer item introduction");
-    for (const text of nestedTexts) expect(rendered).toContain(text);
+    const expectedText = ["Outer item introduction", ...nestedTexts].join(" ");
+    expect(rendered.replace(/\s+/g, " ").trim().split(" ")).toEqual(expectedText.split(" "));
     expect(allNodes.filter(block => block.blockId === "outer-item" && block.marker).map(block => block.marker)).toEqual(["4."]);
     for (let index = 0; index < nestedTexts.length; index++) {
       expect(allNodes.filter(block => block.blockId === "inner-item-" + index && block.marker).map(block => block.marker)).toEqual(["•"]);
     }
-    expect(result.pages.every(page => page.blocks.every(block => block.rect.y + block.rect.height <= page.content.y + page.content.height + 0.001))).toBe(true);
+    expect(allNodes.every(block => block.rect.y + block.rect.height <= result.pages[block.pageIndex]!.content.y + result.pages[block.pageIndex]!.content.height + 0.001)).toBe(true);
   });
 
   it("reports invalid page geometry and safely uses a default page", () => {
