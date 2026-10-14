@@ -85,7 +85,12 @@ function makeParagraph(node: Element, type: "paragraph" | "heading" = "paragraph
   const spacingBefore = toPoints(css.marginTop);
   const spacingAfter = toPoints(css.marginBottom);
   const lineSpacingValue = Number.parseFloat(css.lineHeight);
-  const spacing = { ...(spacingBefore ? { spacingBefore } : {}), ...(spacingAfter ? { spacingAfter } : {}), ...(Number.isFinite(lineSpacingValue) && lineSpacingValue >= 0.5 && lineSpacingValue <= 4 ? { lineSpacing: lineSpacingValue } : {}) };
+  const backgroundColor = css.backgroundColor && isValidColor(css.backgroundColor) ? css.backgroundColor : undefined;
+  const borderMatch = /^([0-9.]+)px solid (#[0-9a-f]{3}(?:[0-9a-f]{3})?)$/i.exec(css.border);
+  const borderWidth = borderMatch ? Number(borderMatch[1]) * 0.75 : undefined;
+  const borderColor = borderMatch?.[2];
+  const paddingValue = toPoints(css.padding);
+  const spacing = { ...(spacingBefore ? { spacingBefore } : {}), ...(spacingAfter ? { spacingAfter } : {}), ...(Number.isFinite(lineSpacingValue) && lineSpacingValue >= 0.5 && lineSpacingValue <= 4 ? { lineSpacing: lineSpacingValue } : {}), ...(backgroundColor ? { backgroundColor } : {}), ...(borderColor && borderWidth ? { borderColor, borderWidth } : {}), ...(paddingValue ? { padding: paddingValue } : {}) };
   if (type === "heading") {
     const level = Math.min(6, Math.max(1, Number(node.tagName.slice(1)) || 1)) as 1 | 2 | 3 | 4 | 5 | 6;
     return { type: "heading", id: nextId(), level, ...alignment, ...indentation, ...spacing, children: runs };
@@ -122,7 +127,7 @@ function tableBlock(element: Element): Extract<Block, { type: "table" }> {
 
 function sanitizeImportedHtml(parsed: Document): void {
   parsed.querySelectorAll("script,style,iframe,object,embed,form,input,button,textarea,select,option,link,meta,base,svg,math,template").forEach(node => node.remove());
-  const allowedStyles = new Set(["color", "background-color", "font-size", "font-family", "text-align", "margin-left", "margin-top", "margin-bottom", "line-height", "width", "height"]);
+  const allowedStyles = new Set(["color", "background-color", "font-size", "font-family", "text-align", "margin-left", "margin-top", "margin-bottom", "line-height", "border", "padding", "width", "height"]);
   parsed.body.querySelectorAll("*").forEach(element => {
     for (const attribute of Array.from(element.attributes)) {
       const name = attribute.name.toLowerCase();
@@ -149,6 +154,7 @@ function sanitizeImportedHtml(parsed: Document): void {
             property === "font-family" ? /^[\w\s,'"()-]{1,120}$/.test(value) :
             property === "text-align" ? /^(?:left|right|center|justify|start|end)$/i.test(value) :
             property === "line-height" ? /^(?:\d+(?:\.\d+)?)(?:px|pt|em|rem|%)?$/i.test(value) && Number.parseFloat(value) >= 0.5 && Number.parseFloat(value) <= 4 :
+            property === "border" ? /^\d+(?:\.\d+)?px solid #[0-9a-f]{3}(?:[0-9a-f]{3})?$/i.test(value) :
             /^(?:\d+(?:\.\d+)?)(?:px|pt|mm|cm|in|%)$/i.test(value)
           );
           if (!valid) style.removeProperty(property);
