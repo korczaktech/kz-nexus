@@ -16,6 +16,7 @@ import {deserializeNexusHtml,nexusDocumentFromHtml,serializeNexusHtml,syncNexusE
 import {decodeNexusDocument,encodeNexusDocument} from '../services/nexusDocumentPersistence';
 import {characterDeletionRange,normalizeTextRange,wordDeletionRange} from './editorSelection';
 import {isCompositionInput} from './editorComposition';
+import {markdownToHtml} from './markdown';
 
 type RibbonGlyphName='bold'|'indent-more'|'indent-increase'|'clear-format'|'zoom-out'|'zoom-in'|'pages'|'reading'|'link'|'image'|'table'|'rule'|'page-break'|'text-color'|'highlight'|'word-count'|'import-doc'|'extension-export'|'extension-image'|'exit'|'print-document'|'share-document'|'document-properties'|'password-shield'|'compare-versions'|'cut-selection'|'copy-selection'|'paste-selection'|'paste-plain'|'find-next'|'find-previous'|'replace-next'|'replace-all'|'repeat-action'|'select-word'|'select-line'|'select-paragraph'|'select-block'|'font-increase'|'font-decrease'|'superscript'|'subscript'|'format-painter'|'line-spacing'|'paragraph-spacing'|'first-line-indent'|'hanging-indent'|'paragraph-border'|'paragraph-fill'|'custom-style';
 function RibbonGlyph({name}:{name:RibbonGlyphName}){
@@ -127,30 +128,6 @@ function prepareImportedHtml(source:string):{html:string;layout:Partial<EditorLa
   const body=parsed.body.innerHTML||source;
   return {html:sanitizeHtml(body),layout};
 }
-export function markdownToHtml(source:string){
-  const raw=(source||'').trim();
-  if(/<\s*(p|div|h[1-6]|ul|ol|table|blockquote|section|article)\b/i.test(raw)) return sanitizeHtml(source);
-  const safe=escapeHtml(source||'').replace(/\r\n/g,'\n'),lines=safe.split('\n'); let html='',inUl=false,inOl=false;
-  const close=()=>{if(inUl){html+='</ul>';inUl=false}if(inOl){html+='</ol>';inOl=false}};
-  for(let i=0;i<lines.length;i++){const line=lines[i];
-    if(/^\s*\|.+\|$/.test(line)&&/^\s*\|?\s*:?-{3,}:?\s*\|/.test(lines[i+1]||'')){close();const header=parseTableRow(line);i++;const rows:string[][]=[];while(i+1<lines.length&&/^\s*\|.+\|$/.test(lines[i+1])&&!/^\s*\|?\s*:?-{3,}:?\s*\|/.test(lines[i+1])){i++;rows.push(parseTableRow(lines[i]))}html+='<table><thead><tr>'+header.map(c=>'<th>'+inline(c)+'</th>').join('')+'</tr></thead><tbody>'+rows.map(r=>'<tr>'+r.map(c=>'<td>'+inline(c)+'</td>').join('')+'</tr>').join('')+'</tbody></table>';continue}
-    if(/^\s*[-*]\s+/.test(line)){if(!inUl){close();html+='<ul>';inUl=true}html+='<li>'+inline(line.replace(/^\s*[-*]\s+/,''))+'</li>';continue}
-    if(/^\s*\d+[.)]\s+/.test(line)){if(!inOl){close();html+='<ol>';inOl=true}html+='<li>'+inline(line.replace(/^\s*\d+[.)]\s+/,''))+'</li>';continue}
-    close();if(!line.trim()){html+='<p><br></p>';continue}
-    if(/^###\s+/.test(line)){html+='<h3>'+inline(line.replace(/^###\s+/,''))+'</h3>';continue}
-    if(/^##\s+/.test(line)){html+='<h2>'+inline(line.replace(/^##\s+/,''))+'</h2>';continue}
-    if(/^#\s+/.test(line)){html+='<h1>'+inline(line.replace(/^#\s+/,''))+'</h1>';continue}
-    if(/^>\s+/.test(line)){html+='<blockquote>'+inline(line.replace(/^>\s+/,''))+'</blockquote>';continue}
-    html+='<p>'+inline(line)+'</p>';
-  } close();return html||'<p><br></p>';
-}
-function parseTableRow(line:string){return line.trim().replace(/^\|/,'').replace(/\|$/,'').split('|').map(c=>c.trim())}
-function inline(value:string){
-  const codes:string[]=[];let text=value.replace(/\x60([^\x60]+)\x60/g,(_,code)=>{const key=String.fromCharCode(0)+codes.length+String.fromCharCode(0);codes.push('<code>'+code+'</code>');return key});
-  text=text.replace(/\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g,'<a href="$2" target="_blank" rel="noreferrer">$1</a>').replace(/\*\*([^*]+)\*\*/g,'<strong>$1</strong>').replace(/__([^_]+)__/g,'<strong>$1</strong>').replace(/\*([^*]+)\*/g,'<em>$1</em>').replace(/_([^_]+)_/g,'<em>$1</em>').replace(/~~([^~]+)~~/g,'<s>$1</s>');
-  codes.forEach((code,i)=>{text=text.replace(String.fromCharCode(0)+i+String.fromCharCode(0),code)});return text;
-}
-
 type LocalFile={file:File;path:string;editable:boolean};
 type PageSize='A3'|'A4'|'A5'|'B5'|'Letter'|'Legal'|'Executive'|'Tabloid';
 const PAGE_MM:Record<PageSize,[number,number]>={A3:[297,420],A4:[210,297],A5:[148,210],B5:[176,250],Letter:[215.9,279.4],Legal:[215.9,355.6],Executive:[184.15,266.7],Tabloid:[279.4,431.8]};
