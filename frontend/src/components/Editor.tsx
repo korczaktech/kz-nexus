@@ -14,6 +14,7 @@ import {mergeDocumentContent} from './editorMerge';
 import {createEditor, createIdGenerator, systemClock, type Mark, type Block, getPlainText, applyMark, setAlign, setIndent, setParagraphStyle, setHeadingLevel, convertBlockToBlockquote, insertBlockquote, insertThematicBreak, insertParagraphAfter, splitBlock, mergeBlockWithPrevious, deleteBlock, convertBlockToList, convertListType, splitListItem, mergeListItemWithPrevious, insertTable as engineInsertTable, addTableRow, removeTableRow, addTableColumn, removeTableColumn, insertListItem, removeListItem, insertImageResource, insertImportedBlocksAtSelection, removeImage, setPageConfig, setMetadata, insertText, deleteText, replaceRange, exportPlainText, exportHtml as exportEngineHtml, exportMarkdown, importPlainText, importMarkdown} from '../../../packages/engine/src/index';
 import {deserializeNexusHtml,nexusDocumentFromHtml,serializeNexusHtml,syncNexusEngine,toggleEngineMarkForDomSelection,applyEngineMarksForDomSelection,removeEngineMarksForDomSelection,removeEngineLinkForDomSelection,restoreEngineDomSelection,getEngineDomContext,htmlFromNexusDocument} from '../services/nexusEngineAdapter';
 import {decodeNexusDocument,encodeNexusDocument} from '../services/nexusDocumentPersistence';
+import {normalizeTextRange,wordDeletionRange} from './editorSelection';
 
 type RibbonGlyphName='bold'|'indent-more'|'indent-increase'|'clear-format'|'zoom-out'|'zoom-in'|'pages'|'reading'|'link'|'image'|'table'|'rule'|'page-break'|'text-color'|'highlight'|'word-count'|'import-doc'|'extension-export'|'extension-image'|'exit'|'print-document'|'share-document'|'document-properties'|'password-shield'|'compare-versions'|'cut-selection'|'copy-selection'|'paste-selection'|'paste-plain'|'find-next'|'find-previous'|'replace-next'|'replace-all'|'repeat-action'|'select-word'|'select-line'|'select-paragraph'|'select-block'|'font-increase'|'font-decrease'|'superscript'|'subscript'|'format-painter'|'line-spacing'|'paragraph-spacing'|'first-line-indent'|'hanging-indent'|'paragraph-border'|'paragraph-fill'|'custom-style';
 function RibbonGlyph({name}:{name:RibbonGlyphName}){
@@ -289,18 +290,42 @@ export function Editor({document,versions,onSave,onClose,onConflict}:{document:D
    event.preventDefault();
    const context=engineContext(),engine=nexusEngineRef.current;
    if(!context||!engine)return;
-   const start=Math.min(context.startOffset,context.endOffset),end=Math.max(context.startOffset,context.endOffset);
+   const {start,end}=normalizeTextRange(context.startOffset,context.endOffset);
    if(start!==end){exec('insertText','');return}
    const text=getPlainText(context.block);
    let from=start,to=start;
    if(inputType==='deleteContentBackward')from=Math.max(0,start-1);
    else if(inputType==='deleteContentForward')to=Math.min(text.length,start+1);
-   else if(inputType==='deleteWordBackward'){from=start;while(from>0&&/\\s/.test(text[from-1]!))from--;while(from>0&&!/\\s/.test(text[from-1]!))from--}
-   else if(inputType==='deleteWordForward'){to=start;while(to<text.length&&/\\s/.test(text[to]!))to++;while(to<text.length&&!/\\s/.test(text[to]!))to++}
+   else if(inputType==='deleteWordBackward'){({start:from,end:to}=wordDeletionRange(text,start,'backward'))}
+   else if(inputType==='deleteWordForward'){({start:from,end:to}=wordDeletionRange(text,start,'forward'))}
    else if(inputType==='deleteSoftLineBackward')from=0;
    else if(inputType==='deleteSoftLineForward')to=text.length;
-   if(from<to)commitEngineCommands([deleteText({blockId:context.block.id,start:from,end:to})],'typing');
-   else if(inputType==='deleteContentBackward'&&start===0)runEngineStructure('mergeBlockWithPrevious');
+   if(from<to){commitEngineCommands([deleteText({blockId:context.block.id,start:from,end:to})],'typing');return}
+   if((inputType==='deleteContentBackward'||inputType==='deleteWordBackward')&&start===0){
+    const doc=engine.getDocument(),current=context.topLevelBlock,previous=doc.content[context.topLevelIndex-1];
+    if((current.type==='paragraph'||current.type==='heading')&&previous&&(previous.type==='paragraph'||previous.type==='heading')){
+     const commands:Parameters<NonNullable<ReturnType<typeof createEditor>['exec']>>[0]=[];
+     if(inputType==='deleteWordBackward'){
+      const previousText=getPlainText(previous),range=wordDeletionRange(previousText,previousText.length,'backward');
+      if(range.start<range.end)commands.push(deleteText({blockId:previous.id,start:range.start,end:range.end}));
+     }
+     commands.push(mergeBlockWithPrevious({blockId:current.id}));
+     commitEngineCommands(commands,'typing');
+    }else if(inputType==='deleteContentBackward')runEngineStructure('mergeBlockWithPrevious');
+    return;
+   }
+   if((inputType==='deleteContentForward'||inputType==='deleteWordForward')&&start===text.length){
+    const doc=engine.getDocument(),current=context.topLevelBlock,next=doc.content[context.topLevelIndex+1];
+    if((current.type==='paragraph'||current.type==='heading')&&next&&(next.type==='paragraph'||next.type==='heading')){
+     const commands:Parameters<NonNullable<ReturnType<typeof createEditor>['exec']>>[0]=[];
+     if(inputType==='deleteWordForward'){
+      const nextText=getPlainText(next),range=wordDeletionRange(nextText,0,'forward');
+      if(range.start<range.end)commands.push(deleteText({blockId:next.id,start:range.start,end:range.end}));
+     }
+     commands.push(mergeBlockWithPrevious({blockId:next.id}));
+     commitEngineCommands(commands,'typing');
+    }
+   }
    return;
   }
   if(inputType==='historyUndo'||inputType==='historyRedo'){
@@ -374,9 +399,24 @@ export function Editor({document,versions,onSave,onClose,onConflict}:{document:D
  function syncEngineDocumentSettings(){const engine=nexusEngineRef.current;if(!engine)return;const config=engine.getDocument().pageConfig;const rawWidthMm=config.width*25.4/72,rawHeightMm=config.height*25.4/72;const widthMm=config.orientation==='landscape'?rawHeightMm:rawWidthMm,heightMm=config.orientation==='landscape'?rawWidthMm:rawHeightMm;const matched=(Object.keys(PAGE_MM) as PageSize[]).find(key=>Math.abs(PAGE_MM[key][0]-widthMm)<2&&Math.abs(PAGE_MM[key][1]-heightMm)<2);const nextPageSize=matched??pageSize;const nextMargin=Math.max(0,Math.min(100,Math.round(config.margins.top*25.4/72)));setPageSize(nextPageSize);setOrientation(config.orientation);setMargin(nextMargin);enginePageConfigSignature.current=JSON.stringify({pageSize:nextPageSize,orientation:config.orientation,margin:nextMargin});const title=engine.getDocument().metadata.title;if(typeof title==='string'&&title.trim()&&title!==name)setName(title)}
  function engineContext(){const engine=nexusEngineRef.current,root=editorRef.current;if(!engine||!root)return null;const selection=window.getSelection();if((!selection?.rangeCount||!selection.anchorNode||!root.contains(selection.anchorNode))&&lastDomRangeRef.current&&root.contains(lastDomRangeRef.current.startContainer)&&root.contains(lastDomRangeRef.current.endContainer)){const saved=lastDomRangeRef.current;const active=window.getSelection();active?.removeAllRanges();active?.addRange(saved)}const context=getEngineDomContext(engine,root);if(!context){setMessage('Não foi possível mapear a seleção atual para o motor.');return null}engine.setSelection({anchor:{blockId:context.anchorBlockId,offset:context.anchorOffset},focus:{blockId:context.focusBlockId,offset:context.focusOffset}});return context}
  function runEngineStructure(command:string,value?:string){const engine=nexusEngineRef.current;if(!engine)return false;const context=engineContext();if(!context)return false;const top=context.topLevelBlock;const topId=top.id;const blockId=context.block.id;
-  if(command==='justifyLeft'||command==='justifyCenter'||command==='justifyRight'||command==='justifyFull'){const align=command==='justifyLeft'?'start':command==='justifyCenter'?'center':command==='justifyRight'?'end':'justify';return commitEngineCommands([setAlign({blockId,align})],'formatting')}
-  if(command==='indent'||command==='outdent'){const current=context.block.indent??0;const indent=Math.max(0,Math.min(720,current+(command==='indent'?36:-36)));return commitEngineCommands([setIndent({blockId,indent})],'formatting')}
-  if(command==='formatBlock'){const tag=(value||'p').replace(/[<>]/g,'').toLowerCase();const level=/^h[1-6]$/.test(tag)?Number(tag[1]) as 1|2|3|4|5|6:'paragraph';if(top.type!=='paragraph'&&top.type!=='heading'){setMessage('Este bloco não aceita conversão de parágrafo/título.');return false}return commitEngineCommands([setHeadingLevel({blockId:topId,level})],'formatting')}
+  if(command==='justifyLeft'||command==='justifyCenter'||command==='justifyRight'||command==='justifyFull'){
+   const align=command==='justifyLeft'?'start':command==='justifyCenter'?'center':command==='justifyRight'?'end':'justify';
+   const doc=engine.getDocument(),selected=doc.content.slice(context.topLevelIndex,context.endTopLevelIndex+1);
+   const targets=selected.length>1&&selected.every((item):item is Extract<Block,{type:'paragraph'|'heading'}>=>item.type==='paragraph'||item.type==='heading')?selected:[context.block];
+   return commitEngineCommands(targets.map(item=>setAlign({blockId:item.id,align})),'formatting')
+  }
+  if(command==='indent'||command==='outdent'){
+   const doc=engine.getDocument(),selected=doc.content.slice(context.topLevelIndex,context.endTopLevelIndex+1);
+   const targets=selected.length>1&&selected.every((item):item is Extract<Block,{type:'paragraph'|'heading'}>=>item.type==='paragraph'||item.type==='heading')?selected:[context.block];
+   return commitEngineCommands(targets.map(item=>setIndent({blockId:item.id,indent:Math.max(0,Math.min(720,(item.indent??0)+(command==='indent'?36:-36)))})),'formatting')
+  }
+  if(command==='formatBlock'){
+   const tag=(value||'p').replace(/[<>]/g,'').toLowerCase(),level=/^h[1-6]$/.test(tag)?Number(tag[1]) as 1|2|3|4|5|6:'paragraph';
+   const doc=engine.getDocument(),selected=doc.content.slice(context.topLevelIndex,context.endTopLevelIndex+1);
+   const targets=selected.length>1&&selected.every((item):item is Extract<Block,{type:'paragraph'|'heading'}>=>item.type==='paragraph'||item.type==='heading')?selected:[top];
+   if(targets.some(item=>item.type!=='paragraph'&&item.type!=='heading')){setMessage('Este bloco não aceita conversão de parágrafo/título.');return false}
+   return commitEngineCommands(targets.map(item=>setHeadingLevel({blockId:item.id,level})),'formatting')
+  }
   if(command==='insertUnorderedList'||command==='insertOrderedList'){const ordered=command==='insertOrderedList';if(context.list)return commitEngineCommands([convertListType({listId:context.list.id,ordered})]);if(top.type==='paragraph'||top.type==='heading')return commitEngineCommands([convertBlockToList({blockId:topId,ordered})]);setMessage('Selecione um parágrafo para convertê-lo em lista.');return false}
   if(command==='insertHorizontalRule')return commitEngineCommands([insertThematicBreak({afterBlockId:topId})]);
   if(command==='insertParagraphAfter')return commitEngineCommands([insertParagraphAfter({blockId:topId})]);
