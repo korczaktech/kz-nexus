@@ -86,18 +86,20 @@ function wrapText(text: string, maxWidth: number, fontSize: number, fontFamily: 
         const clean = line.trimEnd();
         result.push({ text: clean, start, end: start + clean.length, width: measure(clean) });
         start += line.length;
-        line = word.trimStart();
-        if (measure(line) > maxWidth) {
-          let piece = "";
-          for (const char of line) {
-            if (piece && measure(piece + char) > maxWidth) {
-              result.push({ text: piece, start, end: start + piece.length, width: measure(piece) });
-              start += piece.length; piece = char;
-            } else piece += char;
-          }
-          line = piece;
+        line = "";
+      }
+      const token = line ? word : word.trimStart();
+      if (!line && measure(token) > maxWidth) {
+        let piece = "";
+        for (const char of token) {
+          if (piece && measure(piece + char) > maxWidth) {
+            result.push({ text: piece, start, end: start + piece.length, width: measure(piece) });
+            start += piece.length;
+            piece = char;
+          } else piece += char;
         }
-      } else line = candidate;
+        line = piece;
+      } else line += token;
     }
     const clean = line.trimEnd();
     result.push({ text: clean, start, end: start + clean.length, width: measure(clean) });
