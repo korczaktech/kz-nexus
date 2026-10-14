@@ -415,11 +415,11 @@ export function layoutDocument(document: NexusDocument, options: LayoutOptions =
               .filter(bottom => bottom > offset + 0.001 && bottom <= offset + available + 0.001)
               .reduce((best, bottom) => Math.max(best, bottom), offset);
             if (boundary > offset + 0.001) nextOffset = Math.min(row.height, boundary);
-            const fragmentHeight = Math.max(0.001, nextOffset - offset);
+            const chunkHeight = Math.max(0.001, nextOffset - offset);
             const rowY = cursorY;
             const cells = cellLines.map(({ cell, lines }) => ({
               cellId: cell.cellId,
-              rect: { x: cell.x, y: rowY, width: cell.width, height: fragmentHeight },
+              rect: { x: cell.x, y: rowY, width: cell.width, height: chunkHeight },
               lines: lines.filter(line => line.y < nextOffset && line.y + line.height > offset)
                 .map(line => ({ ...line, y: rowY + line.y - offset }))
             }));
@@ -428,10 +428,11 @@ export function layoutDocument(document: NexusDocument, options: LayoutOptions =
             }
             fragmentRows.push({
               rowId: row.rowId,
-              rect: { x: content.x, y: rowY, width: content.width, height: fragmentHeight },
+              rect: { x: content.x, y: rowY, width: content.width, height: chunkHeight },
               cells
             });
-            cursorY += fragmentHeight;
+            cursorY += chunkHeight;
+            fragmentHeight += chunkHeight;
             // Emit a row fragment at each page boundary; table.continued marks
             // every fragment after the first one.
             const remaining = row.height - nextOffset;
