@@ -668,6 +668,9 @@ export function removeEngineMarksForDomSelection(
   if (!selection || selection.isCollapsed || !selection.rangeCount || !selection.anchorNode || !selection.focusNode) return { ok: false, message: "Selecione o texto que deseja limpar." };
   const range = selection.getRangeAt(0);
   if (!root.contains(range.startContainer) || !root.contains(range.endContainer)) return { ok: false, message: "A seleção precisa estar dentro do documento." };
+  if (!selectionBody(root, selection.anchorNode) || !selectionBody(root, selection.focusNode)) {
+    return { ok: false, message: "Selecione texto no corpo do documento. Cabeçalhos e rodapés são campos de layout separados." };
+  }
   const domBlocks = domTextBlocks(root);
   const modelBlocks = logicalTextBlocks(engine.getDocument().content);
   if (!domBlocks.length || domBlocks.length !== modelBlocks.length) return { ok: false, message: "Não foi possível mapear a seleção para o modelo do motor." };
