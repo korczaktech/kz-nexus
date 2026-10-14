@@ -379,18 +379,80 @@ export function layoutDocument(document: NexusDocument, options: LayoutOptions =
         fragmentRows = []; fragmentHeight = 0;
       };
       for (const row of rowLayouts) {
+        if (row.height > content.height) {
+          // Keep a pathological row's text intact by splitting the row between
+          // line boundaries. Each page fragment retains every cell and line.
+          if (cursorY > content.y) {
+            flushTableFragment();
+            nextPage();
+            fragmentStartY = cursorY;
+          }
+          const cellLines = row.cells.map((cell, cellIndex) => {
+            let localY = 4;
+            const lines: LayoutLine[] = [];
+            for (const paragraph of cell.paragraphs) {
+              lines.push(...paragraph.lines.map(line => ({
+                ...line,
+                x: cell.x + 4 + (line.x - (content.x + cellIndex * colWidth + 4)),
+                y: localY + line.y
+              })));
+              localY += paragraph.height;
+            }
+            return { cell, lines };
+          });
+          const allLineBottoms = cellLines.flatMap(item => item.lines.map(line => line.y + line.height));
+          let offset = 0;
+          while (offset < row.height - 0.001) {
+            const available = content.y + content.height - cursorY;
+            if (available <= 0.001) {
+              flushTableFragment();
+              nextPage();
+              fragmentStartY = cursorY;
+              continue;
+            }
+            let nextOffset = Math.min(row.height, offset + available);
+            const boundary = allLineBottoms
+              .filter(bottom => bottom > offset + 0.001 && bottom <= offset + available + 0.001)
+              .reduce((best, bottom) => Math.max(best, bottom), offset);
+            if (boundary > offset + 0.001) nextOffset = Math.min(row.height, boundary);
+            const fragmentHeight = Math.max(0.001, nextOffset - offset);
+            const rowY = cursorY;
+            const cells = cellLines.map(({ cell, lines }) => ({
+              cellId: cell.cellId,
+              rect: { x: cell.x, y: rowY, width: cell.width, height: fragmentHeight },
+              lines: lines.filter(line => line.y < nextOffset && line.y + line.height > offset)
+                .map(line => ({ ...line, y: rowY + line.y - offset }))
+            }));
+            if (cells.some(cell => cell.lines.some(line => line.height > content.height))) {
+              diagnostics.push({ code: "OVERSIZED_BLOCK", message: "Uma linha de texto dentro de uma célula é maior que a área útil da página.", blockId: block.id });
+            }
+            fragmentRows.push({
+              rowId: row.rowId,
+              rect: { x: content.x, y: rowY, width: content.width, height: fragmentHeight },
+              cells
+            });
+            cursorY += fragmentHeight;
+            // Emit a row fragment at each page boundary; table.continued marks
+            // every fragment after the first one.
+            const remaining = row.height - nextOffset;
+            offset = nextOffset;
+            if (remaining > 0.001) {
+              flushTableFragment();
+              nextPage();
+              fragmentStartY = cursorY;
+            }
+          }
+          continue;
+        }
         if (cursorY > content.y && cursorY + row.height > content.y + content.height) {
           flushTableFragment(); nextPage(); fragmentStartY = cursorY;
         }
-        // An individual row taller than a page is kept intact and reported. Hosts
-        // can inspect its line metrics and choose a more advanced cell-splitting UI.
-        if (row.height > content.height) diagnostics.push({ code: "OVERSIZED_BLOCK", message: "Linha de tabela maior que a área útil da página; mantida íntegra para não corromper células.", blockId: block.id });
         const rowY = cursorY;
         const cells = row.cells.map(cell => {
           let cellY = rowY + 4;
           const lines: LayoutLine[] = [];
           for (const paragraph of cell.paragraphs) {
-            lines.push(...paragraph.lines.map(line => ({ ...line, x: cell.x + 4 + (line.x - (content.x + (row.cells.indexOf(cell)) * colWidth + 4)), y: cellY + (line.y - 0) })));
+            lines.push(...paragraph.lines.map(line => ({ ...line, x: cell.x + 4 + (line.x - (content.x + (row.cells.indexOf(cell)) * colWidth + 4)), y: cellY + line.y })));
             cellY += paragraph.height;
           }
           return { cellId: cell.cellId, rect: { x: cell.x, y: rowY, width: cell.width, height: row.height }, lines };
