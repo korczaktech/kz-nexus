@@ -54,6 +54,25 @@ segurança do Kortex.
   recuperação prioriza o modelo Kortex mesmo quando o rascunho HTML legado não
   existe, evitando reabrir silenciosamente a versão antiga do servidor.
 
+## Seleção e formatação — marcos 7 e 8
+
+A ponte de seleção mantém os offsets DOM em unidades UTF-16, normaliza seleções
+reversas e calcula intervalos de exclusão de palavra sem modificar o documento
+diretamente. Backspace/Delete em limites entre parágrafos de texto também usa
+comandos Kortex: ao apagar uma palavra no limite de um parágrafo, a palavra
+vizinha é removida antes de unir os blocos. Seleções que abrangem vários blocos
+recebem comandos por ID de bloco; alinhamento e recuo percorrem a sequência
+lógica de blocos de texto do modelo, inclusive texto em listas e tabelas. A
+conversão de título aplica-se a múltiplos parágrafos selecionados de nível
+superior. A formatação inline já usa comandos de marcas do motor e restaura a
+seleção depois de atualizar a projeção.
+
+Os testes de `frontend/src/components/editorSelection.test.ts` cobrem a
+normalização de offsets, seleção reversa, limites de texto e exclusão de
+palavras. A conclusão funcional ainda depende da CI e de regressões de interação
+no navegador, principalmente IME, seleções complexas em blocos aninhados e
+navegação por teclado.
+
 ## Limite conhecido
 
 A integração ainda não é 100% independente de HTML/DOM: a superfície visual
