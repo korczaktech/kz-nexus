@@ -13,6 +13,7 @@ import {
   getPlainText,
   isValidLink,
   isValidColor,
+  isValidId,
   exportHtml,
   renderTextRunsHtml,
   type Selection,
