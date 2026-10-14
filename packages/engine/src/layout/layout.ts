@@ -400,6 +400,77 @@ export function layoutDocument(document: NexusDocument, options: LayoutOptions =
       cursorY += 8;
       return;
     }
+    if (block.type === "blockquote") {
+      let fragmentChildren: LayoutBlock[] = [];
+      let fragmentStartY = cursorY;
+      let fragmentIndex = 0;
+      let lastSpacing = 0;
+      const flushQuote = () => {
+        if (!fragmentChildren.length) return;
+        page.blocks.push({ blockId: block.id, type: "blockquote", pageIndex: page.index,
+          rect: { x: content.x, y: fragmentStartY, width: content.width,
+            height: Math.max(0, cursorY - fragmentStartY - lastSpacing) },
+          lines: [], children: fragmentChildren, quote: true, continued: fragmentIndex > 0 });
+        fragmentIndex += 1;
+        fragmentChildren = [];
+        lastSpacing = 0;
+      };
+      for (const paragraph of block.children) {
+        const x = content.x + 14;
+        const availableWidth = Math.max(1, content.width - 14);
+        const measured = blockTextLayout(paragraph, x, cursorY, availableWidth, options);
+        if (measured.height > content.height) diagnostics.push({ code: "OVERSIZED_BLOCK",
+          message: "Parágrafo de citação maior que a área útil da página; mantido íntegro para preservar seus estilos.", blockId: paragraph.id });
+        const spacing = safeNumber(paragraph.spacingAfter, 6);
+        if (cursorY > content.y && cursorY + measured.height + spacing > content.y + content.height) {
+          flushQuote();
+          nextPage();
+          fragmentStartY = cursorY;
+        }
+        const child = paragraphChild(paragraph, x, cursorY, availableWidth);
+        fragmentChildren.push(child);
+        cursorY += child.rect.height + spacing;
+        lastSpacing = spacing;
+      }
+      flushQuote();
+      cursorY += 4;
+      return;
+    }
+    if (block.type === "bulletList" || block.type === "orderedList") {
+      let fragmentChildren: LayoutBlock[] = [];
+      let fragmentStartY = cursorY;
+      let fragmentIndex = 0;
+      let lastSpacing = 2;
+      const flushList = () => {
+        if (!fragmentChildren.length) return;
+        page.blocks.push({ blockId: block.id, type: block.type, pageIndex: page.index,
+          rect: { x: content.x, y: fragmentStartY, width: content.width,
+            height: Math.max(0, cursorY - fragmentStartY - lastSpacing) },
+          lines: [], children: fragmentChildren, continued: fragmentIndex > 0 });
+        fragmentIndex += 1;
+        fragmentChildren = [];
+        lastSpacing = 2;
+      };
+      for (let index = 0; index < block.children.length; index++) {
+        const item = block.children[index];
+        const itemHeight = listItemHeight(item, 0);
+        if (cursorY > content.y && cursorY + itemHeight > content.y + content.height) {
+          flushList();
+          nextPage();
+          fragmentStartY = cursorY;
+        }
+        if (itemHeight > content.height) diagnostics.push({ code: "OVERSIZED_BLOCK",
+          message: "Item de lista maior que a área útil da página; mantido íntegro e preservando a estrutura aninhada.", blockId: item.id });
+        const marker = block.type === "orderedList" ? String(block.start + index) + "." : "•";
+        const laidOut = buildListItem(item, marker, 0, cursorY);
+        fragmentChildren.push(laidOut.block);
+        cursorY += laidOut.height + 2;
+        lastSpacing = 2;
+      }
+      flushList();
+      cursorY += 4;
+      return;
+    }
     if (block.type === "paragraph" || block.type === "heading") {
       const spacingBefore = safeNumber(block.spacingBefore, block.type === "heading" ? 8 : 0);
       const spacingAfter = safeNumber(block.spacingAfter, block.type === "heading" ? 5 : 6);
