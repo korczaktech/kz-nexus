@@ -200,7 +200,7 @@ export function insertImportedBlocksAtNestedSelection(params: {
       const right = splitRuns(left.after, params.end - params.start, ctx.generateId);
       const prefix = left.before;
       const suffix = right.after;
-      const cloned = incoming.map(block => makeParagraph(block, ctx.generateId()));
+      const cloned = incoming.map(block => makeParagraph(block as Paragraph | Heading, ctx.generateId()));
       const replacement: Paragraph[] = [];
       if (prefix.some(run => run.text.length)) replacement.push({ ...source, children: prefix });
       if (cloned.length) replacement.push(...cloned);
