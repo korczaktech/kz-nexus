@@ -1,8 +1,7 @@
 import {createDocument} from '../../../packages/engine/src/index';
 import {htmlFromNexusDocument} from '../services/nexusEngineAdapter';
-import {resolveEditorInitialHtml} from './Editor';
 import {describe,expect,it} from 'vitest';
-import {toRtf} from './Editor';
+import {resolveEditorInitialHtml,toRtf} from './Editor';
 import {markdownToHtml} from './markdown';
 
 describe('Fase 8 - editor',()=>{
