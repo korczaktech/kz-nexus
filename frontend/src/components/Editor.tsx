@@ -410,7 +410,8 @@ export function Editor({document,versions,onSave,onClose,onConflict}:{document:D
    if(top.type==='paragraph'||top.type==='heading')return commitEngineCommands([convertBlockToList({blockId:topId,ordered})]);
    setMessage('Selecione parágrafos consecutivos para convertê-los em lista.');return false
   }
-  if(command==='insertHorizontalRule')return commitEngineCommands([insertThematicBreak({afterBlockId:topId,kind:'rule'})]);\n  if(command==='insertPageBreak')return commitEngineCommands([insertPageBreak({afterBlockId:topId})]);
+  if(command==='insertHorizontalRule')return commitEngineCommands([insertThematicBreak({afterBlockId:topId,kind:'rule'})]);
+  if(command==='insertPageBreak')return commitEngineCommands([insertPageBreak({afterBlockId:topId})]);
   if(command==='insertParagraphAfter')return commitEngineCommands([insertParagraphAfter({blockId:topId})]);
   if(command==='splitBlock')return commitEngineCommands([splitBlock({blockId,offset:context.startOffset})]);
   if(command==='mergeBlockWithPrevious'){if(context.list&&context.listItemId)return commitEngineCommands([mergeListItemWithPrevious({listId:context.list.id,itemId:context.listItemId,blockId})]);return commitEngineCommands([mergeBlockWithPrevious({blockId})])}
