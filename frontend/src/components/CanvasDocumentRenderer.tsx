@@ -1,0 +1,290 @@
+import { useEffect, useRef } from "react";
+import type { CSSProperties } from "react";
+import type { LayoutBlock, LayoutLine, LayoutPage, LayoutResult, Mark, NexusDocument } from "../../../packages/engine/src/index";
+
+const PT_TO_CSS_PX = 96 / 72;
+const PAGE_GAP = 24;
+const PAGE_SHADOW = "0 4px 22px #10182824";
+const DEFAULT_TEXT = "#111111";
+
+type CanvasPageProps = {
+  page: LayoutPage;
+  pageCount: number;
+  document: NexusDocument;
+  headerText: string;
+  footerText: string;
+  showPageNumbers: boolean;
+};
+
+function markedFont(marks: Mark[], fontSize: number, fontFamily: string): string {
+  const weight = marks.some(mark => mark.type === "bold") ? "700" : "400";
+  const italic = marks.some(mark => mark.type === "italic") ? "italic " : "";
+  const size = marks.some(mark => mark.type === "superscript" || mark.type === "subscript")
+    ? fontSize * 0.75
+    : marks.find(mark => mark.type === "fontSize")?.type === "fontSize"
+      ? (marks.find(mark => mark.type === "fontSize") as Extract<Mark, { type: "fontSize" }>).value * 0.75
+      : fontSize;
+  const family = marks.find(mark => mark.type === "fontFamily");
+  return `${italic}${weight} ${size * PT_TO_CSS_PX}px ${family?.type === "fontFamily" ? family.value : fontFamily}`;
+}
+
+function markColor(marks: Mark[]): string {
+  const color = marks.find(mark => mark.type === "color");
+  return color?.type === "color" ? color.value : DEFAULT_TEXT;
+}
+
+function textWidth(ctx: CanvasRenderingContext2D, line: LayoutLine): number {
+  if (!line.runs?.length) return ctx.measureText(line.text).width;
+  return line.runs.reduce((sum, run) => {
+    ctx.font = markedFont(run.marks, run.fontSize, run.fontFamily);
+    return sum + ctx.measureText(run.text).width;
+  }, 0);
+}
+
+function drawLine(ctx: CanvasRenderingContext2D, line: LayoutLine): void {
+  const runs = line.runs?.length ? line.runs : [{
+    text: line.text, fontSize: 11, fontFamily: "Arial", marks: [] as Mark[], width: line.width,
+  }];
+  const totalWidth = textWidth(ctx, line);
+  const availableWidth = Math.max(0, line.width * PT_TO_CSS_PX);
+  let x = line.x * PT_TO_CSS_PX;
+  if (line.align === "center") x += Math.max(0, (availableWidth - totalWidth) / 2);
+  else if (line.align === "end") x += Math.max(0, availableWidth - totalWidth);
+  const top = line.y * PT_TO_CSS_PX;
+  const baseline = top + Math.min(line.height * PT_TO_CSS_PX * 0.82, line.height * PT_TO_CSS_PX - 1);
+  for (const run of runs) {
+    ctx.font = markedFont(run.marks, run.fontSize, run.fontFamily);
+    ctx.textBaseline = "alphabetic";
+    const width = ctx.measureText(run.text).width;
+    const highlight = run.marks.find(mark => mark.type === "highlight");
+    const comment = run.marks.find(mark => mark.type === "comment");
+    if (highlight?.type === "highlight") {
+      ctx.fillStyle = highlight.value;
+      ctx.fillRect(x, top + 1, width, Math.max(1, line.height * PT_TO_CSS_PX - 2));
+    } else if (comment) {
+      ctx.fillStyle = "#fef3c7";
+      ctx.fillRect(x, top + 1, width, Math.max(1, line.height * PT_TO_CSS_PX - 2));
+    }
+    ctx.fillStyle = markColor(run.marks);
+    ctx.fillText(run.text, x, baseline);
+    const underline = run.marks.some(mark => mark.type === "underline" || mark.type === "link");
+    const strike = run.marks.some(mark => mark.type === "strike");
+    if (underline || strike || comment) {
+      ctx.strokeStyle = comment ? "#d97706" : markColor(run.marks);
+      ctx.lineWidth = comment ? 1 : Math.max(0.6, run.fontSize * PT_TO_CSS_PX / 16);
+      ctx.setLineDash(comment ? [1.5, 1.5] : []);
+      ctx.beginPath();
+      const y = strike ? baseline - run.fontSize * PT_TO_CSS_PX * 0.32 : baseline + 1.5;
+      ctx.moveTo(x, y);
+      ctx.lineTo(x + width, y);
+      ctx.stroke();
+      ctx.setLineDash([]);
+    }
+    x += width;
+  }
+}
+
+function findTopLevelBlock(document: NexusDocument, id: string) {
+  return document.content.find(block => block.id === id);
+}
+
+function drawBlock(ctx: CanvasRenderingContext2D, block: LayoutBlock, document: NexusDocument, imageCache: Map<string, HTMLImageElement>): void {
+  const x = block.rect.x * PT_TO_CSS_PX;
+  const y = block.rect.y * PT_TO_CSS_PX;
+  const width = block.rect.width * PT_TO_CSS_PX;
+  const height = block.rect.height * PT_TO_CSS_PX;
+
+  if (block.style?.backgroundColor) {
+    ctx.fillStyle = block.style.backgroundColor;
+    ctx.fillRect(x, y, width, height);
+  }
+  if (block.style?.borderColor && block.style.borderWidth) {
+    ctx.strokeStyle = block.style.borderColor;
+    ctx.lineWidth = block.style.borderWidth * PT_TO_CSS_PX;
+    ctx.strokeRect(x, y, width, height);
+  }
+  if (block.quote) {
+    ctx.strokeStyle = "#98a2b3";
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.moveTo(x + 4 * PT_TO_CSS_PX, y);
+    ctx.lineTo(x + 4 * PT_TO_CSS_PX, y + height);
+    ctx.stroke();
+  }
+  if (block.type === "listItem" && block.marker) {
+    ctx.font = `10pt Arial, sans-serif`;
+    ctx.textAlign = "right";
+    ctx.textBaseline = "top";
+    ctx.fillStyle = "#344054";
+    ctx.fillText(block.marker, x, y + 2 * PT_TO_CSS_PX);
+    ctx.textAlign = "left";
+  }
+  if (block.type === "thematicBreak") {
+    ctx.strokeStyle = "#98a2b3";
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(x, y);
+    ctx.lineTo(x + width, y);
+    ctx.stroke();
+  }
+  if (block.table) {
+    for (const row of block.table.rows) {
+      for (const cell of row.cells) {
+        const cellX = cell.rect.x * PT_TO_CSS_PX;
+        const cellY = cell.rect.y * PT_TO_CSS_PX;
+        const cellWidth = cell.rect.width * PT_TO_CSS_PX;
+        const cellHeight = cell.rect.height * PT_TO_CSS_PX;
+        ctx.fillStyle = "#ffffff";
+        ctx.fillRect(cellX, cellY, cellWidth, cellHeight);
+        ctx.strokeStyle = "#98a2b3";
+        ctx.lineWidth = 1;
+        ctx.strokeRect(cellX, cellY, cellWidth, cellHeight);
+        for (const line of cell.lines) drawLine(ctx, line);
+      }
+    }
+  }
+  for (const line of block.lines) drawLine(ctx, line);
+
+  if (block.type === "image") {
+    const model = findTopLevelBlock(document, block.blockId);
+    if (model?.type === "image") {
+      const resource = document.resources.find(item => item.id === model.resourceId);
+      const image = imageCache.get(model.resourceId);
+      if (image?.complete && image.naturalWidth > 0) {
+        ctx.drawImage(image, x, y, width, height);
+      } else {
+        ctx.fillStyle = "#f2f4f7";
+        ctx.fillRect(x, y, width, height);
+        ctx.strokeStyle = "#d0d5dd";
+        ctx.strokeRect(x, y, width, height);
+        ctx.fillStyle = "#667085";
+        ctx.font = `10pt Arial, sans-serif`;
+        ctx.textBaseline = "top";
+        ctx.fillText(model.alt || (resource ? "Carregando imagem…" : "Imagem indisponível"), x + 6, y + 6, Math.max(0, width - 12));
+      }
+    }
+  }
+
+  for (const child of block.children ?? []) drawBlock(ctx, child, document, imageCache);
+}
+
+function pageText(page: LayoutPage): string {
+  const parts: string[] = [];
+  const visit = (block: LayoutBlock) => {
+    if (block.marker) parts.push(block.marker);
+    for (const line of block.lines) parts.push(line.text);
+    for (const row of block.table?.rows ?? []) for (const cell of row.cells) for (const line of cell.lines) parts.push(line.text);
+    for (const child of block.children ?? []) visit(child);
+  };
+  page.blocks.forEach(visit);
+  return parts.join(" ").replace(/\s+/g, " ").trim();
+}
+
+export function CanvasPage({ page, pageCount, document, headerText, footerText, showPageNumbers }: CanvasPageProps) {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const cssWidth = page.width * PT_TO_CSS_PX;
+  const cssHeight = page.height * PT_TO_CSS_PX;
+  const style: CSSProperties = {
+    display: "block",
+    flex: "0 0 auto",
+    width: cssWidth,
+    height: cssHeight,
+    background: "#ffffff",
+    boxShadow: PAGE_SHADOW,
+  };
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const context = canvas.getContext("2d");
+    if (!context) return;
+    const ratio = Math.max(1, Math.min(3, window.devicePixelRatio || 1));
+    canvas.width = Math.round(cssWidth * ratio);
+    canvas.height = Math.round(cssHeight * ratio);
+    context.setTransform(ratio, 0, 0, ratio, 0, 0);
+    context.clearRect(0, 0, cssWidth, cssHeight);
+    context.fillStyle = "#ffffff";
+    context.fillRect(0, 0, cssWidth, cssHeight);
+
+    const imageCache = new Map<string, HTMLImageElement>();
+    let cancelled = false;
+    const imageResources = document.resources.filter(resource => resource.kind === "image");
+    for (const resource of imageResources) {
+      const image = new Image();
+      imageCache.set(resource.id, image);
+      image.onload = () => {
+        if (!cancelled) paint();
+      };
+      image.onerror = () => {
+        if (!cancelled) paint();
+      };
+      image.src = `data:${resource.mimeType};base64,${resource.data}`;
+    }
+
+    const paint = () => {
+      if (cancelled) return;
+      context.setTransform(ratio, 0, 0, ratio, 0, 0);
+      context.clearRect(0, 0, cssWidth, cssHeight);
+      context.fillStyle = "#ffffff";
+      context.fillRect(0, 0, cssWidth, cssHeight);
+      if (headerText) {
+        context.font = `9pt Arial, sans-serif`;
+        context.fillStyle = "#667085";
+        context.textBaseline = "top";
+        context.fillText(headerText, page.content.x * PT_TO_CSS_PX, 12 * PT_TO_CSS_PX, page.content.width * PT_TO_CSS_PX);
+      }
+      for (const block of page.blocks) drawBlock(context, block, document, imageCache);
+      if (footerText || showPageNumbers) {
+        context.font = `9pt Arial, sans-serif`;
+        context.fillStyle = "#667085";
+        context.textBaseline = "alphabetic";
+        const footerY = cssHeight - 12 * PT_TO_CSS_PX;
+        if (footerText) context.fillText(footerText, page.content.x * PT_TO_CSS_PX, footerY, page.content.width * PT_TO_CSS_PX);
+        if (showPageNumbers) {
+          const label = `Página ${page.index + 1} de ${pageCount}`;
+          context.textAlign = "right";
+          context.fillText(label, (page.width - page.content.x) * PT_TO_CSS_PX, footerY);
+          context.textAlign = "left";
+        }
+      }
+    };
+    paint();
+    return () => { cancelled = true; };
+  }, [page, pageCount, document, headerText, footerText, showPageNumbers, cssWidth, cssHeight]);
+
+  return <canvas
+    ref={canvasRef}
+    className="kortex-canvas-page"
+    role="img"
+    aria-label={`Página ${page.index + 1} de ${pageCount}. ${pageText(page)}`}
+    data-page-index={page.index}
+    style={style}
+  />;
+}
+
+export function CanvasDocumentRenderer({ layout, document, headerText = "", footerText = "", showPageNumbers = false }: {
+  layout: LayoutResult;
+  document: NexusDocument;
+  headerText?: string;
+  footerText?: string;
+  showPageNumbers?: boolean;
+}) {
+  return <div className="kortex-canvas-pages" data-renderer="canvas-2d" style={{
+    display: "flex",
+    flexDirection: "column",
+    alignItems: "center",
+    gap: PAGE_GAP,
+    padding: "24px 16px 48px",
+    minWidth: 0,
+  }}>
+    {layout.pages.map(page => <CanvasPage
+      key={page.index}
+      page={page}
+      pageCount={layout.pageCount}
+      document={document}
+      headerText={headerText}
+      footerText={footerText}
+      showPageNumbers={showPageNumbers}
+    />)}
+  </div>;
+}
