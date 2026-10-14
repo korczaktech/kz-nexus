@@ -417,7 +417,11 @@ export function layoutDocument(document: NexusDocument, options: LayoutOptions =
               allLines.every(line => !(line.y < bottom - 0.001 && line.y + line.height > bottom + 0.001))
             );
             const boundary = safeBoundaries.reduce((best, bottom) => Math.max(best, bottom), offset);
-            if (boundary > offset + 0.001) nextOffset = Math.min(row.height, boundary);
+            if (boundary > offset + 0.001) {
+              nextOffset = Math.min(row.height, boundary);
+              // Keep the final bottom padding with the last line fragment.
+              if (row.height - nextOffset <= 8) nextOffset = row.height;
+            }
             const chunkHeight = Math.max(0.001, nextOffset - offset);
             const rowY = cursorY;
             const cells = cellLines.map(({ cell, lines }) => ({
