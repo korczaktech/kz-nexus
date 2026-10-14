@@ -101,7 +101,6 @@ function makeParagraph(node: Element, type: "paragraph" | "heading" = "paragraph
   const indentation = { ...(indent !== undefined ? { indent } : {}), ...(firstLineIndent !== undefined ? { firstLineIndent } : {}), ...(hangingIndent !== undefined ? { hangingIndent } : {}) };
   const rawAnchorId = node.getAttribute("id");
   const anchor = type === "paragraph" && rawAnchorId && isValidId(rawAnchorId) ? { anchorId: rawAnchorId } : {};
-  const css = (node as HTMLElement).style;
   const toPoints = (value: string): number | undefined => { if (!value) return undefined; const number = Number.parseFloat(value); if (!Number.isFinite(number) || number < 0) return undefined; return value.trim().endsWith("pt") ? number : value.trim().endsWith("px") ? number * 0.75 : number; };
   const spacingBefore = toPoints(css.marginTop);
   const spacingAfter = toPoints(css.marginBottom);
