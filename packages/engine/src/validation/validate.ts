@@ -99,6 +99,7 @@ function checkParagraphLike(
   counter.nodes += 1;
   counter.maxDepth = Math.max(counter.maxDepth, depth);
   checkId(node.id, path, seen, issues);
+  if (node.type === "paragraph" && node.anchorId !== undefined) checkId(node.anchorId, `${path}.anchorId`, seen, issues);
   if (!Array.isArray(node.children) || node.children.length === 0) {
     issues.push({ code: "INVALID_DOCUMENT", message: `Block must contain at least one text run at ${path}`, path });
     return;
