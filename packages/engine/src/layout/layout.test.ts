@@ -138,24 +138,33 @@ describe("native layout engine", () => {
     expect(line.runs?.[1].marks.some(mark => mark.type === "bold")).toBe(true);
   });
 
-  it("retains ordered, unordered, nested list markers and blockquote prefixes", () => {
+  it("preserves nested list and blockquote structure plus paragraph run styling", () => {
     const nested: Block = { type: "orderedList", id: "list", start: 3, children: [
       { type: "listItem", id: "item-1", children: [
         { type: "paragraph", id: "item-p", children: [{ type: "text", id: "item-r", text: "First", marks: [] }] },
         { type: "bulletList", id: "nested-list", children: [
-          { type: "listItem", id: "nested-item", children: [{ type: "paragraph", id: "nested-p", children: [{ type: "text", id: "nested-r", text: "Nested", marks: [] }] }] }
+          { type: "listItem", id: "nested-item", children: [{ type: "paragraph", id: "nested-p", children: [{ type: "text", id: "nested-r", text: "Nested", marks: [{ type: "bold" }] }] }] }
         ] }
       ] }
     ] };
     const quote: Block = { type: "blockquote", id: "quote", children: [
-      { type: "paragraph", id: "quote-p", children: [{ type: "text", id: "quote-r", text: "Quoted", marks: [] }] }
+      { type: "paragraph", id: "quote-p", children: [{ type: "text", id: "quote-r", text: "Quoted", marks: [{ type: "italic" }] }] }
     ] };
     const result = layoutDocument(documentWith([nested, quote]), { metrics });
-    const listText = result.pages[0].blocks.find(block => block.blockId === "list")!.lines.map(line => line.text).join("\\n");
-    const quoteText = result.pages[0].blocks.find(block => block.blockId === "quote")!.lines.map(line => line.text).join("\\n");
-    expect(listText).toContain("3. First");
-    expect(listText).toContain("↳ • Nested");
-    expect(quoteText).toContain("│ Quoted");
+    const listLayout = result.pages[0].blocks.find(block => block.blockId === "list")!;
+    const quoteLayout = result.pages[0].blocks.find(block => block.blockId === "quote")!;
+    const topItem = listLayout.children?.[0];
+    const nestedList = topItem?.children?.find(child => child.blockId === "nested-list");
+    const nestedItem = nestedList?.children?.[0];
+    const nestedParagraph = nestedItem?.children?.[0];
+    expect(topItem?.type).toBe("listItem");
+    expect(topItem?.marker).toBe("3.");
+    expect(nestedList?.type).toBe("bulletList");
+    expect(nestedItem?.marker).toBe("•");
+    expect(nestedParagraph?.lines[0].runs?.[0].marks.some(mark => mark.type === "bold")).toBe(true);
+    expect(quoteLayout.quote).toBe(true);
+    expect(quoteLayout.children?.[0].blockId).toBe("quote-p");
+    expect(quoteLayout.children?.[0].lines[0].runs?.[0].marks.some(mark => mark.type === "italic")).toBe(true);
   });
 
   it("reports invalid page geometry and safely uses a default page", () => {

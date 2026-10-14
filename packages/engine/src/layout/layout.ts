@@ -5,7 +5,7 @@
  * browser, desktop or mobile host can use its actual font renderer. The
  * fallback measurer is deterministic and intentionally approximate.
  */
-import type { Alignment, Block, Heading, NexusDocument, PageConfig, Paragraph, TextRun } from "../model/types";
+import type { Alignment, Block, BulletList, Heading, ListItem, NexusDocument, OrderedList, PageConfig, Paragraph, TextRun } from "../model/types";
 
 export interface TextMetrics {
   measureText(text: string, fontSize: number, fontFamily: string, marks?: TextRun["marks"]): number;
@@ -33,12 +33,24 @@ export interface LayoutTextRun {
   width: number;
 }
 export interface LayoutLine { text: string; x: number; y: number; width: number; height: number; startOffset: number; endOffset: number; align?: Alignment; runs?: LayoutTextRun[] }
+export interface LayoutBlockStyle {
+  backgroundColor?: string;
+  borderColor?: string;
+  borderWidth?: number;
+  padding?: number;
+  align?: Alignment;
+}
 export interface LayoutBlock {
   blockId: string;
-  type: Block["type"];
+  type: Block["type"] | "listItem";
   pageIndex: number;
   rect: LayoutRect;
   lines: LayoutLine[];
+  children?: LayoutBlock[];
+  marker?: string;
+  depth?: number;
+  quote?: boolean;
+  style?: LayoutBlockStyle;
   table?: { rows: Array<{ rowId: string; rect: LayoutRect; cells: Array<{ cellId: string; rect: LayoutRect; lines: LayoutLine[] }> }> };
   continued?: boolean;
 }
@@ -254,8 +266,68 @@ export function layoutDocument(document: NexusDocument, options: LayoutOptions =
   };
   let page = makePage(), cursorY = content.y;
   const nextPage = () => { page = makePage(); cursorY = content.y; };
+  const styleForParagraph = (block: Paragraph | Heading): LayoutBlockStyle => ({
+    backgroundColor: block.backgroundColor, borderColor: block.borderColor,
+    borderWidth: block.borderWidth, padding: block.padding, align: block.align
+  });
   const addBlock = (block: Block, rect: LayoutRect, lines: LayoutLine[], extra: Partial<LayoutBlock> = {}) => {
-    page.blocks.push({ blockId: block.id, type: block.type, pageIndex: page.index, rect, lines, ...extra });
+    const style = block.type === "paragraph" || block.type === "heading" ? styleForParagraph(block) : undefined;
+    page.blocks.push({ blockId: block.id, type: block.type, pageIndex: page.index, rect, lines, ...(style ? { style } : {}), ...extra });
+  };
+  const paragraphChild = (paragraph: Paragraph, x: number, y: number, width: number): LayoutBlock => {
+    const measured = blockTextLayout(paragraph, x, y, width, options);
+    return { blockId: paragraph.id, type: "paragraph", pageIndex: page.index,
+      rect: { x, y, width, height: measured.height }, lines: measured.lines, style: styleForParagraph(paragraph) };
+  };
+  const listItemHeight = (item: ListItem, depth: number): number => {
+    let total = 4;
+    for (const child of item.children) {
+      if (child.type === "paragraph") {
+        total += safeNumber(child.spacingBefore, 0) + blockTextLayout(child, 0, 0,
+          Math.max(1, content.width - (depth + 1) * 18), options).height + safeNumber(child.spacingAfter, 6);
+      } else {
+        total += listHeight(child, depth + 1);
+      }
+    }
+    return Math.max(12, total);
+  };
+  const listHeight = (list: BulletList | OrderedList, depth: number): number =>
+    list.children.reduce((sum, item) => sum + listItemHeight(item, depth) + 2, 0);
+  const buildListItem = (item: ListItem, marker: string, depth: number, y: number): { block: LayoutBlock; height: number } => {
+    const children: LayoutBlock[] = [];
+    let childY = y + 2;
+    for (const child of item.children) {
+      if (child.type === "paragraph") {
+        childY += safeNumber(child.spacingBefore, 0);
+        const x = content.x + (depth + 1) * 18;
+        const width = Math.max(1, content.width - (depth + 1) * 18);
+        const laidOut = paragraphChild(child, x, childY, width);
+        children.push(laidOut);
+        childY += laidOut.rect.height + safeNumber(child.spacingAfter, 6);
+      } else {
+        const nested = buildListNode(child, depth + 1, childY);
+        children.push(nested.block);
+        childY += nested.height;
+      }
+    }
+    const height = Math.max(12, childY - y + 2);
+    return { block: { blockId: item.id, type: "listItem", pageIndex: page.index,
+      rect: { x: content.x + depth * 18, y, width: Math.max(1, content.width - depth * 18), height },
+      lines: [], children, marker, depth }, height };
+  };
+  const buildListNode = (list: BulletList | OrderedList, depth: number, y: number): { block: LayoutBlock; height: number } => {
+    const children: LayoutBlock[] = [];
+    let childY = y;
+    list.children.forEach((item, index) => {
+      const marker = list.type === "orderedList" ? String(list.start + index) + "." : "•";
+      const laidOut = buildListItem(item, marker, depth, childY);
+      children.push(laidOut.block);
+      childY += laidOut.height + 2;
+    });
+    const height = Math.max(0, childY - y);
+    return { block: { blockId: list.id, type: list.type, pageIndex: page.index,
+      rect: { x: content.x + depth * 18, y, width: Math.max(1, content.width - depth * 18), height },
+      lines: [], children, depth }, height };
   };
   const isForced = new Set(options.breakBefore || []);
   document.content.forEach((block, blockIndex) => {
@@ -326,6 +398,77 @@ export function layoutDocument(document: NexusDocument, options: LayoutOptions =
       }
       flushTableFragment();
       cursorY += 8;
+      return;
+    }
+    if (block.type === "blockquote") {
+      let fragmentChildren: LayoutBlock[] = [];
+      let fragmentStartY = cursorY;
+      let fragmentIndex = 0;
+      let lastSpacing = 0;
+      const flushQuote = () => {
+        if (!fragmentChildren.length) return;
+        page.blocks.push({ blockId: block.id, type: "blockquote", pageIndex: page.index,
+          rect: { x: content.x, y: fragmentStartY, width: content.width,
+            height: Math.max(0, cursorY - fragmentStartY - lastSpacing) },
+          lines: [], children: fragmentChildren, quote: true, continued: fragmentIndex > 0 });
+        fragmentIndex += 1;
+        fragmentChildren = [];
+        lastSpacing = 0;
+      };
+      for (const paragraph of block.children) {
+        const x = content.x + 14;
+        const availableWidth = Math.max(1, content.width - 14);
+        const measured = blockTextLayout(paragraph, x, cursorY, availableWidth, options);
+        if (measured.height > content.height) diagnostics.push({ code: "OVERSIZED_BLOCK",
+          message: "Parágrafo de citação maior que a área útil da página; mantido íntegro para preservar seus estilos.", blockId: paragraph.id });
+        const spacing = safeNumber(paragraph.spacingAfter, 6);
+        if (cursorY > content.y && cursorY + measured.height + spacing > content.y + content.height) {
+          flushQuote();
+          nextPage();
+          fragmentStartY = cursorY;
+        }
+        const child = paragraphChild(paragraph, x, cursorY, availableWidth);
+        fragmentChildren.push(child);
+        cursorY += child.rect.height + spacing;
+        lastSpacing = spacing;
+      }
+      flushQuote();
+      cursorY += 4;
+      return;
+    }
+    if (block.type === "bulletList" || block.type === "orderedList") {
+      let fragmentChildren: LayoutBlock[] = [];
+      let fragmentStartY = cursorY;
+      let fragmentIndex = 0;
+      let lastSpacing = 2;
+      const flushList = () => {
+        if (!fragmentChildren.length) return;
+        page.blocks.push({ blockId: block.id, type: block.type, pageIndex: page.index,
+          rect: { x: content.x, y: fragmentStartY, width: content.width,
+            height: Math.max(0, cursorY - fragmentStartY - lastSpacing) },
+          lines: [], children: fragmentChildren, continued: fragmentIndex > 0 });
+        fragmentIndex += 1;
+        fragmentChildren = [];
+        lastSpacing = 2;
+      };
+      for (let index = 0; index < block.children.length; index++) {
+        const item = block.children[index];
+        const itemHeight = listItemHeight(item, 0);
+        if (cursorY > content.y && cursorY + itemHeight > content.y + content.height) {
+          flushList();
+          nextPage();
+          fragmentStartY = cursorY;
+        }
+        if (itemHeight > content.height) diagnostics.push({ code: "OVERSIZED_BLOCK",
+          message: "Item de lista maior que a área útil da página; mantido íntegro e preservando a estrutura aninhada.", blockId: item.id });
+        const marker = block.type === "orderedList" ? String(block.start + index) + "." : "•";
+        const laidOut = buildListItem(item, marker, 0, cursorY);
+        fragmentChildren.push(laidOut.block);
+        cursorY += laidOut.height + 2;
+        lastSpacing = 2;
+      }
+      flushList();
+      cursorY += 4;
       return;
     }
     if (block.type === "paragraph" || block.type === "heading") {

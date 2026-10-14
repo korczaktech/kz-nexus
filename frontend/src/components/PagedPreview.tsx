@@ -39,6 +39,12 @@ function LineVisual({line}: {line:LayoutLine}){
 
 function BlockVisual({block,document}: {block:LayoutBlock;document:NexusDocument}){
   const scale=PT_TO_PX;
+  if(block.children?.length){
+    return <>{block.quote&&<div aria-hidden="true" style={{position:'absolute',left:px(block.rect.x+4),top:px(block.rect.y),height:px(block.rect.height),borderLeft:'3px solid #98a2b3'}}/>}
+      {block.type==='listItem'&&block.marker&&<div aria-hidden="true" style={{position:'absolute',left:px(block.rect.x),top:px(block.rect.y+2),width:px(16),height:px(14),font:'10pt Arial,sans-serif',textAlign:'right',lineHeight:px(14),color:'#344054'}}>{block.marker}</div>}
+      {block.children.map((child,index)=><BlockVisual key={child.blockId+'-'+block.pageIndex+'-'+index} block={child} document={document}/>)}
+    </>;
+  }
   if(block.type==='image'){
     const model=document.content.find(item=>item.id===block.blockId);
     if(!model||model.type!=='image')return null;
@@ -58,8 +64,11 @@ function BlockVisual({block,document}: {block:LayoutBlock;document:NexusDocument
   }
   if(block.lines.length)block.lines.forEach((line,index)=>children.push(<LineVisual key={'line-'+block.blockId+'-'+index+'-'+line.startOffset} line={line}/>));
   const model=document.content.find(item=>item.id===block.blockId);
-  if(model&&(model.type==='paragraph'||model.type==='heading')&&(model.backgroundColor||model.borderColor)){
-    children.unshift(<div key="block-decoration" style={{position:'absolute',left:px(block.rect.x),top:px(block.rect.y),width:px(block.rect.width),height:px(block.rect.height),background:model.backgroundColor||'transparent',border:model.borderColor&&model.borderWidth?px(model.borderWidth)+'px solid '+model.borderColor:undefined,boxSizing:'border-box',pointerEvents:'none'}}/>);
+  const style=block.style||(model&&(model.type==='paragraph'||model.type==='heading')?{
+    backgroundColor:model.backgroundColor,borderColor:model.borderColor,borderWidth:model.borderWidth,padding:model.padding,align:model.align
+  }:undefined);
+  if(style&&(style.backgroundColor||style.borderColor)){
+    children.unshift(<div key="block-decoration" style={{position:'absolute',left:px(block.rect.x),top:px(block.rect.y),width:px(block.rect.width),height:px(block.rect.height),background:style.backgroundColor||'transparent',border:style.borderColor&&style.borderWidth?px(style.borderWidth)+'px solid '+style.borderColor:undefined,boxSizing:'border-box',pointerEvents:'none'}}/>);
   }
   return <>{children}</>;
 }
