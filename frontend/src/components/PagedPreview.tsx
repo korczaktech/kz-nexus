@@ -22,7 +22,7 @@ function runStyle(marks:Mark[],fontSize:number,fontFamily:string):CSSProperties{
     else if(mark.type==='subscript'){style.verticalAlign='sub';style.fontSize=px(fontSize*.75)}
     else if(mark.type==='color')style.color=mark.value;
     else if(mark.type==='highlight')style.backgroundColor=mark.value;
-    else if(mark.type==='fontSize')style.fontSize=px(mark.value);
+    else if(mark.type==='fontSize')style.fontSize=px(mark.value*.75);
     else if(mark.type==='fontFamily')style.fontFamily=mark.value;
   }
   return style;
