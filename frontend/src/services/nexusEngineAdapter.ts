@@ -231,7 +231,8 @@ function blocksFromHtml(html: string, resources: ResourceRef[] = []): Block[] {
   const blocks: Block[] = [];
   const visit = (element: Element) => {
     const tag = element.tagName.toLowerCase();
-    if (/^h[1-6]$/.test(tag)) blocks.push(makeParagraph(element, "heading"));
+    if (tag === "div" && element.getAttribute("data-kz-page-break") === "true") blocks.push({ type: "thematicBreak", id: nextId(), kind: "pageBreak" });
+    else if (/^h[1-6]$/.test(tag)) blocks.push(makeParagraph(element, "heading"));
     else if (tag === "p" || tag === "div" || tag === "pre") {
       const directChildren = Array.from(element.children);
       const standaloneImage = directChildren.length === 1 && directChildren[0].tagName.toLowerCase() === "img" && !(element.textContent || "").trim();
