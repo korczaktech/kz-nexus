@@ -23,13 +23,13 @@ const structuredDocument: NexusDocument = {
         { type: "paragraph", id: "item-p", children: [{ type: "text", id: "item-run", text: "First item", marks: [{ type: "bold" }] }] },
         { type: "bulletList", id: "nested-list", children: [
           { type: "listItem", id: "nested-item", children: [
-            { type: "paragraph", id: "nested-p", children: [{ type: "text", id: "nested-run", text: "Nested item", marks: [{ type: "italic" }] }],
+            { type: "paragraph", id: "nested-p", children: [{ type: "text", id: "nested-run", text: "Nested item", marks: [{ type: "italic" }] }] },
           }],
         }],
       }],
     },
     { type: "blockquote", id: "quote", children: [
-      { type: "paragraph", id: "quote-p", children: [{ type: "text", id: "quote-run", text: "Quoted text", marks: [{ type: "italic" }] }],
+      { type: "paragraph", id: "quote-p", children: [{ type: "text", id: "quote-run", text: "Quoted text", marks: [{ type: "italic" }] }] },
     ] },
   ],
 };
