@@ -653,7 +653,8 @@ export function layoutDocument(document: NexusDocument, options: LayoutOptions =
                 itemStartY = cursorY;
               }
             }
-            cursorY += safeNumber(paragraph.spacingAfter, 6);
+            const paragraphSpacing = safeNumber(paragraph.spacingAfter, 6);
+            cursorY += Math.min(paragraphSpacing, Math.max(0, content.y + content.height - cursorY));
           }
           finishItemFragment();
           cursorY += 2;
