@@ -25,6 +25,32 @@ export function insertImage(params: { afterBlockId: string; resourceId: string; 
   };
 }
 
+/** Updates image alternative text and/or dimensions in the canonical document model. */
+export function updateImage(params: { blockId: string; alt?: string; width?: number | null; height?: number | null }): Command {
+  return (doc) => {
+    const index = doc.content.findIndex((block) => block.id === params.blockId && block.type === "image");
+    if (index < 0) return err(engineError("NODE_NOT_FOUND", `Image block "${params.blockId}" not found`, { path: params.blockId }));
+    for (const [name, value] of [["width", params.width], ["height", params.height]] as const) {
+      if (value !== undefined && value !== null && (!Number.isFinite(value) || value <= 0 || value > 2000)) {
+        return err(engineError("INVALID_DOCUMENT", `${name} must be greater than 0 and at most 2000 pixels`, { path: params.blockId }));
+      }
+    }
+    if (params.alt !== undefined && (typeof params.alt !== "string" || params.alt.length > 2000)) {
+      return err(engineError("INVALID_DOCUMENT", "Image alternative text must be at most 2000 characters", { path: params.blockId }));
+    }
+    const image = doc.content[index];
+    if (!image || image.type !== "image") return err(engineError("NODE_NOT_FOUND", `Image block "${params.blockId}" not found`, { path: params.blockId }));
+    const content = [...doc.content];
+    content[index] = {
+      ...image,
+      ...(params.alt !== undefined ? { alt: params.alt } : {}),
+      ...(params.width !== undefined ? { width: params.width === null ? undefined : params.width } : {}),
+      ...(params.height !== undefined ? { height: params.height === null ? undefined : params.height } : {}),
+    };
+    return ok({ document: { ...doc, content } });
+  };
+}
+
 export function removeImage(params: { blockId: string }): Command {
   return (doc, ctx) => {
     const image = doc.content.find((block) => block.id === params.blockId && block.type === "image");
