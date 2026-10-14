@@ -38,7 +38,6 @@ function LineVisual({line}: {line:LayoutLine}){
 }
 
 function BlockVisual({block,document}: {block:LayoutBlock;document:NexusDocument}){
-  const scale=PT_TO_PX;
   if(block.children?.length){
     return <>{block.quote&&<div aria-hidden="true" style={{position:'absolute',left:px(block.rect.x+4),top:px(block.rect.y),height:px(block.rect.height),borderLeft:'3px solid #98a2b3'}}/>}
       {block.type==='listItem'&&block.marker&&<div aria-hidden="true" style={{position:'absolute',left:px(block.rect.x),top:px(block.rect.y+2),width:px(16),height:px(14),font:'10pt Arial,sans-serif',textAlign:'right',lineHeight:px(14),color:'#344054'}}>{block.marker}</div>}
@@ -138,7 +137,7 @@ export function PagedPreview({html,css,onClose,document,useNativeLayout=true,hea
     {error&&<div role="alert" style={{padding:16,color:'#b42318'}}>{error}</div>}
     {nativeLayout?.diagnostics.length&&document&&useNativeLayout?<div role="status" style={{padding:'10px 16px',background:'#fff4e5',color:'#7a2e0e',borderBottom:'1px solid #f2c078'}}><strong>Análise do Kortex:</strong> {nativeLayout.diagnostics.join(' ')}</div>:null}
     {busy&&<div role="status" style={{padding:24,textAlign:'center'}}>Preparando páginas para impressão…</div>}
-    <div ref={target} className="paged-preview-pages" style={{overflow:'auto',flex:1,display:document&&useNativeLayout?'none':undefined}}/>
+    <div ref={target} className="paged-preview-pages" style={{overflow:'auto',flex:1,display:document&&useNativeLayout&&nativeLayout?.result.pageCount?'none':undefined}}/>
     {!busy&&document&&useNativeLayout&&nativeLayout&&nativeLayout.result.pageCount>0?<div style={{overflow:'auto',flex:1}}><NativePages layout={nativeLayout.result} document={document} headerText={headerText} footerText={footerText} showPageNumbers={showPageNumbers}/></div>:null}
   </div>;
 }
