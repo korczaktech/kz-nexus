@@ -1,10 +1,61 @@
 // @vitest-environment happy-dom
 import { describe, expect, it } from "vitest";
 import { createEditor, getPlainText } from "../../../packages/engine/src/index";
-import { htmlFromNexusDocument, nexusDocumentFromHtml, syncNexusEngine } from "./nexusEngineAdapter";
+import { getEngineDomContext, htmlFromNexusDocument, nexusDocumentFromHtml, syncNexusEngine } from "./nexusEngineAdapter";
 import type { Paragraph } from "../../../packages/engine/src/model/types";
 
 describe("Nexus editor adapter", () => {
+  it("does not map header or footer selections to body paragraphs", () => {
+    const engine = createEditor({ document: nexusDocumentFromHtml("<p>Body paragraph</p>", "Layout selection test") });
+    const root = document.createElement("div");
+    root.innerHTML = '<div class="editor-page"><div class="editor-document-header" contenteditable="true">Header</div><div class="rich-editor"><p>Body paragraph</p></div><div class="editor-document-footer" contenteditable="true">Footer</div></div>';
+    document.body.append(root);
+    const selection = window.getSelection();
+    const headerText = root.querySelector(".editor-document-header")!.firstChild!;
+    const headerRange = document.createRange();
+    headerRange.setStart(headerText, 2);
+    headerRange.collapse(true);
+    selection!.removeAllRanges();
+    selection!.addRange(headerRange);
+    expect(getEngineDomContext(engine, root)).toBeNull();
+
+    const bodyText = root.querySelector(".rich-editor p")!.firstChild!;
+    const bodyRange = document.createRange();
+    bodyRange.setStart(bodyText, 4);
+    bodyRange.collapse(true);
+    selection!.removeAllRanges();
+    selection!.addRange(bodyRange);
+    expect(getEngineDomContext(engine, root)).toMatchObject({
+      block: { type: "paragraph" },
+      startOffset: 4,
+      endOffset: 4,
+    });
+    root.remove();
+    engine.dispose();
+  });
+
+  it("maps body paragraphs across pages without treating layout fields as text blocks", () => {
+    const engine = createEditor({ document: nexusDocumentFromHtml("<p>First</p><p>Second</p>", "Multi-page mapping test") });
+    const root = document.createElement("div");
+    root.innerHTML = '<div class="editor-page"><div class="editor-document-header">Header</div><div class="rich-editor"><p>First</p></div><div class="editor-document-footer">Footer</div></div><div class="editor-page"><div class="editor-document-header">Header</div><div class="rich-editor"><p>Second</p></div><div class="editor-document-footer">Footer</div></div>';
+    document.body.append(root);
+    const selection = window.getSelection();
+    const secondText = root.querySelectorAll(".rich-editor p")[1]!.firstChild!;
+    const range = document.createRange();
+    range.setStart(secondText, 3);
+    range.collapse(true);
+    selection!.removeAllRanges();
+    selection!.addRange(range);
+    expect(getEngineDomContext(engine, root)).toMatchObject({
+      block: { type: "paragraph" },
+      blockIndex: 1,
+      startOffset: 3,
+      endOffset: 3,
+    });
+    root.remove();
+    engine.dispose();
+  });
+
   it("routes ordinary typing through engine transactions and preserves block IDs", () => {
     const document = nexusDocumentFromHtml("<p>Hello</p>", "Adapter test");
     const engine = createEditor({ document });
