@@ -1,3 +1,4 @@
+import asyncio
 from datetime import datetime, timezone
 from uuid import uuid4
 import hashlib
@@ -130,9 +131,12 @@ async def get_document(document_id: str):
 async def list_documents(owner_id: str, query: dict, skip: int, limit: int):
     collection = get_database()["documentos"]
     filters = {"owner_id": owner_id, **query}
-    total = await collection.count_documents(filters)
-    cursor = collection.find(filters).sort("updated_at", -1).skip(skip).limit(limit)
-    return await cursor.to_list(length=limit), total
+    # The page query and total count are independent reads; overlap their I/O.
+    items, total = await asyncio.gather(
+        collection.find(filters).sort("updated_at", -1).skip(skip).limit(limit).to_list(length=limit),
+        collection.count_documents(filters),
+    )
+    return items, total
 
 
 async def update_document(document_id: str, changes: dict):
@@ -220,8 +224,10 @@ async def log_event(user_id: str | None, event_type: str, payload: dict):
 async def list_events(user_id: str, filters: dict, skip: int, limit: int):
     collection = get_database()["eventos"]
     query = {"user_id": user_id, **filters}
-    total = await collection.count_documents(query)
-    items = await collection.find(query).sort("created_at", -1).skip(skip).limit(limit).to_list(length=limit)
+    items, total = await asyncio.gather(
+        collection.find(query).sort("created_at", -1).skip(skip).limit(limit).to_list(length=limit),
+        collection.count_documents(query),
+    )
     return items, total
 
 
@@ -235,6 +241,8 @@ async def list_audit_events(actor_id: str, filters: dict, skip: int, limit: int,
     collection = get_database()["eventos"]
     query = {} if global_view else {"user_id": actor_id}
     query.update(filters)
-    total = await collection.count_documents(query)
-    items = await collection.find(query).sort("created_at", -1).skip(skip).limit(limit).to_list(length=limit)
+    items, total = await asyncio.gather(
+        collection.find(query).sort("created_at", -1).skip(skip).limit(limit).to_list(length=limit),
+        collection.count_documents(query),
+    )
     return items, total
