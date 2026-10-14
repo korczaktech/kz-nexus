@@ -1,30 +1,65 @@
 /**
  * Kortex document persistence boundary.
  *
- * The canonical document model is serialized directly to the native .nsx
- * format. This module intentionally accepts no HTML and has no DOM dependency.
- * HTML remains a presentation/import-export format, not the source of truth.
+ * NexusDocument is the canonical model. The .nsx envelope is its native
+ * persistence format; HTML is deliberately excluded from this module.
+ *
+ * This adapter stays thin and delegates validation, size limits, migration,
+ * normalization, and serialization to the engine's supported public API.
  */
 import {
   openNsx,
   saveNsx,
+  type IdGenerator,
   type NexusDocument,
   type Result,
+  type EngineLimits,
 } from "../../../packages/engine/src/index";
 
 export const NSX_FILE_EXTENSION = ".nsx";
 
-/** Serialize the canonical Kortex model into a versioned .nsx payload. */
-export function encodeNexusDocument(document: NexusDocument): Result<string> {
-  return saveNsx(document);
+export interface EncodeNexusDocumentOptions {
+  /** Override engine safety limits for controlled import/export environments. */
+  limits?: EngineLimits;
 }
 
-/** Parse, migrate, normalize and validate a native .nsx payload. */
-export function decodeNexusDocument(payload: string): Result<NexusDocument> {
-  return openNsx(payload);
+export interface DecodeNexusDocumentOptions {
+  /** Override engine safety limits for controlled import/export environments. */
+  limits?: EngineLimits;
+  /** Inject deterministic IDs when normalization needs to repair legacy data. */
+  idGenerator?: IdGenerator;
 }
 
-/** Returns true when a filename uses the native Nexus extension. */
+/** Serialize the canonical model into the versioned native .nsx envelope. */
+export function encodeNexusDocument(
+  document: NexusDocument,
+  options: EncodeNexusDocumentOptions = {},
+): Result<string> {
+  return saveNsx(document, options.limits);
+}
+
+/**
+ * Parse and validate a native .nsx payload, including schema migration and
+ * normalization. Invalid JSON, HTML, unsupported versions, and unsafe or
+ * oversized documents are rejected by the engine.
+ */
+export function decodeNexusDocument(
+  payload: string,
+  options: DecodeNexusDocumentOptions = {},
+): Result<NexusDocument> {
+  return openNsx(payload, {
+    ...(options.limits ? { limits: options.limits } : {}),
+    ...(options.idGenerator ? { idGenerator: options.idGenerator } : {}),
+  });
+}
+
+/**
+ * Check a filename (not file contents) for the native extension.
+ * Supports paths with either slash convention and case-insensitive extensions.
+ */
 export function isNsxFilename(filename: string): boolean {
-  return filename.toLowerCase().endsWith(NSX_FILE_EXTENSION);
+  const normalized = filename.trim().replace(/\\/g, "/");
+  const basename = normalized.slice(normalized.lastIndexOf("/") + 1);
+  return basename.length > NSX_FILE_EXTENSION.length
+    && basename.toLowerCase().endsWith(NSX_FILE_EXTENSION);
 }
