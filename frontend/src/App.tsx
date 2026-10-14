@@ -7,7 +7,7 @@ import {chooseLocalFolder, getStorageSelection, saveStorageSelection, storageLab
 
 import {listIOSFiles, getIOSFile, deleteIOSFile, shareIOSFile} from './services/iosFiles';
 import {isIOS} from './iosPwa';
-import {finishCloudOAuth, listCloudFiles, readCloudFile, saveCloudFile, type CloudFile} from './services/cloudStorage';
+import type {CloudFile} from './services/cloudStorage';
 const nexusLogo = `${import.meta.env.BASE_URL}icons/favicon-nexus.svg?v=2`;
 const NEXUS_RELEASE_FALLBACK = '0.0.0.331';
 const NEXUS_API_VERSION = '0.3.0';
@@ -346,9 +346,9 @@ function AppAuthenticated(){
   useEffect(()=>{document.documentElement.dataset.theme=theme;localStorage.setItem('kz_theme',theme)},[theme]);
   useEffect(()=>{checkWebRelease();checkHubIntegration();const online=()=>{checkHubIntegration()};const offline=()=>setHubIntegration('offline');window.addEventListener('online',online);window.addEventListener('offline',offline);return()=>{window.removeEventListener('online',online);window.removeEventListener('offline',offline)}},[]);
   useEffect(()=>{const enterGuest=()=>{setGuest(true);setUser({id:'local-guest',name:'Visitante',email:'',phone:null,email_verified:false,phone_verified:false,role:'guest',status:'active',created_at:new Date().toISOString(),updated_at:new Date().toISOString()})};if(!getToken()){enterGuest();setBoot(false);return}api.me().then(setUser).catch(()=>{clearToken();enterGuest()}).finally(()=>setBoot(false))},[]);
-  useEffect(()=>{finishCloudOAuth().then(provider=>{if(provider){const selection={provider,label:storageLabel(provider),connectedAt:new Date().toISOString()};saveStorageSelection(selection);setStorageSelection(selection);}}).catch(e=>setError(e instanceof Error?e.message:'Não foi possível conectar o armazenamento.'))},[]);
+  useEffect(()=>{const query=new URLSearchParams(location.search);if(!query.has('code')&&!query.has('state')&&!query.has('error'))return;import('./services/cloudStorage').then(({finishCloudOAuth})=>finishCloudOAuth()).then(provider=>{if(provider){const selection={provider,label:storageLabel(provider),connectedAt:new Date().toISOString()};saveStorageSelection(selection);setStorageSelection(selection);}}).catch(e=>setError(e instanceof Error?e.message:'Não foi possível conectar o armazenamento.'))},[]);
   useEffect(()=>{if(user&&!guest&&!getStorageSelection())setShowStoragePicker(true)},[user,guest]);
-  async function refreshDriveFiles(folderId:string|null=driveFolderId){if(getStorageSelection()?.provider!=='google-drive')return;setDriveBusy(true);try{const result=await listCloudFiles(folderId||undefined);setDriveFiles(result.files)}catch(e){setError(e instanceof Error?e.message:'Não foi possível carregar o Google Drive.')}finally{setDriveBusy(false)}}
+  async function refreshDriveFiles(folderId:string|null=driveFolderId){if(getStorageSelection()?.provider!=='google-drive')return;setDriveBusy(true);try{const {listCloudFiles}=await import('./services/cloudStorage');const result=await listCloudFiles(folderId||undefined);setDriveFiles(result.files)}catch(e){setError(e instanceof Error?e.message:'Não foi possível carregar o Google Drive.')}finally{setDriveBusy(false)}}
   async function openDriveFile(file:CloudFile){
     if(driveBusy)return;
     setDriveBusy(true);setError('');
@@ -367,7 +367,7 @@ function AppAuthenticated(){
           return;
         }catch{try{localStorage.removeItem(sourceKey)}catch{}}
       }
-      const imported=await readCloudFile(file);
+      const {readCloudFile}=await import('./services/cloudStorage');const imported=await readCloudFile(file);
       const slidesMime='application/vnd.google-apps.presentation';
       const sheetsMime='application/vnd.google-apps.spreadsheet';
       const isSlides=file.mimeType===slidesMime;
@@ -500,7 +500,7 @@ function AppAuthenticated(){
       let source:CloudFile|null=null;
       try{const raw=localStorage.getItem('kz_nexus_drive_source_'+selected.id);if(raw)source=JSON.parse(raw) as CloudFile}catch{}
       if(source){
-        try{await saveCloudFile(source,data.content)}
+        try{const {saveCloudFile}=await import('./services/cloudStorage');await saveCloudFile(source,data.content)}
         catch(syncError){setError('Documento salvo no Nexus, mas não foi possível sincronizar com o Google Drive: '+(syncError instanceof Error?syncError.message:'erro desconhecido'))}
       }
       return 'saved' as const;
