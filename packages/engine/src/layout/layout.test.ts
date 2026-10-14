@@ -116,7 +116,7 @@ describe("native layout engine", () => {
     const listText = result.pages[0].blocks.find(block => block.blockId === "list")!.lines.map(line => line.text).join("\\n");
     const quoteText = result.pages[0].blocks.find(block => block.blockId === "quote")!.lines.map(line => line.text).join("\\n");
     expect(listText).toContain("3. First");
-    expect(listText).toContain("• Nested");
+    expect(listText).toContain("↳ • Nested");
     expect(quoteText).toContain("│ Quoted");
   });
 
