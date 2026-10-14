@@ -92,4 +92,65 @@ describe("Kortex model persistence (.nsx)", () => {
     expect(isNsxFilename("report.nsx.bak")).toBe(false);
     expect(isNsxFilename("folder.nsx/report.txt")).toBe(false);
   });
+
+  it("reports stable error codes for empty, malformed, and unsupported payloads", () => {
+    const empty = decodeNexusDocument("");
+    const malformed = decodeNexusDocument("{broken");
+    const wrongFormat = decodeNexusDocument(JSON.stringify({
+      format: "another-format",
+      formatVersion: 1,
+      document: {},
+    }));
+    expect(empty.ok).toBe(false);
+    if (!empty.ok) expect(empty.error.code).toBe("CORRUPTED_CONTENT");
+    expect(malformed.ok).toBe(false);
+    if (!malformed.ok) expect(malformed.error.code).toBe("CORRUPTED_CONTENT");
+    expect(wrongFormat.ok).toBe(false);
+    if (!wrongFormat.ok) expect(wrongFormat.error.code).toBe("UNSUPPORTED_FORMAT");
+  });
+
+  it("rejects future envelope and document schema versions explicitly", () => {
+    const document = createDocument({ title: "Version guard" });
+    const encoded = encodeNexusDocument(document);
+    expect(encoded.ok).toBe(true);
+    if (!encoded.ok) return;
+
+    const envelope = JSON.parse(encoded.value) as Record<string, unknown>;
+    const futureEnvelope = decodeNexusDocument(JSON.stringify({
+      ...envelope,
+      formatVersion: Number(envelope.formatVersion) + 1,
+    }));
+    expect(futureEnvelope.ok).toBe(false);
+    if (!futureEnvelope.ok) expect(futureEnvelope.error.code).toBe("VERSION_MISMATCH");
+
+    const nativeDocument = envelope.document as Record<string, unknown>;
+    const futureSchema = decodeNexusDocument(JSON.stringify({
+      ...envelope,
+      document: { ...nativeDocument, schemaVersion: 999 },
+    }));
+    expect(futureSchema.ok).toBe(false);
+    if (!futureSchema.ok) expect(futureSchema.error.code).toBe("VERSION_MISMATCH");
+  });
+
+  it("keeps configured size-limit failures distinguishable from corrupted content", () => {
+    const document = createDocument({ title: "Limit error classification" });
+    const encoded = encodeNexusDocument(document);
+    expect(encoded.ok).toBe(true);
+    if (!encoded.ok) return;
+
+    const decoded = decodeNexusDocument(encoded.value, {
+      limits: { ...DEFAULT_LIMITS, maxDocumentBytes: 1 },
+    });
+    expect(decoded.ok).toBe(false);
+    if (!decoded.ok) expect(decoded.error.code).toBe("LIMIT_EXCEEDED");
+  });
+
+  it("normalizes filename whitespace and handles both slash conventions without accepting suffixes", () => {
+    expect(isNsxFilename("  C:\\docs\\Report.NSX  ")).toBe(true);
+    expect(isNsxFilename("/home/user/report.NsX")).toBe(true);
+    expect(isNsxFilename("report.nsx.backup")).toBe(false);
+    expect(isNsxFilename("folder.nsx/report.txt")).toBe(false);
+    expect(isNsxFilename("   ")).toBe(false);
+  });
+
 });
