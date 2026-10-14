@@ -68,7 +68,8 @@ export function convertBlocksToList(params: { blockIds: string[]; ordered: boole
     if (sourceBlocks.some(block => !selectedIds.has(block.id))) {
       return err(engineError("INVALID_POSITION", "Selected blocks must follow document order"));
     }
-    const items: ListItem[] = sourceBlocks.map(block => {
+    const textBlocks = sourceBlocks as Array<Extract<Block, { type: "paragraph" | "heading" }>>;
+    const items: ListItem[] = textBlocks.map(block => {
       const paragraph: Paragraph = {
         type: "paragraph",
         id: block.id,
