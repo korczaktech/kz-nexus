@@ -1,4 +1,5 @@
 import {useEffect,useRef,useState} from 'react';
+import type {CSSProperties,ReactNode} from 'react';
 import {Previewer} from 'pagedjs';
 import {layoutDocument, type LayoutBlock, type LayoutLine, type LayoutResult, type Mark, type NexusDocument, type TextMetrics} from '../../../packages/engine/src/index';
 
@@ -10,7 +11,7 @@ type PreviewProps={
 const PT_TO_PX=96/72;
 const px=(points:number)=>points*PT_TO_PX;
 
-function runStyle(marks:Mark[],fontSize:number,fontFamily:string):React.CSSProperties{
+function runStyle(marks:Mark[],fontSize:number,fontFamily:string):CSSProperties{
   const style:React.CSSProperties={fontSize:px(fontSize),fontFamily};
   for(const mark of marks){
     if(mark.type==='bold')style.fontWeight=700;
@@ -44,7 +45,7 @@ function BlockVisual({block,document}: {block:LayoutBlock;document:NexusDocument
     return <img alt={model.alt} src={'data:'+resource.mimeType+';base64,'+resource.data} style={{position:'absolute',left:px(block.rect.x),top:px(block.rect.y),width:px(block.rect.width),height:px(block.rect.height),objectFit:'contain'}}/>;
   }
   if(block.type==='thematicBreak')return <div style={{position:'absolute',left:px(block.rect.x),top:px(block.rect.y),width:px(block.rect.width),borderTop:'1px solid #98a2b3'}}/>;
-  const children:React.ReactNode[]=[];
+  const children:ReactNode[]=[];
   if(block.table){
     for(const row of block.table.rows){
       for(const cell of row.cells){
