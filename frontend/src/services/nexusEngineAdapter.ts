@@ -103,7 +103,7 @@ function makeParagraph(node: Element, type: "paragraph" | "heading" = "paragraph
   const borderStyle = css.borderTopStyle || css.borderStyle || (borderShorthandMatch ? "solid" : "");
   const borderWidth = borderStyle === "solid" && borderWidthMatch ? Number(borderWidthMatch[1]) * (borderWidthMatch[2].toLowerCase() === "px" ? 0.75 : 1) : undefined;
   const borderColor = borderStyle === "solid" ? cssColorToHex(css.borderTopColor || css.borderColor || borderShorthandMatch?.[3] || "") : undefined;
-  const paddingValue = toPoints(css.padding);
+  const paddingValue = toPoints(css.padding || css.paddingTop);
   const spacing = { ...(spacingBefore ? { spacingBefore } : {}), ...(spacingAfter ? { spacingAfter } : {}), ...(Number.isFinite(lineSpacingValue) && lineSpacingValue >= 0.5 && lineSpacingValue <= 4 ? { lineSpacing: lineSpacingValue } : {}), ...(backgroundColor ? { backgroundColor } : {}), ...(borderColor && borderWidth ? { borderColor, borderWidth } : {}), ...(paddingValue ? { padding: paddingValue } : {}) };
   if (type === "heading") {
     const level = Math.min(6, Math.max(1, Number(node.tagName.slice(1)) || 1)) as 1 | 2 | 3 | 4 | 5 | 6;
@@ -141,7 +141,7 @@ function tableBlock(element: Element): Extract<Block, { type: "table" }> {
 
 function sanitizeImportedHtml(parsed: Document): void {
   parsed.querySelectorAll("script,style,iframe,object,embed,form,input,button,textarea,select,option,link,meta,base,svg,math,template").forEach(node => node.remove());
-  const allowedStyles = new Set(["color", "background-color", "font-size", "font-family", "text-align", "margin-left", "margin-top", "margin-bottom", "line-height", "border", "border-top-width", "border-top-style", "border-top-color", "border-right-width", "border-right-style", "border-right-color", "border-bottom-width", "border-bottom-style", "border-bottom-color", "border-left-width", "border-left-style", "border-left-color", "padding", "width", "height"]);
+  const allowedStyles = new Set(["color", "background-color", "font-size", "font-family", "text-align", "margin-left", "margin-top", "margin-bottom", "line-height", "border", "border-top-width", "border-top-style", "border-top-color", "border-right-width", "border-right-style", "border-right-color", "border-bottom-width", "border-bottom-style", "border-bottom-color", "border-left-width", "border-left-style", "border-left-color", "padding", "padding-top", "padding-right", "padding-bottom", "padding-left", "width", "height"]);
   parsed.body.querySelectorAll("*").forEach(element => {
     for (const attribute of Array.from(element.attributes)) {
       const name = attribute.name.toLowerCase();
