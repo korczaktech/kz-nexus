@@ -212,6 +212,26 @@ describe("native layout engine", () => {
     expect(fragments.every(fragment => fragment.rect.y + fragment.rect.height <= smallPage.height - smallPage.margins.bottom + 0.001)).toBe(true);
   });
 
+  it("splits oversized plain-text list items across pages and keeps the marker once", () => {
+    const longText = "one two three four five six seven eight nine ten eleven twelve thirteen fourteen fifteen sixteen seventeen eighteen nineteen twenty twentyone twentytwo twentythree twentyfour twentyfive twentysix twentyseven twentyeight twentynine thirty thirtyone thirtytwo thirtythree thirtyfour thirtyfive thirtysix thirtyseven thirtyeight thirtynine forty";
+    const list: Block = { type: "orderedList", id: "long-list", start: 1, children: [
+      { type: "listItem", id: "long-item", children: [
+        { type: "paragraph", id: "long-item-p", children: [{ type: "text", id: "long-item-run", text: longText, marks: [] }] }
+      ] }
+    ] };
+    const smallPage = { unit: "pt" as const, width: 160, height: 55, orientation: "portrait" as const, margins: { top: 5, right: 10, bottom: 5, left: 10 } };
+    const result = layoutDocument(documentWith([list], smallPage), { metrics });
+    const listFragments = result.pages.flatMap(page => page.blocks.filter(block => block.blockId === "long-list"));
+    const itemFragments = listFragments.flatMap(fragment => fragment.children || []);
+    const rendered = itemFragments.flatMap(item => item.children || []).flatMap(paragraph => paragraph.lines.map(line => line.text)).join(" ");
+    expect(listFragments.length).toBeGreaterThan(1);
+    expect(itemFragments[0].marker).toBe("1.");
+    expect(itemFragments.slice(1).every(item => !item.marker)).toBe(true);
+    expect(rendered).toContain("one two three");
+    expect(rendered).toContain("thirtynine forty");
+    expect(listFragments.every(fragment => fragment.rect.y + fragment.rect.height <= smallPage.height - smallPage.margins.bottom + 0.001)).toBe(true);
+  });
+
   it("reports invalid page geometry and safely uses a default page", () => {
     const invalid = { unit: "pt" as const, width: 100, height: 100, orientation: "portrait" as const, margins: { top: 80, right: 80, bottom: 80, left: 80 } };
     const result = layoutDocument(documentWith([paragraph("p", "fallback")], invalid), { metrics });
