@@ -6,14 +6,14 @@ const metrics: TextMetrics = { measureText: text => text.length * 5, lineHeight:
 function paragraph(id: string, text: string): Block {
   return { type: "paragraph", id, children: [{ type: "text", id: id + "-run", text, marks: [] }] };
 }
-function documentWith(content: Block[], page = { unit: "pt" as const, width: 200, height: 160, orientation: "portrait" as const, margins: { top: 10, right: 10, bottom: 10, left: 10 } }): NexusDocument {
+function documentWith(content: Block[], page = { unit: "pt" as const, width: 160, height: 200, orientation: "portrait" as const, margins: { top: 10, right: 10, bottom: 10, left: 10 } }): NexusDocument {
   return { id: "doc", schemaVersion: 1, metadata: {}, pageConfig: page, content, resources: [] };
 }
 
 describe("native layout engine", () => {
   it("calculates content dimensions from page size and margins", () => {
     const result = layoutDocument(documentWith([paragraph("p1", "Hello")]), { metrics });
-    expect(result.pages[0].content).toEqual({ x: 10, y: 10, width: 180, height: 140 });
+    expect(result.pages[0].content).toEqual({ x: 10, y: 10, width: 140, height: 180 });
     expect(result.pages[0].blocks[0].rect.x).toBe(10);
     expect(result.pages[0].blocks[0].lines[0].text).toBe("Hello");
   });
@@ -26,7 +26,7 @@ describe("native layout engine", () => {
     expect(fragments.length).toBeGreaterThan(1);
     expect(fragments[0].continued).toBeFalsy();
     expect(fragments[1].continued).toBe(true);
-    expect(fragments.every(fragment => fragment.rect.y + fragment.rect.height <= 150.01)).toBe(true);
+    expect(fragments.every(fragment => fragment.rect.y + fragment.rect.height <= 190.01)).toBe(true);
   });
 
   it("honors explicit page breaks before block ids", () => {
