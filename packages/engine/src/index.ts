@@ -80,6 +80,7 @@ export { openNsx, saveNsx } from "./nsx/api";
 
 // Importers / exporters
 export { importPlainText } from "./importers/plainText";
+export { importMarkdown } from "./importers/markdown";
 export { exportPlainText } from "./exporters/plainText";
 export { exportHtml, renderBlockHtml, renderTextRunsHtml } from "./exporters/html";
 export { exportMarkdown } from "./exporters/markdown";
