@@ -1,5 +1,5 @@
 import {describe,expect,it} from 'vitest';
-import {normalizeTextRange,wordDeletionRange} from './editorSelection';
+import {characterDeletionRange,normalizeTextRange,wordDeletionRange} from './editorSelection';
 
 describe('Kortex editor selection helpers',()=>{
   it('normalizes forward and reversed selections to the same range',()=>{
@@ -9,6 +9,12 @@ describe('Kortex editor selection helpers',()=>{
   it('clamps invalid and negative DOM offsets safely',()=>{
     expect(normalizeTextRange(-3,4)).toEqual({start:0,end:4});
     expect(normalizeTextRange(Number.NaN,Number.POSITIVE_INFINITY)).toEqual({start:0,end:0});
+  });
+  it('deletes a full Unicode character instead of half a surrogate pair',()=>{
+    expect(characterDeletionRange('A😀B',3,'backward')).toEqual({start:1,end:3});
+    expect(characterDeletionRange('A😀B',1,'forward')).toEqual({start:1,end:3});
+    expect(characterDeletionRange('A😀B',0,'backward')).toEqual({start:0,end:0});
+    expect(characterDeletionRange('A😀B',4,'forward')).toEqual({start:4,end:4});
   });
   it('deletes the preceding word and its separating whitespace',()=>{
     expect(wordDeletionRange('um texto aqui',8,'backward')).toEqual({start:3,end:8});
