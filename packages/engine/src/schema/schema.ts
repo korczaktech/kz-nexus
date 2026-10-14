@@ -27,6 +27,7 @@ export const KNOWN_MARK_TYPES: ReadonlySet<string> = new Set([
   "fontSize",
   "fontFamily",
   "link",
+  "comment",
 ]);
 
 /** Allows safe web, email, and same-document anchor links; rejects executable schemes. */
