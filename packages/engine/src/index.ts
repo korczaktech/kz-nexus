@@ -34,7 +34,7 @@ export type { Result } from "./utils/result";
 
 // Native layout and pagination
 export { layoutDocument } from "./layout/layout";
-export type { LayoutOptions, LayoutRect, LayoutLine, LayoutBlock, LayoutPage, LayoutResult, TextMetrics } from "./layout/layout";
+export type { LayoutOptions, LayoutRect, LayoutTextRun, LayoutLine, LayoutBlock, LayoutPage, LayoutResult, TextMetrics } from "./layout/layout";
 
 // Selection
 export { isCollapsed, collapsedAt, orderedRange } from "./selection/selection";

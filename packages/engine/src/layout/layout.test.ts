@@ -49,6 +49,115 @@ describe("native layout engine", () => {
     expect(fragments.flatMap(fragment => fragment.table?.rows || []).map(row => row.rowId)).toHaveLength(12);
   });
 
+  it("keeps a heading with the first line of its following paragraph", () => {
+    const heading: Block = { type: "heading", id: "h", level: 1, children: [{ type: "text", id: "hr", text: "Section", marks: [] }] };
+    const result = layoutDocument(documentWith([paragraph("lead", "Lead text Lead text Lead text"), heading, paragraph("body", "Body text")], {
+      unit: "pt", width: 100, height: 100, orientation: "portrait",
+      margins: { top: 10, right: 10, bottom: 10, left: 10 }
+    }), { metrics, keepHeadingsWithNext: true });
+    const headingBlock = result.pages.flatMap(page => page.blocks).find(block => block.blockId === "h");
+    const bodyBlock = result.pages.flatMap(page => page.blocks).find(block => block.blockId === "body");
+    expect(headingBlock?.pageIndex).toBe(1);
+    expect(bodyBlock?.pageIndex).toBe(headingBlock?.pageIndex);
+  });
+
+  it("keeps a paragraph together when it fits on a fresh page", () => {
+    const result = layoutDocument(documentWith([
+      paragraph("lead-together", "Lead text Lead text Lead text Lead text Lead text"),
+      paragraph("together", "A short paragraph")
+    ], {
+      unit: "pt", width: 100, height: 100, orientation: "portrait",
+      margins: { top: 10, right: 10, bottom: 10, left: 10 }
+    }), { metrics, keepParagraphsTogether: true });
+    const lead = result.pages.flatMap(page => page.blocks).find(block => block.blockId === "lead-together");
+    const kept = result.pages.flatMap(page => page.blocks).find(block => block.blockId === "together");
+    expect(kept?.pageIndex).toBeGreaterThanOrEqual(lead?.pageIndex || 0);
+    expect(kept?.continued).toBeFalsy();
+    expect(kept?.rect.height).toBeLessThanOrEqual(result.pages[kept!.pageIndex]!.content.height);
+  });
+
+  it("reports oversized table rows without silently splitting their cells", () => {
+    const table: Block = { type: "table", id: "oversized-table", children: [{
+      type: "tableRow", id: "oversized-row", children: [{
+        type: "tableCell", id: "oversized-cell", children: [{
+          type: "paragraph", id: "oversized-p", children: [{
+            type: "text", id: "oversized-run", text: Array.from({ length: 100 }, () => "wide text").join(" "), marks: []
+          }]
+        }]
+      }]
+    }] };
+    const result = layoutDocument(documentWith([table], {
+      unit: "pt", width: 100, height: 100, orientation: "portrait",
+      margins: { top: 10, right: 10, bottom: 10, left: 10 }
+    }), { metrics });
+    expect(result.diagnostics.some(item => item.code === "OVERSIZED_BLOCK" && item.blockId === "oversized-table")).toBe(true);
+    expect(result.pages.flatMap(page => page.blocks).some(block => block.blockId === "oversized-table" && (block.table?.rows.length || 0) === 1)).toBe(true);
+  });
+
+  it("marks only table fragments after the first as continued", () => {
+    const table: Block = { type: "table", id: "continued-table", children: Array.from({ length: 12 }, (_, r) => ({
+      type: "tableRow" as const, id: "ct-r" + r, children: [{ type: "tableCell" as const, id: "ct-c" + r, children: [
+        { type: "paragraph" as const, id: "ct-p" + r, children: [{ type: "text" as const, id: "ct-run" + r, text: "cell value", marks: [] }] }
+      ] }]
+    })) };
+    const result = layoutDocument(documentWith([table]), { metrics });
+    const fragments = result.pages.flatMap(page => page.blocks.filter(block => block.blockId === "continued-table"));
+    expect(fragments.length).toBeGreaterThan(1);
+    expect(fragments[0].continued).toBe(false);
+    expect(fragments.slice(1).every(fragment => fragment.continued === true)).toBe(true);
+  });
+
+  it("applies paragraph alignment to line geometry", () => {
+    const centered: Block = { type: "paragraph", id: "center", align: "center", children: [{ type: "text", id: "center-run", text: "Hi", marks: [] }] };
+    const ended: Block = { type: "paragraph", id: "end", align: "end", children: [{ type: "text", id: "end-run", text: "Hi", marks: [] }] };
+    const result = layoutDocument(documentWith([centered, ended]), { metrics });
+    const centerLine = result.pages[0].blocks.find(block => block.blockId === "center")!.lines[0];
+    const endLine = result.pages[0].blocks.find(block => block.blockId === "end")!.lines[0];
+    expect(centerLine.x).toBeGreaterThan(10);
+    expect(centerLine.align).toBe("center");
+    expect(endLine.x).toBeGreaterThan(centerLine.x);
+    expect(endLine.align).toBe("end");
+  });
+
+  it("measures mixed font sizes per run and retains run-level layout metrics", () => {
+    const mixed: Block = { type: "paragraph", id: "mixed", children: [
+      { type: "text", id: "small-run", text: "small ", marks: [{ type: "fontSize", value: 8 }] },
+      { type: "text", id: "large-run", text: "LARGE", marks: [{ type: "fontSize", value: 24 }, { type: "bold" }] }
+    ] };
+    const styledMetrics: TextMetrics = {
+      measureText: (text, size) => text.length * size * 0.5,
+      lineHeight: size => size * 1.2
+    };
+    const result = layoutDocument(documentWith([mixed]), { metrics: styledMetrics });
+    const line = result.pages[0].blocks[0].lines[0];
+    expect(line.height).toBeCloseTo(21.6, 5);
+    expect(line.runs).toHaveLength(2);
+    expect(line.runs?.[0].fontSize).toBe(6);
+    expect(line.runs?.[1].fontSize).toBe(18);
+    expect(line.runs?.[1].width).toBeGreaterThan(line.runs?.[0].width || 0);
+    expect(line.runs?.[1].marks.some(mark => mark.type === "bold")).toBe(true);
+  });
+
+  it("retains ordered, unordered, nested list markers and blockquote prefixes", () => {
+    const nested: Block = { type: "orderedList", id: "list", start: 3, children: [
+      { type: "listItem", id: "item-1", children: [
+        { type: "paragraph", id: "item-p", children: [{ type: "text", id: "item-r", text: "First", marks: [] }] },
+        { type: "bulletList", id: "nested-list", children: [
+          { type: "listItem", id: "nested-item", children: [{ type: "paragraph", id: "nested-p", children: [{ type: "text", id: "nested-r", text: "Nested", marks: [] }] }] }
+        ] }
+      ] }
+    ] };
+    const quote: Block = { type: "blockquote", id: "quote", children: [
+      { type: "paragraph", id: "quote-p", children: [{ type: "text", id: "quote-r", text: "Quoted", marks: [] }] }
+    ] };
+    const result = layoutDocument(documentWith([nested, quote]), { metrics });
+    const listText = result.pages[0].blocks.find(block => block.blockId === "list")!.lines.map(line => line.text).join("\\n");
+    const quoteText = result.pages[0].blocks.find(block => block.blockId === "quote")!.lines.map(line => line.text).join("\\n");
+    expect(listText).toContain("3. First");
+    expect(listText).toContain("↳ • Nested");
+    expect(quoteText).toContain("│ Quoted");
+  });
+
   it("reports invalid page geometry and safely uses a default page", () => {
     const invalid = { unit: "pt" as const, width: 100, height: 100, orientation: "portrait" as const, margins: { top: 80, right: 80, bottom: 80, left: 80 } };
     const result = layoutDocument(documentWith([paragraph("p", "fallback")], invalid), { metrics });

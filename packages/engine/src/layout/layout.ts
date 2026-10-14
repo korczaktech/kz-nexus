@@ -5,10 +5,10 @@
  * browser, desktop or mobile host can use its actual font renderer. The
  * fallback measurer is deterministic and intentionally approximate.
  */
-import type { Block, Heading, NexusDocument, PageConfig, Paragraph, TextRun } from "../model/types";
+import type { Alignment, Block, Heading, NexusDocument, PageConfig, Paragraph, TextRun } from "../model/types";
 
 export interface TextMetrics {
-  measureText(text: string, fontSize: number, fontFamily: string): number;
+  measureText(text: string, fontSize: number, fontFamily: string, marks?: TextRun["marks"]): number;
   lineHeight?(fontSize: number, fontFamily: string): number;
 }
 export interface LayoutOptions {
@@ -23,7 +23,16 @@ export interface LayoutOptions {
   keepParagraphsTogether?: boolean;
 }
 export interface LayoutRect { x: number; y: number; width: number; height: number }
-export interface LayoutLine { text: string; x: number; y: number; width: number; height: number; startOffset: number; endOffset: number }
+export interface LayoutTextRun {
+  text: string;
+  startOffset: number;
+  endOffset: number;
+  fontSize: number;
+  fontFamily: string;
+  marks: TextRun["marks"];
+  width: number;
+}
+export interface LayoutLine { text: string; x: number; y: number; width: number; height: number; startOffset: number; endOffset: number; align?: Alignment; runs?: LayoutTextRun[] }
 export interface LayoutBlock {
   blockId: string;
   type: Block["type"];
@@ -63,10 +72,6 @@ function safeNumber(value: unknown, fallback: number): number {
   return typeof value === "number" && Number.isFinite(value) ? value : fallback;
 }
 function textOf(runs: TextRun[]): string { return runs.map(run => run.text).join(""); }
-function fontSizeOf(block: Paragraph | Heading, fallback: number): number {
-  const sizes = block.children.flatMap(run => run.marks.filter(mark => mark.type === "fontSize").map(mark => mark.type === "fontSize" ? mark.value : fallback));
-  return sizes.length ? Math.max(1, sizes[0]) : fallback;
-}
 function wrapText(text: string, maxWidth: number, fontSize: number, fontFamily: string, metrics?: TextMetrics): Array<{text:string;start:number;end:number;width:number}> {
   const measure = (value: string) => metrics ? metrics.measureText(value, fontSize, fontFamily) : defaultMeasure(value, fontSize);
   const result: Array<{text:string;start:number;end:number;width:number}> = [];
@@ -113,24 +118,116 @@ function validPage(page: PageConfig): boolean {
     && page.width > m.left + m.right && page.height > m.top + m.bottom;
 }
 function blockTextLayout(block: Paragraph | Heading, x: number, y: number, width: number, options: LayoutOptions): {lines: LayoutLine[];height:number} {
-  const fallback = block.type === "heading" ? HEADING_SIZES[block.level] : safeNumber(options.fontSize, DEFAULT_FONT);
-  const size = fontSizeOf(block, fallback);
-  const family = options.fontFamily || "Arial";
+  const fallbackSize = block.type === "heading" ? HEADING_SIZES[block.level] : safeNumber(options.fontSize, DEFAULT_FONT);
+  const familyFallback = options.fontFamily || "Arial";
   const available = Math.max(1, width - safeNumber(block.indent, 0) - safeNumber(block.padding, 0) * 2 - safeNumber(block.borderWidth, 0) * 2);
-  const wrapped = wrapText(textOf(block.children), available, size, family, options.metrics);
-  const natural = options.metrics?.lineHeight?.(size, family) ?? size * 1.2;
-  const lineHeight = natural * safeNumber(block.lineSpacing, 1);
-  const lines = wrapped.map((line, index) => ({
-    text: line.text, x: x + safeNumber(block.indent, 0) + (index === 0 ? safeNumber(block.firstLineIndent, 0) : safeNumber(block.hangingIndent, 0)),
-    y: y + safeNumber(block.padding, 0) + index * lineHeight, width: line.width, height: lineHeight,
-    startOffset: line.start, endOffset: line.end
-  }));
-  return { lines, height: Math.max(lineHeight, wrapped.length * lineHeight) + safeNumber(block.padding, 0) * 2 + safeNumber(block.borderWidth, 0) * 2 };
+  const source = textOf(block.children);
+  const charStyle: Array<{runIndex:number;fontSize:number;fontFamily:string}> = [];
+  block.children.forEach((run, runIndex) => {
+    const sizeMark = run.marks.find(mark => mark.type === "fontSize");
+    const familyMark = run.marks.find(mark => mark.type === "fontFamily");
+    const fontSize = sizeMark && sizeMark.type === "fontSize" ? Math.max(1, sizeMark.value * 0.75) : fallbackSize;
+    const fontFamily = familyMark && familyMark.type === "fontFamily" ? familyMark.value : familyFallback;
+    for (let i = 0; i < run.text.length; i++) charStyle.push({ runIndex, fontSize, fontFamily });
+  });
+  const measureRange = (start:number, end:number):number => {
+    let total = 0, cursor = start;
+    while (cursor < end) {
+      const style = charStyle[cursor] || { runIndex: 0, fontSize: fallbackSize, fontFamily: familyFallback };
+      let stop = cursor + 1;
+      while (stop < end && charStyle[stop]?.runIndex === style.runIndex) stop++;
+      const chunk = source.slice(cursor, stop);
+      total += options.metrics ? options.metrics.measureText(chunk, style.fontSize, style.fontFamily, block.children[style.runIndex]?.marks || []) : defaultMeasure(chunk, style.fontSize);
+      cursor = stop;
+    }
+    return total;
+  };
+  const buildRuns = (start:number,end:number):LayoutTextRun[] => {
+    const result:LayoutTextRun[]=[];
+    let cursor=start;
+    while(cursor<end){
+      const style=charStyle[cursor]||{runIndex:0,fontSize:fallbackSize,fontFamily:familyFallback};
+      let stop=cursor+1;
+      while(stop<end&&charStyle[stop]?.runIndex===style.runIndex)stop++;
+      const original=block.children[style.runIndex];
+      const marks=original?.marks||[];
+      result.push({text:source.slice(cursor,stop),startOffset:cursor,endOffset:stop,fontSize:style.fontSize,fontFamily:style.fontFamily,marks,width:measureRange(cursor,stop)});
+      cursor=stop;
+    }
+    return result;
+  };
+  const wrapped:Array<{text:string;start:number;end:number;width:number;runs:LayoutTextRun[];height:number}>=[];
+  const paragraphs=source.split("\n");
+  let globalOffset=0;
+  for(const paragraph of paragraphs){
+    if(!paragraph.length){
+      const size=fallbackSize, natural=options.metrics?.lineHeight?.(size,familyFallback)??size*1.2;
+      wrapped.push({text:"",start:globalOffset,end:globalOffset,width:0,runs:[],height:natural*safeNumber(block.lineSpacing,1)});
+      globalOffset+=1;continue;
+    }
+    const tokens=paragraph.match(/\S+\s*/g)||[paragraph];
+    let lineStart=globalOffset,lineEnd=globalOffset,lineText="";
+    const pushLine=(start:number,end:number,text:string)=>{
+      const clean=text.trimEnd();
+      const actualEnd=start+clean.length;
+      const runs=buildRuns(start,actualEnd);
+      const naturalHeights=runs.map(run=>options.metrics?.lineHeight?.(run.fontSize,run.fontFamily)??run.fontSize*1.2);
+      const height=(naturalHeights.length?Math.max(...naturalHeights):((options.metrics?.lineHeight?.(fallbackSize,familyFallback)??fallbackSize*1.2)))*safeNumber(block.lineSpacing,1);
+      wrapped.push({text:clean,start,end:actualEnd,width:measureRange(start,actualEnd),runs,height});
+    };
+    let tokenOffset=globalOffset;
+    for(const token of tokens){
+      let candidate=lineText+token;
+      if(lineText&&measureRange(lineStart,tokenOffset+token.length)>available){
+        pushLine(lineStart,tokenOffset,lineText);
+        lineStart=tokenOffset;lineText="";candidate=token.trimStart();
+      }
+      if(!lineText&&measureRange(tokenOffset,tokenOffset+token.trimEnd().length)>available){
+        let pieceStart=tokenOffset,piece="";
+        for(let i=0;i<token.trimEnd().length;i++){
+          const char=token.trimEnd()[i];
+          if(piece&&measureRange(pieceStart,pieceStart+piece.length+1)>available){
+            pushLine(pieceStart,pieceStart+piece.length,piece);
+            pieceStart+=piece.length;piece=char;
+          }else piece+=char;
+        }
+        lineStart=pieceStart;lineText=piece;
+        if(token.endsWith(" "))lineText+=" ";
+      }else lineText+=lineText?token:token.trimStart();
+      tokenOffset+=token.length;
+    }
+    pushLine(lineStart,tokenOffset,lineText);
+    globalOffset+=paragraph.length+1;
+  }
+  const align = block.align || "start";
+  let yOffset=safeNumber(block.padding,0);
+  const lines=wrapped.map((line,index)=>{
+    const indent=safeNumber(block.indent,0)+(index===0?safeNumber(block.firstLineIndent,0):safeNumber(block.hangingIndent,0));
+    const leftInset=safeNumber(block.padding,0)+safeNumber(block.borderWidth,0);
+    const alignedX=align==="center"?x+leftInset+safeNumber(block.indent,0)+(available-line.width)/2
+      :align==="end"?x+leftInset+safeNumber(block.indent,0)+available-line.width:x+leftInset+indent;
+    const result:LayoutLine={text:line.text,x:alignedX,y:y+yOffset,width:align==="justify"&&index<wrapped.length-1?Math.max(1,available-indent):line.width,
+      height:line.height,startOffset:line.start,endOffset:line.end,align,runs:line.runs};
+    yOffset+=line.height;
+    return result;
+  });
+  return {lines,height:Math.max(wrapped.reduce((sum,line)=>sum+line.height,0),options.metrics?.lineHeight?.(fallbackSize,familyFallback)??fallbackSize*1.2)+safeNumber(block.padding,0)*2+safeNumber(block.borderWidth,0)*2};
 }
 function plainBlockText(block: Block): string {
   if (block.type === "paragraph" || block.type === "heading") return textOf(block.children);
-  if (block.type === "blockquote") return block.children.map(paragraph => textOf(paragraph.children)).join("\n");
-  if (block.type === "bulletList" || block.type === "orderedList") return block.children.map(item => item.children.map(child => child.type === "paragraph" ? textOf(child.children) : "").join("\n")).join("\n");
+  if (block.type === "blockquote") return block.children.map(paragraph => "│ " + textOf(paragraph.children)).join("\n");
+  if (block.type === "bulletList" || block.type === "orderedList") {
+    const renderItems = (items: Array<{ children: Array<any> }>, depth: number, ordered: boolean, start: number): string[] =>
+      items.flatMap((item, index) => {
+        const marker = ordered ? String(start + index) + "." : "•";
+        const prefix = "↳ ".repeat(depth) + marker + " ";
+        const own = item.children.flatMap((child: any) => child.type === "paragraph" ? [prefix + textOf(child.children)]
+          : child.type === "bulletList" ? renderItems(child.children, depth + 1, false, 1)
+          : child.type === "orderedList" ? renderItems(child.children, depth + 1, true, child.start) : []);
+        return own.length ? own : [prefix];
+      });
+    return renderItems(block.children, 0, block.type === "orderedList", block.type === "orderedList" ? block.start : 1).join("\n");
+  }
   if (block.type === "table") return block.children.map(row => row.children.map(cell => cell.children.map(p => textOf(p.children)).join("\n")).join(" | ")).join("\n");
   if (block.type === "image") return block.alt;
   return "";
@@ -175,6 +272,7 @@ export function layoutDocument(document: NexusDocument, options: LayoutOptions =
       const naturalHeight = safeNumber(block.height, resource ? naturalWidth * 0.75 : 24);
       const scale = Math.min(1, content.width / Math.max(1, naturalWidth));
       const w = naturalWidth * scale, h = naturalHeight * scale;
+      if (h > content.height) diagnostics.push({ code: "OVERSIZED_BLOCK", message: "Imagem maior que a área útil da página; reduzida apenas à largura disponível.", blockId: block.id });
       if (cursorY > content.y && cursorY + h > content.y + content.height) nextPage();
       addBlock(block, { x: content.x, y: cursorY, width: w, height: h }, []);
       cursorY += h + 8; return;
@@ -195,13 +293,15 @@ export function layoutDocument(document: NexusDocument, options: LayoutOptions =
       let fragmentRows: NonNullable<LayoutBlock["table"]>["rows"] = [];
       let fragmentStartY = cursorY;
       let fragmentHeight = 0;
+      let fragmentIndex = 0;
       const flushTableFragment = () => {
         if (!fragmentRows.length) return;
         page.blocks.push({
           blockId: block.id, type: "table", pageIndex: page.index,
           rect: { x: content.x, y: fragmentStartY, width: content.width, height: fragmentHeight },
-          lines: [], table: { rows: fragmentRows }, continued: fragmentStartY !== cursorY || fragmentRows.length < rowLayouts.length
+          lines: [], table: { rows: fragmentRows }, continued: fragmentIndex > 0
         });
+        fragmentIndex += 1;
         fragmentRows = []; fragmentHeight = 0;
       };
       for (const row of rowLayouts) {
@@ -234,20 +334,60 @@ export function layoutDocument(document: NexusDocument, options: LayoutOptions =
       let measured = blockTextLayout(block, content.x, 0, content.width, options);
       const lineHeight = measured.lines[0]?.height || safeNumber(options.fontSize, DEFAULT_FONT) * 1.2;
       const totalHeight = measured.height;
+      if (measured.lines.some(line => line.height > content.height)) diagnostics.push({ code: "OVERSIZED_BLOCK", message: "Linha de texto maior que a área útil da página; mantida íntegra para evitar perda de conteúdo.", blockId: block.id });
       const remaining = content.y + content.height - cursorY;
-      if (cursorY > content.y && totalHeight + spacingBefore + spacingAfter > remaining && (options.keepParagraphsTogether || (options.keepHeadingsWithNext && block.type === "heading"))) nextPage();
+      let headingKeepHeight = 0;
+      if (options.keepHeadingsWithNext && block.type === "heading") {
+        const following = document.content[blockIndex + 1];
+        if (following) {
+          if (following.type === "paragraph" || following.type === "heading") {
+            const followingLayout = blockTextLayout(following, content.x, 0, content.width, options);
+            headingKeepHeight = followingLayout.lines[0]?.height || safeNumber(options.fontSize, DEFAULT_FONT) * 1.2;
+          } else if (following.type === "table") {
+            headingKeepHeight = 24;
+          } else if (following.type === "image") {
+            const resource = document.resources.find(item => item.id === following.resourceId);
+            const naturalWidth = safeNumber(following.width, Math.min(content.width, 240));
+            headingKeepHeight = Math.min(safeNumber(following.height, resource ? naturalWidth * 0.75 : 24), content.height);
+          } else {
+            headingKeepHeight = safeNumber(options.fontSize, DEFAULT_FONT) * 1.25;
+          }
+        }
+      }
+      const mustKeepHeadingWithNext = options.keepHeadingsWithNext && block.type === "heading"
+        && headingKeepHeight > 0 && totalHeight + spacingBefore + spacingAfter + headingKeepHeight > remaining;
+      const mustKeepParagraph = options.keepParagraphsTogether && totalHeight <= content.height
+        && totalHeight + spacingBefore + spacingAfter > remaining;
+      if (cursorY > content.y && (mustKeepHeadingWithNext || mustKeepParagraph)) nextPage();
       cursorY += spacingBefore;
       measured = blockTextLayout(block, content.x, cursorY, content.width, options);
       let lineOffset = 0;
       let firstFragment = true;
       while (lineOffset < measured.lines.length) {
-        const available = content.y + content.height - cursorY;
-        if (available < lineHeight && cursorY > content.y) nextPage();
-        const usable = content.y + content.height - cursorY;
-        const fitCount = Math.max(1, Math.floor((usable + 0.001) / lineHeight));
-        const count = Math.min(fitCount, measured.lines.length - lineOffset);
-        const fragmentLines = measured.lines.slice(lineOffset, lineOffset + count).map(line => ({ ...line, y: cursorY + (line.y - measured.lines[0].y) }));
-        const fragmentHeight = Math.max(lineHeight, count * lineHeight);
+        const topInset = firstFragment ? safeNumber(block.padding, 0) + safeNumber(block.borderWidth, 0) : 0;
+        let available = content.y + content.height - cursorY - topInset;
+        if (available < measured.lines[lineOffset].height && cursorY > content.y) {
+          nextPage();
+          available = content.y + content.height - cursorY - topInset;
+        }
+        const firstLineY = measured.lines[lineOffset].y;
+        let count = 0;
+        let lineHeightSum = 0;
+        while (lineOffset + count < measured.lines.length) {
+          const nextHeight = measured.lines[lineOffset + count].height;
+          if (count > 0 && lineHeightSum + nextHeight > available + 0.001) break;
+          if (count === 0 && nextHeight > available && cursorY > content.y) break;
+          lineHeightSum += nextHeight;
+          count += 1;
+        }
+        if (count === 0) {
+          nextPage();
+          continue;
+        }
+        const isLastFragment = lineOffset + count >= measured.lines.length;
+        const bottomInset = isLastFragment ? safeNumber(block.padding, 0) + safeNumber(block.borderWidth, 0) : 0;
+        const fragmentHeight = topInset + lineHeightSum + bottomInset;
+        const fragmentLines = measured.lines.slice(lineOffset, lineOffset + count).map(line => ({ ...line, y: cursorY + topInset + (line.y - firstLineY) }));
         addBlock(block, { x: content.x, y: cursorY, width: content.width, height: fragmentHeight }, fragmentLines, { continued: !firstFragment });
         cursorY += fragmentHeight;
         lineOffset += count;
@@ -263,7 +403,7 @@ export function layoutDocument(document: NexusDocument, options: LayoutOptions =
     const lineHeight = safeNumber(options.fontSize, DEFAULT_FONT) * 1.25;
     const blockHeight = Math.max(lineHeight, measured.length * lineHeight) + 8;
     if (cursorY > content.y && cursorY + blockHeight > content.y + content.height) nextPage();
-    const lines = measured.map((line,index)=>({text:line.text,x:content.x+20,y:cursorY+index*lineHeight,width:line.width,height:lineHeight,startOffset:line.start,endOffset:line.end}));
+    const lines = measured.map((line,index)=>({text:line.text,x:content.x+20+(/^│ /.test(line.text)?8:(/^(?:↳ )+/.exec(line.text)?.[0].length||0)*4),y:cursorY+index*lineHeight,width:line.width,height:lineHeight,startOffset:line.start,endOffset:line.end,align:"start" as const}));
     addBlock(block, { x: content.x, y: cursorY, width: content.width, height: blockHeight }, lines);
     cursorY += blockHeight + 6;
   });

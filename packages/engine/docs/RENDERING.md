@@ -5,7 +5,7 @@ O motor mantém o modelo de documento independente do DOM e oferece agora um **m
 ## Responsabilidades do layout
 
 - Calcula a área útil a partir do tamanho, orientação e margens da página, em pontos tipográficos (pt).
-- Quebra texto em linhas com offsets no texto de origem, posições X/Y, largura e altura de linha.
+- Quebra texto em linhas com offsets no texto de origem, posições X/Y, largura e altura de linha; preserva métricas por trecho para tamanhos e famílias de fonte mistos.\n- Expõe alinhamento e segmentos tipográficos na geometria de cada linha para o renderizador aplicar os estilos sem reconstruir a origem do texto.
 - Calcula espaçamentos, recuos, tamanho de fonte, altura de linha e caixas de parágrafos e títulos.
 - Pagina blocos longos entre páginas, mantendo o identificador original e marcando fragmentos continuados.
 - Calcula linhas, células e alturas de linhas de tabelas; tabelas extensas são divididas entre páginas por limites de linha para preservar a integridade das células.
@@ -21,8 +21,8 @@ O layout é headless: não acessa DOM, Canvas, React ou APIs de plataforma. O re
 ## Limites conhecidos
 
 - Uma linha de tabela é mantida íntegra. Uma linha individual maior que a área útil é reportada em `diagnostics`, não cortada silenciosamente.
-- Cabeçalhos podem ser mantidos com o bloco seguinte via `keepHeadingsWithNext`; parágrafos podem ser mantidos juntos quando couberem em uma página via `keepParagraphsTogether`.
+- Cabeçalhos podem ser mantidos com a primeira linha do bloco seguinte via `keepHeadingsWithNext`; parágrafos podem ser mantidos juntos quando couberem em uma página via `keepParagraphsTogether`. As alturas variáveis das linhas são consideradas ao distribuir fragmentos.
 - A divisão de linhas considera texto simples e medidas de fonte injetadas. Para quebra perfeita em conteúdo com estilos mistos, ligaturas, idiomas complexos, colunas, cabeçalhos/rodapés repetidos, notas de rodapé e regras avançadas de órfãs/viúvas, o host precisa ampliar as métricas e a camada de composição.
-- A pré-visualização web existente usa Paged.js para composição de HTML; o motor nativo é uma API geométrica headless e não substitui automaticamente todos os renderizadores da interface até que o host desenhe o resultado dessa API.
+- A pré-visualização do editor usa `layoutDocument` com o documento canônico e métricas tipográficas do navegador para desenhar páginas nativas posicionadas pela geometria do Kortex. A pré-visualização de DOCX importado continua usando Paged.js para preservar a composição HTML de documentos importados. O renderizador nativo cobre blocos, linhas, listas/citações, tabelas, imagens e estilos de texto modelados; elementos visuais que não fazem parte do modelo canônico (por exemplo, CSS arbitrário importado) não são garantidos no renderizador nativo. A equivalência pixel a pixel com Word, PDF ou Paged.js não é garantida.
 
-Consulte `src/layout/layout.test.ts` para os testes de margens, quebra de linhas, quebra explícita, paginação de tabelas e recuperação de configuração inválida.
+Consulte `src/layout/layout.test.ts` para os testes de margens, quebra de linhas, quebra explícita, paginação de tabelas, títulos com o próximo parágrafo, marcadores de continuação, alinhamento, listas aninhadas, citações, estilos mistos e recuperação de configuração inválida.
