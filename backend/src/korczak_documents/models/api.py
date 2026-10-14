@@ -76,6 +76,7 @@ class DocumentSaveRequest(APIModel):
     name: str = Field(min_length=1, max_length=255)
     document_type: str = Field(min_length=1, max_length=80)
     content: str | None = Field(default=None, max_length=2000000)
+    native_content: str | None = Field(default=None, max_length=2000000)
     base_version_id: str | None = None
 
 
@@ -101,10 +102,12 @@ class DocumentResponse(ResponseModel):
     created_at: datetime
     updated_at: datetime
     content: str | None = None
+    native_content: str | None = None
 
 
 class VersionCreateRequest(APIModel):
     content: str | None = None
+    native_content: str | None = Field(default=None, max_length=2000000)
 
 
 class VersionResponse(ResponseModel):
@@ -113,6 +116,7 @@ class VersionResponse(ResponseModel):
     version_number: int
     author_id: str
     content: str | None
+    native_content: str | None = None
     created_at: datetime
 
 
