@@ -49,15 +49,22 @@ describe("Nexus editor adapter", () => {
   });
 
   it("round-trips paragraph spacing and line-height through the engine adapter", () => {
-    const document = nexusDocumentFromHtml('<p style="margin-top:8pt;margin-bottom:12pt;line-height:1.5">Spaced</p>', "Spacing test");
+    const document = nexusDocumentFromHtml('<p style="margin-top:8pt;margin-bottom:12pt;line-height:1.5;background-color:#fff2a8;border:0.75pt solid #6475ff;padding:4.5pt">Spaced</p>', "Spacing test");
     const paragraph = document.content[0];
     expect(paragraph && (paragraph.type === "paragraph" || paragraph.type === "heading") ? paragraph.spacingBefore : undefined).toBe(8);
     expect(paragraph && (paragraph.type === "paragraph" || paragraph.type === "heading") ? paragraph.spacingAfter : undefined).toBe(12);
     expect(paragraph && (paragraph.type === "paragraph" || paragraph.type === "heading") ? paragraph.lineSpacing : undefined).toBe(1.5);
+    expect(paragraph && (paragraph.type === "paragraph" || paragraph.type === "heading") ? paragraph.backgroundColor : undefined).toBe("#fff2a8");
+    expect(paragraph && (paragraph.type === "paragraph" || paragraph.type === "heading") ? paragraph.borderColor : undefined).toBe("#6475ff");
+    expect(paragraph && (paragraph.type === "paragraph" || paragraph.type === "heading") ? paragraph.borderWidth : undefined).toBe(0.75);
+    expect(paragraph && (paragraph.type === "paragraph" || paragraph.type === "heading") ? paragraph.padding : undefined).toBe(4.5);
     const html = htmlFromNexusDocument(document);
     expect(html).toContain("margin-top:8pt");
     expect(html).toContain("margin-bottom:12pt");
     expect(html).toContain("line-height:1.5");
+    expect(html).toContain("background-color:#fff2a8");
+    expect(html).toContain("border:0.75pt solid #6475ff");
+    expect(html).toContain("padding:4.5pt");
   });
 
   it("round-trips comment annotations through the engine document", () => {
