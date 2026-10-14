@@ -274,9 +274,10 @@ export function Editor({document,versions,onSave,onClose,onConflict}:{document:D
   }
   if(inputType==='insertParagraph'||inputType==='insertLineBreak'){
    event.preventDefault();
-   const context=engineContext();
+   let context=engineContext();
    if(!context)return;
    if(inputType==='insertLineBreak'){exec('insertText','\\n');return}
+   if(context.startOffset!==context.endOffset){exec('insertText','');context=engineContext();if(!context)return}
    if(context.list){runEngineStructure('splitListItem');return}
    if(context.block.type==='paragraph'||context.block.type==='heading'){runEngineStructure('splitBlock');return}
    setMessage('Este contêiner ainda não aceita quebra de parágrafo pelo motor Kortex.');return;
