@@ -16,6 +16,95 @@ export function getPlainText(node: { children: TextRun[] }): string {
   return node.children.map((run) => run.text).join("");
 }
 
+/** Updates one paragraph/heading by ID, copying only the containers on its path. */
+export function updateParagraphLike(
+  blocks: Block[],
+  id: string,
+  fn: (node: ParagraphLike) => ParagraphLike,
+): { blocks: Block[]; found: boolean } {
+  for (let index = 0; index < blocks.length; index += 1) {
+    const result = updateParagraphLikeInBlock(blocks[index]!, id, fn);
+    if (!result.found) continue;
+    const next = blocks.slice();
+    next[index] = result.block;
+    return { blocks: next, found: true };
+  }
+  return { blocks, found: false };
+}
+
+function updateParagraphLikeInBlock(
+  block: Block,
+  id: string,
+  fn: (node: ParagraphLike) => ParagraphLike,
+): { block: Block; found: boolean } {
+  switch (block.type) {
+    case "paragraph":
+    case "heading":
+      return block.id === id ? { block: fn(block), found: true } : { block, found: false };
+    case "blockquote": {
+      const index = block.children.findIndex(child => child.id === id);
+      if (index < 0) return { block, found: false };
+      const children = block.children.slice();
+      children[index] = fn(children[index]!) as Paragraph;
+      return { block: { ...block, children }, found: true };
+    }
+    case "bulletList":
+    case "orderedList": {
+      for (let index = 0; index < block.children.length; index += 1) {
+        const result = updateParagraphLikeInListItem(block.children[index]!, id, fn);
+        if (!result.found) continue;
+        const children = block.children.slice();
+        children[index] = result.item;
+        return { block: { ...block, children } as Block, found: true };
+      }
+      return { block, found: false };
+    }
+    case "table": {
+      for (let rowIndex = 0; rowIndex < block.children.length; rowIndex += 1) {
+        const row = block.children[rowIndex]!;
+        for (let cellIndex = 0; cellIndex < row.children.length; cellIndex += 1) {
+          const cell = row.children[cellIndex]!;
+          const paragraphIndex = cell.children.findIndex(child => child.id === id);
+          if (paragraphIndex < 0) continue;
+          const paragraphs = cell.children.slice();
+          paragraphs[paragraphIndex] = fn(paragraphs[paragraphIndex]!) as Paragraph;
+          const cells = row.children.slice();
+          cells[cellIndex] = { ...cell, children: paragraphs };
+          const rows = block.children.slice();
+          rows[rowIndex] = { ...row, children: cells };
+          return { block: { ...block, children: rows }, found: true };
+        }
+      }
+      return { block, found: false };
+    }
+    case "thematicBreak":
+    case "image":
+      return { block, found: false };
+  }
+}
+
+function updateParagraphLikeInListItem(
+  item: ListItem,
+  id: string,
+  fn: (node: ParagraphLike) => ParagraphLike,
+): { item: ListItem; found: boolean } {
+  for (let index = 0; index < item.children.length; index += 1) {
+    const child = item.children[index]!;
+    if (child.type === "paragraph") {
+      if (child.id !== id) continue;
+      const children = item.children.slice();
+      children[index] = fn(child) as Paragraph;
+      return { item: { ...item, children }, found: true };
+    }
+    const result = updateParagraphLikeInBlock(child, id, fn);
+    if (!result.found) continue;
+    const children = item.children.slice();
+    children[index] = result.block as BulletList | OrderedList;
+    return { item: { ...item, children }, found: true };
+  }
+  return { item, found: false };
+}
+
 /** Deeply maps every paragraph/heading node reachable from `blocks`, rebuilding containers immutably. */
 export function mapParagraphLike(blocks: Block[], fn: (node: ParagraphLike) => ParagraphLike): Block[] {
   return blocks.map((block) => mapParagraphLikeInBlock(block, fn));
