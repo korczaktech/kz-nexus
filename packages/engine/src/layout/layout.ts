@@ -85,7 +85,16 @@ function safeNumber(value: unknown, fallback: number): number {
 }
 function textOf(runs: TextRun[]): string { return runs.map(run => run.text).join(""); }
 function wrapText(text: string, maxWidth: number, fontSize: number, fontFamily: string, metrics?: TextMetrics): Array<{text:string;start:number;end:number;width:number}> {
-  const measure = (value: string) => metrics ? metrics.measureText(value, fontSize, fontFamily) : defaultMeasure(value, fontSize);
+  // Wrapping probes the same candidate strings repeatedly; cache measurements
+  // locally to avoid redundant calls during line breaking.
+  const widthCache = new Map<string, number>();
+  const measure = (value: string) => {
+    const cached = widthCache.get(value);
+    if (cached !== undefined) return cached;
+    const width = metrics ? metrics.measureText(value, fontSize, fontFamily) : defaultMeasure(value, fontSize);
+    widthCache.set(value, width);
+    return width;
+  };
   const result: Array<{text:string;start:number;end:number;width:number}> = [];
   const paragraphs = text.split("\n");
   let globalOffset = 0;
@@ -142,7 +151,11 @@ function blockTextLayout(block: Paragraph | Heading, x: number, y: number, width
     const fontFamily = familyMark && familyMark.type === "fontFamily" ? familyMark.value : familyFallback;
     for (let i = 0; i < run.text.length; i++) charStyle.push({ runIndex, fontSize, fontFamily });
   });
+  const rangeWidthCache = new Map<string, number>();
   const measureRange = (start:number, end:number):number => {
+    const key = start + ":" + end;
+    const cached = rangeWidthCache.get(key);
+    if (cached !== undefined) return cached;
     let total = 0, cursor = start;
     while (cursor < end) {
       const style = charStyle[cursor] || { runIndex: 0, fontSize: fallbackSize, fontFamily: familyFallback };
@@ -152,6 +165,7 @@ function blockTextLayout(block: Paragraph | Heading, x: number, y: number, width
       total += options.metrics ? options.metrics.measureText(chunk, style.fontSize, style.fontFamily, block.children[style.runIndex]?.marks || []) : defaultMeasure(chunk, style.fontSize);
       cursor = stop;
     }
+    rangeWidthCache.set(key, total);
     return total;
   };
   const buildRuns = (start:number,end:number):LayoutTextRun[] => {
