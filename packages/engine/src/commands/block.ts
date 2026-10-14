@@ -84,8 +84,8 @@ export function setHeadingLevel(params: { blockId: string; level: 1 | 2 | 3 | 4 
     const content = [...doc.content];
     content[index] =
       params.level === "paragraph"
-        ? { type: "paragraph", id: block.id, align: block.align, ...(block.indent !== undefined ? { indent: block.indent } : {}), ...(block.spacingBefore !== undefined ? { spacingBefore: block.spacingBefore } : {}), ...(block.spacingAfter !== undefined ? { spacingAfter: block.spacingAfter } : {}), ...(block.lineSpacing !== undefined ? { lineSpacing: block.lineSpacing } : {}), children: block.children }
-        : { type: "heading", id: block.id, level: params.level, align: block.align, ...(block.indent !== undefined ? { indent: block.indent } : {}), ...(block.spacingBefore !== undefined ? { spacingBefore: block.spacingBefore } : {}), ...(block.spacingAfter !== undefined ? { spacingAfter: block.spacingAfter } : {}), ...(block.lineSpacing !== undefined ? { lineSpacing: block.lineSpacing } : {}), children: block.children };
+        ? { type: "paragraph", id: block.id, align: block.align, ...(block.indent !== undefined ? { indent: block.indent } : {}), ...(block.spacingBefore !== undefined ? { spacingBefore: block.spacingBefore } : {}), ...(block.spacingAfter !== undefined ? { spacingAfter: block.spacingAfter } : {}), ...(block.lineSpacing !== undefined ? { lineSpacing: block.lineSpacing } : {}), ...(block.backgroundColor !== undefined ? { backgroundColor: block.backgroundColor } : {}), ...(block.borderColor !== undefined ? { borderColor: block.borderColor } : {}), ...(block.borderWidth !== undefined ? { borderWidth: block.borderWidth } : {}), ...(block.padding !== undefined ? { padding: block.padding } : {}), children: block.children }
+        : { type: "heading", id: block.id, level: params.level, align: block.align, ...(block.indent !== undefined ? { indent: block.indent } : {}), ...(block.spacingBefore !== undefined ? { spacingBefore: block.spacingBefore } : {}), ...(block.spacingAfter !== undefined ? { spacingAfter: block.spacingAfter } : {}), ...(block.lineSpacing !== undefined ? { lineSpacing: block.lineSpacing } : {}), ...(block.backgroundColor !== undefined ? { backgroundColor: block.backgroundColor } : {}), ...(block.borderColor !== undefined ? { borderColor: block.borderColor } : {}), ...(block.borderWidth !== undefined ? { borderWidth: block.borderWidth } : {}), ...(block.padding !== undefined ? { padding: block.padding } : {}), children: block.children };
     return ok({ document: { ...doc, content } });
   };
 }
@@ -101,7 +101,7 @@ export function splitBlock(params: { blockId: string; offset: number }): Command
       const { before, after } = splitRunsAt(block.children, params.offset, ctx.generateId);
       const newId = ctx.generateId();
       const first: Paragraph = { ...block, children: ensureRun(before) };
-      const second: Paragraph = { type: "paragraph", id: newId, align: block.align, ...(block.indent !== undefined ? { indent: block.indent } : {}), children: ensureRun(after) };
+      const second: Paragraph = { type: "paragraph", id: newId, align: block.align, ...(block.indent !== undefined ? { indent: block.indent } : {}), ...(block.spacingBefore !== undefined ? { spacingBefore: block.spacingBefore } : {}), ...(block.spacingAfter !== undefined ? { spacingAfter: block.spacingAfter } : {}), ...(block.lineSpacing !== undefined ? { lineSpacing: block.lineSpacing } : {}), ...(block.backgroundColor !== undefined ? { backgroundColor: block.backgroundColor } : {}), ...(block.borderColor !== undefined ? { borderColor: block.borderColor } : {}), ...(block.borderWidth !== undefined ? { borderWidth: block.borderWidth } : {}), ...(block.padding !== undefined ? { padding: block.padding } : {}), children: ensureRun(after) };
       const children = [...containerChildren];
       children.splice(childIndex, 1, first, second);
       return { children, newId };
@@ -114,7 +114,7 @@ export function splitBlock(params: { blockId: string; offset: number }): Command
       const parts = splitRunsAt(block.children, params.offset, ctx.generateId);
       const newId = ctx.generateId();
       const first: Block = { ...block, children: ensureRun(parts.before) } as Block;
-      const second: Paragraph = { type: "paragraph", id: newId, align: block.align, ...(block.indent !== undefined ? { indent: block.indent } : {}), children: ensureRun(parts.after) };
+      const second: Paragraph = { type: "paragraph", id: newId, align: block.align, ...(block.indent !== undefined ? { indent: block.indent } : {}), ...(block.spacingBefore !== undefined ? { spacingBefore: block.spacingBefore } : {}), ...(block.spacingAfter !== undefined ? { spacingAfter: block.spacingAfter } : {}), ...(block.lineSpacing !== undefined ? { lineSpacing: block.lineSpacing } : {}), ...(block.backgroundColor !== undefined ? { backgroundColor: block.backgroundColor } : {}), ...(block.borderColor !== undefined ? { borderColor: block.borderColor } : {}), ...(block.borderWidth !== undefined ? { borderWidth: block.borderWidth } : {}), ...(block.padding !== undefined ? { padding: block.padding } : {}), children: ensureRun(parts.after) };
       const content = [...doc.content];
       content.splice(index, 1, first, second);
       return ok({ document: { ...doc, content }, selection: { blockId: newId, offset: 0 } });
