@@ -27,6 +27,13 @@ segurança do Kortex.
 
 - Ao abrir um documento, o editor prioriza `native_content` quando a versão
   contém um payload Kortex válido; documentos legados continuam abrindo pelo HTML.
+- A digitação comum, exclusão, quebra de parágrafo/linha, atalhos de formatação,
+  desfazer/refazer do motor e operações de estrutura são encaminhados como
+  comandos Kortex. Eventos nativos de edição não suportados são bloqueados e a
+  projeção é reconstruída a partir do modelo, em vez de ser aceita como fonte.
+- As páginas geradas dinamicamente pelo paginador recebem os mesmos listeners
+  de entrada, colagem, recorte e composição; a integração não depende apenas dos
+  handlers React do primeiro render.
 - Ao salvar, a API persiste o envelope `.nsx` em `native_content` na mesma versão
   que o HTML de compatibilidade. A resposta mantém `content` para visualizadores,
   integrações e versões antigas do cliente.
@@ -41,10 +48,12 @@ segurança do Kortex.
 ## Limite conhecido
 
 A integração ainda não é 100% independente de HTML/DOM: a superfície visual
-continua usando `contentEditable`, e algumas operações de edição sincronizam o
-HTML de volta para o modelo. Portanto, o payload nativo é persistido e priorizado
-na abertura, mas a eliminação total do DOM como fonte intermediária exige uma
-migração separada das operações de entrada, seleção, histórico e layout.
+continua usando `contentEditable`, e a composição de texto por IME (por exemplo,
+teclados de idiomas asiáticos) ainda precisa reconciliar a composição final com o
+modelo. O DOM serve como projeção e como ponte limitada para essa composição;
+salvamento e exportação NSX usam o modelo Kortex como fonte. O paginador ainda
+organiza nós DOM para exibição e o histórico de compatibilidade mantém snapshots
+HTML para recuperar fluxos legados.
 
 ## Próximas etapas seguras
 
