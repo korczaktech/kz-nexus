@@ -19,6 +19,7 @@ export function renderTextRunsHtml(runs: TextRun[]): string {
       else if (mark.type === "fontSize") text = '<span style="font-size:' + mark.value + 'px">' + text + "</span>";
       else if (mark.type === "fontFamily") text = '<span style="font-family:' + escapeHtml(mark.value) + '">' + text + "</span>";
       else if (mark.type === "link") text = '<a href="' + escapeHtml(mark.value) + '">' + text + "</a>";
+      else if (mark.type === "comment") text = '<span data-kz-comment="' + escapeHtml(mark.value) + '" title="Comentário: ' + escapeHtml(mark.value) + '" style="background-color:#fef3c7;border-bottom:2px dotted #d97706">' + text + "</span>";
     }
     return text;
   }).join("");
