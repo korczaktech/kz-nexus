@@ -76,3 +76,19 @@ O workflow phase-8-editor.yml executa:
 - proteção contra interpretação de HTML bruto.
 
 A conclusão da Fase 8 fica condicionada ao resultado verde desses testes no GitHub Actions.
+
+
+## Fonte da verdade do documento — critério arquitetural obrigatório
+
+O modelo `NexusDocument` do motor em `packages/engine` é a fonte canônica da estrutura e do conteúdo. O envelope nativo `.nsx` é a representação persistida desse modelo; o HTML é apenas uma projeção de leitura/edição/renderização e nunca pode prevalecer sobre um payload nativo válido.
+
+Regras de integração:
+
+1. Se existir um payload nativo NSX válido, a abertura do documento renderiza esse modelo, mesmo que o HTML legado esteja presente e desatualizado.
+2. HTML legado só é usado como caminho de migração quando não existe payload nativo.
+3. Se o servidor possuir um payload nativo inválido, o editor falha de forma segura, bloqueia edição/salvamento e não mascara a corrupção usando HTML antigo.
+4. Um rascunho nativo local só prevalece se for validado pelo leitor NSX; um rascunho local inválido não pode impedir a recuperação do payload nativo válido do servidor.
+5. O salvamento valida o modelo, serializa o NSX e só então deriva o HTML para compatibilidade de leitura. Os dois são enviados na mesma versão, usando o controle de concorrência já existente.
+6. A conversão HTML → modelo é um caminho de importação/migração, não o caminho normal de persistência.
+
+Regressões cobertas nesta revisão: preferência do modelo nativo quando o HTML diverge; fallback HTML apenas na ausência de modelo nativo; recuperação após rascunho nativo local inválido; rejeição do payload NSX inválido no editor. A aprovação final depende dos workflows de CI executarem no commit revisado.
