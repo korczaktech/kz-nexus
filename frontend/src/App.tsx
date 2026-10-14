@@ -491,7 +491,7 @@ function AppAuthenticated(){
     try{const full=await api.document(d.id);setSelected(full);setVersions(await api.versions(d.id));setTags(await api.tags());await api.open(d.id)}catch(x){setError(x instanceof Error?x.message:'Não foi possível abrir o documento.')}setView('viewer')}
   async function showVersions(v:View){if(!selected)return;setVersions(await api.versions(selected.id));setView(v)}
   async function showHistory(){if(!selected)return;setHistory((await api.audit({document_id:selected.id})).items);setView('history')}
-  async function saveEditor(data:{name:string;document_type:string;content:string;base_version_id:string|null}){if(guest)throw new Error('Entre na sua conta para editar documentos.');
+  async function saveEditor(data:{name:string;document_type:string;content:string;native_content:string;base_version_id:string|null}){if(guest)throw new Error('Entre na sua conta para editar documentos.');
     if(!selected)return 'conflict' as const;
     try{
       const saved=await api.saveDocument(selected.id,data);
