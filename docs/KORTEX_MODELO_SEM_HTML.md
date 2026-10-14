@@ -29,7 +29,8 @@ segurança do Kortex.
   contém um payload Kortex válido; documentos legados continuam abrindo pelo HTML.
 - A digitação comum, exclusão, quebra de parágrafo/linha, atalhos de formatação,
   desfazer/refazer do motor e operações de estrutura são encaminhados como
-  comandos Kortex. Eventos nativos de edição não suportados são bloqueados e a
+  comandos Kortex. Colagem, recorte e entrada por páginas criadas pelo paginador
+  também usam os mesmos caminhos do motor. Eventos nativos de edição não suportados são bloqueados e a
   projeção é reconstruída a partir do modelo, em vez de ser aceita como fonte.
 - As páginas geradas dinamicamente pelo paginador recebem os mesmos listeners
   de entrada, colagem, recorte e composição; a integração não depende apenas dos
@@ -39,6 +40,9 @@ segurança do Kortex.
   integrações e versões antigas do cliente.
 - O histórico de versões grava e restaura os dois campos, permitindo recuperar o
   modelo nativo junto com sua projeção HTML.
+- As preferências de layout do editor (página, margens, cabeçalho, rodapé e fonte)
+  também são serializadas como metadado `editorLayout` no modelo Kortex; o
+  comentário HTML de layout permanece apenas para compatibilidade com clientes antigos.
 - A importação e exportação de arquivos `.nsx` usam a API nativa do motor.
 - O salvamento é interrompido se a sincronização HTML → Kortex falhar; não deve
   enviar um snapshot nativo possivelmente desatualizado.
