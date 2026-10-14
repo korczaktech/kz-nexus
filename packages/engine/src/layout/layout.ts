@@ -571,6 +571,77 @@ export function layoutDocument(document: NexusDocument, options: LayoutOptions =
           fragmentStartY = cursorY;
         }
         const marker = block.type === "orderedList" ? String(block.start + index) + "." : "•";
+        if (itemHeight > content.height && item.children.some(child => child.type !== "paragraph")) {
+          // Build the complete nested hierarchy once, then paginate its tree at
+          // line boundaries. Clipping the tree (rather than flattening it) keeps
+          // nested list types, item IDs, styles and markers intact.
+          const complete = buildListItem(item, marker, 0, cursorY).block;
+          const lineBottoms: number[] = [];
+          const collectLineBottoms = (node: LayoutBlock) => {
+            node.lines.forEach(line => lineBottoms.push(line.y + line.height));
+            node.children?.forEach(collectLineBottoms);
+          };
+          collectLineBottoms(complete);
+          const shownMarkers = new Set<string>();
+          const clipTree = (node: LayoutBlock, fromY: number, toY: number, delta: number): LayoutBlock | null => {
+            if (node.children?.length) {
+              const children = node.children.map(child => clipTree(child, fromY, toY, delta)).filter((child): child is LayoutBlock => child !== null);
+              if (!children.length) return null;
+              const top = Math.min(...children.map(child => child.rect.y));
+              const bottom = Math.max(...children.map(child => child.rect.y + child.rect.height));
+              const marker = node.type === "listItem" && shownMarkers.has(node.blockId) ? undefined : node.marker;
+              if (node.type === "listItem" && node.marker) shownMarkers.add(node.blockId);
+              return { ...node, pageIndex: page.index, rect: { ...node.rect, y: top, height: Math.max(0, bottom - top) }, children, marker };
+            }
+            const lines = node.lines.filter(line =>
+              line.y >= fromY - 0.001 && line.y + line.height <= toY + 0.001
+            ).map(line => ({ ...line, y: line.y + delta }));
+            if (!lines.length) return null;
+            const top = Math.min(...lines.map(line => line.y));
+            const bottom = Math.max(...lines.map(line => line.y + line.height));
+            return { ...node, pageIndex: page.index, rect: { ...node.rect, y: top, height: bottom - top }, lines };
+          };
+          let segmentStart = cursorY;
+          let remainingHeight = Math.max(0, content.y + content.height - cursorY);
+          const finalBottom = complete.rect.y + complete.rect.height;
+          while (segmentStart < finalBottom - 0.001) {
+            if (remainingHeight <= 0.001) {
+              flushList();
+              nextPage();
+              fragmentStartY = cursorY;
+              remainingHeight = content.height;
+            }
+            const maxBoundary = segmentStart + remainingHeight;
+            const safeBoundary = lineBottoms
+              .filter(bottom => bottom > segmentStart + 0.001 && bottom <= maxBoundary + 0.001)
+              .reduce((best, bottom) => Math.max(best, bottom), segmentStart);
+            const nextLineBottom = lineBottoms
+              .filter(bottom => bottom > segmentStart + 0.001)
+              .reduce((best, bottom) => best === 0 ? bottom : Math.min(best, bottom), 0);
+            const segmentEnd = finalBottom <= maxBoundary + 0.001
+              ? finalBottom
+              : safeBoundary > segmentStart + 0.001 ? safeBoundary
+              : nextLineBottom > segmentStart ? nextLineBottom : maxBoundary;
+            const delta = content.y - segmentStart;
+            const fragment = clipTree(complete, segmentStart, segmentEnd, delta);
+            if (fragment) fragmentChildren.push(fragment);
+            const consumed = Math.max(0.001, segmentEnd - segmentStart);
+            cursorY = content.y + consumed;
+            segmentStart = segmentEnd;
+            remainingHeight = content.height;
+            if (segmentStart < finalBottom - 0.001) {
+              flushList();
+              nextPage();
+              fragmentStartY = cursorY;
+            }
+            if (segmentEnd > maxBoundary + 0.001) {
+              diagnostics.push({ code: "OVERSIZED_BLOCK", message: "Uma linha dentro de uma lista aninhada excede a área útil da página; a linha foi mantida íntegra.", blockId: item.id });
+            }
+          }
+          cursorY += 2;
+          lastSpacing = 2;
+          continue;
+        }
         if (itemHeight > content.height && item.children.every(child => child.type === "paragraph")) {
           // Oversized plain-text list items can span pages. Preserve the list
           // item structure on each page and show the marker only on its first part.
