@@ -23,17 +23,31 @@ injetar limites de execução e um gerador de IDs determinístico para cenários
 migração/teste. A camada não duplica o parser, o envelope ou as regras de
 segurança do Kortex.
 
-## Estado da migração
+## Integração atual
 
-O adaptador `nexusEngineAdapter.ts` ainda faz a ponte entre a superfície de
-edição HTML existente e o modelo Kortex. A fronteira `.nsx` cria um caminho de
-persistência direto do modelo, mas não significa que o editor já deixou de usar
-HTML/DOM durante a edição.
+- Ao abrir um documento, o editor prioriza `native_content` quando a versão
+  contém um payload Kortex válido; documentos legados continuam abrindo pelo HTML.
+- Ao salvar, a API persiste o envelope `.nsx` em `native_content` na mesma versão
+  que o HTML de compatibilidade. A resposta mantém `content` para visualizadores,
+  integrações e versões antigas do cliente.
+- O histórico de versões grava e restaura os dois campos, permitindo recuperar o
+  modelo nativo junto com sua projeção HTML.
+- A importação e exportação de arquivos `.nsx` usam a API nativa do motor.
+- O salvamento é interrompido se a sincronização HTML → Kortex falhar; não deve
+  enviar um snapshot nativo possivelmente desatualizado.
+
+## Limite conhecido
+
+A integração ainda não é 100% independente de HTML/DOM: a superfície visual
+continua usando `contentEditable`, e algumas operações de edição sincronizam o
+HTML de volta para o modelo. Portanto, o payload nativo é persistido e priorizado
+na abertura, mas a eliminação total do DOM como fonte intermediária exige uma
+migração separada das operações de entrada, seleção, histórico e layout.
 
 ## Próximas etapas seguras
 
-1. Conectar abrir/salvar à fronteira `.nsx` sem alterar abruptamente o contrato do backend.
-2. Substituir gradualmente sincronizações HTML → modelo por comandos do Kortex.
-3. Manter HTML como adaptador explícito de importação/exportação.
-4. Adicionar testes de ida e volta para todos os blocos, marcas e recursos.
+1. Fazer com que todos os comandos de edição alterem primeiro `NexusDocument`.
+2. Usar o HTML somente como projeção de visualização e adaptador de importação/exportação.
+3. Persistir rascunhos locais com o payload nativo além da projeção HTML.
+4. Adicionar testes de ida e volta para todos os blocos, marcas, recursos e versões legadas.
 5. Só remover o caminho legado depois de confirmar compatibilidade com documentos existentes.
