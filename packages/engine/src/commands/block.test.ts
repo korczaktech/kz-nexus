@@ -3,7 +3,7 @@ import { createIdGenerator } from "../core/ids";
 import { createFixedClock } from "../core/clock";
 import { createDocument } from "./document";
 import { insertText } from "./text";
-import { convertBlockToBlockquote, deleteBlock, insertParagraphAfter, mergeBlockWithPrevious, setAlign, setIndent, setHeadingLevel, splitBlock } from "./block";
+import { convertBlockToBlockquote, deleteBlock, insertParagraphAfter, mergeBlockWithPrevious, setAlign, setIndent, setParagraphStyle, setHeadingLevel, splitBlock } from "./block";
 import { getPlainText } from "../model/tree";
 import { insertTable } from "./table";
 import type { Paragraph } from "../model/types";
@@ -87,6 +87,22 @@ describe("nested split/merge", () => {
       expect(getPlainText(mergedQuote.children[0])).toBe("hello world");
     }
     expect(validateDocument(merged.value.document).ok).toBe(true);
+  });
+});
+
+describe("setParagraphStyle", () => {
+  it("stores spacing and line-height in the engine document and rejects invalid values", () => {
+    const { document, blockId } = setup("Paragraph");
+    const styled = setParagraphStyle({ blockId, spacingBefore: 6, spacingAfter: 12, lineSpacing: 1.5 })(document, ctx());
+    expect(styled.ok).toBe(true);
+    if (styled.ok) {
+      const paragraph = styled.value.document.content[0] as Paragraph;
+      expect(paragraph.spacingBefore).toBe(6);
+      expect(paragraph.spacingAfter).toBe(12);
+      expect(paragraph.lineSpacing).toBe(1.5);
+    }
+    const invalid = setParagraphStyle({ blockId, lineSpacing: 9 })(document, ctx());
+    expect(invalid.ok).toBe(false);
   });
 });
 
