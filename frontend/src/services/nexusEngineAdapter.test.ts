@@ -48,6 +48,18 @@ describe("Nexus editor adapter", () => {
     expect(htmlFromNexusDocument(document)).toContain("<p>First</p><p>Second</p>");
   });
 
+  it("round-trips paragraph spacing and line-height through the engine adapter", () => {
+    const document = nexusDocumentFromHtml('<p style="margin-top:8pt;margin-bottom:12pt;line-height:1.5">Spaced</p>', "Spacing test");
+    const paragraph = document.content[0];
+    expect(paragraph && (paragraph.type === "paragraph" || paragraph.type === "heading") ? paragraph.spacingBefore : undefined).toBe(8);
+    expect(paragraph && (paragraph.type === "paragraph" || paragraph.type === "heading") ? paragraph.spacingAfter : undefined).toBe(12);
+    expect(paragraph && (paragraph.type === "paragraph" || paragraph.type === "heading") ? paragraph.lineSpacing : undefined).toBe(1.5);
+    const html = htmlFromNexusDocument(document);
+    expect(html).toContain("margin-top:8pt");
+    expect(html).toContain("margin-bottom:12pt");
+    expect(html).toContain("line-height:1.5");
+  });
+
   it("round-trips comment annotations through the engine document", () => {
     const document = nexusDocumentFromHtml('<p><span data-kz-comment="Review this" title="Comentário: Review this">Important</span></p>', "Comment test");
     const paragraph = document.content[0];
