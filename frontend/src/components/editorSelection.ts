@@ -18,11 +18,11 @@ export function wordDeletionRange(text: string, offset: number, direction: WordD
   let start = cursor;
   let end = cursor;
   if (direction === 'backward') {
-    while (start > 0 && /\\s/.test(text[start - 1]!)) start--;
-    while (start > 0 && !/\\s/.test(text[start - 1]!)) start--;
+    while (start > 0 && /\s/.test(text[start - 1]!)) start--;
+    while (start > 0 && !/\s/.test(text[start - 1]!)) start--;
   } else {
-    while (end < text.length && /\\s/.test(text[end]!)) end++;
-    while (end < text.length && !/\\s/.test(text[end]!)) end++;
+    while (end < text.length && /\s/.test(text[end]!)) end++;
+    while (end < text.length && !/\s/.test(text[end]!)) end++;
   }
   return { start, end };
 }
