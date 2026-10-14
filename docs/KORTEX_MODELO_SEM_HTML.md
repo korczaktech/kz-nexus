@@ -51,7 +51,8 @@ segurança do Kortex.
 - O salvamento é interrompido se a sincronização HTML → Kortex falhar; não deve
   enviar um snapshot nativo possivelmente desatualizado.
 - Rascunhos locais guardam a projeção HTML e o payload nativo separadamente; a
-  recuperação prioriza o modelo Kortex quando os dois estão disponíveis.
+  recuperação prioriza o modelo Kortex mesmo quando o rascunho HTML legado não
+  existe, evitando reabrir silenciosamente a versão antiga do servidor.
 
 ## Limite conhecido
 
