@@ -267,7 +267,7 @@ export function Editor({document,versions,onSave,onClose,onConflict}:{document:D
   if(readOnly){event.preventDefault();return}
   const inputEvent=event.nativeEvent as InputEvent;
   const inputType=inputEvent.inputType||'';
-  if(compositionActive.current||inputEvent.isComposing||inputType==='insertCompositionText')return;
+  if(compositionActive.current||inputEvent.isComposing||inputType==='insertCompositionText'||inputType==='insertFromComposition')return;
   if(inputType==='insertText'||inputType==='insertReplacementText'){
    if(inputEvent.data===null)return;
    event.preventDefault();exec('insertText',inputEvent.data);return;
