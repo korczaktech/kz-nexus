@@ -19,7 +19,8 @@
   "devDependencies": {
     "electron": "^38.1.2",
     "electron-builder": "^26.0.12",
-    "esbuild": "0.25.5"
+    "esbuild": "0.25.5",
+    "happy-dom": "^20.0.0"
   },
   "build": {
     "appId": "com.korczaktech.nexus.desktop",
