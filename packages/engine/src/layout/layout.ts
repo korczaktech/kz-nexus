@@ -402,7 +402,7 @@ export function layoutDocument(document: NexusDocument, options: LayoutOptions =
     const lineHeight = safeNumber(options.fontSize, DEFAULT_FONT) * 1.25;
     const blockHeight = Math.max(lineHeight, measured.length * lineHeight) + 8;
     if (cursorY > content.y && cursorY + blockHeight > content.y + content.height) nextPage();
-    const lines = measured.map((line,index)=>({text:line.text,x:content.x+20+(/^│ /.test(line.text)?8:/^\s{2,}/.test(line.text)?Math.min(48,line.text.match(/^\s*/)?.[0].length||0)*4:0),y:cursorY+index*lineHeight,width:line.width,height:lineHeight,startOffset:line.start,endOffset:line.end,align:"start" as const}));
+    const lines = measured.map((line,index)=>({text:line.text,x:content.x+20+(/^│ /.test(line.text)?8:(/^(?:↳ )+/.exec(line.text)?.[0].length||0)*4),y:cursorY+index*lineHeight,width:line.width,height:lineHeight,startOffset:line.start,endOffset:line.end,align:"start" as const}));
     addBlock(block, { x: content.x, y: cursorY, width: content.width, height: blockHeight }, lines);
     cursorY += blockHeight + 6;
   });
