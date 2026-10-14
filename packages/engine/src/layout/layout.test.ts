@@ -6,7 +6,7 @@ const metrics: TextMetrics = { measureText: text => text.length * 5, lineHeight:
 function paragraph(id: string, text: string): Block {
   return { type: "paragraph", id, children: [{ type: "text", id: id + "-run", text, marks: [] }] };
 }
-function documentWith(content: Block[], page = { unit: "pt" as const, width: 160, height: 200, orientation: "portrait" as const, margins: { top: 10, right: 10, bottom: 10, left: 10 } }): NexusDocument {
+function documentWith(content: Block[], page: NexusDocument["pageConfig"] = { unit: "pt", width: 160, height: 200, orientation: "portrait", margins: { top: 10, right: 10, bottom: 10, left: 10 } }): NexusDocument {
   return { id: "doc", schemaVersion: 1, metadata: {}, pageConfig: page, content, resources: [] };
 }
 
