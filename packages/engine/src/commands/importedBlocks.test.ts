@@ -3,7 +3,8 @@ import { createIdGenerator } from "../core/ids";
 import { createFixedClock } from "../core/clock";
 import { createDocument } from "./document";
 import { insertText } from "./text";
-import { insertImportedBlocksAtSelection } from "./importedBlocks";
+import { insertImportedBlocksAtSelection, insertImportedBlocksAtNestedSelection } from "./importedBlocks";
+import { insertTable } from "./table";
 import { createEditor } from "../editor/editor";
 import { deleteText } from "./text";
 import { mergeBlockWithPrevious, insertParagraphAfter } from "./block";
@@ -94,6 +95,36 @@ describe("insertImportedBlocksAtSelection", () => {
     expect(list?.type).toBe("bulletList");
     if (list?.type === "bulletList") expect(getPlainText(list.children[0]!.children[0] as Paragraph)).toBe("list item");
     expect(getPlainText(result.value.document.content[3] as Paragraph)).toBe(" after");
+    expect(validateDocument(result.value.document).ok).toBe(true);
+  });
+});
+
+
+describe("insertImportedBlocksAtNestedSelection", () => {
+  it("preserves multiple rich paragraphs inside a table cell", () => {
+    const ids = createIdGenerator("nested", 1);
+    const document = createDocument(ids, createFixedClock(0).now);
+    const anchor = document.content[0]!;
+    const tableResult = insertTable({ afterBlockId: anchor.id, rows: 1, columns: 1 })(document, { generateId: ids });
+    if (!tableResult.ok) throw tableResult.error;
+    const tableIndex = tableResult.value.document.content.findIndex(block => block.type === "table");
+    const table = tableResult.value.document.content[tableIndex]!;
+    if (table.type !== "table") throw new Error("table fixture missing");
+    const target = table.children[0]!.children[0]!.children[0]!;
+    const incoming: Block[] = [
+      { type: "paragraph", id: "incoming-one", children: [{ type: "text", id: "run-one", text: "First", marks: [{ type: "bold" }] }] },
+      { type: "heading", id: "incoming-two", level: 2, children: [{ type: "text", id: "run-two", text: "Second", marks: [{ type: "italic" }] }] },
+    ];
+    const result = insertImportedBlocksAtNestedSelection({ blockId: target.id, start: 0, end: 0, blocks: incoming })(tableResult.value.document, { generateId: ids });
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    const updatedTable = result.value.document.content[tableIndex]!;
+    if (updatedTable.type !== "table") throw new Error("updated table missing");
+    const paragraphs = updatedTable.children[0]!.children[0]!.children;
+    expect(paragraphs).toHaveLength(2);
+    expect(paragraphs.map(paragraph => getPlainText(paragraph))).toEqual(["First", "Second"]);
+    expect(paragraphs[0]!.children[0]!.marks).toContainEqual({ type: "bold" });
+    expect(paragraphs[1]!.children[0]!.marks).toContainEqual({ type: "italic" });
     expect(validateDocument(result.value.document).ok).toBe(true);
   });
 });
