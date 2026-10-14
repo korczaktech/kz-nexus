@@ -377,6 +377,43 @@ function pointOffset(block: HTMLElement, node: Node, offset: number): number | n
   return total;
 }
 
+interface ResolvedDomPoint { block: HTMLElement; offset: number; }
+
+function resolveDomPoint(root: HTMLElement, node: Node, offset: number, blocks: HTMLElement[]): ResolvedDomPoint | null {
+  const element = node instanceof HTMLElement ? node : node.parentElement;
+  const closest = element?.closest<HTMLElement>("p,h1,h2,h3,h4,h5,h6,li,td,th,blockquote");
+  if (closest && blocks.includes(closest)) {
+    const localOffset = pointOffset(closest, node, offset);
+    return localOffset === null ? null : { block: closest, offset: localOffset };
+  }
+
+  const body = selectionBody(root, node);
+  const container = node instanceof Element ? node : node.parentElement;
+  if (!body || !container) return null;
+  const inSubtree = (subtree: Node) => blocks.filter(block => block === subtree || subtree.contains(block));
+
+  // A caret can legally sit on the editable body's child boundary, e.g. when
+  // the user clicks below the last paragraph. Resolve that boundary to the
+  // next paragraph's start or the previous paragraph's end.
+  const nextStart = Math.max(0, Math.min(container.childNodes.length, offset));
+  for (let index = nextStart; index < container.childNodes.length; index++) {
+    const candidates = inSubtree(container.childNodes[index]!);
+    if (candidates.length) return { block: candidates[0]!, offset: 0 };
+  }
+  for (let index = Math.min(nextStart - 1, container.childNodes.length - 1); index >= 0; index--) {
+    const candidates = inSubtree(container.childNodes[index]!);
+    if (candidates.length) {
+      const block = candidates[candidates.length - 1]!;
+      return { block, offset: domNodeTextLength(block) };
+    }
+  }
+  const bodyBlocks = blocks.filter(block => body.contains(block));
+  if (!bodyBlocks.length) return null;
+  if (offset <= 0) return { block: bodyBlocks[0]!, offset: 0 };
+  const block = bodyBlocks[bodyBlocks.length - 1]!;
+  return { block, offset: domNodeTextLength(block) };
+}
+
 function logicalTextLength(block: LogicalTextBlock): number {
   return block.children.reduce((length, run) => length + run.text.length, 0);
 }
@@ -428,23 +465,22 @@ export function getEngineDomContext(
   const domBlocks = domTextBlocks(root);
   const modelBlocks = logicalTextBlocks(engine.getDocument().content);
   if (!domBlocks.length || domBlocks.length !== modelBlocks.length) return null;
-  const startElement = (range.startContainer instanceof HTMLElement ? range.startContainer : range.startContainer.parentElement)
-    ?.closest<HTMLElement>("p,h1,h2,h3,h4,h5,h6,li,td,th,blockquote");
-  const endElement = (range.endContainer instanceof HTMLElement ? range.endContainer : range.endContainer.parentElement)
-    ?.closest<HTMLElement>("p,h1,h2,h3,h4,h5,h6,li,td,th,blockquote");
-  const startIndex = startElement ? domBlocks.indexOf(startElement) : -1;
-  const endIndex = endElement ? domBlocks.indexOf(endElement) : -1;
+  const startPoint = resolveDomPoint(root, range.startContainer, range.startOffset, domBlocks);
+  const endPoint = resolveDomPoint(root, range.endContainer, range.endOffset, domBlocks);
+  if (!startPoint || !endPoint) return null;
+  const startIndex = domBlocks.indexOf(startPoint.block);
+  const endIndex = domBlocks.indexOf(endPoint.block);
   if (startIndex < 0 || endIndex < 0 || startIndex > endIndex) return null;
-  const startOffset = pointOffset(domBlocks[startIndex], range.startContainer, range.startOffset);
-  const endOffset = pointOffset(domBlocks[endIndex], range.endContainer, range.endOffset);
-  if (startOffset === null || endOffset === null) return null;
-  const anchorElement = (selection.anchorNode instanceof HTMLElement ? selection.anchorNode : selection.anchorNode.parentElement)?.closest<HTMLElement>("p,h1,h2,h3,h4,h5,h6,li,td,th,blockquote");
-  const focusElement = (selection.focusNode instanceof HTMLElement ? selection.focusNode : selection.focusNode.parentElement)?.closest<HTMLElement>("p,h1,h2,h3,h4,h5,h6,li,td,th,blockquote");
-  const anchorIndex = anchorElement ? domBlocks.indexOf(anchorElement) : -1;
-  const focusIndex = focusElement ? domBlocks.indexOf(focusElement) : -1;
-  const anchorOffset = anchorIndex >= 0 ? pointOffset(domBlocks[anchorIndex], selection.anchorNode, selection.anchorOffset) : null;
-  const focusOffset = focusIndex >= 0 ? pointOffset(domBlocks[focusIndex], selection.focusNode, selection.focusOffset) : null;
-  if (anchorIndex < 0 || focusIndex < 0 || anchorOffset === null || focusOffset === null) return null;
+  const startOffset = startPoint.offset;
+  const endOffset = endPoint.offset;
+  const anchorPoint = resolveDomPoint(root, selection.anchorNode, selection.anchorOffset, domBlocks);
+  const focusPoint = resolveDomPoint(root, selection.focusNode, selection.focusOffset, domBlocks);
+  if (!anchorPoint || !focusPoint) return null;
+  const anchorIndex = domBlocks.indexOf(anchorPoint.block);
+  const focusIndex = domBlocks.indexOf(focusPoint.block);
+  const anchorOffset = anchorPoint.offset;
+  const focusOffset = focusPoint.offset;
+  if (anchorIndex < 0 || focusIndex < 0) return null;
   const selected = modelBlocks[startIndex];
   let topLevelBlock: Block | undefined;
   let topLevelIndex = -1;
@@ -526,30 +562,22 @@ function updateEngineMarksForDomSelection(
   if (!domBlocks.length || domBlocks.length !== modelBlocks.length) {
     return { ok: false, message: "Não foi possível mapear a seleção para o modelo do motor." };
   }
-  const startElement = (range.startContainer instanceof HTMLElement
-    ? range.startContainer
-    : range.startContainer.parentElement)?.closest<HTMLElement>("p,h1,h2,h3,h4,h5,h6,li,td,th,blockquote");
-  const endElement = (range.endContainer instanceof HTMLElement
-    ? range.endContainer
-    : range.endContainer.parentElement)?.closest<HTMLElement>("p,h1,h2,h3,h4,h5,h6,li,td,th,blockquote");
-  const startIndex = startElement ? domBlocks.indexOf(startElement) : -1;
-  const endIndex = endElement ? domBlocks.indexOf(endElement) : -1;
-  if (startIndex < 0 || endIndex < 0 || startIndex > endIndex) {
-    return { ok: false, message: "Não foi possível identificar os parágrafos selecionados." };
-  }
-  const startOffset = pointOffset(domBlocks[startIndex], range.startContainer, range.startOffset);
-  const endOffset = pointOffset(domBlocks[endIndex], range.endContainer, range.endOffset);
-  if (startOffset === null || endOffset === null) {
-    return { ok: false, message: "Não foi possível calcular os limites da seleção." };
-  }
-
-  const anchorElement = (selection.anchorNode instanceof HTMLElement ? selection.anchorNode : selection.anchorNode.parentElement)?.closest<HTMLElement>("p,h1,h2,h3,h4,h5,h6,li,td,th,blockquote");
-  const focusElement = (selection.focusNode instanceof HTMLElement ? selection.focusNode : selection.focusNode.parentElement)?.closest<HTMLElement>("p,h1,h2,h3,h4,h5,h6,li,td,th,blockquote");
-  const anchorIndex = anchorElement ? domBlocks.indexOf(anchorElement) : -1;
-  const focusIndex = focusElement ? domBlocks.indexOf(focusElement) : -1;
-  const anchorOffset = anchorIndex >= 0 ? pointOffset(domBlocks[anchorIndex], selection.anchorNode!, selection.anchorOffset) : null;
-  const focusOffset = focusIndex >= 0 ? pointOffset(domBlocks[focusIndex], selection.focusNode!, selection.focusOffset) : null;
-  if (anchorIndex < 0 || focusIndex < 0 || anchorOffset === null || focusOffset === null) return { ok: false, message: "Não foi possível mapear a direção da seleção." };
+  const startPoint = resolveDomPoint(root, range.startContainer, range.startOffset, domBlocks);
+  const endPoint = resolveDomPoint(root, range.endContainer, range.endOffset, domBlocks);
+  if (!startPoint || !endPoint) return { ok: false, message: "Não foi possível identificar os parágrafos selecionados." };
+  const startIndex = domBlocks.indexOf(startPoint.block);
+  const endIndex = domBlocks.indexOf(endPoint.block);
+  if (startIndex < 0 || endIndex < 0 || startIndex > endIndex) return { ok: false, message: "Não foi possível identificar os parágrafos selecionados." };
+  const startOffset = startPoint.offset;
+  const endOffset = endPoint.offset;
+  const anchorPoint = resolveDomPoint(root, selection.anchorNode, selection.anchorOffset, domBlocks);
+  const focusPoint = resolveDomPoint(root, selection.focusNode, selection.focusOffset, domBlocks);
+  if (!anchorPoint || !focusPoint) return { ok: false, message: "Não foi possível mapear a direção da seleção." };
+  const anchorIndex = domBlocks.indexOf(anchorPoint.block);
+  const focusIndex = domBlocks.indexOf(focusPoint.block);
+  const anchorOffset = anchorPoint.offset;
+  const focusOffset = focusPoint.offset;
+  if (anchorIndex < 0 || focusIndex < 0) return { ok: false, message: "Não foi possível mapear a direção da seleção." };
   const anchor = { blockId: modelBlocks[anchorIndex].id, offset: anchorOffset };
   const focus = { blockId: modelBlocks[focusIndex].id, offset: focusOffset };
   const setSelection = engine.setSelection({ anchor, focus });
@@ -712,21 +740,22 @@ export function removeEngineMarksForDomSelection(
   const domBlocks = domTextBlocks(root);
   const modelBlocks = logicalTextBlocks(engine.getDocument().content);
   if (!domBlocks.length || domBlocks.length !== modelBlocks.length) return { ok: false, message: "Não foi possível mapear a seleção para o modelo do motor." };
-  const startElement = (range.startContainer instanceof HTMLElement ? range.startContainer : range.startContainer.parentElement)?.closest<HTMLElement>("p,h1,h2,h3,h4,h5,h6,li,td,th,blockquote");
-  const endElement = (range.endContainer instanceof HTMLElement ? range.endContainer : range.endContainer.parentElement)?.closest<HTMLElement>("p,h1,h2,h3,h4,h5,h6,li,td,th,blockquote");
-  const startIndex = startElement ? domBlocks.indexOf(startElement) : -1;
-  const endIndex = endElement ? domBlocks.indexOf(endElement) : -1;
+  const startPoint = resolveDomPoint(root, range.startContainer, range.startOffset, domBlocks);
+  const endPoint = resolveDomPoint(root, range.endContainer, range.endOffset, domBlocks);
+  if (!startPoint || !endPoint) return { ok: false, message: "Não foi possível identificar o intervalo selecionado." };
+  const startIndex = domBlocks.indexOf(startPoint.block);
+  const endIndex = domBlocks.indexOf(endPoint.block);
   if (startIndex < 0 || endIndex < 0 || startIndex > endIndex) return { ok: false, message: "Não foi possível identificar o intervalo selecionado." };
-  const startOffset = pointOffset(domBlocks[startIndex], range.startContainer, range.startOffset);
-  const endOffset = pointOffset(domBlocks[endIndex], range.endContainer, range.endOffset);
-  if (startOffset === null || endOffset === null) return { ok: false, message: "Não foi possível calcular os limites da seleção." };
-  const anchorElement = (selection.anchorNode instanceof HTMLElement ? selection.anchorNode : selection.anchorNode.parentElement)?.closest<HTMLElement>("p,h1,h2,h3,h4,h5,h6,li,td,th,blockquote");
-  const focusElement = (selection.focusNode instanceof HTMLElement ? selection.focusNode : selection.focusNode.parentElement)?.closest<HTMLElement>("p,h1,h2,h3,h4,h5,h6,li,td,th,blockquote");
-  const anchorIndex = anchorElement ? domBlocks.indexOf(anchorElement) : -1;
-  const focusIndex = focusElement ? domBlocks.indexOf(focusElement) : -1;
-  const anchorOffset = anchorIndex >= 0 ? pointOffset(domBlocks[anchorIndex], selection.anchorNode!, selection.anchorOffset) : null;
-  const focusOffset = focusIndex >= 0 ? pointOffset(domBlocks[focusIndex], selection.focusNode!, selection.focusOffset) : null;
-  if (anchorIndex < 0 || focusIndex < 0 || anchorOffset === null || focusOffset === null) return { ok: false, message: "Não foi possível mapear a direção da seleção." };
+  const startOffset = startPoint.offset;
+  const endOffset = endPoint.offset;
+  const anchorPoint = resolveDomPoint(root, selection.anchorNode, selection.anchorOffset, domBlocks);
+  const focusPoint = resolveDomPoint(root, selection.focusNode, selection.focusOffset, domBlocks);
+  if (!anchorPoint || !focusPoint) return { ok: false, message: "Não foi possível mapear a direção da seleção." };
+  const anchorIndex = domBlocks.indexOf(anchorPoint.block);
+  const focusIndex = domBlocks.indexOf(focusPoint.block);
+  const anchorOffset = anchorPoint.offset;
+  const focusOffset = focusPoint.offset;
+  if (anchorIndex < 0 || focusIndex < 0) return { ok: false, message: "Não foi possível mapear a direção da seleção." };
   const selectionResult = engine.setSelection({ anchor: { blockId: modelBlocks[anchorIndex].id, offset: anchorOffset }, focus: { blockId: modelBlocks[focusIndex].id, offset: focusOffset } });
   if (!selectionResult.ok) return { ok: false, message: selectionResult.error.message };
   const types: MarkType[] = selectedTypes ?? ["bold", "italic", "underline", "strike", "superscript", "subscript", "color", "highlight", "fontSize", "fontFamily", "link", "comment"];
