@@ -52,7 +52,7 @@ describe("native layout engine", () => {
   it("keeps a heading with the first line of its following paragraph", () => {
     const heading: Block = { type: "heading", id: "h", level: 1, children: [{ type: "text", id: "hr", text: "Section", marks: [] }] };
     const result = layoutDocument(documentWith([paragraph("lead", "Lead text Lead text Lead text"), heading, paragraph("body", "Body text")], {
-      unit: "pt", width: 160, height: 100, orientation: "portrait",
+      unit: "pt", width: 100, height: 100, orientation: "portrait",
       margins: { top: 10, right: 10, bottom: 10, left: 10 }
     }), { metrics, keepHeadingsWithNext: true });
     const headingBlock = result.pages.flatMap(page => page.blocks).find(block => block.blockId === "h");
