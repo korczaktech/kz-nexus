@@ -113,7 +113,19 @@ function makeParagraph(node: Element, type: "paragraph" | "heading" = "paragraph
   const borderWidth = borderStyle === "solid" && borderWidthMatch ? Number(borderWidthMatch[1]) * (borderWidthMatch[2].toLowerCase() === "px" ? 0.75 : 1) : undefined;
   const borderColor = borderStyle === "solid" ? cssColorToHex(css.borderTopColor || css.borderColor || borderShorthandMatch?.[3] || "") : undefined;
   const paddingValue = toPoints(css.padding || css.paddingTop);
-  const spacing = { ...(spacingBefore ? { spacingBefore } : {}), ...(spacingAfter ? { spacingAfter } : {}), ...(Number.isFinite(lineSpacingValue) && lineSpacingValue >= 0.5 && lineSpacingValue <= 4 ? { lineSpacing: lineSpacingValue } : {}), ...(backgroundColor ? { backgroundColor } : {}), ...(borderColor && borderWidth ? { borderColor, borderWidth } : {}), ...(paddingValue ? { padding: paddingValue } : {}) };
+  const objectKind = node.getAttribute("data-kz-object");
+  const objectShape = node.getAttribute("data-kz-object-shape");
+  const objectLabel = node.getAttribute("data-kz-object-label") || undefined;
+  const objectStroke = cssColorToHex(node.getAttribute("data-kz-object-stroke") || "");
+  const objectFill = cssColorToHex(node.getAttribute("data-kz-object-fill") || "");
+  const editorObject = (["note", "textBox", "shape"].includes(objectKind || "") ? {
+    kind: objectKind as "note" | "textBox" | "shape",
+    ...(objectLabel ? { label: objectLabel } : {}),
+    ...(["rectangle", "ellipse", "triangle"].includes(objectShape || "") ? { shape: objectShape as "rectangle" | "ellipse" | "triangle" } : {}),
+    ...(objectStroke ? { stroke: objectStroke } : {}),
+    ...(objectFill ? { fill: objectFill } : {}),
+  } : undefined);
+  const spacing = { ...(spacingBefore ? { spacingBefore } : {}), ...(spacingAfter ? { spacingAfter } : {}), ...(Number.isFinite(lineSpacingValue) && lineSpacingValue >= 0.5 && lineSpacingValue <= 4 ? { lineSpacing: lineSpacingValue } : {}), ...(backgroundColor ? { backgroundColor } : {}), ...(borderColor && borderWidth ? { borderColor, borderWidth } : {}), ...(paddingValue ? { padding: paddingValue } : {}), ...(editorObject ? { editorObject } : {}) };
   if (type === "heading") {
     const level = Math.min(6, Math.max(1, Number(node.tagName.slice(1)) || 1)) as 1 | 2 | 3 | 4 | 5 | 6;
     return { type: "heading", id: nextId(), level, ...alignment, ...indentation, ...spacing, children: runs };
@@ -199,6 +211,14 @@ function sanitizeImportedHtml(parsed: Document): void {
         continue;
       }
       if (name === "data-kz-comment") { if (element.tagName.toLowerCase() !== "span" || !attribute.value.trim() || attribute.value.length > 2000) element.removeAttribute(attribute.name); continue; }
+      if (name === "data-kz-page-break") { if (element.tagName.toLowerCase() !== "div" || attribute.value !== "true") element.removeAttribute(attribute.name); continue; }
+      if (["data-kz-object", "data-kz-object-label", "data-kz-object-shape", "data-kz-object-stroke", "data-kz-object-fill"].includes(name)) {
+        const validObject = element.tagName.toLowerCase() === "p" || /^h[1-6]$/.test(element.tagName.toLowerCase());
+        const validValue = name !== "data-kz-object" || ["note", "textBox", "shape"].includes(attribute.value);
+        const validShape = name !== "data-kz-object-shape" || ["rectangle", "ellipse", "triangle"].includes(attribute.value);
+        if (!validObject || !validValue || !validShape || attribute.value.length > 200) element.removeAttribute(attribute.name);
+        continue;
+      }
       if (["alt", "title", "start", "colspan", "rowspan"].includes(name)) continue;
       element.removeAttribute(attribute.name);
     }
