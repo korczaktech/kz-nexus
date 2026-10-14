@@ -88,10 +88,17 @@ function makeParagraph(node: Element, type: "paragraph" | "heading" = "paragraph
   const runs = children.length ? children : [{ type: "text" as const, id: nextId(), text: "", marks: [] }];
   const align = (node as HTMLElement).style.textAlign;
   const indent = indentInPoints(node);
+  const css = (node as HTMLElement).style;
+  const unitPoints = (value: string) => { const amount = Number.parseFloat(value); if (!Number.isFinite(amount)) return undefined; const unit = value.trim().match(/[a-z%]+$/i)?.[0]?.toLowerCase() ?? "px"; return Math.min(200, Math.max(0, unit === "pt" ? amount : unit === "in" ? amount * 72 : unit === "cm" ? amount * 28.3464567 : unit === "mm" ? amount * 2.83464567 : amount * 0.75)); };
+  const textIndentRaw = Number.parseFloat(css.textIndent || "");
+  const textIndent = css.textIndent ? unitPoints(css.textIndent) : undefined;
+  const paddingLeft = css.paddingLeft ? unitPoints(css.paddingLeft) : undefined;
+  const firstLineIndent = textIndentRaw > 0 ? textIndent : undefined;
+  const hangingIndent = textIndentRaw < 0 ? Math.max(textIndent || 0, paddingLeft || 0) : undefined;
   const alignment = align && ["left", "start", "center", "right", "end", "justify"].includes(align)
     ? { align: align === "left" ? "start" as const : align === "right" ? "end" as const : align as "start" | "end" | "center" | "justify" }
     : {};
-  const indentation = indent !== undefined ? { indent } : {};
+  const indentation = { ...(indent !== undefined ? { indent } : {}), ...(firstLineIndent !== undefined ? { firstLineIndent } : {}), ...(hangingIndent !== undefined ? { hangingIndent } : {}) };
   const rawAnchorId = node.getAttribute("id");
   const anchor = type === "paragraph" && rawAnchorId && isValidId(rawAnchorId) ? { anchorId: rawAnchorId } : {};
   const css = (node as HTMLElement).style;
@@ -144,7 +151,7 @@ function tableBlock(element: Element): Extract<Block, { type: "table" }> {
 
 function sanitizeImportedHtml(parsed: Document): void {
   parsed.querySelectorAll("script,style,iframe,object,embed,form,input,button,textarea,select,option,link,meta,base,svg,math,template").forEach(node => node.remove());
-  const allowedStyles = new Set(["color", "background-color", "font-size", "font-family", "text-align", "margin-left", "margin-top", "margin-bottom", "line-height", "border", "border-top-width", "border-top-style", "border-top-color", "border-right-width", "border-right-style", "border-right-color", "border-bottom-width", "border-bottom-style", "border-bottom-color", "border-left-width", "border-left-style", "border-left-color", "padding", "padding-top", "padding-right", "padding-bottom", "padding-left", "width", "height"]);
+  const allowedStyles = new Set(["color", "background-color", "font-size", "font-family", "text-align", "margin-left", "text-indent", "margin-top", "margin-bottom", "line-height", "border", "border-top-width", "border-top-style", "border-top-color", "border-right-width", "border-right-style", "border-right-color", "border-bottom-width", "border-bottom-style", "border-bottom-color", "border-left-width", "border-left-style", "border-left-color", "padding", "padding-top", "padding-right", "padding-bottom", "padding-left", "width", "height"]);
   parsed.body.querySelectorAll("*").forEach(element => {
     for (const attribute of Array.from(element.attributes)) {
       const name = attribute.name.toLowerCase();
