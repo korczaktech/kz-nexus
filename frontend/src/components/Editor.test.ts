@@ -1,5 +1,6 @@
 import {describe,expect,it} from 'vitest';
-import {markdownToHtml,toRtf} from './Editor';
+import {toRtf} from './Editor';
+import {markdownToHtml} from './markdown';
 
 describe('Fase 8 - editor',()=>{
   it('renderiza conteúdo formatado sem interpretar HTML bruto',()=>{
