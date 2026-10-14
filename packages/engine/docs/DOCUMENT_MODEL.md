@@ -3,7 +3,8 @@
 `NexusDocument { id, schemaVersion, metadata, pageConfig, content: Block[], resources }`.
 
 Blocos: `paragraph`, `heading` (1–6), `blockquote`, `thematicBreak`, `bulletList`, `orderedList` (com `start`), `table` (linhas → células → parágrafos), `image` (referência a recurso + `alt`).
-Texto: `TextRun { type:"text", id, text, marks }`. Marcas: `bold`, `italic`, `underline`, `strike`, `color` (#RGB/#RRGGBB), `highlight`, `fontSize` (pt), `fontFamily`.
+Texto: `TextRun { type:"text", id, text, marks }`. Marcas: `bold`, `italic`, `underline`, `strike`, `superscript`, `subscript`, `color` (#RGB/#RRGGBB), `highlight`, `fontSize`, `fontFamily`, `link` (http/https/mailto/âncora local validado), `comment`.
+Parágrafo/título: alinhamento, recuo em pontos, espaçamento antes/depois em pontos e entrelinhas como multiplicador (0,5–4).
 Página: unidade `pt`, largura/altura, orientação, margens.
 
 Invariantes validadas (`validateDocument`, com caminho do nó): raiz válida, tipos conhecidos, ids válidos e únicos, filhos permitidos por tipo, tabelas retangulares, marcas válidas, números finitos, profundidade e quantidade de nós dentro dos limites, referências de imagem a recursos existentes.
