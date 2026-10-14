@@ -27,7 +27,7 @@ import {
 const nextId = createIdGenerator("nexus");
 function cssColorToHex(value: string): string | undefined {
   if (isValidColor(value)) return value;
-  const match = /^rgb\\(\\s*(\\d{1,3})\\s*,\\s*(\\d{1,3})\\s*,\\s*(\\d{1,3})\\s*\\)$/i.exec(value.trim());
+  const match = /^rgb\(\s*(\d{1,3})\s*,\s*(\d{1,3})\s*,\s*(\d{1,3})\s*\)$/i.exec(value.trim());
   if (!match) return undefined;
   const channels = match.slice(1, 4).map(part => Number(part));
   if (channels.some(channel => channel < 0 || channel > 255)) return undefined;
