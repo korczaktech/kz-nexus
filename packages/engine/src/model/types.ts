@@ -79,6 +79,8 @@ export interface Heading {
   lineSpacing?: number;
   /** Optional paragraph background and border styling. */
   backgroundColor?: string;
+  /** Optional semantic editor object rendered and exported as an editable block. */
+  editorObject?: { kind: "note" | "textBox" | "shape"; label?: string; shape?: "rectangle" | "ellipse" | "triangle"; fill?: string; stroke?: string; width?: number; height?: number };
   borderColor?: string;
   borderWidth?: number;
   padding?: number;
