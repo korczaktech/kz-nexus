@@ -56,6 +56,28 @@ describe("Nexus editor adapter", () => {
     engine.dispose();
   });
 
+  it("maps a caret at the end of the editable body to the last paragraph", () => {
+    const engine = createEditor({ document: nexusDocumentFromHtml("<p>First</p><p>Second</p>", "Body boundary test") });
+    const root = document.createElement("div");
+    root.innerHTML = '<div class="rich-editor"><p>First</p><p>Second</p></div>';
+    document.body.append(root);
+    const body = root.querySelector(".rich-editor")!;
+    const selection = window.getSelection();
+    const range = document.createRange();
+    range.setStart(body, body.childNodes.length);
+    range.collapse(true);
+    selection!.removeAllRanges();
+    selection!.addRange(range);
+    expect(getEngineDomContext(engine, root)).toMatchObject({
+      block: { type: "paragraph" },
+      blockIndex: 1,
+      startOffset: 6,
+      endOffset: 6,
+    });
+    root.remove();
+    engine.dispose();
+  });
+
   it("maps DOM line breaks to Kortex newline offsets and restores the caret", () => {
     const engine = createEditor({ document: nexusDocumentFromHtml("<p>one<br>two</p>", "Line break mapping test") });
     const root = document.createElement("div");
