@@ -11,7 +11,7 @@ import {attachLayoutMetadata,parseLayoutMetadata,stripLayoutMetadata} from './ed
 import type {EditorLayoutSettings} from './editorLayoutMetadata';
 import {parseRtfToHtml} from './editorRtf';
 import {mergeDocumentContent} from './editorMerge';
-import {createEditor, createIdGenerator, systemClock, type Mark, type Block, getPlainText, applyMark, setAlign, setIndent, setParagraphStyle, setHeadingLevel, convertBlockToBlockquote, insertBlockquote, insertThematicBreak, insertParagraphAfter, splitBlock, mergeBlockWithPrevious, deleteBlock, convertBlockToList, convertListType, splitListItem, mergeListItemWithPrevious, insertTable as engineInsertTable, addTableRow, removeTableRow, addTableColumn, removeTableColumn, insertListItem, removeListItem, insertImageResource, insertImportedBlocksAtSelection, removeImage, setPageConfig, setMetadata, insertText, deleteText, replaceRange, exportPlainText, exportHtml as exportEngineHtml, exportMarkdown, importPlainText, importMarkdown} from '../../../packages/engine/src/index';
+import {createEditor, createIdGenerator, systemClock, type Mark, type Block, getPlainText, applyMark, setAlign, setIndent, setParagraphStyle, setHeadingLevel, convertBlockToBlockquote, insertBlockquote, insertThematicBreak, insertParagraphAfter, splitBlock, mergeBlockWithPrevious, deleteBlock, convertBlockToList, convertBlocksToList, convertListType, splitListItem, mergeListItemWithPrevious, insertTable as engineInsertTable, addTableRow, removeTableRow, addTableColumn, removeTableColumn, insertListItem, removeListItem, insertImageResource, insertImportedBlocksAtSelection, removeImage, setPageConfig, setMetadata, insertText, deleteText, replaceRange, exportPlainText, exportHtml as exportEngineHtml, exportMarkdown, importPlainText, importMarkdown} from '../../../packages/engine/src/index';
 import {deserializeNexusHtml,nexusDocumentFromHtml,serializeNexusHtml,syncNexusEngine,toggleEngineMarkForDomSelection,applyEngineMarksForDomSelection,removeEngineMarksForDomSelection,removeEngineLinkForDomSelection,restoreEngineDomSelection,getEngineDomContext,getEngineTextBlocks,htmlFromNexusDocument} from '../services/nexusEngineAdapter';
 import {decodeNexusDocument,encodeNexusDocument} from '../services/nexusDocumentPersistence';
 import {normalizeTextRange,wordDeletionRange} from './editorSelection';
@@ -415,7 +415,15 @@ export function Editor({document,versions,onSave,onClose,onConflict}:{document:D
    if(targets.some(item=>item.type!=='paragraph'&&item.type!=='heading')){setMessage('Este bloco não aceita conversão de parágrafo/título.');return false}
    return commitEngineCommands(targets.map(item=>setHeadingLevel({blockId:item.id,level})),'formatting')
   }
-  if(command==='insertUnorderedList'||command==='insertOrderedList'){const ordered=command==='insertOrderedList';if(context.list)return commitEngineCommands([convertListType({listId:context.list.id,ordered})]);if(top.type==='paragraph'||top.type==='heading')return commitEngineCommands([convertBlockToList({blockId:topId,ordered})]);setMessage('Selecione um parágrafo para convertê-lo em lista.');return false}
+  if(command==='insertUnorderedList'||command==='insertOrderedList'){
+   const ordered=command==='insertOrderedList';
+   if(context.list)return commitEngineCommands([convertListType({listId:context.list.id,ordered})]);
+   const doc=engine.getDocument(),selected=doc.content.slice(context.topLevelIndex,context.endTopLevelIndex+1);
+   if(selected.length>1&&selected.every(item=>item.type==='paragraph'||item.type==='heading'))
+    return commitEngineCommands([convertBlocksToList({blockIds:selected.map(item=>item.id),ordered})]);
+   if(top.type==='paragraph'||top.type==='heading')return commitEngineCommands([convertBlockToList({blockId:topId,ordered})]);
+   setMessage('Selecione parágrafos consecutivos para convertê-los em lista.');return false
+  }
   if(command==='insertHorizontalRule')return commitEngineCommands([insertThematicBreak({afterBlockId:topId})]);
   if(command==='insertParagraphAfter')return commitEngineCommands([insertParagraphAfter({blockId:topId})]);
   if(command==='splitBlock')return commitEngineCommands([splitBlock({blockId,offset:context.startOffset})]);
