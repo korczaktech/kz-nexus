@@ -115,6 +115,8 @@ function checkParagraphLike(
     }
     checkTextRun(run, `${path}.children[${index}]`, seen, issues, limits, counter, depth + 1);
   });
+  if (node.firstLineIndent !== undefined && (!Number.isFinite(node.firstLineIndent) || node.firstLineIndent < 0 || node.firstLineIndent > 200)) issues.push({ code: "INVALID_DOCUMENT", message: `First-line indent out of range at ${path}`, path });
+  if (node.hangingIndent !== undefined && (!Number.isFinite(node.hangingIndent) || node.hangingIndent < 0 || node.hangingIndent > 200)) issues.push({ code: "INVALID_DOCUMENT", message: `Hanging indent out of range at ${path}`, path });
   if (node.indent !== undefined && (!Number.isFinite(node.indent) || node.indent < 0 || node.indent > 720)) {
     issues.push({ code: "INVALID_DOCUMENT", message: `Indent out of range at ${path}`, path });
   }
