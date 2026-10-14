@@ -11,7 +11,7 @@ import type {
   Table,
   TextRun,
 } from "../model/types";
-import { KNOWN_BLOCK_TYPES, KNOWN_MARK_TYPES, isValidColor, isValidFontSize, isValidLink, type EngineLimits, DEFAULT_LIMITS } from "../schema/schema";
+import { KNOWN_BLOCK_TYPES, KNOWN_MARK_TYPES, isValidAnchorId, isValidColor, isValidFontSize, isValidLink, type EngineLimits, DEFAULT_LIMITS } from "../schema/schema";
 import { isValidId } from "../core/ids";
 import { EngineError, engineError } from "../errors/errors";
 import { err, ok, type Result } from "../utils/result";
@@ -99,7 +99,11 @@ function checkParagraphLike(
   counter.nodes += 1;
   counter.maxDepth = Math.max(counter.maxDepth, depth);
   checkId(node.id, path, seen, issues);
-  if (node.type === "paragraph" && node.anchorId !== undefined) checkId(node.anchorId, `${path}.anchorId`, seen, issues);
+  if (node.type === "paragraph" && node.anchorId !== undefined) {
+    if (!isValidAnchorId(node.anchorId)) issues.push({ code: "INVALID_DOCUMENT", message: `Invalid paragraph anchor ID at ${path}`, path });
+    else if (seen.has(node.anchorId)) issues.push({ code: "DUPLICATE_ID", message: `Duplicate paragraph anchor ID "${node.anchorId}" at ${path}`, path });
+    else seen.add(node.anchorId);
+  }
   if (!Array.isArray(node.children) || node.children.length === 0) {
     issues.push({ code: "INVALID_DOCUMENT", message: `Block must contain at least one text run at ${path}`, path });
     return;
