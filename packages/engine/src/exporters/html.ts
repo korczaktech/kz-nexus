@@ -26,16 +26,17 @@ export function renderTextRunsHtml(runs: TextRun[]): string {
 }
 
 function renderParagraph(block: Extract<Block, { type: "paragraph" | "heading" }>): string {
-  const styles = [block.align ? `text-align:${block.align}` : "", block.indent ? `margin-left:${block.indent}pt` : "", block.firstLineIndent ? `text-indent:${block.firstLineIndent}pt` : "", block.hangingIndent ? `padding-left:${block.hangingIndent}pt;text-indent:-${block.hangingIndent}pt` : "", block.spacingBefore ? `margin-top:${block.spacingBefore}pt` : "", block.spacingAfter ? `margin-bottom:${block.spacingAfter}pt` : "", block.lineSpacing ? `line-height:${block.lineSpacing}` : "", block.backgroundColor ? `background-color:${block.backgroundColor}` : "", block.borderColor && block.borderWidth ? `border:${block.borderWidth}pt solid ${block.borderColor}` : "", block.padding ? `padding:${block.padding}pt` : ""].filter(Boolean).join(";");
+  const styles = [block.editorObject?.kind === "textBox" ? "border:1px solid " + (block.editorObject.stroke || "#94a3b8") : "", block.editorObject?.kind === "note" ? "border-left:3px solid " + (block.editorObject.stroke || "#d97706") : "", block.editorObject?.fill ? `background-color:${block.editorObject.fill}` : "", block.editorObject?.width ? `width:${block.editorObject.width}pt` : "", block.editorObject?.height ? `min-height:${block.editorObject.height}pt` : "", block.align ? `text-align:${block.align}` : "", block.indent ? `margin-left:${block.indent}pt` : "", block.firstLineIndent ? `text-indent:${block.firstLineIndent}pt` : "", block.hangingIndent ? `padding-left:${block.hangingIndent}pt;text-indent:-${block.hangingIndent}pt` : "", block.spacingBefore ? `margin-top:${block.spacingBefore}pt` : "", block.spacingAfter ? `margin-bottom:${block.spacingAfter}pt` : "", block.lineSpacing ? `line-height:${block.lineSpacing}` : "", block.backgroundColor ? `background-color:${block.backgroundColor}` : "", block.borderColor && block.borderWidth ? `border:${block.borderWidth}pt solid ${block.borderColor}` : "", block.padding ? `padding:${block.padding}pt` : ""].filter(Boolean).join(";");
   const style = styles ? ' style="' + escapeHtml(styles) + '"' : "";
-  if (block.type === "paragraph") return "<p" + (block.anchorId ? ` id="${escapeHtml(block.anchorId)}"` : "") + style + ">" + renderTextRunsHtml(block.children) + "</p>";
-  return '<h' + block.level + ' id="' + escapeHtml(block.id) + '"' + style + ">" + renderTextRunsHtml(block.children) + "</h" + block.level + ">";
+  const objectAttrs = block.editorObject ? ` data-kz-object="${block.editorObject.kind}" data-kz-object-label="${escapeHtml(block.editorObject.label || "")}"${block.editorObject.shape ? ` data-kz-object-shape="${block.editorObject.shape}"` : ""}${block.editorObject.stroke ? ` data-kz-object-stroke="${escapeHtml(block.editorObject.stroke)}"` : ""}${block.editorObject.fill ? ` data-kz-object-fill="${escapeHtml(block.editorObject.fill)}"` : ""}` : "";
+  if (block.type === "paragraph") return "<p" + objectAttrs + (block.anchorId ? ` id="${escapeHtml(block.anchorId)}"` : "") + style + ">" + renderTextRunsHtml(block.children) + "</p>";
+  return '<h' + block.level + ' id="' + escapeHtml(block.id) + '"' + objectAttrs + style + ">" + renderTextRunsHtml(block.children) + "</h" + block.level + ">";
 }
 
 export function renderBlockHtml(block: Block, resources: ResourceRef[] = []): string {
   if (block.type === "paragraph" || block.type === "heading") return renderParagraph(block);
   if (block.type === "blockquote") return "<blockquote>" + block.children.map(child => renderParagraph(child)).join("") + "</blockquote>";
-  if (block.type === "thematicBreak") return "<hr>";
+  if (block.type === "thematicBreak") return block.kind === "pageBreak" ? '<div data-kz-page-break="true" style="break-before:page;page-break-before:always" aria-label="Quebra de página"></div>' : "<hr>";
   if (block.type === "bulletList" || block.type === "orderedList") {
     const tag = block.type === "bulletList" ? "ul" : "ol";
     const start = block.type === "orderedList" && block.start !== 1 ? ' start="' + block.start + '"' : "";
