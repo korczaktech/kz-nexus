@@ -36,6 +36,11 @@ export function isValidLink(value: string): boolean {
   return /^(?:https?:\/\/[^\s]+|mailto:[^\s@]+@[^\s@]+|#[A-Za-z][A-Za-z0-9_.:-]*)$/i.test(value);
 }
 
+/** Validates HTML anchor identifiers independently from engine-generated node IDs. */
+export function isValidAnchorId(value: unknown): value is string {
+  return typeof value === "string" && /^[A-Za-z][A-Za-z0-9_.:-]{0,127}$/.test(value);
+}
+
 /** Safety limits applied during validation and `.nsx` parsing (Section 9.7 / 19). */
 export interface EngineLimits {
   maxDocumentBytes: number;
