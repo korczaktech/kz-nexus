@@ -36,7 +36,7 @@ function renderParagraph(block: Extract<Block, { type: "paragraph" | "heading" }
 export function renderBlockHtml(block: Block, resources: ResourceRef[] = []): string {
   if (block.type === "paragraph" || block.type === "heading") return renderParagraph(block);
   if (block.type === "blockquote") return "<blockquote>" + block.children.map(child => renderParagraph(child)).join("") + "</blockquote>";
-  if (block.type === "thematicBreak") return block.kind === "pageBreak" ? '<div data-kz-page-break="true" style="break-before:page;page-break-before:always" aria-label="Quebra de página"></div>' : "<hr>";
+  if (block.type === "thematicBreak") return block.kind === "pageBreak" ? '<div data-kz-page-break="true" style="display:block;height:0;border-top:1px dashed #94a3b8;margin:12px 0;break-before:page;page-break-before:always" aria-label="Quebra de página"></div>' : "<hr>";
   if (block.type === "bulletList" || block.type === "orderedList") {
     const tag = block.type === "bulletList" ? "ul" : "ol";
     const start = block.type === "orderedList" && block.start !== 1 ? ' start="' + block.start + '"' : "";
