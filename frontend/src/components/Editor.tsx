@@ -328,11 +328,13 @@ export function Editor({document,versions,onSave,onClose,onConflict}:{document:D
   restoreEngineDomSelection(engine,root);
  }
  function handleCompositionEnd(){
-  compositionActive.current=false;
+  // Keep composition mode active through the browser's final input event.
+  // Some IMEs dispatch that event after compositionend.
   window.setTimeout(()=>{
    const engine=nexusEngineRef.current,root=editorRef.current;
-   if(!engine||!root)return;
+   if(!engine||!root){compositionActive.current=false;return}
    const html=sanitizeHtml(readEditorHtml());
+   compositionActive.current=false;
    if(!syncNexusEngine(engine,html,name)){
     writeEditorHtml(htmlFromNexusDocument(engine.getDocument()));
     paginateEditor();
