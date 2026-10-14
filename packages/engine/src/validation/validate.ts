@@ -124,6 +124,14 @@ function checkParagraphLike(
   if (node.spacingAfter !== undefined && (!Number.isFinite(node.spacingAfter) || node.spacingAfter < 0 || node.spacingAfter > 720)) issues.push({ code: "INVALID_DOCUMENT", message: `Spacing after out of range at ${path}`, path });
   if (node.lineSpacing !== undefined && (!Number.isFinite(node.lineSpacing) || node.lineSpacing < 0.5 || node.lineSpacing > 4)) issues.push({ code: "INVALID_DOCUMENT", message: `Line spacing out of range at ${path}`, path });
   if (node.backgroundColor !== undefined && !isValidColor(node.backgroundColor)) issues.push({ code: "INVALID_DOCUMENT", message: `Invalid paragraph background color at ${path}`, path });
+  if (node.editorObject) {
+    if (!["note", "textBox", "shape"].includes(node.editorObject.kind)) issues.push({ code: "INVALID_DOCUMENT", message: `Invalid editor object kind at ${path}`, path });
+    if (node.editorObject.label !== undefined && (typeof node.editorObject.label !== "string" || node.editorObject.label.length > 200)) issues.push({ code: "INVALID_DOCUMENT", message: `Invalid editor object label at ${path}`, path });
+    if (node.editorObject.shape !== undefined && !["rectangle", "ellipse", "triangle"].includes(node.editorObject.shape)) issues.push({ code: "INVALID_DOCUMENT", message: `Invalid editor object shape at ${path}`, path });
+    if (node.editorObject.stroke !== undefined && !isValidColor(node.editorObject.stroke)) issues.push({ code: "INVALID_DOCUMENT", message: `Invalid editor object stroke at ${path}`, path });
+    if (node.editorObject.fill !== undefined && !isValidColor(node.editorObject.fill)) issues.push({ code: "INVALID_DOCUMENT", message: `Invalid editor object fill at ${path}`, path });
+    for (const key of ["width", "height"] as const) if (node.editorObject[key] !== undefined && (!Number.isFinite(node.editorObject[key]) || node.editorObject[key]! < 1 || node.editorObject[key]! > 2000)) issues.push({ code: "INVALID_DOCUMENT", message: `Invalid editor object ${key} at ${path}`, path });
+  }
   if (node.borderColor !== undefined && !isValidColor(node.borderColor)) issues.push({ code: "INVALID_DOCUMENT", message: `Invalid paragraph border color at ${path}`, path });
   if (node.borderWidth !== undefined && (!Number.isFinite(node.borderWidth) || node.borderWidth < 0 || node.borderWidth > 20)) issues.push({ code: "INVALID_DOCUMENT", message: `Paragraph border width out of range at ${path}`, path });
   if (node.padding !== undefined && (!Number.isFinite(node.padding) || node.padding < 0 || node.padding > 100)) issues.push({ code: "INVALID_DOCUMENT", message: `Paragraph padding out of range at ${path}`, path });
