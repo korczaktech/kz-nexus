@@ -247,11 +247,15 @@ describe("native layout engine", () => {
       "nested golf hotel india juliet",
       "nested kilo lima mike november"
     ];
+    const p = (id: string, text: string) => ({
+      type: "paragraph" as const, id,
+      children: [{ type: "text" as const, id: id + "-run", text, marks: [] }]
+    });
     const list: Block = { type: "orderedList", id: "outer-list", start: 4, children: [
       { type: "listItem", id: "outer-item", children: [
-        paragraph("outer-p", "Outer item introduction"),
+        p("outer-p", "Outer item introduction"),
         { type: "bulletList", id: "inner-list", children: nestedTexts.map((text, index) => ({
-          type: "listItem" as const, id: "inner-item-" + index, children: [paragraph("inner-p-" + index, text)]
+          type: "listItem" as const, id: "inner-item-" + index, children: [p("inner-p-" + index, text)]
         })) }
       ] }
     ] };
@@ -264,7 +268,7 @@ describe("native layout engine", () => {
     const rendered = allNodes.filter(block => block.type === "paragraph").flatMap(block => block.lines.map(line => line.text)).join(" ");
     expect(fragments.length).toBeGreaterThan(1);
     expect(allNodes.some(block => block.blockId === "inner-list" && block.type === "bulletList")).toBe(true);
-    expect(rendered.replace(/\\s+/g, " ").trim()).toContain("Outer item introduction");
+    expect(rendered.replace(/\s+/g, " ").trim()).toContain("Outer item introduction");
     for (const text of nestedTexts) expect(rendered).toContain(text);
     expect(allNodes.filter(block => block.blockId === "outer-item" && block.marker).map(block => block.marker)).toEqual(["4."]);
     for (let index = 0; index < nestedTexts.length; index++) {
