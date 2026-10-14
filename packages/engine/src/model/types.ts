@@ -45,6 +45,11 @@ export interface Paragraph {
   spacingAfter?: number;
   /** Unitless line-height multiplier (0.5–4). */
   lineSpacing?: number;
+  /** Optional paragraph background and border styling. */
+  backgroundColor?: string;
+  borderColor?: string;
+  borderWidth?: number;
+  padding?: number;
   children: TextRun[];
 }
 
@@ -60,6 +65,11 @@ export interface Heading {
   spacingAfter?: number;
   /** Unitless line-height multiplier (0.5–4). */
   lineSpacing?: number;
+  /** Optional paragraph background and border styling. */
+  backgroundColor?: string;
+  borderColor?: string;
+  borderWidth?: number;
+  padding?: number;
   children: TextRun[];
 }
 
