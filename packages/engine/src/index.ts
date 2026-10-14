@@ -32,6 +32,10 @@ export type { EngineErrorCode } from "./errors/errors";
 export { ok, err, isOk, isErr, unwrap } from "./utils/result";
 export type { Result } from "./utils/result";
 
+// Native layout and pagination
+export { layoutDocument } from "./layout/layout";
+export type { LayoutOptions, LayoutRect, LayoutLine, LayoutBlock, LayoutPage, LayoutResult, TextMetrics } from "./layout/layout";
+
 // Selection
 export { isCollapsed, collapsedAt, orderedRange } from "./selection/selection";
 export type { Position, Selection } from "./selection/selection";
