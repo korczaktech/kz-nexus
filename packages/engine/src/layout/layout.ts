@@ -33,12 +33,24 @@ export interface LayoutTextRun {
   width: number;
 }
 export interface LayoutLine { text: string; x: number; y: number; width: number; height: number; startOffset: number; endOffset: number; align?: Alignment; runs?: LayoutTextRun[] }
+export interface LayoutBlockStyle {
+  backgroundColor?: string;
+  borderColor?: string;
+  borderWidth?: number;
+  padding?: number;
+  align?: Alignment;
+}
 export interface LayoutBlock {
   blockId: string;
-  type: Block["type"];
+  type: Block["type"] | "listItem";
   pageIndex: number;
   rect: LayoutRect;
   lines: LayoutLine[];
+  children?: LayoutBlock[];
+  marker?: string;
+  depth?: number;
+  quote?: boolean;
+  style?: LayoutBlockStyle;
   table?: { rows: Array<{ rowId: string; rect: LayoutRect; cells: Array<{ cellId: string; rect: LayoutRect; lines: LayoutLine[] }> }> };
   continued?: boolean;
 }
