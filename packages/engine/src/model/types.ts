@@ -40,6 +40,11 @@ export interface Paragraph {
   align?: Alignment;
   /** Left paragraph indent in points. */
   indent?: number;
+  /** Spacing before and after the paragraph in points. */
+  spacingBefore?: number;
+  spacingAfter?: number;
+  /** Unitless line-height multiplier (0.5–4). */
+  lineSpacing?: number;
   children: TextRun[];
 }
 
