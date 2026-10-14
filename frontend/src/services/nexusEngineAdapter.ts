@@ -36,10 +36,11 @@ function marksFor(element: Element, inherited: Mark[]): Mark[] {
   if (tag === "sup") add({ type: "superscript" });
   if (tag === "sub") add({ type: "subscript" });
   if (tag === "a") { const href = element.getAttribute("href") ?? ""; if (isValidLink(href)) add({ type: "link", value: href }); }
-  if (tag === "span") { const comment = element.getAttribute("data-kz-comment"); if (comment && comment.trim().length <= 2000) add({ type: "comment", value: comment }); }
+  const comment = tag === "span" ? element.getAttribute("data-kz-comment") : null;
+  if (comment && comment.trim().length <= 2000) add({ type: "comment", value: comment });
   const style = (element as HTMLElement).style;
   if (style.color) add({ type: "color", value: style.color });
-  if (style.backgroundColor) add({ type: "highlight", value: style.backgroundColor });
+  if (style.backgroundColor && !comment) add({ type: "highlight", value: style.backgroundColor });
   if (style.fontSize) {
     const size = Number.parseFloat(style.fontSize);
     if (Number.isFinite(size) && size > 0 && size <= 200) add({ type: "fontSize", value: size });
