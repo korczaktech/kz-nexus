@@ -1,5 +1,5 @@
 import type { Paragraph } from "../model/types";
-import { findParagraphLike, mapParagraphLike } from "../model/tree";
+import { findParagraphLike, updateParagraphLike } from "../model/tree";
 import { engineError } from "../errors/errors";
 import { err, ok } from "../utils/result";
 import type { Command } from "./types";
@@ -16,7 +16,7 @@ export function updateEditorObject(params: { blockId: string; patch: EditorObjec
     if (next.label !== undefined && next.label.length > 200) return err(engineError("INVALID_DOCUMENT", "Object label must be at most 200 characters", { path: params.blockId }));
     if (next.width !== undefined && (!Number.isFinite(next.width) || next.width < 1 || next.width > 2000)) return err(engineError("INVALID_DOCUMENT", "Object width must be between 1 and 2000 points", { path: params.blockId }));
     if (next.height !== undefined && (!Number.isFinite(next.height) || next.height < 1 || next.height > 2000)) return err(engineError("INVALID_DOCUMENT", "Object height must be between 1 and 2000 points", { path: params.blockId }));
-    const content = mapParagraphLike(doc.content, node => node.id === params.blockId ? { ...node, editorObject: next } : node);
+    const content = updateParagraphLike(doc.content, params.blockId, node => node.id === params.blockId ? { ...node, editorObject: next } : node).blocks;
     return ok({ document: { ...doc, content } });
   };
 }
