@@ -130,7 +130,7 @@ function blockTextLayout(block: Paragraph | Heading, x: number, y: number, width
   block.children.forEach((run, runIndex) => {
     const sizeMark = run.marks.find(mark => mark.type === "fontSize");
     const familyMark = run.marks.find(mark => mark.type === "fontFamily");
-    const fontSize = sizeMark && sizeMark.type === "fontSize" ? Math.max(1, sizeMark.value) : fallbackSize;
+    const fontSize = sizeMark && sizeMark.type === "fontSize" ? Math.max(1, sizeMark.value * 0.75) : fallbackSize;
     const fontFamily = familyMark && familyMark.type === "fontFamily" ? familyMark.value : familyFallback;
     for (let i = 0; i < run.text.length; i++) charStyle.push({ runIndex, fontSize, fontFamily });
   });
