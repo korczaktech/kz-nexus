@@ -1,5 +1,5 @@
 import type { Mark, MarkType, NexusDocument, TextRun } from "../model/types";
-import { findParagraphLike, getPlainText, mapParagraphLike } from "../model/tree";
+import { findParagraphLike, getPlainText, updateParagraphLike } from "../model/tree";
 import { engineError } from "../errors/errors";
 import { isValidColor, isValidFontSize, isValidLink } from "../schema/schema";
 import { err, ok } from "../utils/result";
@@ -52,9 +52,9 @@ function runCommand(blockId: string, start: number, end: number, transform: (mar
     if (start < 0 || end > length || start > end) {
       return err(engineError("INVALID_POSITION", `Invalid range [${start}, ${end}]`, { path: blockId }));
     }
-    const content = mapParagraphLike(doc.content, (n) =>
+    const content = updateParagraphLike(doc.content, blockId, (n) =>
       n.id === blockId ? { ...n, children: applyToRange(n.children, start, end, transform, generateId) } : n,
-    );
+    ).blocks;
     return ok({ document: { ...doc, content } });
   };
 }
