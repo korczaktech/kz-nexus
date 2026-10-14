@@ -19,11 +19,9 @@ type CanvasPageProps = {
 function markedFont(marks: Mark[], fontSize: number, fontFamily: string): string {
   const weight = marks.some(mark => mark.type === "bold") ? "700" : "400";
   const italic = marks.some(mark => mark.type === "italic") ? "italic " : "";
-  const size = marks.some(mark => mark.type === "superscript" || mark.type === "subscript")
-    ? fontSize * 0.75
-    : marks.find(mark => mark.type === "fontSize")?.type === "fontSize"
-      ? (marks.find(mark => mark.type === "fontSize") as Extract<Mark, { type: "fontSize" }>).value * 0.75
-      : fontSize;
+  const fontSizeMark = marks.find((mark): mark is Extract<Mark, { type: "fontSize" }> => mark.type === "fontSize");
+  const isScript = marks.some(mark => mark.type === "superscript" || mark.type === "subscript");
+  const size = isScript ? fontSize * 0.75 : fontSizeMark ? fontSizeMark.value * 0.75 : fontSize;
   const family = marks.find(mark => mark.type === "fontFamily");
   return `${italic}${weight} ${size * PT_TO_CSS_PX}px ${family?.type === "fontFamily" ? family.value : fontFamily}`;
 }
@@ -33,29 +31,27 @@ function markColor(marks: Mark[]): string {
   return color?.type === "color" ? color.value : DEFAULT_TEXT;
 }
 
-function textWidth(ctx: CanvasRenderingContext2D, line: LayoutLine): number {
-  if (!line.runs?.length) return ctx.measureText(line.text).width;
-  return line.runs.reduce((sum, run) => {
-    ctx.font = markedFont(run.marks, run.fontSize, run.fontFamily);
-    return sum + ctx.measureText(run.text).width;
-  }, 0);
-}
-
 function drawLine(ctx: CanvasRenderingContext2D, line: LayoutLine): void {
   const runs = line.runs?.length ? line.runs : [{
     text: line.text, fontSize: 11, fontFamily: "Arial", marks: [] as Mark[], width: line.width,
   }];
-  const totalWidth = textWidth(ctx, line);
+  // Measure each run once; alignment and drawing share the same measurements.
+  const widths = runs.map(run => {
+    ctx.font = markedFont(run.marks, run.fontSize, run.fontFamily);
+    return ctx.measureText(run.text).width;
+  });
+  const totalWidth = widths.reduce((sum, width) => sum + width, 0);
   const availableWidth = Math.max(0, line.width * PT_TO_CSS_PX);
   let x = line.x * PT_TO_CSS_PX;
   if (line.align === "center") x += Math.max(0, (availableWidth - totalWidth) / 2);
   else if (line.align === "end") x += Math.max(0, availableWidth - totalWidth);
   const top = line.y * PT_TO_CSS_PX;
   const baseline = top + Math.min(line.height * PT_TO_CSS_PX * 0.82, line.height * PT_TO_CSS_PX - 1);
-  for (const run of runs) {
+  for (let index = 0; index < runs.length; index += 1) {
+    const run = runs[index];
+    const width = widths[index];
     ctx.font = markedFont(run.marks, run.fontSize, run.fontFamily);
     ctx.textBaseline = "alphabetic";
-    const width = ctx.measureText(run.text).width;
     const highlight = run.marks.find(mark => mark.type === "highlight");
     const comment = run.marks.find(mark => mark.type === "comment");
     if (highlight?.type === "highlight") {
