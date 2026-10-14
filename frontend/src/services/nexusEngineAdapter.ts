@@ -117,7 +117,7 @@ function makeParagraph(node: Element, type: "paragraph" | "heading" = "paragraph
   const objectShape = node.getAttribute("data-kz-object-shape");
   const objectLabel = node.getAttribute("data-kz-object-label") || undefined;
   const objectStroke = cssColorToHex(node.getAttribute("data-kz-object-stroke") || "");
-  const objectFill = cssColorToHex(node.getAttribute("data-kz-object-fill") || "");
+  const objectFill = cssColorToHex(node.getAttribute("data-kz-object-fill") || "");\n  const objectWidth = Number(node.getAttribute("data-kz-object-width"));\n  const objectHeight = Number(node.getAttribute("data-kz-object-height"));
   const editorObject = (["note", "textBox", "shape"].includes(objectKind || "") ? {
     kind: objectKind as "note" | "textBox" | "shape",
     ...(objectLabel ? { label: objectLabel } : {}),
@@ -212,7 +212,7 @@ function sanitizeImportedHtml(parsed: Document): void {
       }
       if (name === "data-kz-comment") { if (element.tagName.toLowerCase() !== "span" || !attribute.value.trim() || attribute.value.length > 2000) element.removeAttribute(attribute.name); continue; }
       if (name === "data-kz-page-break") { if (element.tagName.toLowerCase() !== "div" || attribute.value !== "true") element.removeAttribute(attribute.name); continue; }
-      if (["data-kz-object", "data-kz-object-label", "data-kz-object-shape", "data-kz-object-stroke", "data-kz-object-fill"].includes(name)) {
+      if (["data-kz-object", "data-kz-object-label", "data-kz-object-shape", "data-kz-object-stroke", "data-kz-object-fill", "data-kz-object-width", "data-kz-object-height"].includes(name)) {
         const validObject = element.tagName.toLowerCase() === "p" || /^h[1-6]$/.test(element.tagName.toLowerCase());
         const validValue = name !== "data-kz-object" || ["note", "textBox", "shape"].includes(attribute.value);
         const validShape = name !== "data-kz-object-shape" || ["rectangle", "ellipse", "triangle"].includes(attribute.value);
