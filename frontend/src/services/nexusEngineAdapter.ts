@@ -91,6 +91,8 @@ function makeParagraph(node: Element, type: "paragraph" | "heading" = "paragraph
     ? { align: align === "left" ? "start" as const : align === "right" ? "end" as const : align as "start" | "end" | "center" | "justify" }
     : {};
   const indentation = indent !== undefined ? { indent } : {};
+  const rawAnchorId = node.getAttribute("id");
+  const anchor = type === "paragraph" && rawAnchorId && isValidId(rawAnchorId) ? { anchorId: rawAnchorId } : {};
   const css = (node as HTMLElement).style;
   const toPoints = (value: string): number | undefined => { if (!value) return undefined; const number = Number.parseFloat(value); if (!Number.isFinite(number) || number < 0) return undefined; return value.trim().endsWith("pt") ? number : value.trim().endsWith("px") ? number * 0.75 : number; };
   const spacingBefore = toPoints(css.marginTop);
@@ -109,7 +111,7 @@ function makeParagraph(node: Element, type: "paragraph" | "heading" = "paragraph
     const level = Math.min(6, Math.max(1, Number(node.tagName.slice(1)) || 1)) as 1 | 2 | 3 | 4 | 5 | 6;
     return { type: "heading", id: nextId(), level, ...alignment, ...indentation, ...spacing, children: runs };
   }
-  return { type: "paragraph", id: nextId(), ...alignment, ...indentation, ...spacing, children: runs };
+  return { type: "paragraph", id: nextId(), ...alignment, ...indentation, ...anchor, ...spacing, children: runs };
 }
 
 function listBlock(element: Element): Extract<Block, { type: "bulletList" | "orderedList" }> {
@@ -151,6 +153,10 @@ function sanitizeImportedHtml(parsed: Document): void {
       }
       if (name === "href") {
         if (element.tagName.toLowerCase() !== "a" || !isValidLink(attribute.value)) element.removeAttribute(attribute.name);
+        continue;
+      }
+      if (name === "id") {
+        if (!isValidId(attribute.value)) element.removeAttribute(attribute.name);
         continue;
       }
       if (name === "src") {
@@ -563,8 +569,8 @@ function blockShape(block: Block): unknown {
     }
     return groups;
   };
-  if (block.type === "paragraph") return ["paragraph", block.align ?? null, block.indent ?? null, marksShape(block.children)];
-  if (block.type === "heading") return ["heading", block.level, block.align ?? null, block.indent ?? null, marksShape(block.children)];
+  if (block.type === "paragraph") return ["paragraph", block.align ?? null, block.indent ?? null, block.anchorId ?? null, block.spacingBefore ?? null, block.spacingAfter ?? null, block.lineSpacing ?? null, block.backgroundColor ?? null, block.borderColor ?? null, block.borderWidth ?? null, block.padding ?? null, marksShape(block.children)];
+  if (block.type === "heading") return ["heading", block.level, block.align ?? null, block.indent ?? null, block.spacingBefore ?? null, block.spacingAfter ?? null, block.lineSpacing ?? null, block.backgroundColor ?? null, block.borderColor ?? null, block.borderWidth ?? null, block.padding ?? null, marksShape(block.children)];
   if (block.type === "blockquote") return ["blockquote", block.children.map(blockShape)];
   if (block.type === "bulletList" || block.type === "orderedList") return [block.type, block.type === "orderedList" ? block.start : null, block.children.map(item => item.children.map(child => blockShape(child as Block)))];
   if (block.type === "table") return ["table", block.children.map(row => row.children.map(cell => cell.children.map(blockShape)))];
