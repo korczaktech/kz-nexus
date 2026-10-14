@@ -2,8 +2,9 @@ import { describe, expect, it } from "vitest";
 import { createIdGenerator } from "../core/ids";
 import { createFixedClock } from "../core/clock";
 import { createDocument } from "./document";
-import { convertBlockToList, convertListType, insertList, insertListItem, splitListItem, mergeListItemWithPrevious, removeListItem } from "./list";
+import { convertBlockToList, convertBlocksToList, convertListType, insertList, insertListItem, splitListItem, mergeListItemWithPrevious, removeListItem } from "./list";
 import { insertText } from "./text";
+import { insertParagraphAfter } from "./block";
 import type { BulletList, OrderedList, Paragraph } from "../model/types";
 import { validateDocument } from "../validation/validate";
 
@@ -29,6 +30,29 @@ describe("convertBlockToList", () => {
     expect(list.type).toBe("bulletList");
     expect(list.children[0].children[0].id).toBe(paragraph.id);
     expect((list.children[0].children[0] as Paragraph).children.map(run => run.text).join("")).toBe("Preserved text");
+    expect(validateDocument(converted.value.document).ok).toBe(true);
+  });
+});
+
+describe("convertBlocksToList", () => {
+  it("converts consecutive selected paragraphs into one list and preserves text", () => {
+    const d = base();
+    const first = d.content[0] as Paragraph;
+    const secondResult = insertParagraphAfter({ blockId: first.id })(d, ctx());
+    if (!secondResult.ok) throw secondResult.error;
+    const withText = insertText({ blockId: first.id, offset: 0, text: "first" })(secondResult.value.document, ctx());
+    if (!withText.ok) throw withText.error;
+    const second = withText.value.document.content[1] as Paragraph;
+    const withSecondText = insertText({ blockId: second.id, offset: 0, text: "second" })(withText.value.document, ctx());
+    if (!withSecondText.ok) throw withSecondText.error;
+    const converted = convertBlocksToList({ blockIds: [first.id, second.id], ordered: false })(withSecondText.value.document, ctx());
+    expect(converted.ok).toBe(true);
+    if (!converted.ok) return;
+    expect(converted.value.document.content).toHaveLength(1);
+    const list = converted.value.document.content[0] as BulletList;
+    expect(list.children).toHaveLength(2);
+    expect((list.children[0]!.children[0] as Paragraph).children.map(run => run.text).join("")).toBe("first");
+    expect((list.children[1]!.children[0] as Paragraph).children.map(run => run.text).join("")).toBe("second");
     expect(validateDocument(converted.value.document).ok).toBe(true);
   });
 });
