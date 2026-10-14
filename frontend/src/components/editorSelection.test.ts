@@ -16,6 +16,18 @@ describe('Kortex editor selection helpers',()=>{
     expect(characterDeletionRange('A😀B',0,'backward')).toEqual({start:0,end:0});
     expect(characterDeletionRange('A😀B',4,'forward')).toEqual({start:4,end:4});
   });
+  it('deletes a combining sequence as one visible character',()=>{
+    const text='Ae\u0301B';
+    expect(characterDeletionRange(text,3,'backward')).toEqual({start:1,end:3});
+    expect(characterDeletionRange(text,1,'forward')).toEqual({start:1,end:3});
+  });
+  it('deletes joined emoji and flags as single grapheme clusters',()=>{
+    const family='👨‍👩‍👧‍👦';
+    expect(characterDeletionRange('A'+family+'B',1,'forward')).toEqual({start:1,end:1+family.length});
+    expect(characterDeletionRange('A'+family+'B',1+family.length,'backward')).toEqual({start:1,end:1+family.length});
+    const flag='🇧🇷';
+    expect(characterDeletionRange(flag,flag.length,'backward')).toEqual({start:0,end:flag.length});
+  });
   it('deletes the preceding word and its separating whitespace',()=>{
     expect(wordDeletionRange('um texto aqui',8,'backward')).toEqual({start:3,end:8});
     expect(wordDeletionRange('palavra   ',10,'backward')).toEqual({start:0,end:10});
