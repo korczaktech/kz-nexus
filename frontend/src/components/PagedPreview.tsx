@@ -24,6 +24,8 @@ function runStyle(marks:Mark[],fontSize:number,fontFamily:string):CSSProperties{
     else if(mark.type==='highlight')style.backgroundColor=mark.value;
     else if(mark.type==='fontSize')style.fontSize=px(mark.value*.75);
     else if(mark.type==='fontFamily')style.fontFamily=mark.value;
+    else if(mark.type==='link'){style.color='#0563c1';style.textDecoration=[style.textDecoration,'underline'].filter(Boolean).join(' ')}
+    else if(mark.type==='comment'){style.backgroundColor='#fef3c7';style.borderBottom='2px dotted #d97706'}
   }
   return style;
 }
