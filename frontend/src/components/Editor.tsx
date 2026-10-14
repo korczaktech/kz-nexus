@@ -318,7 +318,7 @@ export function Editor({document,versions,onSave,onClose,onConflict}:{document:D
   }
  }
  function handleEditorInput(){
-  if(compositionActive.current){syncEditor();return}
+  if(compositionActive.current){paginateEditor();return}
   const engine=nexusEngineRef.current,root=editorRef.current;
   if(!engine||!root)return;
   // Input events not translated to engine commands must never become persisted
@@ -348,7 +348,7 @@ export function Editor({document,versions,onSave,onClose,onConflict}:{document:D
    restoreEngineDomSelection(engine,root);
   },0);
  }
- function syncEditor(){paginateEditor();const html=sanitizeHtml(readEditorHtml());const engine=nexusEngineRef.current;if(engine&&syncNexusEngine(engine,html,name))markDirty(html,false)}
+ function syncEditor(){paginateEditor()}
  function focusEditor(){const active=window.getSelection()?.anchorNode?.parentElement?.closest<HTMLElement>('.rich-editor');if(active&&editorRef.current?.contains(active))return;editorRef.current?.querySelector<HTMLElement>('.rich-editor:last-of-type')?.focus()}
  const [selectedImageId,setSelectedImageId]=useState('');
  const lastDomRangeRef=useRef<Range|null>(null);
