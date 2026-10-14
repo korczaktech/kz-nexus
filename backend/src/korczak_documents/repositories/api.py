@@ -141,8 +141,8 @@ async def update_document(document_id: str, changes: dict):
     return await get_document(document_id)
 
 
-async def create_version(document_id: str, author_id: str, content: str | None, number: int):
-    version = {"id": str(uuid4()), "document_id": document_id, "version_number": number, "author_id": author_id, "content": content, "created_at": now()}
+async def create_version(document_id: str, author_id: str, content: str | None, number: int, native_content: str | None = None):
+    version = {"id": str(uuid4()), "document_id": document_id, "version_number": number, "author_id": author_id, "content": content, "native_content": native_content, "created_at": now()}
     await get_database()["versoes"].insert_one(version)
     await update_document(document_id, {"current_version_id": version["id"]})
     return version
@@ -153,7 +153,7 @@ async def save_document(document_id: str, author_id: str, data: dict, base_versi
     if not current or current.get("current_version_id") != base_version_id:
         return None
     version_number=await _next_version_number(document_id)
-    version={"id":str(uuid4()),"document_id":document_id,"version_number":version_number,"author_id":author_id,"content":data.get("content"),"created_at":now()}
+    version={"id":str(uuid4()),"document_id":document_id,"version_number":version_number,"author_id":author_id,"content":data.get("content"),"native_content":data.get("native_content"),"created_at":now()}
     await versions.insert_one(version)
     result=await documents.update_one({"id":document_id,"current_version_id":base_version_id},{"$set":{"name":data["name"].strip(),"document_type":data["document_type"].strip(),"current_version_id":version["id"],"updated_at":now()}})
     if result.modified_count != 1:
