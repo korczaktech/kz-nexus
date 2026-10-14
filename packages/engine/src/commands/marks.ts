@@ -31,8 +31,9 @@ function hasMarkType(marks: Mark[], type: MarkType): boolean {
 
 function applyToRange(runs: TextRun[], start: number, end: number, transform: (marks: Mark[]) => Mark[], generateId: () => string): TextRun[] {
   if (start === end) return runs;
-  const { before } = splitRunsAt(runs, start, generateId);
-  const afterStart = splitRunsAt(runs, start, generateId).after;
+  const splitAtStart = splitRunsAt(runs, start, generateId);
+  const before = splitAtStart.before;
+  const afterStart = splitAtStart.after;
   const relativeEnd = end - start;
   const { before: middle, after: tail } = splitRunsAt(afterStart, relativeEnd, generateId);
   const transformedMiddle = middle.map((run) => ({ ...run, marks: transform(run.marks) }));
