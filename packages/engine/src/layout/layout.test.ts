@@ -277,6 +277,17 @@ describe("native layout engine", () => {
     expect(allNodes.every(block => block.rect.y + block.rect.height <= result.pages[block.pageIndex]!.content.y + result.pages[block.pageIndex]!.content.height + 0.001)).toBe(true);
   });
 
+  it("treats a native page-break block as a structural page boundary", () => {
+    const result = layoutDocument(documentWith([
+      paragraph("before", "Before"),
+      { type: "thematicBreak", id: "page-break", kind: "pageBreak" },
+      paragraph("after", "After"),
+    ]), { metrics });
+    expect(result.pageCount).toBe(2);
+    expect(result.pages[0]!.blocks.some(block => block.blockId === "before")).toBe(true);
+    expect(result.pages[1]!.blocks.some(block => block.blockId === "after")).toBe(true);
+  });
+
   it("reports invalid page geometry and safely uses a default page", () => {
     const invalid = { unit: "pt" as const, width: 100, height: 100, orientation: "portrait" as const, margins: { top: 80, right: 80, bottom: 80, left: 80 } };
     const result = layoutDocument(documentWith([paragraph("p", "fallback")], invalid), { metrics });
