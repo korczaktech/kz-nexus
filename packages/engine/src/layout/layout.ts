@@ -331,8 +331,13 @@ export function layoutDocument(document: NexusDocument, options: LayoutOptions =
   };
   const isForced = new Set(options.breakBefore || []);
   document.content.forEach((block, blockIndex) => {
-    if (blockIndex > 0 && isForced.has(block.id)) nextPage();
+    if (blockIndex > 0 && (isForced.has(block.id) || ((block.type === "paragraph" || block.type === "heading") && (block as { pageBreakBefore?: boolean }).pageBreakBefore))) nextPage();
     if (block.type === "thematicBreak") {
+      if (block.kind === "pageBreak") {
+        if (blockIndex > 0 || cursorY > content.y) nextPage();
+        addBlock(block, { x: content.x, y: cursorY, width: content.width, height: 0 }, []);
+        return;
+      }
       const h = 1;
       if (cursorY + h > content.y + content.height) nextPage();
       addBlock(block, { x: content.x, y: cursorY, width: content.width, height: h }, []);
