@@ -38,8 +38,8 @@ segurança do Kortex.
 - Ao salvar, a API persiste o envelope `.nsx` em `native_content` na mesma versão
   que o HTML de compatibilidade. A resposta mantém `content` para visualizadores,
   integrações e versões antigas do cliente.
-- O histórico de versões grava e restaura os dois campos, permitindo recuperar o
-  modelo nativo junto com sua projeção HTML.
+- O histórico de versões grava e restaura os dois campos, permitindo recuperar
+  o modelo nativo junto com sua projeção HTML.
 - O histórico de desfazer/refazer de compatibilidade mantém snapshots `.nsx` do
   `NexusDocument`, não snapshots HTML. Ao restaurar um snapshot nativo, o editor
   carrega o modelo e regenera a projeção visual. Snapshots HTML antigos ainda são
@@ -111,7 +111,6 @@ artificial. O leitor rejeita versões futuras e mantém erros explícitos quando
 migração necessária não está registrada. Quando a versão 2 for definida, o marco de
 migração deverá incluir fixtures reais da versão 1 e expectativas do documento migrado.
 
-
 ## Validação integral da persistência — marco 11
 
 A fronteira de persistência nativa ganhou cobertura explícita para as classes de
@@ -134,7 +133,6 @@ de células, redimensionamento e movimentação de imagens, paginação e persis
 após recarregar. Esses cenários não devem ser declarados aprovados apenas porque
 a suíte automatizada passa.
 
-
 ## Política de eventos de composição IME — marco 12
 
 A decisão de tratar um evento como parte da composição foi extraída para
@@ -151,6 +149,19 @@ nem a ordem específica de eventos de cada navegador. A reconciliação final da
 composição e a preservação de cursor/seleção ainda exigem validação manual em
 navegadores e dispositivos reais; este marco não declara o IME integralmente
 resolvido.
+
+## Exclusão segura de grafemas Unicode — marco 13
+
+A exclusão de um caractere foi ampliada para respeitar clusters de grafemas, usando
+`Intl.Segmenter` quando disponível. Isso evita separar marcas combinantes (como
+uma letra acentuada construída por dois code points), emojis formados por
+sequências ZWJ, modificadores e bandeiras. Em runtimes antigos, o fallback mantém
+ao menos a proteção contra separar pares substitutos UTF-16.
+
+Os testes cobrem caracteres suplementares, sequências combinantes, família emoji,
+bandeira e os limites do texto. A lógica opera sobre offsets UTF-16 compatíveis com
+a seleção DOM, mas a validação de integração continua dependendo da CI e de teste
+manual do cursor em navegador.
 
 ## Limite conhecido
 
