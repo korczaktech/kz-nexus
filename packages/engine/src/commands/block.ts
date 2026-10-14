@@ -293,11 +293,11 @@ export function insertBlockquote(params: { afterBlockId: string }): Command {
   };
 }
 
-export function insertThematicBreak(params: { afterBlockId: string }): Command {
+export function insertThematicBreak(params: { afterBlockId: string; kind?: "rule" | "pageBreak" }): Command {
   return (doc, ctx) => {
     const index = findTopLevelIndex(doc.content, params.afterBlockId);
     if (index === -1) return err(engineError("NODE_NOT_FOUND", `Top-level block "${params.afterBlockId}" not found`, { path: params.afterBlockId }));
-    const block: Block = { type: "thematicBreak", id: ctx.generateId() };
+    const block: Block = { type: "thematicBreak", id: ctx.generateId(), ...(params.kind ? { kind: params.kind } : {}) };
     const content = [...doc.content];
     content.splice(index + 1, 0, block);
     return ok({ document: { ...doc, content } });
