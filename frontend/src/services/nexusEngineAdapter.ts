@@ -148,6 +148,7 @@ function sanitizeImportedHtml(parsed: Document): void {
             property === "font-size" ? /^(?:\d+(?:\.\d+)?)(?:px|pt|em|rem|%)$/i.test(value) && Number.parseFloat(value) > 0 && Number.parseFloat(value) <= 200 :
             property === "font-family" ? /^[\w\s,'"()-]{1,120}$/.test(value) :
             property === "text-align" ? /^(?:left|right|center|justify|start|end)$/i.test(value) :
+            property === "line-height" ? /^(?:\d+(?:\.\d+)?)(?:px|pt|em|rem|%)?$/i.test(value) && Number.parseFloat(value) >= 0.5 && Number.parseFloat(value) <= 4 :
             /^(?:\d+(?:\.\d+)?)(?:px|pt|mm|cm|in|%)$/i.test(value)
           );
           if (!valid) style.removeProperty(property);
