@@ -45,7 +45,7 @@ describe("SmartCanvas layout hit testing", () => {
   });
 
   it("uses host text metrics for a stable caret offset", () => {
-    const target = hitTestLayout(layout, 0, 35, 25, {
+    const target = hitTestLayout(layout, 0, 24, 25, {
       measureText: text => text.length * 10,
     });
     expect(target).toMatchObject({ kind: "text", position: { blockId: "paragraph-1", offset: 1 } });
