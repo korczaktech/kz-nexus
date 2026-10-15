@@ -107,6 +107,8 @@ export class Editor {
       }
     }
     this.selection = selection;
+    const selectionBlockId = selection && selection.anchor.blockId === selection.focus.blockId ? selection.anchor.blockId : undefined;
+    if (this.storedMarksBlockId && selectionBlockId !== this.storedMarksBlockId) this.clearStoredMarks();
     this.emitter.emit("selectionChanged", { selection });
     return ok(undefined);
   }
@@ -118,6 +120,35 @@ export class Editor {
       active: this.storedMarks.map((mark) => ({ ...mark })),
       disabled: [...this.disabledStoredMarks],
     };
+  }
+
+  /** Queries whether a mark is active in the current engine selection. */
+  isMarkActiveAtSelection(type: MarkType): boolean {
+    const selection = this.selection;
+    if (!selection || selection.anchor.blockId !== selection.focus.blockId) return false;
+    const blockId = selection.anchor.blockId;
+    const start = Math.min(selection.anchor.offset, selection.focus.offset);
+    const end = Math.max(selection.anchor.offset, selection.focus.offset);
+    const block = findParagraphLike(this.document.content, blockId);
+    if (!block) return false;
+    if (start === end) {
+      if (this.storedMarksBlockId === blockId) {
+        if (this.storedMarks.some((mark) => mark.type === type)) return true;
+        if (this.disabledStoredMarks.includes(type)) return false;
+      }
+      return this.markAtPosition(block.children, start, type);
+    }
+    let offset = 0;
+    let sawText = false;
+    for (const run of block.children) {
+      const runStart = offset;
+      const runEnd = offset + run.text.length;
+      offset = runEnd;
+      if (runEnd <= start || runStart >= end) continue;
+      sawText = true;
+      if (!run.marks.some((mark) => mark.type === type)) return false;
+    }
+    return sawText;
   }
 
   /** Toggles an inline mark at a collapsed engine selection, or on selected text. */
