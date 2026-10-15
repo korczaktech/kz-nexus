@@ -1,6 +1,8 @@
-import type { NexusDocument, ResourceRef } from "../model/types";
+import type { Mark, MarkType, NexusDocument, ResourceRef } from "../model/types";
 import type { Selection } from "../selection/selection";
 import { findParagraphLike, getPlainText } from "../model/tree";
+import { toggleMark as toggleMarkCommand } from "../commands/marks";
+import { insertText, replaceRange } from "../commands/text";
 import type { Command } from "../commands/types";
 import { applyTransaction } from "../transactions/transaction";
 import { HistoryManager, type HistoryGroup, type HistoryOptions } from "../history/history";
@@ -56,6 +58,10 @@ export interface ExecOptions {
 export class Editor {
   private document: NexusDocument;
   private selection: Selection | undefined;
+  /** Pending inline formatting belongs to the engine, never to the UI. */
+  private storedMarks: Mark[] = [];
+  private disabledStoredMarks: MarkType[] = [];
+  private storedMarksBlockId: string | undefined;
   private readonly history: HistoryManager;
   private readonly emitter = new TypedEmitter<EditorEvents>();
   private readonly generateId: IdGenerator;
@@ -103,6 +109,121 @@ export class Editor {
     this.selection = selection;
     this.emitter.emit("selectionChanged", { selection });
     return ok(undefined);
+  }
+
+  /** Returns the engine-owned inline formatting state for subsequent typing. */
+  getStoredMarkState(): { blockId?: string; active: Mark[]; disabled: MarkType[] } {
+    return {
+      blockId: this.storedMarksBlockId,
+      active: this.storedMarks.map((mark) => ({ ...mark })),
+      disabled: [...this.disabledStoredMarks],
+    };
+  }
+
+  /** Toggles an inline mark at a collapsed engine selection, or on selected text. */
+  toggleStoredMark(mark: Mark): Result<boolean> {
+    this.assertNotDisposed();
+    const selection = this.selection;
+    if (!selection) return err(engineError("INVALID_POSITION", "A selection is required to toggle formatting"));
+    if (selection.anchor.blockId !== selection.focus.blockId) {
+      return err(engineError("UNSUPPORTED_OPERATION", "Formatting across multiple blocks is not supported by this operation"));
+    }
+    const blockId = selection.anchor.blockId;
+    const start = Math.min(selection.anchor.offset, selection.focus.offset);
+    const end = Math.max(selection.anchor.offset, selection.focus.offset);
+    if (start !== end) {
+      const result = this.exec([toggleMarkCommand({ blockId, start, end, mark })], { group: "formatting" });
+      if (!result.ok) return err(result.error);
+      const block = findParagraphLike(this.document.content, blockId);
+      const runs = block?.children ?? [];
+      let offset = 0;
+      let sawText = false;
+      let allMarked = true;
+      for (const run of runs) {
+        const runStart = offset;
+        const runEnd = offset + run.text.length;
+        offset = runEnd;
+        if (runEnd <= start || runStart >= end) continue;
+        sawText = true;
+        if (!run.marks.some((item) => item.type === mark.type)) allMarked = false;
+      }
+      return ok(sawText && allMarked);
+    }
+
+    if (this.storedMarksBlockId !== blockId) {
+      this.storedMarks = [];
+      this.disabledStoredMarks = [];
+      this.storedMarksBlockId = blockId;
+    }
+    const activeIndex = this.storedMarks.findIndex((item) => item.type === mark.type);
+    const disabledIndex = this.disabledStoredMarks.indexOf(mark.type);
+    const block = findParagraphLike(this.document.content, blockId);
+    if (!block) return err(engineError("NODE_NOT_FOUND", `Block "${blockId}" not found`));
+    const inherited = this.markAtPosition(block.children, start, mark.type);
+    const isActive = activeIndex >= 0 ? true : disabledIndex >= 0 ? false : inherited;
+    if (isActive) {
+      if (activeIndex >= 0) this.storedMarks.splice(activeIndex, 1);
+      if (!this.disabledStoredMarks.includes(mark.type)) this.disabledStoredMarks.push(mark.type);
+    } else {
+      if (activeIndex >= 0) this.storedMarks.splice(activeIndex, 1);
+      if (disabledIndex >= 0) this.disabledStoredMarks.splice(disabledIndex, 1);
+      this.storedMarks.push({ ...mark });
+    }
+    if (this.storedMarks.length === 0 && this.disabledStoredMarks.length === 0) this.storedMarksBlockId = undefined;
+    return ok(!isActive);
+  }
+
+  /** Inserts/replaces text using the engine selection and engine-owned stored marks. */
+  insertTextAtSelection(text: string): Result<{ document: NexusDocument; selection?: Selection }> {
+    this.assertNotDisposed();
+    const selection = this.selection;
+    if (!selection) return err(engineError("INVALID_POSITION", "A selection is required to insert text"));
+    if (selection.anchor.blockId !== selection.focus.blockId) {
+      return err(engineError("UNSUPPORTED_OPERATION", "Text replacement across multiple blocks is not supported by this operation"));
+    }
+    const blockId = selection.anchor.blockId;
+    const start = Math.min(selection.anchor.offset, selection.focus.offset);
+    const end = Math.max(selection.anchor.offset, selection.focus.offset);
+    const block = findParagraphLike(this.document.content, blockId);
+    if (!block) return err(engineError("NODE_NOT_FOUND", `Block "${blockId}" not found`));
+    let marks: Mark[] | undefined;
+    if (this.storedMarksBlockId === blockId) {
+      marks = this.marksAtPosition(block.children, start);
+      for (const type of this.disabledStoredMarks) marks = marks.filter((item) => item.type !== type);
+      for (const mark of this.storedMarks) marks = [...marks.filter((item) => item.type !== mark.type), { ...mark }];
+    }
+    const command = start === end
+      ? insertText({ blockId, offset: start, text, ...(marks ? { marks } : {}) })
+      : replaceRange({ blockId, start, end, text, ...(marks ? { marks } : {}) });
+    const result = this.exec([command], { group: "typing" });
+    if (result.ok && this.storedMarksBlockId && this.storedMarksBlockId !== blockId) {
+      this.clearStoredMarks();
+    }
+    return result;
+  }
+
+  /** Clears pending inline formatting in the engine. */
+  clearStoredMarks(): void {
+    this.storedMarks = [];
+    this.disabledStoredMarks = [];
+    this.storedMarksBlockId = undefined;
+  }
+
+  private marksAtPosition(runs: Array<{ text: string; marks: Mark[] }>, offset: number): Mark[] {
+    if (runs.length === 0) return [];
+    if (offset <= 0) return runs[0].marks.map((mark) => ({ ...mark }));
+    let consumed = 0;
+    let last = runs[0];
+    for (const run of runs) {
+      consumed += run.text.length;
+      last = run;
+      if (offset <= consumed) return run.marks.map((mark) => ({ ...mark }));
+    }
+    return last.marks.map((mark) => ({ ...mark }));
+  }
+
+  private markAtPosition(runs: Array<{ text: string; marks: Mark[] }>, offset: number, type: MarkType): boolean {
+    return this.marksAtPosition(runs, offset).some((mark) => mark.type === type);
   }
 
   /** Applies one or more commands as a single atomic transaction. */
