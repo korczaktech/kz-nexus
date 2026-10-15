@@ -77,7 +77,9 @@ O heap JavaScript não equivale à RAM total do processo: Canvas, DOM nativo, im
 - [x] Mapear os módulos atuais e os caminhos paralelos de renderização.
 - [x] Definir limites entre motor, host, renderer, seleção, layout e persistência.
 - [x] Preparar um teste repetível de memória no browser e apontar as limitações da medição.
-- [ ] Executar o teste em Chromium disponível e registrar números reais do ambiente de execução.
-- [ ] Executar testes de arquitetura/build/testes existentes após as mudanças.
+- [x] Executar o teste em Chromium e registrar heap JS, memória privada e RSS do grupo de processos para o preview do motor (3 rodadas; veja PERFORMANCE.md).
+- [x] Validar o script, o build do motor e o preview via workflow automatizado.
+- [ ] Registrar também a linha de base do editor React de produção; a medição do preview não substitui esta etapa.
+- [ ] Confirmar a conclusão dos workflows após a última alteração.
 
 O passo só pode ser marcado como concluído depois dos dois últimos itens. Se Playwright/Chromium não estiver instalado no ambiente de execução, o script deve falhar com uma mensagem explícita; não substituir medições reais por estimativas.
