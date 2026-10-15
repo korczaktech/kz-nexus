@@ -6,7 +6,7 @@ from korczak_documents.telemetry import request_finished, request_started, snaps
 client = TestClient(app)
 
 
-def test_telemetry_dashboard_is_server_rendered_without_javascript() -> None:
+def test_telemetry_dashboard_is_server_rendered_without_javascript(monkeypatch) -> None:\n    import korczak_documents.main as main_module\n\n    async def fake_ci():\n        return {"state": "success", "label": "ÚLTIMA VALIDAÇÃO OK", "updated_at": "2026-10-15T00:00:00Z", "url": "https://github.com/korczaktech/kz-nexus/actions"}\n\n    monkeypatch.setattr(main_module, "get_engine_ci_status", fake_ci)
     response = client.get("/telemetry")
     assert response.status_code == 200
     assert "text/html" in response.headers["content-type"]
