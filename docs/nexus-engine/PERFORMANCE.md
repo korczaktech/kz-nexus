@@ -34,3 +34,19 @@ O script `tooling/memory-baseline.mjs` carrega o preview real e registra fases: 
 Para reduzir ruído, executar pelo menos três vezes na mesma máquina, manter versão do browser e viewport, e comparar medianas. O workflow manual `SmartCanvas Memory Baseline` executa três rodadas e guarda os relatórios como artefato.
 
 No preview, o fixture de 400 parágrafos foi previamente montado e renderizado em ~0,25–0,3 s no E2E histórico. Não havia medições registradas de memória do navegador, tabelas grandes, imagens grandes ou dispositivos móveis antes deste baseline.
+
+
+## Medição real do preview do motor — 2026-10-15
+
+Executadas três rodadas no GitHub Actions, Linux x64, Node 22.23.3, Chromium 156.0.8078.4, viewport 1400×860. Os números abaixo são medianas das três rodadas; o documento de teste contém 400 parágrafos, 800 nós, 33.463 caracteres e nenhum recurso de imagem.
+
+| Fase | Heap JS do renderer | Memória privada do grupo Chromium | Soma RSS dos processos Chromium |
+|---|---:|---:|---:|
+| Chromium iniciado, sem página | 0,48 MB | 72,52 MB | 414,36 MB |
+| Preview aberto, documento vazio | 2,92 MB | 100,04 MB | 475,93 MB |
+| Documento com 400 parágrafos | 4,66 MB | 121,80 MB | 512,17 MB |
+| Após inserir 1 caractere e executar undo/redo | 6,70 MB | 130,61 MB | 522,64 MB |
+
+**Como interpretar:** entre o preview vazio e o documento de 400 parágrafos, a mediana aumentou cerca de 21,76 MB de memória privada do grupo Chromium, 36,24 MB de RSS agregado e 1,74 MB de heap JavaScript. A RSS agregada inclui páginas compartilhadas e pode contá-las mais de uma vez; para comparar consumo privado, use a coluna de memória privada. O heap JavaScript não inclui necessariamente DOM nativo, Canvas, imagens e outros buffers.
+
+Esses dados são de um **preview isolado do motor**, não do editor React de produção nem de um Chromebook físico. A memória total do grupo Chromium (incluindo browser, renderer, GPU e processos auxiliares) não deve ser confundida com o consumo incremental do editor. O baseline correspondente ao editor React está sendo preparado separadamente. Os números não são, por si só, evidência de vazamento nem prova de cumprimento da meta de 100 MB; são uma linha de base para comparar implementações no mesmo ambiente.
