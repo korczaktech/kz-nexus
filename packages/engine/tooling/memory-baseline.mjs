@@ -2,6 +2,7 @@
 // Requires a built preview and Playwright + Chromium available globally (same prerequisite as e2e-preview.mjs).
 // Reports JS heap for the page renderer and private memory of Chrome processes separately.
 import { spawn, spawnSync } from "node:child_process";
+import { readFile } from "node:fs/promises";
 import { createRequire } from "node:module";
 import { resolve, dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -49,14 +50,35 @@ try {
   async function processMemory() {
     try {
       const result = await browserSession.send("SystemInfo.getProcessInfo");
-      const processes = result.processInfo ?? [];
+      const processes = await Promise.all((result.processInfo ?? []).map(async (p) => {
+        let privateMemoryMB = null;
+        let source = "unavailable";
+        // Chromium's CDP memory field can be zero on Linux CI; prefer kernel private-page accounting.
+        try {
+          const status = await readFile(`/proc/${p.id}/smaps_rollup`, "utf8");
+          const values = [...status.matchAll(/^Private_(?:Clean|Dirty|Hugetlb):\\s+(\\d+) kB$/gm)]
+            .map((match) => Number(match[1]));
+          if (values.length) {
+            privateMemoryMB = mb(values.reduce((sum, value) => sum + value, 0) * 1024);
+            source = "proc-smaps_rollup";
+          }
+        } catch { /* /proc is Linux-specific and may be restricted */ }
+        if (privateMemoryMB === null && Number(p.memory ?? 0) > 0) {
+          privateMemoryMB = mb(Number(p.memory) * 1024);
+          source = "cdp";
+        }
+        return { type: p.type, id: p.id, privateMemoryMB, source };
+      }));
+      const complete = processes.length > 0 && processes.every((p) => p.privateMemoryMB !== null);
       return {
-        privateMemoryMB: mb(processes.reduce((sum, p) => sum + Number(p.memory ?? 0) * 1024, 0)),
-        processes: processes.map((p) => ({ type: p.type, id: p.id, privateMemoryMB: mb(Number(p.memory ?? 0) * 1024) })),
-        note: "Soma de memória privada reportada pelo CDP para processos Chrome listados; não somar ao heap JS.",
+        privateMemoryMB: complete ? Number(processes.reduce((sum, p) => sum + p.privateMemoryMB, 0).toFixed(2)) : null,
+        processes,
+        note: complete
+          ? "Memória privada dos processos Chrome; /proc/smaps_rollup quando disponível, CDP como fallback."
+          : "Medição de memória privada incompleta neste ambiente; null indica indisponibilidade, não zero.",
       };
     } catch (error) {
-      return { unavailable: String(error), note: "SystemInfo.getProcessInfo não suportado por este Chromium." };
+      return { privateMemoryMB: null, unavailable: String(error), note: "Medição de memória privada não suportada neste Chromium." };
     }
   }
 
