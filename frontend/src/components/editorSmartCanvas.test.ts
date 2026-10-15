@@ -1,5 +1,6 @@
-import { beforeEach, describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
+  dispatchSmartCanvasBeforeInput,
   getSmartCanvasDiagnostics,
   isProductionSmartCanvasEnabled,
   resetSmartCanvasDiagnostics,
@@ -18,8 +19,25 @@ describe("production SmartCanvas migration gate", () => {
 
   it("keeps diagnostic counters isolated and returns a snapshot", () => {
     const snapshot = getSmartCanvasDiagnostics();
-    expect(snapshot).toEqual({ reads: 0, successfulReads: 0, failedReads: 0, restores: 0 });
+    expect(snapshot).toEqual({ reads: 0, successfulReads: 0, failedReads: 0, restores: 0, beforeInputEvents: 0, compositionDeferredEvents: 0 });
     resetSmartCanvasDiagnostics();
     expect(getSmartCanvasDiagnostics()).toEqual(snapshot);
   });
+
+  it("routes beforeinput through the adapter and records IME deferrals without swallowing events", () => {
+    const handler = vi.fn();
+    const ordinary = { nativeEvent: { inputType: "insertText", isComposing: false } as InputEvent, preventDefault: vi.fn() };
+    const composing = { nativeEvent: { inputType: "insertCompositionText", isComposing: true } as InputEvent, preventDefault: vi.fn() };
+
+    dispatchSmartCanvasBeforeInput(ordinary, handler, false);
+    dispatchSmartCanvasBeforeInput(composing, handler, true);
+
+    expect(handler).toHaveBeenCalledTimes(2);
+    expect(handler).toHaveBeenNthCalledWith(1, ordinary);
+    expect(handler).toHaveBeenNthCalledWith(2, composing);
+    expect(ordinary.preventDefault).not.toHaveBeenCalled();
+    expect(composing.preventDefault).not.toHaveBeenCalled();
+    expect(getSmartCanvasDiagnostics()).toMatchObject({ beforeInputEvents: 2, compositionDeferredEvents: 1 });
+  });
+
 });
