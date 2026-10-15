@@ -2983,3 +2983,39 @@ html:has(.app-shell.editor-mode),body:has(.app-shell.editor-mode),#root:has(.app
 .editor-workspace .kz-view-tools button.editor-tool[aria-pressed="true"] svg{
   color:#fff!important;stroke:#fff!important;
 }
+
+
+/* Korczak Nexus — animated splash system */
+.nexus-splash{--splash-bg:#070c16;--splash-panel:rgba(13,23,40,.72);--splash-text:#f2f6ff;--splash-muted:#91a1bb;position:relative;isolation:isolate;display:grid;place-items:center;min-height:100vh;overflow:hidden;background:radial-gradient(ellipse at 50% 42%,#14294a 0%,#0a1425 38%,var(--splash-bg) 78%);color:var(--splash-text);font-family:inherit}
+.nexus-splash.is-compact{min-height:clamp(380px,62vh,620px);width:100%;border:1px solid rgba(125,158,220,.15);border-radius:22px;background:radial-gradient(ellipse at 50% 42%,#152b4c 0%,#0b1526 45%,#080e19 100%)}
+.splash-atmosphere{position:absolute;inset:0;overflow:hidden;pointer-events:none}
+.splash-atmosphere:before{content:"";position:absolute;inset:0;background-image:linear-gradient(rgba(144,176,232,.035) 1px,transparent 1px),linear-gradient(90deg,rgba(144,176,232,.035) 1px,transparent 1px);background-size:54px 54px;mask-image:radial-gradient(ellipse at center,#000 0%,transparent 76%);animation:splash-grid-drift 24s linear infinite}
+.splash-glow{position:absolute;display:block;width:38vw;height:38vw;min-width:260px;min-height:260px;border-radius:50%;filter:blur(70px);opacity:.18}
+.glow-one{background:#427cff;left:-12%;top:-18%;animation:splash-glow-float 9s ease-in-out infinite alternate}
+.glow-two{background:#36d6c4;right:-15%;bottom:-24%;animation:splash-glow-float 12s ease-in-out infinite alternate-reverse}
+.splash-orbit{position:absolute;left:50%;top:45%;border:1px solid rgba(116,161,239,.12);border-radius:50%;transform:translate(-50%,-50%);animation:splash-orbit-turn 32s linear infinite}
+.orbit-one{width:min(82vw,760px);height:min(82vw,760px)}.orbit-two{width:min(62vw,560px);height:min(62vw,560px);border-style:dashed;animation-duration:45s;animation-direction:reverse}.orbit-three{width:min(42vw,380px);height:min(42vw,380px);border-color:rgba(63,218,205,.13);animation-duration:24s}
+.splash-content{position:relative;z-index:1;display:flex;align-items:center;flex-direction:column;text-align:center;width:min(92%,520px);padding:42px 20px;animation:splash-content-in .8s cubic-bezier(.2,.8,.2,1) both}
+.splash-mark{position:relative;display:grid;place-items:center;width:108px;height:108px;margin-bottom:32px}
+.splash-mark-core{position:relative;z-index:2;display:grid;place-items:center;width:58px;height:58px;border:1px solid rgba(194,217,255,.8);border-radius:19px;background:linear-gradient(145deg,rgba(113,161,255,.3),rgba(20,42,75,.85));box-shadow:0 0 0 7px rgba(90,141,242,.06),0 0 45px rgba(76,137,255,.28);font-size:30px;font-weight:800;color:#e8f2ff;animation:splash-core-breathe 3s ease-in-out infinite}
+.splash-mark-ring{position:absolute;inset:5px;border:1px solid rgba(104,160,255,.34);border-radius:29px;transform:rotate(0deg);animation:splash-ring-turn 8s linear infinite}
+.splash-mark-ring:after{content:"";position:absolute;left:12px;top:10px;width:7px;height:7px;border-radius:50%;background:#74a8ff;box-shadow:0 0 14px #74a8ff}
+.ring-b{inset:-5px;border-color:rgba(63,218,205,.25);border-radius:36px;transform:rotate(35deg);animation-duration:12s;animation-direction:reverse}.ring-b:after{left:auto;top:auto;right:8px;bottom:14px;background:#4be0ce;box-shadow:0 0 14px #4be0ce}.ring-c{inset:-14px;border-style:dashed;border-color:rgba(129,161,215,.17);border-radius:42px;animation-duration:22s}.ring-c:after{left:50%;top:-4px;width:5px;height:5px;background:#d7e6ff}
+.splash-eyebrow{display:flex;align-items:center;gap:9px;margin:0 0 12px;color:#8ca7d1;font-size:10px;font-weight:750;letter-spacing:.24em;text-transform:uppercase}
+.splash-live-dot{width:6px;height:6px;border-radius:50%;background:#55dec7;box-shadow:0 0 12px rgba(85,222,199,.85);animation:splash-dot-pulse 1.8s ease-in-out infinite}
+.splash-content h1{margin:0;color:#f3f7ff;font-size:clamp(38px,5vw,58px);font-weight:650;letter-spacing:-.055em;line-height:1.05}
+.splash-title-period{color:#62dccc}.splash-message{max-width:360px;margin:17px 0 0;color:var(--splash-muted);font-size:14px;line-height:1.7}
+.splash-progress{position:relative;width:min(240px,72%);height:3px;margin-top:32px;overflow:hidden;border-radius:99px;background:rgba(143,168,208,.14)}
+.splash-progress span{position:absolute;inset:0 auto 0 -42%;width:42%;border-radius:inherit;background:linear-gradient(90deg,transparent,#5e9aff 48%,#5ce1d0);box-shadow:0 0 14px rgba(83,157,255,.65);animation:splash-progress-travel 1.8s cubic-bezier(.65,0,.35,1) infinite}
+.splash-footer{margin:54px 0 0;color:rgba(145,161,187,.56);font-size:9px;letter-spacing:.2em}.splash-footer span{color:rgba(121,163,228,.8)}
+.is-compact .splash-content{padding:30px 16px}.is-compact .splash-mark{width:82px;height:82px;margin-bottom:23px}.is-compact .splash-mark-core{width:48px;height:48px;border-radius:16px;font-size:25px}.is-compact .splash-mark-ring{inset:0;border-radius:24px}.is-compact .ring-b{inset:-7px;border-radius:30px}.is-compact .ring-c{inset:-12px;border-radius:36px}.is-compact .splash-content h1{font-size:clamp(32px,4vw,44px)}.is-compact .splash-footer{margin-top:34px}
+.splash-editor .splash-mark-core{animation:splash-core-breathe 2.2s ease-in-out infinite}.splash-editor .splash-progress span{animation-duration:1.25s}.splash-sync .splash-mark-core{color:#b9fff4;border-color:rgba(76,224,206,.75)}
+@keyframes splash-content-in{from{opacity:0;transform:translateY(14px) scale(.985)}to{opacity:1;transform:translateY(0) scale(1)}}
+@keyframes splash-ring-turn{to{transform:rotate(360deg)}}
+@keyframes splash-orbit-turn{to{transform:translate(-50%,-50%) rotate(360deg)}}
+@keyframes splash-core-breathe{0%,100%{transform:scale(1);box-shadow:0 0 0 7px rgba(90,141,242,.06),0 0 35px rgba(76,137,255,.2)}50%{transform:scale(1.045);box-shadow:0 0 0 12px rgba(90,141,242,.035),0 0 55px rgba(76,137,255,.4)}}
+@keyframes splash-dot-pulse{0%,100%{opacity:1;box-shadow:0 0 12px rgba(85,222,199,.85)}50%{opacity:.35;box-shadow:0 0 3px rgba(85,222,199,.3)}}
+@keyframes splash-progress-travel{0%{left:-42%}100%{left:110%}}
+@keyframes splash-glow-float{from{transform:translate3d(0,0,0) scale(.92)}to{transform:translate3d(5vw,4vh,0) scale(1.1)}}
+@keyframes splash-grid-drift{from{background-position:0 0}to{background-position:54px 54px}}
+@media(prefers-reduced-motion:reduce){.nexus-splash *, .nexus-splash *:before,.nexus-splash *:after{animation-duration:.01ms!important;animation-iteration-count:1!important;scroll-behavior:auto!important}}
