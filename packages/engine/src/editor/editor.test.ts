@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 import { createIdGenerator } from "../core/ids";
 import { createFixedClock } from "../core/clock";
 import { createEditor } from "./editor";
-import { insertText } from "../commands/text";
+import { deleteText, insertText } from "../commands/text";
 import { applyMark } from "../commands/marks";
 import type { Paragraph } from "../model/types";
 
@@ -50,6 +50,19 @@ describe("Editor", () => {
       { text: "Bold", marks: [{ type: "bold" }] },
       { text: " plain", marks: [] },
     ]);
+  });
+
+  it("does not retain stale inline formatting after deleting the last character", () => {
+    const editor = newEditor();
+    const blockId = editor.getDocument().content[0].id;
+    editor.setSelection({ anchor: { blockId, offset: 0 }, focus: { blockId, offset: 0 } });
+    editor.toggleStoredMark({ type: "bold" });
+    expect(editor.insertTextAtSelection("x").ok).toBe(true);
+    expect(editor.isMarkActiveAtSelection("bold")).toBe(true);
+
+    expect(editor.exec([deleteText({ blockId, start: 0, end: 1 })], { group: "typing" }).ok).toBe(true);
+    expect((editor.getDocument().content[0] as Paragraph).children).toMatchObject([{ text: "", marks: [] }]);
+    expect(editor.isMarkActiveAtSelection("bold")).toBe(false);
   });
 
   it("clears pending formatting only when the engine explicitly clears it", () => {
