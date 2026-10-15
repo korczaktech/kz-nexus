@@ -7,6 +7,7 @@ on:
       - ".github/workflows/smartcanvas-memory-baseline.yml"
       - "packages/engine/**"
       - "packages/engine-preview/**"
+      - "frontend/**"
       - "docs/nexus-engine/SMARTCANVAS-PLAN.md"
       - "docs/nexus-engine/PERFORMANCE.md"
 
@@ -36,14 +37,21 @@ jobs:
         run: |
           npm install --no-audit --no-fund
           npm run build
+      - name: Build production React frontend
+        working-directory: frontend
+        run: |
+          npm install --no-audit --no-fund
+          VITE_API_BASE_URL=https://kzdoc.onrender.com npm run build
       - name: Collect three memory baselines
         shell: bash
         run: |
           set -euo pipefail
           mkdir -p memory-baseline
           for run in 1 2 3; do
-            echo "Collecting browser memory baseline $run/3"
-            node packages/engine/tooling/memory-baseline.mjs > "memory-baseline/run-$run.json"
+            echo "Collecting standalone engine preview baseline $run/3"
+            node packages/engine/tooling/memory-baseline.mjs > "memory-baseline/engine-run-$run.json"
+            echo "Collecting production React editor baseline $run/3"
+            node packages/engine/tooling/production-editor-memory.mjs > "memory-baseline/frontend-run-$run.json"
           done
       - name: Upload memory reports
         uses: actions/upload-artifact@v4
