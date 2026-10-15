@@ -1,6 +1,6 @@
 import { useEffect, useRef } from "react";
 import type { CSSProperties, PointerEvent as ReactPointerEvent } from "react";
-import { hitTestLayout, type LayoutBlock, type LayoutLine, type LayoutPage, type LayoutResult, type Mark, type NexusDocument, type SmartCanvasHitTarget } from "../../../packages/engine/src/index";
+import { getSelectionGeometry, hitTestLayout, type LayoutBlock, type LayoutLine, type LayoutPage, type LayoutResult, type Mark, type NexusDocument, type Selection, type SmartCanvasHitTarget, type LayoutTextRun } from "../../../packages/engine/src/index";
 
 const PT_TO_CSS_PX = 96 / 72;
 const PAGE_GAP = 24;
@@ -16,6 +16,8 @@ type CanvasPageProps = {
   showPageNumbers: boolean;
   layout: LayoutResult;
   onHitTest?: (target: SmartCanvasHitTarget) => void;
+  selection?: Selection;
+  showCaret?: boolean;
 };
 
 function markedFont(marks: Mark[], fontSize: number, fontFamily: string): string {
@@ -178,8 +180,9 @@ function pageText(page: LayoutPage): string {
   return parts.join(" ").replace(/\s+/g, " ").trim();
 }
 
-export function CanvasPage({ page, pageCount, document, headerText, footerText, showPageNumbers, layout, onHitTest }: CanvasPageProps) {
+export function CanvasPage({ page, pageCount, document, headerText, footerText, showPageNumbers, layout, onHitTest, selection, showCaret = false }: CanvasPageProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const overlayRef = useRef<HTMLCanvasElement>(null);
   const cssWidth = page.width * PT_TO_CSS_PX;
   const cssHeight = page.height * PT_TO_CSS_PX;
   const style: CSSProperties = {
@@ -264,6 +267,37 @@ export function CanvasPage({ page, pageCount, document, headerText, footerText, 
     return () => { cancelled = true; };
   }, [page, pageCount, document, headerText, footerText, showPageNumbers, cssWidth, cssHeight]);
 
+  useEffect(() => {
+    const overlay = overlayRef.current;
+    if (!overlay) return;
+    const context = overlay.getContext("2d");
+    if (!context) return;
+    const ratio = Math.max(1, Math.min(3, window.devicePixelRatio || 1));
+    overlay.width = Math.round(cssWidth * ratio);
+    overlay.height = Math.round(cssHeight * ratio);
+    context.setTransform(ratio, 0, 0, ratio, 0, 0);
+    context.clearRect(0, 0, cssWidth, cssHeight);
+    if (!selection) return;
+
+    const measureText = (text: string, run?: LayoutTextRun) => {
+      if (run) context.font = markedFont(run.marks, run.fontSize, run.fontFamily);
+      return context.measureText(text).width * 72 / 96;
+    };
+    const geometry = getSelectionGeometry(layout, page.index, selection, measureText);
+    context.fillStyle = "rgba(59, 130, 246, 0.24)";
+    for (const rect of geometry.selectionRects) {
+      context.fillRect(rect.x * PT_TO_CSS_PX, rect.y * PT_TO_CSS_PX, rect.width * PT_TO_CSS_PX, rect.height * PT_TO_CSS_PX);
+    }
+    if (showCaret && geometry.caret) {
+      context.strokeStyle = "#2563eb";
+      context.lineWidth = 1.25;
+      context.beginPath();
+      context.moveTo(geometry.caret.x * PT_TO_CSS_PX, geometry.caret.y * PT_TO_CSS_PX);
+      context.lineTo(geometry.caret.x * PT_TO_CSS_PX, (geometry.caret.y + geometry.caret.height) * PT_TO_CSS_PX);
+      context.stroke();
+    }
+  }, [layout, page.index, selection, showCaret, cssWidth, cssHeight]);
+
   const handlePointerDown = (event: ReactPointerEvent<HTMLCanvasElement>) => {
     if (!onHitTest) return;
     const bounds = event.currentTarget.getBoundingClientRect();
@@ -274,25 +308,35 @@ export function CanvasPage({ page, pageCount, document, headerText, footerText, 
     if (target) onHitTest(target);
   };
 
-  return <canvas
-    ref={canvasRef}
-    onPointerDown={onHitTest ? handlePointerDown : undefined}
-    tabIndex={onHitTest ? 0 : undefined}
-    className="kortex-canvas-page"
-    role="img"
-    aria-label={`Página ${page.index + 1} de ${pageCount}. ${pageText(page)}`}
-    data-page-index={page.index}
-    style={style}
-  />;
+  return <div style={{ position: "relative", flex: "0 0 auto", width: cssWidth, height: cssHeight }}>
+    <canvas
+      ref={canvasRef}
+      onPointerDown={onHitTest ? handlePointerDown : undefined}
+      tabIndex={onHitTest ? 0 : undefined}
+      className="kortex-canvas-page"
+      role="img"
+      aria-label={`Página ${page.index + 1} de ${pageCount}. ${pageText(page)}`}
+      data-page-index={page.index}
+      style={style}
+    />
+    <canvas
+      ref={overlayRef}
+      aria-hidden="true"
+      className="kortex-canvas-interaction-overlay"
+      style={{ position: "absolute", inset: 0, width: cssWidth, height: cssHeight, pointerEvents: "none" }}
+    />
+  </div>;
 }
 
-export function CanvasDocumentRenderer({ layout, document, headerText = "", footerText = "", showPageNumbers = false, onHitTest }: {
+export function CanvasDocumentRenderer({ layout, document, headerText = "", footerText = "", showPageNumbers = false, onHitTest, selection, showCaret = false }: {
   layout: LayoutResult;
   document: NexusDocument;
   headerText?: string;
   footerText?: string;
   showPageNumbers?: boolean;
   onHitTest?: (target: SmartCanvasHitTarget) => void;
+  selection?: Selection;
+  showCaret?: boolean;
 }) {
   return <div className="kortex-canvas-pages" data-renderer="canvas-2d" style={{
     display: "flex",
@@ -307,6 +351,8 @@ export function CanvasDocumentRenderer({ layout, document, headerText = "", foot
       page={page}
       layout={layout}
       onHitTest={onHitTest}
+      selection={selection}
+      showCaret={showCaret}
       pageCount={layout.pageCount}
       document={document}
       headerText={headerText}
