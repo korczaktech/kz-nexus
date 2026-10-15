@@ -55,7 +55,7 @@ def _number(value: int | float | None, suffix: str = "") -> str:
     return f"{value:,.1f}{suffix}".replace(",", "X").replace(".", ",").replace("X", ".")
 
 
-def render_dashboard(metrics: dict[str, Any], database_status: str, database_latency_ms: float | None, engine_ci: dict[str, Any] | None = None) -> str:
+def render_dashboard(metrics: dict[str, Any], database_status: str, database_latency_ms: float | None, engine_ci: dict[str, Any] | None = None, history: list[dict[str, Any]] | None = None) -> str:
     api_ok = True
     db_ok = database_status == "operacional"
     engine_ci = engine_ci or {"state": "unknown", "label": "INDISPONÍVEL", "updated_at": None, "url": "https://github.com/korczaktech/kz-nexus/actions/workflows/kortex-validation.yml"}
@@ -101,6 +101,16 @@ def render_dashboard(metrics: dict[str, Any], database_status: str, database_lat
         '</code></td><td>' + escape(_duration(item.get("duration_ms"))) + '</td></tr>'
         for item in events[:20]
     ) or '<tr><td colspan="5" class="empty">Nenhum erro HTTP registrado nesta instância desde o início.</td></tr>'
+
+    history_rows = "".join(
+        '<tr><td>' + escape(str(item.get("captured_at", "—"))) + '</td><td>' +
+        str(int(item.get("requests_last_5m", 0))) + '</td><td>' +
+        str(int(item.get("errors_last_5m", 0))) + '</td><td>' +
+        escape(_number(item.get("error_rate_last_5m_percent"), "%")) + '</td><td>' +
+        escape(_duration(item.get("latency_avg_ms_last_5m"))) + '</td><td>' +
+        escape(_duration(item.get("latency_p95_ms_last_5m"))) + '</td></tr>'
+        for item in (history or [])
+    ) or '<tr><td colspan="6" class="empty">As primeiras amostras históricas serão gravadas pelo servidor. O histórico é mantido por até 30 dias.</td></tr>'
 
     status_counts = metrics.get("status_groups_since_start", {})
     uptime = int(metrics.get("instance_uptime_seconds", 0))
@@ -166,6 +176,7 @@ main{{padding:35px 0 64px}}.eyebrow{{color:var(--blue);font-size:11px;font-weigh
 </div>
 <section class="panel table-wrap"><h2>Rotas mais acessadas</h2><p class="panel-intro">Somente os últimos cinco minutos. Identificadores numéricos são normalizados.</p><table><thead><tr><th>Rota</th><th>Requisições</th><th>Erros</th></tr></thead><tbody>{route_rows}</tbody></table></section>
 <section class="panel table-wrap"><h2>Eventos HTTP recentes</h2><p class="panel-intro">Respostas 4xx e 5xx observadas nesta instância; não inclui payloads, IPs, tokens ou query strings.</p><table><thead><tr><th>Horário (UTC)</th><th>Nível</th><th>Status</th><th>Rota</th><th>Duração</th></tr></thead><tbody>{event_rows}</tbody></table></section>
+<section class="panel table-wrap"><h2>Histórico persistido</h2><p class="panel-intro">Últimas 24 amostras gravadas no MongoDB, aproximadamente 24 minutos · retenção automática de 30 dias.</p><table><thead><tr><th>Capturada em</th><th>Req. (5 min)</th><th>Erros</th><th>Taxa de erro</th><th>Latência média</th><th>Latência p95</th></tr></thead><tbody>{history_rows}</tbody></table></section>
 <div class="note"><strong>Limites e privacidade.</strong> {scope_note} Os contadores são em memória e reiniciam quando o processo reinicia; em ambientes com múltiplas instâncias, cada instância possui seus próprios dados. CPU e memória dependem do que o host permite expor. O resultado de CI é a última validação automatizada, não uma medição de execução ao vivo. Esta página não confirma a execução de comandos em cada editor cliente nem substitui alertas externos, logs persistentes ou monitoramento sintético.</div>
 </main><footer><span>Korczak Technologies · Telemetria Kortex</span><span>HTML gerado no servidor · sem JavaScript · atualização por recarga da página</span><a href="https://nexus.korczaktech.com.br/Kortex/status.html">Voltar à Central Kortex</a></footer>
 </div></body></html>"""
