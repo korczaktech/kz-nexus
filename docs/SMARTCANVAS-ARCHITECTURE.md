@@ -112,7 +112,7 @@ A migração é por capacidades, com a implementação nova opt-in e o caminho a
 - [ ] O caminho experimental renderiza todas as páginas a partir do mesmo LayoutResult do motor.
 - [x] Hit-testing do motor mapeia coordenadas em pontos para posições lógicas, blocos e células sem consultar seleção DOM; há testes unitários dedicados.
 - [x] O renderer Canvas aceita um callback opcional de pointer hit-test, mantendo o comportamento existente quando não configurado.
-- [ ] Caret e seleção são overlays independentes do conteúdo desenhado.
+- [x] Caret e seleção de texto de um único bloco podem ser desenhados em um canvas overlay independente do conteúdo, quando a seleção lógica é fornecida.
 - [ ] Imagens, tabelas, marcas, objetos, cabeçalho/rodapé e quebras têm cobertura explícita.
 
 ### Etapa 3 — edição própria
@@ -132,6 +132,6 @@ A migração é por capacidades, com a implementação nova opt-in e o caminho a
 
 ## 5. Progresso e próxima tarefa
 
-**Implementado nesta iteração:** função pura hitTestLayout no pacote público do motor; alvos tipados para texto, bloco e célula de tabela; medição de texto injetável para posicionar o caret; callback opcional de hit-test por pointer no renderer Canvas; testes de geometria e de seleção de célula. O callback não está ligado ao editor principal e não altera o comportamento padrão.
+**Implementado nesta iteração:** função pura hitTestLayout no pacote público do motor; alvos tipados para texto, bloco e célula de tabela; medição de texto injetável para posicionar o caret; callback opcional de hit-test por pointer no renderer Canvas; cálculo de geometria de caret/seleção; canvas overlay separado para desenhar caret e destaque de seleção quando o host fornece uma seleção lógica; testes unitários de geometria. O callback e o overlay continuam opcionais e ainda não estão ligados ao editor principal.
 
 **Próxima tarefa:** desenhar caret e retângulos de seleção como overlays independentes do conteúdo, depois conectar o pointer-hit-test à seleção lógica do motor sob a flag ?smartCanvas=1. Não remover contentEditable nem alterar o caminho padrão antes que o controlador consiga editar texto, preservar IME e restaurar undo/redo com seleção.
