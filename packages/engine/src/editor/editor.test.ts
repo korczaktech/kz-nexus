@@ -29,6 +29,39 @@ describe("Editor", () => {
     expect((editor.getDocument().content[0] as Paragraph).children[0].text).toBe("Hello");
   });
 
+  it("keeps pending formatting in Kortex and applies explicit on/off marks while typing", () => {
+    const editor = newEditor();
+    const blockId = editor.getDocument().content[0].id;
+    expect(editor.setSelection({ anchor: { blockId, offset: 0 }, focus: { blockId, offset: 0 } }).ok).toBe(true);
+
+    expect(editor.toggleStoredMark({ type: "bold" })).toEqual({ ok: true, value: true });
+    expect(editor.getStoredMarkState()).toMatchObject({ blockId, active: [{ type: "bold" }], disabled: [] });
+    expect(editor.insertTextAtSelection("Bold").ok).toBe(true);
+
+    const boldParagraph = editor.getDocument().content[0] as Paragraph;
+    expect(boldParagraph.children.map((run) => ({ text: run.text, marks: run.marks }))).toEqual([
+      { text: "Bold", marks: [{ type: "bold" }] },
+    ]);
+
+    expect(editor.toggleStoredMark({ type: "bold" })).toEqual({ ok: true, value: false });
+    expect(editor.insertTextAtSelection(" plain").ok).toBe(true);
+    const paragraph = editor.getDocument().content[0] as Paragraph;
+    expect(paragraph.children.map((run) => ({ text: run.text, marks: run.marks }))).toEqual([
+      { text: "Bold", marks: [{ type: "bold" }] },
+      { text: " plain", marks: [] },
+    ]);
+  });
+
+  it("clears pending formatting only when the engine explicitly clears it", () => {
+    const editor = newEditor();
+    const blockId = editor.getDocument().content[0].id;
+    editor.setSelection({ anchor: { blockId, offset: 0 }, focus: { blockId, offset: 0 } });
+    editor.toggleStoredMark({ type: "italic" });
+    expect(editor.getStoredMarkState().active).toEqual([{ type: "italic" }]);
+    editor.clearStoredMarks();
+    expect(editor.getStoredMarkState()).toEqual({ blockId: undefined, active: [], disabled: [] });
+  });
+
   it("rejected transactions emit transactionRejected and leave the document untouched", () => {
     const editor = newEditor();
     const before = editor.getDocument();
