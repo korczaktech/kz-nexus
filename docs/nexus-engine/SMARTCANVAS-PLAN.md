@@ -100,3 +100,18 @@ O passo só pode ser marcado como concluído depois dos dois últimos itens. Se 
 O workflow [Kortex validation](https://github.com/korczaktech/kz-nexus/actions/runs/38815982388) concluiu com sucesso. Os jobs **Frontend typecheck and build**, **SmartCanvas preview tests, types and build** e **Engine tests, types and build** estão verdes. Isso valida os comandos automatizados configurados; não substitui testes manuais nem uma matriz completa de regressão do editor de produção.
 
 O mapa de integração React foi documentado em `SMARTCANVAS-PRODUCTION-INTEGRATION.md`. A implementação atual do SmartCanvas está integrada ao preview do motor, não à superfície de edição React de produção. O próximo passo funcional é introduzir a camada de contratos/adaptadores no editor React sob flag de desenvolvimento, começando por seleção lógica e input de texto, sem alterar a persistência ou o renderer de preview na mesma mudança.
+
+
+## Passo 3 — primeira fatia no editor React (em andamento)
+
+Primeira integração de baixo risco registrada em `frontend/src/components/editorSmartCanvas.ts`:
+
+- [x] Criar uma fronteira explícita para leitura/restauração da seleção no editor de produção.
+- [x] Encaminhar `engineContext()` pelo contrato quando `?smartCanvas=1` estiver presente.
+- [x] Manter o comportamento legado como padrão, sem a flag.
+- [x] Adicionar testes da flag e do isolamento dos diagnósticos.
+- [ ] Confirmar frontend typecheck, testes e build no GitHub Actions após a integração.
+- [ ] Instrumentar e migrar eventos de entrada sem alterar IME ou histórico até existir cobertura específica.
+- [ ] Só então migrar digitação e exclusão para comandos semânticos do motor.
+
+A flag é um mecanismo de teste, não uma declaração de que a nova seleção lógica já substituiu o DOM. A implementação ainda chama o adaptador de seleção existente para mapear posições e restaurar o cursor. Não ativar por padrão nem iniciar otimização de memória nesta fase.
