@@ -27,6 +27,8 @@ _EMAIL_SEGMENT = re.compile(r"^[^/\s@]+@[^/\s@]+\.[^/\s@]+$")
 
 
 def _safe_path(path: str) -> str:
+    # Strip query strings defensively if a caller supplies a full request target.
+    path = path.split("?", 1)[0]
     parts = []
     for segment in path.split("/"):
         if _NUMERIC_SEGMENT.fullmatch(segment):
