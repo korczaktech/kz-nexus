@@ -44,7 +44,7 @@ async def test_api_end_to_end() -> None:
     document_id = document["id"]
     assert document["current_version_id"]
     base_version_id = document["current_version_id"]
-    saved = client.post(f"/api/v1/documents/{document_id}/save", headers=headers, json={"name":"Documento de teste","document_type":"txt","content":"conteúdo pequeno salvo","base_version_id":base_version_id})
+    saved = client.post(f"/api/v1/documents/{document_id}/save", headers=headers, json={"name":"Documento de teste","document_type":"txt","content":"conteúdo pequeno salvo","base_version_id":base_version_id,"create_version":True})
     assert saved.status_code == 200
     fresh = saved.json()
     assert fresh["content"] == "conteúdo pequeno salvo"
@@ -52,9 +52,20 @@ async def test_api_end_to_end() -> None:
     assert stale.status_code == 409
     large_content = ("Korczak Documents " * 12000).strip()
     current_version = fresh["current_version_id"]
-    large = client.post(f"/api/v1/documents/{document_id}/save", headers=headers, json={"name":"Documento grande","document_type":"txt","content":large_content,"base_version_id":current_version})
+    large = client.post(f"/api/v1/documents/{document_id}/save", headers=headers, json={"name":"Documento grande","document_type":"txt","content":large_content,"base_version_id":current_version,"create_version":True})
     assert large.status_code == 200
     assert len(large.json()["content"]) == len(large_content)
+
+    # Routine autosaves update a recoverable draft without creating a history version.
+    checkpoint_id = large.json()["current_version_id"]
+    versions_before = client.get(f"/api/v1/documents/{document_id}/versions", headers=headers).json()
+    autosaved = client.post(f"/api/v1/documents/{document_id}/save", headers=headers, json={"name":"Documento grande","document_type":"txt","content":"rascunho automático","native_content":None,"base_version_id":checkpoint_id})
+    assert autosaved.status_code == 200
+    assert autosaved.json()["current_version_id"] == checkpoint_id
+    assert autosaved.json()["content"] == "rascunho automático"
+    assert client.get(f"/api/v1/documents/{document_id}", headers=headers).json()["content"] == "rascunho automático"
+    versions_after = client.get(f"/api/v1/documents/{document_id}/versions", headers=headers).json()
+    assert len(versions_after) == len(versions_before)
 
     assert client.get(f"/api/v1/documents/{document_id}", headers=headers).status_code == 200
     assert client.get("/api/v1/documents", headers=headers).status_code == 200
