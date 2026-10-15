@@ -99,6 +99,7 @@ class DocumentSaveRequest(APIModel):
     content: str | None = Field(default=None, max_length=2000000)
     native_content: str | None = Field(default=None, max_length=26214400)
     base_version_id: str | None = None
+    create_version: bool = False
 
 
 class DocumentUpdateRequest(APIModel):
