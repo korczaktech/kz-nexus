@@ -85,4 +85,12 @@ Só após equivalência funcional e medições comparáveis, avaliar virtualiza�
 
 ## Limites desta análise
 
-Este mapa foi produzido por inspeção do código e não comprova comportamento de todos os caminhos em execução. A conclusão dos workflows do preview e do frontend confirma os comandos automatizados que eles executaram, mas não equivale a uma regressão completa do editor de produção. Não foram feitas alterações funcionais em `Editor.tsx` nesta etapa.
+Este mapa foi produzido por inspeção do código e não comprova comportamento de todos os caminhos em execução. A implementação inicial criou `frontend/src/components/editorSmartCanvas.ts` como fronteira explícita de seleção e integrou `engineContext()` de `Editor.tsx` a essa fronteira quando a flag `?smartCanvas=1` está presente. A flag fica desligada por padrão; nesse caso, o caminho legado permanece em uso. O adaptador ainda delega a conversão à implementação DOM existente, instrumentando leituras e restaurações apenas quando ativado. Isso é uma etapa de extração de fronteira, não uma substituição da seleção nativa nem uma migração completa de entrada de texto.
+
+
+## Implementação incremental iniciada — 2026-10-15
+
+- Criado `frontend/src/components/editorSmartCanvas.ts` com gate de ativação, fronteira para leitura/restauração da seleção e contadores de diagnóstico em memória.
+- `Editor.tsx` encaminha o mapeamento de seleção de `engineContext()` pelo novo contrato quando `?smartCanvas=1`; sem esse parâmetro, usa diretamente os adaptadores anteriores.
+- Criados testes para a flag (padrão desligado) e isolamento dos contadores.
+- Ainda não migrados: `beforeinput`, digitação/deleção, composição IME, clipboard, histórico, renderer DOM e paginação. O contrato atual continua usando o adaptador DOM existente de propósito.
