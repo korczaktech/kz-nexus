@@ -56,8 +56,8 @@ export function setParagraphStyle(params: {
   spacingBefore?: number;
   spacingAfter?: number;
   lineSpacing?: number;
-  backgroundColor?: string;
-  borderColor?: string;
+  backgroundColor?: string | null;
+  borderColor?: string | null;
   borderWidth?: number;
   padding?: number;
   firstLineIndent?: number;
@@ -72,8 +72,8 @@ export function setParagraphStyle(params: {
     if (params.lineSpacing !== undefined && (!Number.isFinite(params.lineSpacing) || params.lineSpacing < 0.5 || params.lineSpacing > 4)) {
       return err(engineError("INVALID_DOCUMENT", "lineSpacing must be between 0.5 and 4", { path: params.blockId }));
     }
-    if (params.backgroundColor !== undefined && !isValidColor(params.backgroundColor)) return err(engineError("INVALID_DOCUMENT", "backgroundColor must be a hex color", { path: params.blockId }));
-    if (params.borderColor !== undefined && !isValidColor(params.borderColor)) return err(engineError("INVALID_DOCUMENT", "borderColor must be a hex color", { path: params.blockId }));
+    if (params.backgroundColor !== undefined && params.backgroundColor !== null && !isValidColor(params.backgroundColor)) return err(engineError("INVALID_DOCUMENT", "backgroundColor must be a hex color", { path: params.blockId }));
+    if (params.borderColor !== undefined && params.borderColor !== null && !isValidColor(params.borderColor)) return err(engineError("INVALID_DOCUMENT", "borderColor must be a hex color", { path: params.blockId }));
     if (params.borderWidth !== undefined && (!Number.isFinite(params.borderWidth) || params.borderWidth < 0 || params.borderWidth > 20)) return err(engineError("INVALID_DOCUMENT", "borderWidth must be between 0 and 20 points", { path: params.blockId }));
     if (params.firstLineIndent !== undefined && (!Number.isFinite(params.firstLineIndent) || params.firstLineIndent < 0 || params.firstLineIndent > 200)) return err(engineError("INVALID_DOCUMENT", "firstLineIndent must be between 0 and 200 points", { path: params.blockId }));
     if (params.hangingIndent !== undefined && (!Number.isFinite(params.hangingIndent) || params.hangingIndent < 0 || params.hangingIndent > 200)) return err(engineError("INVALID_DOCUMENT", "hangingIndent must be between 0 and 200 points", { path: params.blockId }));
@@ -85,8 +85,8 @@ export function setParagraphStyle(params: {
       ...(params.spacingBefore !== undefined ? { spacingBefore: params.spacingBefore || undefined } : {}),
       ...(params.spacingAfter !== undefined ? { spacingAfter: params.spacingAfter || undefined } : {}),
       ...(params.lineSpacing !== undefined ? { lineSpacing: params.lineSpacing === 1 ? undefined : params.lineSpacing } : {}),
-      ...(params.backgroundColor !== undefined ? { backgroundColor: params.backgroundColor } : {}),
-      ...(params.borderColor !== undefined ? { borderColor: params.borderColor } : {}),
+      ...(params.backgroundColor !== undefined ? { backgroundColor: params.backgroundColor ?? undefined } : {}),
+      ...(params.borderColor !== undefined ? { borderColor: params.borderColor ?? undefined } : {}),
       ...(params.borderWidth !== undefined ? { borderWidth: params.borderWidth || undefined } : {}),
       ...(params.padding !== undefined ? { padding: params.padding || undefined } : {}),
       ...(params.firstLineIndent !== undefined ? { firstLineIndent: params.firstLineIndent || undefined } : {}),
