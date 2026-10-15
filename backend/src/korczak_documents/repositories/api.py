@@ -152,18 +152,29 @@ async def create_version(document_id: str, author_id: str, content: str | None, 
     return version
 
 async def save_document(document_id: str, author_id: str, data: dict, base_version_id: str | None):
-    database=get_database(); documents=database["documentos"]; versions=database["versoes"]
+    database=get_database(); documents=database["documentos"]
     current=await documents.find_one({"id":document_id})
     if not current or current.get("current_version_id") != base_version_id:
         return None
-    version_number=await _next_version_number(document_id)
-    version={"id":str(uuid4()),"document_id":document_id,"version_number":version_number,"author_id":author_id,"content":data.get("content"),"native_content":data.get("native_content"),"created_at":now()}
-    await versions.insert_one(version)
-    result=await documents.update_one({"id":document_id,"current_version_id":base_version_id},{"$set":{"name":data["name"].strip(),"document_type":data["document_type"].strip(),"current_version_id":version["id"],"updated_at":now()}})
+    now_value=now()
+    changes={"name":data["name"].strip(),"document_type":data["document_type"].strip(),"updated_at":now_value}
+    if data.get("create_version"):
+        version_number=await _next_version_number(document_id)
+        version={"id":str(uuid4()),"document_id":document_id,"version_number":version_number,"author_id":author_id,"content":data.get("content"),"native_content":data.get("native_content"),"created_at":now_value}
+        await database["versoes"].insert_one(version)
+        changes["current_version_id"]=version["id"]
+        changes.update({"draft_content":None,"draft_native_content":None,"draft_updated_at":None})
+        result=await documents.update_one({"id":document_id,"current_version_id":base_version_id},{"$set":changes})
+        if result.modified_count != 1:
+            await database["versoes"].delete_one({"id":version["id"]})
+            return None
+        return await documents.find_one({"id":document_id}),version
+    changes.update({"draft_content":data.get("content"),"draft_native_content":data.get("native_content"),"draft_updated_at":now_value})
+    result=await documents.update_one({"id":document_id,"current_version_id":base_version_id},{"$set":changes})
     if result.modified_count != 1:
-        await versions.delete_one({"id":version["id"]})
         return None
-    return await documents.find_one({"id":document_id}),version
+    draft_version={"id":base_version_id or "", "document_id":document_id,"version_number":0,"author_id":author_id,"content":data.get("content"),"native_content":data.get("native_content"),"created_at":now_value}
+    return await documents.find_one({"id":document_id}),draft_version
 
 async def _next_version_number(document_id: str) -> int:
     last=await get_database()["versoes"].find_one({"document_id":document_id},sort=[("version_number",-1)])
