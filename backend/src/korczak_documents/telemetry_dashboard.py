@@ -58,13 +58,20 @@ def _number(value: int | float | None, suffix: str = "") -> str:
 def render_dashboard(metrics: dict[str, Any], database_status: str, database_latency_ms: float | None, engine_ci: dict[str, Any] | None = None, history: list[dict[str, Any]] | None = None) -> str:
     api_ok = True
     db_ok = database_status == "operacional"
+    recent_count = int(metrics.get("requests_last_5m", 0))
+    error_rate = float(metrics.get("error_rate_last_5m_percent", 0) or 0)
+    p95_latency = metrics.get("latency_p95_ms_last_5m")
+    high_error_rate = recent_count >= 10 and error_rate >= 5
+    high_latency = p95_latency is not None and float(p95_latency) >= 2000
+    performance_degraded = high_error_rate or high_latency
+    alert_detail = "Banco indisponível" if not db_ok else ("Taxa de erro elevada" if high_error_rate else ("Latência p95 acima de 2 s" if high_latency else "Sem alertas automáticos nesta janela"))
     engine_ci = engine_ci or {"state": "unknown", "label": "INDISPONÍVEL", "updated_at": None, "url": "https://github.com/korczaktech/kz-nexus/actions/workflows/kortex-validation.yml"}
     ci_state = str(engine_ci.get("state", "unknown"))
     ci_label = str(engine_ci.get("label", "INDISPONÍVEL"))
     ci_class = "pill" if ci_state == "success" else ("pill warn" if ci_state in {"failure", "running"} else "pill neutral")
     ci_updated = str(engine_ci.get("updated_at") or "Sem horário confirmado")
     ci_url = str(engine_ci.get("url") or "https://github.com/korczaktech/kz-nexus/actions/workflows/kortex-validation.yml")
-    overall = "Operacional" if api_ok and db_ok else "Degradado"
+    overall = "Operacional" if api_ok and db_ok and not performance_degraded else "Degradado"
     status_class = "ok" if overall == "Operacional" else "warn"
 
     def card(label: str, value: str, hint: str) -> str:
@@ -151,7 +158,7 @@ main{{padding:35px 0 64px}}.eyebrow{{color:var(--blue);font-size:11px;font-weigh
 <main>
 <p class="eyebrow">Observabilidade · Produção</p><h1>Telemetria do Kortex</h1>
 <p class="subtitle">Painel renderizado no servidor, sem JavaScript no navegador. Acompanha esta instância da API e sua dependência de banco de dados; não lê conteúdo de documentos.</p>
-<section class="overview"><div><span class="state {status_class}"><span class="dot"></span>{escape(overall)}</span><p>API respondendo · Banco de dados {escape(database_status)}</p></div><div><strong>Tempo ativo desta instância</strong><p>{escape(uptime_text)} · processo iniciado em {escape(str(metrics.get("started_at", "—")))}</p></div></section>
+<section class="overview"><div><span class="state {status_class}"><span class="dot"></span>{escape(overall)}</span><p>API respondendo · Banco de dados {escape(database_status)} · {escape(alert_detail)}</p></div><div><strong>Tempo ativo desta instância</strong><p>{escape(uptime_text)} · processo iniciado em {escape(str(metrics.get("started_at", "—")))}</p></div></section>
 <section class="grid" aria-label="Indicadores principais">
 {card("Requisições (5 min)", str(metrics.get("requests_last_5m", 0)), f"{_number(metrics.get('requests_per_minute'))} por minuto em média")}
 {card("Taxa de erro (5 min)", _number(metrics.get("error_rate_last_5m_percent"), "%"), f"{metrics.get('errors_last_5m', 0)} respostas HTTP de erro")}
