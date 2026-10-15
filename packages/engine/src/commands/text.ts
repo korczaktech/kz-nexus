@@ -67,7 +67,10 @@ function rebuildRuns(runs: TextRun[], start: number, end: number, insertedText: 
   // original sole run of a fresh paragraph) so text stays in as few runs as
   // possible; always keep at least one run so the block remains valid.
   const combined = coalesceRuns([...before, ...middle, ...after].filter((run) => run.text.length > 0));
-  return combined.length > 0 ? combined : [{ type: "text", id: ctx.generateId(), text: "", marks: marksAtStart }];
+  // An empty block has no character range from which inline marks can be inherited.
+  // Keeping the deleted run's marks here makes formatting appear permanently on
+  // after the user removes the final character.
+  return combined.length > 0 ? combined : [{ type: "text", id: ctx.generateId(), text: "", marks: [] }];
 }
 
 /** Inserts `text` at `offset` inside the block identified by `blockId`. */
