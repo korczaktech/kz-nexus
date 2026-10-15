@@ -50,35 +50,48 @@ try {
   async function processMemory() {
     try {
       const result = await browserSession.send("SystemInfo.getProcessInfo");
-      const processes = await Promise.all((result.processInfo ?? []).map(async (p) => {
+      const rawProcesses = result.processInfo ?? [];
+      const pids = rawProcesses.map((p) => String(p.id)).filter((id) => /^\\d+$/.test(id));
+      const ps = pids.length ? spawnSync("ps", ["-o", "pid=,rss=", "-p", pids.join(",")], { encoding: "utf8" }) : null;
+      const rssByPid = new Map((ps?.stdout ?? "").trim().split("\\n").filter(Boolean).map((line) => {
+        const [pid, rssKb] = line.trim().split(/\\s+/);
+        return [pid, Number(rssKb)];
+      }));
+      const processes = await Promise.all(rawProcesses.map(async (p) => {
         let privateMemoryMB = null;
-        let source = "unavailable";
-        // Chromium's CDP memory field can be zero on Linux CI; prefer kernel private-page accounting.
+        let privateSource = "unavailable";
         try {
           const status = await readFile(`/proc/${p.id}/smaps_rollup`, "utf8");
           const values = [...status.matchAll(/^Private_(?:Clean|Dirty|Hugetlb):\\s+(\\d+) kB$/gm)]
             .map((match) => Number(match[1]));
           if (values.length) {
             privateMemoryMB = mb(values.reduce((sum, value) => sum + value, 0) * 1024);
-            source = "proc-smaps_rollup";
+            privateSource = "proc-smaps_rollup";
           }
-        } catch { /* /proc is Linux-specific and may be restricted */ }
+        } catch { /* /proc private-page accounting can be restricted */ }
         if (privateMemoryMB === null && Number(p.memory ?? 0) > 0) {
           privateMemoryMB = mb(Number(p.memory) * 1024);
-          source = "cdp";
+          privateSource = "cdp";
         }
-        return { type: p.type, id: p.id, privateMemoryMB, source };
+        const rssKb = rssByPid.get(String(p.id));
+        return {
+          type: p.type,
+          id: p.id,
+          privateMemoryMB,
+          privateSource,
+          residentMemoryMB: Number.isFinite(rssKb) ? mb(rssKb * 1024) : null,
+        };
       }));
-      const complete = processes.length > 0 && processes.every((p) => p.privateMemoryMB !== null);
+      const privateComplete = processes.length > 0 && processes.every((p) => p.privateMemoryMB !== null);
+      const rssComplete = processes.length > 0 && processes.every((p) => p.residentMemoryMB !== null);
       return {
-        privateMemoryMB: complete ? Number(processes.reduce((sum, p) => sum + p.privateMemoryMB, 0).toFixed(2)) : null,
+        privateMemoryMB: privateComplete ? Number(processes.reduce((sum, p) => sum + p.privateMemoryMB, 0).toFixed(2)) : null,
+        totalResidentMemoryMB: rssComplete ? Number(processes.reduce((sum, p) => sum + p.residentMemoryMB, 0).toFixed(2)) : null,
         processes,
-        note: complete
-          ? "Memória privada dos processos Chrome; /proc/smaps_rollup quando disponível, CDP como fallback."
-          : "Medição de memória privada incompleta neste ambiente; null indica indisponibilidade, não zero.",
+        note: "RSS é memória residente por processo; a soma pode contar páginas compartilhadas mais de uma vez. privateMemoryMB só é informado quando todos os processos têm uma medição privada disponível.",
       };
     } catch (error) {
-      return { privateMemoryMB: null, unavailable: String(error), note: "Medição de memória privada não suportada neste Chromium." };
+      return { privateMemoryMB: null, totalResidentMemoryMB: null, unavailable: String(error), note: "Medição de memória de processos não suportada neste ambiente." };
     }
   }
 
