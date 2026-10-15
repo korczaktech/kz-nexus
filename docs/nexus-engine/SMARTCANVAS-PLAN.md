@@ -44,6 +44,16 @@ Editor React (shell, menus, acessibilidade, estado da aplicação)
 8. **Compatibilidade incremental:** a implementação nova deve coexistir atrás de uma flag de desenvolvimento até passar a matriz de testes; não substituir toda a produção em um commit.
 9. **Sem otimização prematura:** primeiro medir e registrar; otimização de memória fica para a última etapa acordada.
 
+## Passo 2 — implementação incremental
+
+- [x] Introduzir SmartCanvasSurface como coordenador da superfície do preview.
+- [x] Definir contratos explícitos SmartCanvasRenderer, SmartCanvasSelectionAdapter e SmartCanvasInputAdapter.
+- [x] Tornar renderização, seleção e input substituíveis por dependências injetadas.
+- [x] Integrar a superfície no preview sem alterar o modelo canônico ou duplicar comandos/histórico.
+- [x] Adicionar testes de lifecycle, renderização por mudança de modelo e passagem de seleção lógica.
+- [ ] Passar typecheck, testes e build do preview antes de fechar a etapa.
+- [ ] Mapear os pontos de integração equivalentes do editor React de produção, sem trocar ainda o caminho de edição.
+
 ## Etapas de migração (ordem obrigatória)
 
 1. **Preparação e baseline (este passo):** mapa arquitetural, script reproduzível de memória do navegador e medições do motor, identificação dos caminhos atuais.
