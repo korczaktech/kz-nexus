@@ -1,6 +1,6 @@
 import { useEffect, useRef } from "react";
 import type { CSSProperties } from "react";
-import type { LayoutBlock, LayoutLine, LayoutPage, LayoutResult, Mark, NexusDocument } from "../../../packages/engine/src/index";
+import { hitTestLayout, type LayoutBlock, type LayoutLine, type LayoutPage, type LayoutResult, type Mark, type NexusDocument, type SmartCanvasHitTarget } from "../../../packages/engine/src/index";
 
 const PT_TO_CSS_PX = 96 / 72;
 const PAGE_GAP = 24;
@@ -14,6 +14,8 @@ type CanvasPageProps = {
   headerText: string;
   footerText: string;
   showPageNumbers: boolean;
+  layout: LayoutResult;
+  onHitTest?: (target: SmartCanvasHitTarget) => void;
 };
 
 function markedFont(marks: Mark[], fontSize: number, fontFamily: string): string {
@@ -176,7 +178,7 @@ function pageText(page: LayoutPage): string {
   return parts.join(" ").replace(/\s+/g, " ").trim();
 }
 
-export function CanvasPage({ page, pageCount, document, headerText, footerText, showPageNumbers }: CanvasPageProps) {
+export function CanvasPage({ page, pageCount, document, headerText, footerText, showPageNumbers, layout, onHitTest }: CanvasPageProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const cssWidth = page.width * PT_TO_CSS_PX;
   const cssHeight = page.height * PT_TO_CSS_PX;
@@ -262,8 +264,20 @@ export function CanvasPage({ page, pageCount, document, headerText, footerText, 
     return () => { cancelled = true; };
   }, [page, pageCount, document, headerText, footerText, showPageNumbers, cssWidth, cssHeight]);
 
+  const handlePointerDown = (event: React.PointerEvent<HTMLCanvasElement>) => {
+    if (!onHitTest) return;
+    const bounds = event.currentTarget.getBoundingClientRect();
+    if (bounds.width <= 0 || bounds.height <= 0) return;
+    const x = ((event.clientX - bounds.left) / bounds.width) * page.width;
+    const y = ((event.clientY - bounds.top) / bounds.height) * page.height;
+    const target = hitTestLayout(layout, page.index, x, y);
+    if (target) onHitTest(target);
+  };
+
   return <canvas
     ref={canvasRef}
+    onPointerDown={onHitTest ? handlePointerDown : undefined}
+    tabIndex={onHitTest ? 0 : undefined}
     className="kortex-canvas-page"
     role="img"
     aria-label={`Página ${page.index + 1} de ${pageCount}. ${pageText(page)}`}
@@ -272,12 +286,13 @@ export function CanvasPage({ page, pageCount, document, headerText, footerText, 
   />;
 }
 
-export function CanvasDocumentRenderer({ layout, document, headerText = "", footerText = "", showPageNumbers = false }: {
+export function CanvasDocumentRenderer({ layout, document, headerText = "", footerText = "", showPageNumbers = false, onHitTest }: {
   layout: LayoutResult;
   document: NexusDocument;
   headerText?: string;
   footerText?: string;
   showPageNumbers?: boolean;
+  onHitTest?: (target: SmartCanvasHitTarget) => void;
 }) {
   return <div className="kortex-canvas-pages" data-renderer="canvas-2d" style={{
     display: "flex",
@@ -290,6 +305,8 @@ export function CanvasDocumentRenderer({ layout, document, headerText = "", foot
     {layout.pages.map(page => <CanvasPage
       key={page.index}
       page={page}
+      layout={layout}
+      onHitTest={onHitTest}
       pageCount={layout.pageCount}
       document={document}
       headerText={headerText}
