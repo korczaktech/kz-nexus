@@ -115,3 +115,14 @@ Primeira integração de baixo risco registrada em `frontend/src/components/edit
 - [ ] Só então migrar digitação e exclusão para comandos semânticos do motor.
 
 A flag é um mecanismo de teste, não uma declaração de que a nova seleção lógica já substituiu o DOM. A implementação ainda chama o adaptador de seleção existente para mapear posições e restaurar o cursor. Não ativar por padrão nem iniciar otimização de memória nesta fase.
+
+
+## Incremento de integração de input — 2026-10-15
+
+- [x] Adicionar despacho explícito do evento `beforeinput` pelo adaptador SmartCanvas quando `?smartCanvas=1` estiver ativo.
+- [x] Manter o handler semântico atual como autoridade para executar comandos Nexus; o adaptador não altera o texto nem cancela eventos.
+- [x] Instrumentar eventos `beforeinput` e eventos de composição/IME em memória.
+- [x] Testar encaminhamento do evento, ausência de cancelamento implícito e contadores de composição.
+- [ ] Validar o novo commit no CI antes de ampliar a fatia.
+
+A flag continua desligada por padrão. O próximo passo não deve ativar SmartCanvas globalmente: deve testar e corrigir os casos de digitação/deleção em fronteiras de blocos e páginas, além da composição IME real, preservando o histórico e o salvamento.
