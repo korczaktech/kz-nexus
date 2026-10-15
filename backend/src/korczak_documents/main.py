@@ -1,6 +1,8 @@
+from time import perf_counter
+
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
+from fastapi.responses import HTMLResponse, JSONResponse
 
 from .config.settings import get_settings
 from .database.bootstrap import bootstrap_database
@@ -9,6 +11,8 @@ from .errors import AppError, register_exception_handlers
 from .logging import configure_logging, get_logger
 from .rate_limit import enforce_rate_limit
 from .routes import router
+from .telemetry import request_finished, request_started, snapshot
+from .telemetry_dashboard import render_dashboard
 
 settings = get_settings()
 configure_logging(settings)
@@ -41,6 +45,30 @@ app.add_middleware(
     allow_headers=["Authorization", "Content-Type"],
 )
 
+
+@app.middleware("http")
+async def collect_telemetry(request: Request, call_next):
+    """Record aggregate request timings without collecting user-identifying data."""
+    path = request.url.path
+    if path.startswith("/telemetry"):
+        return await call_next(request)
+
+    started = perf_counter()
+    request_started()
+    status_code = 500
+    try:
+        response = await call_next(request)
+        status_code = response.status_code
+        return response
+    finally:
+        request_finished(
+            request.method,
+            path,
+            status_code,
+            (perf_counter() - started) * 1000,
+        )
+
+
 @app.middleware("http")
 async def security_middleware(request: Request, call_next):
     path = request.url.path
@@ -64,6 +92,7 @@ async def security_middleware(request: Request, call_next):
         response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
     return response
 
+
 register_exception_handlers(app)
 app.include_router(router, prefix="/api/v1")
 
@@ -78,6 +107,7 @@ async def initialize_mongodb() -> None:
 @app.on_event("shutdown")
 async def shutdown_mongodb() -> None:
     close_client()
+
 
 @app.get("/health", include_in_schema=False)
 def root_health() -> dict[str, str]:
@@ -98,3 +128,30 @@ async def readiness_health():
             content={"status": "unavailable", "service": "korczak-nexus-api"},
         )
     return {"status": "ready", "service": "korczak-nexus-api"}
+
+
+@app.get("/telemetry/metrics", include_in_schema=False)
+def telemetry_metrics() -> dict:
+    """Public aggregate telemetry; deliberately excludes sensitive request data."""
+    return snapshot()
+
+
+@app.get("/telemetry", response_class=HTMLResponse, include_in_schema=False)
+async def telemetry_dashboard():
+    """Server-rendered telemetry dashboard; no client-side JavaScript required."""
+    database_status = "indisponível"
+    database_latency_ms = None
+    started = perf_counter()
+    try:
+        await get_database().command({"ping": 1})
+        database_latency_ms = round((perf_counter() - started) * 1000, 2)
+        database_status = "operacional"
+    except Exception:
+        logger.warning("Telemetry dashboard: MongoDB ping failed")
+    return HTMLResponse(
+        content=render_dashboard(snapshot(), database_status, database_latency_ms),
+        headers={
+            "Cache-Control": "no-store, max-age=0",
+            "X-Robots-Tag": "noindex, nofollow",
+        },
+    )
