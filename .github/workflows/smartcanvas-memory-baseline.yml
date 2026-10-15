@@ -2,6 +2,13 @@ name: SmartCanvas Memory Baseline
 
 on:
   workflow_dispatch:
+  push:
+    paths:
+      - ".github/workflows/smartcanvas-memory-baseline.yml"
+      - "packages/engine/**"
+      - "packages/engine-preview/**"
+      - "docs/nexus-engine/SMARTCANVAS-PLAN.md"
+      - "docs/nexus-engine/PERFORMANCE.md"
 
 permissions:
   contents: read
