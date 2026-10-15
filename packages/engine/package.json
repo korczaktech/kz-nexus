@@ -17,7 +17,8 @@
   "scripts": {
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "build": "node build.mjs",
-    "test": "vitest run"
+    "test": "vitest run",
+    "memory:baseline": "node tooling/memory-baseline.mjs"
   },
   "devDependencies": {
     "esbuild": "0.25.5",
