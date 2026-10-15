@@ -166,9 +166,44 @@ async def readiness_health():
 
 
 @app.get("/telemetry/metrics", include_in_schema=False)
-def telemetry_metrics() -> dict:
+async def telemetry_metrics() -> dict:
     """Public aggregate telemetry; deliberately excludes sensitive request data."""
-    return snapshot()
+    database_status = "indisponível"
+    database_latency_ms = None
+    history = []
+    started = perf_counter()
+    try:
+        database = get_database()
+        await database.command({"ping": 1})
+        database_latency_ms = round((perf_counter() - started) * 1000, 2)
+        database_status = "operacional"
+        cursor = (
+            database["kortex_telemetry_snapshots"]
+            .find(
+                {},
+                {
+                    "_id": 0,
+                    "captured_at": 1,
+                    "requests_last_5m": 1,
+                    "errors_last_5m": 1,
+                    "error_rate_last_5m_percent": 1,
+                    "latency_avg_ms_last_5m": 1,
+                    "latency_p95_ms_last_5m": 1,
+                },
+            )
+            .sort("captured_at", -1)
+            .limit(24)
+        )
+        history = await cursor.to_list(length=24)
+    except Exception:
+        logger.warning("Telemetry metrics: database ping or history query failed")
+    return {
+        "metrics": snapshot(),
+        "database_status": database_status,
+        "database_latency_ms": database_latency_ms,
+        "engine_ci": await get_engine_ci_status(),
+        "history": history,
+    }
 
 
 @app.get("/telemetry", response_class=HTMLResponse, include_in_schema=False)
