@@ -62,6 +62,9 @@ describe("Editor", () => {
 
     expect(editor.exec([deleteText({ blockId, start: 0, end: 1 })], { group: "typing" }).ok).toBe(true);
     expect((editor.getDocument().content[0] as Paragraph).children).toMatchObject([{ text: "", marks: [] }]);
+    // Pending formatting remains active until the user explicitly turns it off.
+    expect(editor.isMarkActiveAtSelection("bold")).toBe(true);
+    expect(editor.toggleStoredMark({ type: "bold" })).toEqual({ ok: true, value: false });
     expect(editor.isMarkActiveAtSelection("bold")).toBe(false);
   });
 
