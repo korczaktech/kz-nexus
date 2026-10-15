@@ -58,6 +58,12 @@ def _number(value: int | float | None, suffix: str = "") -> str:
 def render_dashboard(metrics: dict[str, Any], database_status: str, database_latency_ms: float | None, engine_ci: dict[str, Any] | None = None) -> str:
     api_ok = True
     db_ok = database_status == "operacional"
+    engine_ci = engine_ci or {"state": "unknown", "label": "INDISPONÍVEL", "updated_at": None, "url": "https://github.com/korczaktech/kz-nexus/actions/workflows/kortex-validation.yml"}
+    ci_state = str(engine_ci.get("state", "unknown"))
+    ci_label = str(engine_ci.get("label", "INDISPONÍVEL"))
+    ci_class = "pill" if ci_state == "success" else ("pill warn" if ci_state in {"failure", "running"} else "pill neutral")
+    ci_updated = str(engine_ci.get("updated_at") or "Sem horário confirmado")
+    ci_url = str(engine_ci.get("url") or "https://github.com/korczaktech/kz-nexus/actions/workflows/kortex-validation.yml")
     overall = "Operacional" if api_ok and db_ok else "Degradado"
     status_class = "ok" if overall == "Operacional" else "warn"
 
@@ -151,7 +157,8 @@ main{{padding:35px 0 64px}}.eyebrow{{color:var(--blue);font-size:11px;font-weigh
 <section class="panel"><h2>Integridade dos componentes</h2><p class="panel-intro">Verificações executadas na geração desta página</p><div class="health-list">
 <div class="health-item"><div><strong>API Kortex / Nexus</strong><small>Processo HTTP e renderização do painel</small></div><span class="pill">RESPONDENDO</span></div>
 <div class="health-item"><div><strong>MongoDB</strong><small>Comando ping: {escape(database_status)}</small></div><span class="pill {' ' if db_ok else 'warn'}">{'OPERACIONAL' if db_ok else 'DEGRADADO'}</span></div>
-<div class="health-item"><div><strong>Validação automatizada do motor</strong><small>Última execução: {escape(ci_updated)} · <a href="{escape(ci_url, quote=True)}" rel="noopener noreferrer">ver workflow</a></small></div><span class="{escape(ci_class)}">{escape(ci_label)}</span></div>\n<div class="health-item"><div><strong>Execução do motor no navegador</strong><small>O estado de cada editor aberto não é exposto ao backend</small></div><span class="pill neutral">NÃO INSTRUMENTADO</span></div>
+<div class="health-item"><div><strong>Validação automatizada do motor</strong><small>Última execução: {escape(ci_updated)} · <a href="{escape(ci_url, quote=True)}" rel="noopener noreferrer">ver workflow</a></small></div><span class="{escape(ci_class)}">{escape(ci_label)}</span></div>
+<div class="health-item"><div><strong>Execução do motor no navegador</strong><small>O estado de cada editor aberto não é exposto ao backend</small></div><span class="pill neutral">NÃO INSTRUMENTADO</span></div>
 <div class="health-item"><div><strong>Recursos do sistema</strong><small>{f'{sys_available} MB disponíveis de {sys_total} MB' if sys_available is not None and sys_total is not None else 'Detalhes do host indisponíveis neste ambiente'}</small></div><span class="pill neutral">INFORMATIVO</span></div>
 </div></section>
 </div>
