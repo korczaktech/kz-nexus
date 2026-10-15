@@ -12,7 +12,7 @@ from .logging import configure_logging, get_logger
 from .rate_limit import enforce_rate_limit
 from .routes import router
 from .telemetry import request_finished, request_started, snapshot
-from .telemetry_dashboard import render_dashboard
+from .telemetry_dashboard import get_engine_ci_status, render_dashboard
 
 settings = get_settings()
 configure_logging(settings)
@@ -149,7 +149,7 @@ async def telemetry_dashboard():
     except Exception:
         logger.warning("Telemetry dashboard: MongoDB ping failed")
     return HTMLResponse(
-        content=render_dashboard(snapshot(), database_status, database_latency_ms),
+        content=render_dashboard(snapshot(), database_status, database_latency_ms, await get_engine_ci_status()),
         headers={
             "Cache-Control": "no-store, max-age=0",
             "X-Robots-Tag": "noindex, nofollow",
