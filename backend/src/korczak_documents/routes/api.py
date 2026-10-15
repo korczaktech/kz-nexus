@@ -206,7 +206,9 @@ async def create_document(payload: DocumentCreateRequest, user=Depends(current_u
 async def get_document(document_id: str, user=Depends(current_user)):
     document = await service.document_or_404(document_id, user["id"], "read")
     version = await get_database()["versoes"].find_one({"id": document.get("current_version_id")}) if document.get("current_version_id") else None
-    return DocumentResponse(**document, content=version.get("content") if version else None, native_content=version.get("native_content") if version else None, favorite=user["id"] in document.get("favorite_user_ids", []))
+    content = document.get("draft_content") if document.get("draft_updated_at") else (version.get("content") if version else None)
+    native_content = document.get("draft_native_content") if document.get("draft_updated_at") else (version.get("native_content") if version else None)
+    return DocumentResponse(**document, content=content, native_content=native_content, favorite=user["id"] in document.get("favorite_user_ids", []))
 
 
 @router.post("/documents/{document_id}/save", response_model=DocumentResponse)
@@ -216,7 +218,8 @@ async def save_document(document_id: str, payload: DocumentSaveRequest, user=Dep
     if not result:
         raise AppError("O documento foi alterado em outra sessão. Recarregue a versão atual antes de salvar.", "document_conflict", 409)
     updated,version=result
-    await repo.log_event(user["id"],"document.saved",{"document_id":document_id,"version_id":version["id"]})
+    if payload.create_version:
+        await repo.log_event(user["id"],"document.version_created",{"document_id":document_id,"version_id":version["id"],"source":"autosave_checkpoint"})
     return DocumentResponse(**updated,favorite=user["id"] in updated.get("favorite_user_ids",[]),content=version.get("content"),native_content=version.get("native_content"))
 
 
