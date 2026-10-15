@@ -56,7 +56,7 @@ try {
       const rows = (ps.stdout ?? "").split("\\n").map((line) => {
         const match = line.trim().match(/^(\\d+)\\s+(\\d+)\\s+(.+)$/);
         return match ? { id: Number(match[1]), rssKb: Number(match[2]), command: match[3] } : null;
-      }).filter((row) => row && /(?:^|[\\/\\s])(?:chrome|chromium)(?:\\s|$)/i.test(row.command));
+      }).filter((row) => row && /(?:^|[\\/\\s])(?:chrome-headless-shell|chrome|chromium)(?:\\s|$)/i.test(row.command));
       const processes = await Promise.all(rows.map(async (p) => {
         let privateMemoryMB = null;
         let privateSource = "unavailable";
