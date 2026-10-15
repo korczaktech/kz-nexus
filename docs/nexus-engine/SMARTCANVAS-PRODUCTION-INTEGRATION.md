@@ -85,7 +85,7 @@ Só após equivalência funcional e medições comparáveis, avaliar virtualiza�
 
 ## Limites desta análise
 
-Este mapa foi produzido por inspeção do código e não comprova comportamento de todos os caminhos em execução. A implementação inicial criou `frontend/src/components/editorSmartCanvas.ts` como fronteira explícita de seleção e integrou `engineContext()` de `Editor.tsx` a essa fronteira quando a flag `?smartCanvas=1` está presente. A flag fica desligada por padrão; nesse caso, o caminho legado permanece em uso. O adaptador ainda delega a conversão à implementação DOM existente, instrumentando leituras e restaurações apenas quando ativado. Isso é uma etapa de extração de fronteira, não uma substituição da seleção nativa nem uma migração completa de entrada de texto.
+Este mapa foi produzido por inspeção do código e não comprova comportamento de todos os caminhos em execução. A implementação inicial criou `frontend/src/components/editorSmartCanvas.ts` como fronteira explícita de seleção e input e integrou `engineContext()` de `Editor.tsx` a essa fronteira quando a flag `?smartCanvas=1` está presente. A flag fica desligada por padrão; nesse caso, o caminho legado permanece em uso. O adaptador ainda delega a conversão à implementação DOM existente, instrumentando leituras e restaurações apenas quando ativado. Isso é uma etapa de extração de fronteira, não uma substituição da seleção nativa nem uma migração completa de entrada de texto.
 
 
 ## Implementação incremental iniciada — 2026-10-15
@@ -94,3 +94,11 @@ Este mapa foi produzido por inspeção do código e não comprova comportamento 
 - `Editor.tsx` encaminha o mapeamento de seleção de `engineContext()` pelo novo contrato quando `?smartCanvas=1`; sem esse parâmetro, usa diretamente os adaptadores anteriores.
 - Criados testes para a flag (padrão desligado) e isolamento dos contadores.
 - Ainda não migrados: `beforeinput`, digitação/deleção, composição IME, clipboard, histórico, renderer DOM e paginação. O contrato atual continua usando o adaptador DOM existente de propósito.
+
+
+## Incremento seguinte — fronteira de entrada de texto
+
+- Com `?smartCanvas=1`, o evento `beforeinput` agora passa por `dispatchSmartCanvasBeforeInput()` antes de chegar ao handler de comandos já existente. Sem a flag, o despacho legado continua direto.
+- O adaptador registra em memória a quantidade de eventos `beforeinput` e quantos coincidem com um estado/evento de composição IME. Ele não chama `preventDefault()`, não altera texto e não declara uma operação bem-sucedida; a decisão continua no handler, que converte operações conhecidas em comandos do motor Nexus.
+- Testes verificam o encaminhamento do evento, a preservação do evento de composição e os contadores. A mudança é uma extração explícita de fronteira/instrumentação, não uma nova implementação de digitação ou IME.
+- Próxima validação necessária: testes e build frontend no CI; depois disso, a próxima fatia deve cobrir casos de input que ainda caem no fallback, especialmente seleção cruzando blocos e composição real em navegador.
