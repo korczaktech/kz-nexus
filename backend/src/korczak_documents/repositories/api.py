@@ -148,7 +148,7 @@ async def update_document(document_id: str, changes: dict):
 async def create_version(document_id: str, author_id: str, content: str | None, number: int, native_content: str | None = None):
     version = {"id": str(uuid4()), "document_id": document_id, "version_number": number, "author_id": author_id, "content": content, "native_content": native_content, "created_at": now()}
     await get_database()["versoes"].insert_one(version)
-    await update_document(document_id, {"current_version_id": version["id"]})
+    await update_document(document_id, {"current_version_id": version["id"], "draft_content": None, "draft_native_content": None, "draft_updated_at": None})
     return version
 
 async def save_document(document_id: str, author_id: str, data: dict, base_version_id: str | None):
