@@ -1,6 +1,6 @@
-# SmartCanvas — arquitetura e preparação (Passo 1)
+# SmartCanvas — arquitetura, consolidação e migração
 
-Status: preparação arquitetural; nenhuma substituição do editor de produção nesta etapa.
+Status: Passo 1 concluído; Passo 2 implementado e validado no preview; mapa de integração do editor React de produção criado. A migração do editor de produção ainda não foi iniciada.
 
 ## Objetivo
 
@@ -51,8 +51,8 @@ Editor React (shell, menus, acessibilidade, estado da aplicação)
 - [x] Tornar renderização, seleção e input substituíveis por dependências injetadas.
 - [x] Integrar a superfície no preview sem alterar o modelo canônico ou duplicar comandos/histórico.
 - [x] Adicionar testes de lifecycle, renderização por mudança de modelo e passagem de seleção lógica.
-- [ ] Passar typecheck, testes e build do preview antes de fechar a etapa.
-- [ ] Mapear os pontos de integração equivalentes do editor React de produção, sem trocar ainda o caminho de edição.
+- [x] Passar typecheck, testes e build do preview antes de fechar a etapa (workflow `Kortex validation`, run 38815982388: sucesso).
+- [x] Mapear os pontos de integração equivalentes do editor React de produção, sem trocar ainda o caminho de edição (veja `SMARTCANVAS-PRODUCTION-INTEGRATION.md`).
 
 ## Etapas de migração (ordem obrigatória)
 
@@ -93,3 +93,10 @@ O heap JavaScript não equivale à RAM total do processo: Canvas, DOM nativo, im
 - [x] Confirmar que o workflow de build e medição do motor, preview e editor React concluiu com sucesso.
 
 O passo só pode ser marcado como concluído depois dos dois últimos itens. Se Playwright/Chromium não estiver instalado no ambiente de execução, o script deve falhar com uma mensagem explícita; não substituir medições reais por estimativas.
+
+
+## Estado de validação atualizado — 2026-10-15
+
+O workflow [Kortex validation](https://github.com/korczaktech/kz-nexus/actions/runs/38815982388) concluiu com sucesso. Os jobs **Frontend typecheck and build**, **SmartCanvas preview tests, types and build** e **Engine tests, types and build** estão verdes. Isso valida os comandos automatizados configurados; não substitui testes manuais nem uma matriz completa de regressão do editor de produção.
+
+O mapa de integração React foi documentado em `SMARTCANVAS-PRODUCTION-INTEGRATION.md`. A implementação atual do SmartCanvas está integrada ao preview do motor, não à superfície de edição React de produção. O próximo passo funcional é introduzir a camada de contratos/adaptadores no editor React sob flag de desenvolvimento, começando por seleção lógica e input de texto, sem alterar a persistência ou o renderer de preview na mesma mudança.
