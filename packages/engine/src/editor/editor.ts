@@ -1,7 +1,7 @@
 import type { Mark, MarkType, NexusDocument, ResourceRef } from "../model/types";
 import type { Selection } from "../selection/selection";
 import { findParagraphLike, getPlainText } from "../model/tree";
-import { toggleMark as toggleMarkCommand } from "../commands/marks";
+import { applyMark, removeMark, toggleMark as toggleMarkCommand } from "../commands/marks";
 import { insertText, replaceRange } from "../commands/text";
 import type { Command } from "../commands/types";
 import { applyTransaction } from "../transactions/transaction";
@@ -149,6 +149,43 @@ export class Editor {
       if (!run.marks.some((mark) => mark.type === type)) return false;
     }
     return sawText;
+  }
+
+  /** Sets an inline mark on the current selection or for subsequent typing. */
+  setStoredMark(mark: Mark, active: boolean): Result<boolean> {
+    this.assertNotDisposed();
+    const selection = this.selection;
+    if (!selection) return err(engineError("INVALID_POSITION", "A selection is required to set formatting"));
+    if (selection.anchor.blockId !== selection.focus.blockId) {
+      return err(engineError("UNSUPPORTED_OPERATION", "Formatting across multiple blocks is not supported by this operation"));
+    }
+    const blockId = selection.anchor.blockId;
+    const start = Math.min(selection.anchor.offset, selection.focus.offset);
+    const end = Math.max(selection.anchor.offset, selection.focus.offset);
+    if (start !== end) {
+      const command = active
+        ? applyMark({ blockId, start, end, mark })
+        : removeMark({ blockId, start, end, markType: mark.type });
+      const result = this.exec([command], { group: "formatting" });
+      return result.ok ? ok(active) : err(result.error);
+    }
+    if (this.storedMarksBlockId !== blockId) {
+      this.storedMarks = [];
+      this.disabledStoredMarks = [];
+      this.storedMarksBlockId = blockId;
+    }
+    const activeIndex = this.storedMarks.findIndex((item) => item.type === mark.type);
+    const disabledIndex = this.disabledStoredMarks.indexOf(mark.type);
+    if (active) {
+      if (activeIndex >= 0) this.storedMarks.splice(activeIndex, 1);
+      if (disabledIndex >= 0) this.disabledStoredMarks.splice(disabledIndex, 1);
+      this.storedMarks.push({ ...mark });
+    } else {
+      if (activeIndex >= 0) this.storedMarks.splice(activeIndex, 1);
+      if (disabledIndex < 0) this.disabledStoredMarks.push(mark.type);
+    }
+    if (this.storedMarks.length === 0 && this.disabledStoredMarks.length === 0) this.storedMarksBlockId = undefined;
+    return ok(active);
   }
 
   /** Toggles an inline mark at a collapsed engine selection, or on selected text. */
