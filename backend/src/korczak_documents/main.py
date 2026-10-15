@@ -1,3 +1,5 @@
+import asyncio
+import os
 from time import perf_counter
 
 from fastapi import FastAPI, Request
@@ -11,7 +13,7 @@ from .errors import AppError, register_exception_handlers
 from .logging import configure_logging, get_logger
 from .rate_limit import enforce_rate_limit
 from .routes import router
-from .telemetry import request_finished, request_started, snapshot
+from .telemetry import persist_snapshot, request_finished, request_started, snapshot
 from .telemetry_dashboard import get_engine_ci_status, render_dashboard
 
 settings = get_settings()
@@ -19,6 +21,18 @@ configure_logging(settings)
 logger = get_logger(__name__)
 
 app = FastAPI(title=settings.app_name, version="0.3.0", description="API do Korczak Nexus.")
+_telemetry_task: asyncio.Task | None = None
+
+
+async def _persist_telemetry_periodically() -> None:
+    """Write one privacy-safe aggregate sample per minute, with bounded retention."""
+    while True:
+        await asyncio.sleep(60)
+        try:
+            instance_id = os.getenv("RENDER_INSTANCE_ID") or os.getenv("HOSTNAME") or "default"
+            await persist_snapshot(get_database(), instance_id)
+        except Exception:
+            logger.warning("Telemetria: não foi possível persistir a amostra histórica")
 
 # Produção: o frontend é publicado no GitHub Pages. Mantemos também a
 # origem configurada por ambiente para permitir mudanças de domínio sem
@@ -101,13 +115,32 @@ app.include_router(router, prefix="/api/v1")
 
 @app.on_event("startup")
 async def initialize_mongodb() -> None:
-    """Prepare the complete MongoDB structure before serving requests."""
+    """Prepare MongoDB and initialize historical telemetry collection."""
+    global _telemetry_task
     await bootstrap_database()
+    try:
+        database = get_database()
+        await database["kortex_telemetry_snapshots"].create_index(
+            "captured_at", expireAfterSeconds=30 * 24 * 60 * 60
+        )
+        instance_id = os.getenv("RENDER_INSTANCE_ID") or os.getenv("HOSTNAME") or "default"
+        await persist_snapshot(database, instance_id)
+    except Exception:
+        logger.warning("Telemetria: persistência histórica indisponível; métricas locais continuam ativas")
+    _telemetry_task = asyncio.create_task(_persist_telemetry_periodically())
     logger.info("MongoDB inicializado: coleções, índices e bootstrap verificados")
 
 
 @app.on_event("shutdown")
 async def shutdown_mongodb() -> None:
+    global _telemetry_task
+    if _telemetry_task is not None:
+        _telemetry_task.cancel()
+        try:
+            await _telemetry_task
+        except asyncio.CancelledError:
+            pass
+        _telemetry_task = None
     close_client()
 
 
@@ -144,14 +177,34 @@ async def telemetry_dashboard():
     database_status = "indisponível"
     database_latency_ms = None
     started = perf_counter()
+    history = []
     try:
-        await get_database().command({"ping": 1})
+        database = get_database()
+        await database.command({"ping": 1})
         database_latency_ms = round((perf_counter() - started) * 1000, 2)
         database_status = "operacional"
+        cursor = (
+            database["kortex_telemetry_snapshots"]
+            .find(
+                {},
+                {
+                    "_id": 0,
+                    "captured_at": 1,
+                    "requests_last_5m": 1,
+                    "errors_last_5m": 1,
+                    "error_rate_last_5m_percent": 1,
+                    "latency_avg_ms_last_5m": 1,
+                    "latency_p95_ms_last_5m": 1,
+                },
+            )
+            .sort("captured_at", -1)
+            .limit(24)
+        )
+        history = await cursor.to_list(length=24)
     except Exception:
-        logger.warning("Telemetry dashboard: MongoDB ping failed")
+        logger.warning("Telemetry dashboard: MongoDB ping or historical query failed")
     return HTMLResponse(
-        content=render_dashboard(snapshot(), database_status, database_latency_ms, await get_engine_ci_status()),
+        content=render_dashboard(snapshot(), database_status, database_latency_ms, await get_engine_ci_status(), history),
         headers={
             "Cache-Control": "no-store, max-age=0",
             "X-Robots-Tag": "noindex, nofollow",
