@@ -1,9 +1,7 @@
-import { afterEach, describe, expect, it } from "vitest";
+import { describe, expect, it } from "vitest";
 import type { Selection } from "@korczak/nexus-engine";
 import { SmartCanvasSurface } from "../src/editor/smartcanvas";
 import { PreviewController } from "../src/services/controller";
-
-const originalDocument = globalThis.document;
 
 function fakeRoot(): HTMLElement {
   return {
@@ -13,13 +11,7 @@ function fakeRoot(): HTMLElement {
   } as unknown as HTMLElement;
 }
 
-afterEach(() => {
-  if (originalDocument === undefined) {
-    Reflect.deleteProperty(globalThis, "document");
-  } else {
-    Object.defineProperty(globalThis, "document", { configurable: true, value: originalDocument });
-  }
-});
+
 
 describe("SmartCanvasSurface", () => {
   it("renders model changes and releases input and subscription on dispose", () => {
