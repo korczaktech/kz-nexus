@@ -179,3 +179,26 @@ def snapshot() -> dict[str, Any]:
         "recent_errors": events,
         "scope_note": "Métricas em memória desta instância; reinicializações zeram os contadores. Sem dados de corpos, documentos, IPs ou query strings.",
     }
+
+
+async def persist_snapshot(database: Any, instance_id: str) -> None:
+    """Persist a bounded, privacy-safe aggregate sample for historical charts."""
+    metrics = snapshot()
+    document = {
+        "captured_at": datetime.now(timezone.utc),
+        "instance_id": instance_id[:120],
+        "instance_uptime_seconds": metrics["instance_uptime_seconds"],
+        "requests_total_since_start": metrics["requests_total_since_start"],
+        "requests_last_5m": metrics["requests_last_5m"],
+        "requests_per_minute": metrics["requests_per_minute"],
+        "errors_last_5m": metrics["errors_last_5m"],
+        "error_rate_last_5m_percent": metrics["error_rate_last_5m_percent"],
+        "latency_avg_ms_last_5m": metrics["latency_avg_ms_last_5m"],
+        "latency_p95_ms_last_5m": metrics["latency_p95_ms_last_5m"],
+        "active_requests": metrics["active_requests"],
+        "cpu_process_percent_sampled": metrics["cpu_process_percent_sampled"],
+        "process_rss_mb": metrics["process_rss_mb"],
+        "status_groups_since_start": metrics["status_groups_since_start"],
+        "recent_errors": metrics["recent_errors"][:10],
+    }
+    await database["kortex_telemetry_snapshots"].insert_one(document)
