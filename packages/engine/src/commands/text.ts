@@ -58,11 +58,11 @@ export function coalesceRuns(runs: TextRun[]): TextRun[] {
   return out;
 }
 
-function rebuildRuns(runs: TextRun[], start: number, end: number, insertedText: string, ctx: { generateId: () => string }): TextRun[] {
+function rebuildRuns(runs: TextRun[], start: number, end: number, insertedText: string, ctx: { generateId: () => string }, marksOverride?: Mark[]): TextRun[] {
   const { before } = splitRunsAt(runs, start, ctx.generateId);
   const { after } = splitRunsAt(runs, end, ctx.generateId);
   const marksAtStart = before.length > 0 ? before[before.length - 1].marks : after.length > 0 ? after[0].marks : [];
-  const middle: TextRun[] = insertedText.length > 0 ? [{ type: "text", id: ctx.generateId(), text: insertedText, marks: marksAtStart }] : [];
+  const middle: TextRun[] = insertedText.length > 0 ? [{ type: "text", id: ctx.generateId(), text: insertedText, marks: marksOverride ? [...marksOverride] : marksAtStart }] : [];
   // Drop runs that became empty as a side effect of splitting (e.g. the
   // original sole run of a fresh paragraph) so text stays in as few runs as
   // possible; always keep at least one run so the block remains valid.
@@ -71,7 +71,7 @@ function rebuildRuns(runs: TextRun[], start: number, end: number, insertedText: 
 }
 
 /** Inserts `text` at `offset` inside the block identified by `blockId`. */
-export function insertText(params: { blockId: string; offset: number; text: string }): Command {
+export function insertText(params: { blockId: string; offset: number; text: string; marks?: Mark[] }): Command {
   return (doc: NexusDocument, ctx) => {
     const node = findParagraphLike(doc.content, params.blockId);
     if (!node) return err(engineError("NODE_NOT_FOUND", `Block "${params.blockId}" not found`, { path: params.blockId }));
@@ -80,7 +80,7 @@ export function insertText(params: { blockId: string; offset: number; text: stri
       return err(engineError("INVALID_POSITION", `Offset ${params.offset} out of range [0, ${currentLength}]`, { path: params.blockId }));
     }
     const content = updateParagraphLike(doc.content, params.blockId, (n) =>
-      n.id === params.blockId ? { ...n, children: rebuildRuns(n.children, params.offset, params.offset, params.text, ctx) } : n,
+      n.id === params.blockId ? { ...n, children: rebuildRuns(n.children, params.offset, params.offset, params.text, ctx, params.marks) } : n,
     ).blocks;
     return ok({ document: { ...doc, content }, selection: { blockId: params.blockId, offset: params.offset + params.text.length } });
   };
@@ -104,7 +104,7 @@ export function deleteText(params: { blockId: string; start: number; end: number
 }
 
 /** Replaces the `[start, end)` character range inside `blockId` with `text`. */
-export function replaceRange(params: { blockId: string; start: number; end: number; text: string }): Command {
+export function replaceRange(params: { blockId: string; start: number; end: number; text: string; marks?: Mark[] }): Command {
   return (doc: NexusDocument, ctx) => {
     const node = findParagraphLike(doc.content, params.blockId);
     if (!node) return err(engineError("NODE_NOT_FOUND", `Block "${params.blockId}" not found`, { path: params.blockId }));
@@ -113,7 +113,7 @@ export function replaceRange(params: { blockId: string; start: number; end: numb
       return err(engineError("INVALID_POSITION", `Invalid range [${params.start}, ${params.end}]`, { path: params.blockId }));
     }
     const content = updateParagraphLike(doc.content, params.blockId, (n) =>
-      n.id === params.blockId ? { ...n, children: rebuildRuns(n.children, params.start, params.end, params.text, ctx) } : n,
+      n.id === params.blockId ? { ...n, children: rebuildRuns(n.children, params.start, params.end, params.text, ctx, params.marks) } : n,
     ).blocks;
     return ok({ document: { ...doc, content }, selection: { blockId: params.blockId, offset: params.start + params.text.length } });
   };
