@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { getSelectionGeometry } from "./selectionGeometry";
-import type { LayoutResult, Selection } from "../index";
+import type { LayoutResult } from "./layout";
+import type { Selection } from "../selection/selection";
 
 const line = {
   text: "hello", x: 10, y: 20, width: 50, height: 12, startOffset: 0, endOffset: 5,
