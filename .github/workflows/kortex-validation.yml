@@ -45,3 +45,25 @@ jobs:
       - run: npm install
       - run: npm test
       - run: npm run build
+
+  engine-preview:
+    name: SmartCanvas preview tests, types and build
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: packages/engine-preview
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Install engine dependencies
+        working-directory: packages/engine
+        run: npm ci
+      - name: Build engine package
+        working-directory: packages/engine
+        run: npm run build
+      - run: npm install
+      - run: npm test
+      - run: npm run typecheck
+      - run: npm run build
