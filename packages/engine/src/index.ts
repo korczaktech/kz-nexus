@@ -37,6 +37,8 @@ export { layoutDocument } from "./layout/layout";
 export type { LayoutOptions, LayoutRect, LayoutTextRun, LayoutLine, LayoutBlock, LayoutPage, LayoutResult, TextMetrics } from "./layout/layout";
 export { hitTestLayout } from "./layout/hitTesting";
 export type { HitTestMeasureText, HitTestOptions, SmartCanvasHitTarget } from "./layout/hitTesting";
+export { getSelectionGeometry } from "./layout/selectionGeometry";
+export type { SelectionGeometry } from "./layout/selectionGeometry";
 
 // Selection
 export { isCollapsed, collapsedAt, orderedRange } from "./selection/selection";
