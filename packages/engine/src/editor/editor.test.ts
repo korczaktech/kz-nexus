@@ -52,6 +52,18 @@ describe("Editor", () => {
     ]);
   });
 
+  it("toggles formatting off for an already formatted selected range", () => {
+    const editor = newEditor();
+    const blockId = editor.getDocument().content[0].id;
+    editor.exec([insertText({ blockId, offset: 0, text: "word" })], { group: "typing" });
+    editor.exec([applyMark({ blockId, start: 0, end: 4, mark: { type: "bold" } })], { group: "formatting" });
+    editor.setSelection({ anchor: { blockId, offset: 0 }, focus: { blockId, offset: 4 } });
+
+    expect(editor.toggleStoredMark({ type: "bold" })).toEqual({ ok: true, value: false });
+    expect((editor.getDocument().content[0] as Paragraph).children).toMatchObject([{ text: "word", marks: [] }]);
+    expect(editor.isMarkActiveAtSelection("bold")).toBe(false);
+  });
+
   it("does not retain stale inline formatting after deleting the last character", () => {
     const editor = newEditor();
     const blockId = editor.getDocument().content[0].id;
