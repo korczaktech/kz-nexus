@@ -61,9 +61,11 @@ async def collect_telemetry(request: Request, call_next):
         status_code = response.status_code
         return response
     finally:
+        matched_route = request.scope.get("route")
+        metric_path = getattr(matched_route, "path", None) or path
         request_finished(
             request.method,
-            path,
+            metric_path,
             status_code,
             (perf_counter() - started) * 1000,
         )
