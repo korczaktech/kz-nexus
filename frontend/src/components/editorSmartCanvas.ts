@@ -1,5 +1,6 @@
 import type { createEditor } from "../../../packages/engine/src/index";
 import { getEngineDomContext, restoreEngineDomSelection } from "../services/nexusEngineAdapter";
+import { isCompositionInput } from "./editorComposition";
 
 type EngineInstance = ReturnType<typeof createEditor>;
 
@@ -10,6 +11,8 @@ export type SmartCanvasDiagnostics = {
   successfulReads: number;
   failedReads: number;
   restores: number;
+  beforeInputEvents: number;
+  compositionDeferredEvents: number;
 };
 
 const diagnostics: SmartCanvasDiagnostics = {
@@ -17,6 +20,8 @@ const diagnostics: SmartCanvasDiagnostics = {
   successfulReads: 0,
   failedReads: 0,
   restores: 0,
+  beforeInputEvents: 0,
+  compositionDeferredEvents: 0,
 };
 
 /**
@@ -51,6 +56,30 @@ export function restoreSmartCanvasSelection(engine: EngineInstance, root: HTMLEl
   restoreEngineDomSelection(engine, root);
 }
 
+
+export type SmartCanvasBeforeInputEvent = {
+  nativeEvent: Event;
+  preventDefault: () => void;
+};
+
+/**
+ * Explicit production input seam. The current command handler remains the
+ * authority for translating beforeinput into Nexus commands; this adapter
+ * records dispatch and IME deferrals without mutating browser input itself.
+ */
+export function dispatchSmartCanvasBeforeInput(
+  event: SmartCanvasBeforeInputEvent,
+  handler: (event: SmartCanvasBeforeInputEvent) => void,
+  compositionActive: boolean,
+): void {
+  const inputEvent = event.nativeEvent as InputEvent;
+  diagnostics.beforeInputEvents += 1;
+  if (isCompositionInput(compositionActive, inputEvent.inputType || "", inputEvent.isComposing)) {
+    diagnostics.compositionDeferredEvents += 1;
+  }
+  handler(event);
+}
+
 export function getSmartCanvasDiagnostics(): Readonly<SmartCanvasDiagnostics> {
   return { ...diagnostics };
 }
@@ -61,4 +90,6 @@ export function resetSmartCanvasDiagnostics(): void {
   diagnostics.successfulReads = 0;
   diagnostics.failedReads = 0;
   diagnostics.restores = 0;
+  diagnostics.beforeInputEvents = 0;
+  diagnostics.compositionDeferredEvents = 0;
 }
