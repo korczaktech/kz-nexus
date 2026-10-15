@@ -3019,3 +3019,9 @@ html:has(.app-shell.editor-mode),body:has(.app-shell.editor-mode),#root:has(.app
 @keyframes splash-glow-float{from{transform:translate3d(0,0,0) scale(.92)}to{transform:translate3d(5vw,4vh,0) scale(1.1)}}
 @keyframes splash-grid-drift{from{background-position:0 0}to{background-position:54px 54px}}
 @media(prefers-reduced-motion:reduce){.nexus-splash *, .nexus-splash *:before,.nexus-splash *:after{animation-duration:.01ms!important;animation-iteration-count:1!important;scroll-behavior:auto!important}}
+
+
+/* Contextual removal control for paragraph border/shading boxes. */
+.paragraph-decoration-remove{position:fixed;z-index:99999;width:22px;height:22px;min-width:22px;padding:0;border:1px solid #fff;border-radius:50%;display:grid;place-items:center;background:#dc3545;color:#fff;font:700 17px/1 system-ui,sans-serif;box-shadow:0 2px 9px rgba(0,0,0,.28);cursor:pointer;transform:translate(-50%,-50%);transition:background .12s ease,transform .12s ease}
+.paragraph-decoration-remove:hover{background:#b91c1c;transform:translate(-50%,-50%) scale(1.08)}
+.paragraph-decoration-remove:focus-visible{outline:2px solid #8795ff;outline-offset:2px}
