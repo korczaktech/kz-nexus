@@ -61,11 +61,6 @@ function visitBlock(block: LayoutBlock, pageIndex: number, x: number, y: number,
   }
   if (block.table) {
     for (const row of block.table.rows) for (const cell of row.cells) {
-      candidates.push({
-        target: { kind: "table-cell", pageIndex, blockId: block.blockId, cellId: cell.cellId, offset: 0, lineIndex: -1 },
-        distance: distanceToRect(x, y, cell.rect) + 0.001,
-        order: order.value++,
-      });
       for (let lineIndex = 0; lineIndex < cell.lines.length; lineIndex += 1) {
         const line = cell.lines[lineIndex];
         candidates.push({
@@ -74,7 +69,7 @@ function visitBlock(block: LayoutBlock, pageIndex: number, x: number, y: number,
           order: order.value++,
         });
       }
-      if (!cell.lines.length) candidates.push({
+      candidates.push({
         target: { kind: "table-cell", pageIndex, blockId: block.blockId, cellId: cell.cellId, offset: 0, lineIndex: -1 },
         distance: distanceToRect(x, y, cell.rect),
         order: order.value++,
