@@ -8,8 +8,6 @@ on:
       - "packages/engine/**"
       - "packages/engine-preview/**"
       - "frontend/**"
-      - "docs/nexus-engine/SMARTCANVAS-PLAN.md"
-      - "docs/nexus-engine/PERFORMANCE.md"
 
 permissions:
   contents: read
