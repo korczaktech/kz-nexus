@@ -30,4 +30,11 @@
     <changefreq>yearly</changefreq>
     <priority>0.3</priority>
   </url>
+  <url><loc>https://nexus.korczaktech.com.br/Kortex/</loc><lastmod>2026-10-14</lastmod><changefreq>weekly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://nexus.korczaktech.com.br/Kortex/atualizacoes/</loc><lastmod>2026-10-14</lastmod><changefreq>weekly</changefreq><priority>0.6</priority></url>
+  <url><loc>https://nexus.korczaktech.com.br/Kortex/novidades/</loc><lastmod>2026-10-14</lastmod><changefreq>weekly</changefreq><priority>0.6</priority></url>
+  <url><loc>https://nexus.korczaktech.com.br/Kortex/status/</loc><lastmod>2026-10-14</lastmod><changefreq>daily</changefreq><priority>0.6</priority></url>
+  <url><loc>https://nexus.korczaktech.com.br/Kortex/termos-de-uso/</loc><lastmod>2026-10-14</lastmod><changefreq>yearly</changefreq><priority>0.3</priority></url>
+  <url><loc>https://nexus.korczaktech.com.br/Kortex/termos-de-exclusividade/</loc><lastmod>2026-10-14</lastmod><changefreq>yearly</changefreq><priority>0.3</priority></url>
+  <url><loc>https://nexus.korczaktech.com.br/Kortex/funcionalidades/</loc><lastmod>2026-10-14</lastmod><changefreq>monthly</changefreq><priority>0.6</priority></url>
 </urlset>
