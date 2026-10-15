@@ -1,12 +1,12 @@
 // Reproducible browser-memory baseline for the standalone engine preview.
- // Requires a built preview and Playwright + Chromium available globally (same prerequisite as e2e-preview.mjs).
- // Reports JS heap for the page renderer and private memory of Chrome processes separately.
+// Requires a built preview and Playwright + Chromium available globally (same prerequisite as e2e-preview.mjs).
+// Reports JS heap for the page renderer and private memory of Chrome processes separately.
 import { spawn, spawnSync } from "node:child_process";
 import { createRequire } from "node:module";
 import { resolve, dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
-const root = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
+const root = resolve(dirname(fileURLToPath(import.meta.url)), "../../..");
 const globalRoot = spawnSync("npm", ["root", "-g"], { encoding: "utf8" }).stdout.trim();
 const require = createRequire(join(globalRoot || root, "noop.js"));
 let chromium;
@@ -92,11 +92,12 @@ try {
     };
   }
 
-  await snapshot("chrome-launched-no-page");
+  const samples = [];
+  samples.push(await snapshot("chrome-launched-no-page"));
   await page.goto(url, { waitUntil: "networkidle" });
   await page.waitForSelector('[data-testid="editor"] .page');
   await wait(1200);
-  const samples = [await snapshot("empty-document")];
+  samples.push(await snapshot("empty-document"));
 
   // Load the repository's existing 400-paragraph fixture through the real UI.
   await page.click('[data-panel-tab="diagnostics"]');
