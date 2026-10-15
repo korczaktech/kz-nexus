@@ -5,7 +5,6 @@ query strings, IP addresses, authorization headers, or document contents are ret
 """
 from __future__ import annotations
 
-import os
 import re
 import resource
 import threading
@@ -13,7 +12,6 @@ import time
 from collections import Counter, deque
 from datetime import datetime, timezone
 from typing import Any
-from uuid import UUID
 
 _STARTED_AT = time.time()
 _LOCK = threading.Lock()
@@ -23,9 +21,9 @@ _COUNTS: Counter[str] = Counter()
 _ACTIVE = 0
 _LAST_CPU = (time.process_time(), time.monotonic())
 _CPU_PERCENT = 0.0
-_NUMERIC_SEGMENT = re.compile(r"^\\d+$")
+_NUMERIC_SEGMENT = re.compile(r"^\d+$")
 _UUID_SEGMENT = re.compile(r"^[0-9a-fA-F]{8}-[0-9a-fA-F-]{27,}$")
-_EMAIL_SEGMENT = re.compile(r"^[^/\\s@]+@[^/\\s@]+\\.[^/\\s@]+$")
+_EMAIL_SEGMENT = re.compile(r"^[^/\s@]+@[^/\s@]+\.[^/\s@]+$")
 
 
 def _safe_path(path: str) -> str:
