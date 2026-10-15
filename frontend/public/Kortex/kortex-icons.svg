@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-labelledby="title">
+  <title id="title">Korczak Kortex</title>
+  <defs>
+    <linearGradient id="kortex-gradient" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#a8b7ff"/><stop offset="1" stop-color="#7b8cff"/></linearGradient>
+    <symbol id="brand" viewBox="0 0 64 64"><rect x="3" y="3" width="58" height="58" rx="17" fill="#0b1426" stroke="#40588b" stroke-width="2"/><path d="M20 16v32M43 17 25 32l19 16" fill="none" stroke="url(#kortex-gradient)" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/><path d="M33 32h12" fill="none" stroke="#e8edff" stroke-width="4" stroke-linecap="round"/></symbol>
+    <symbol id="home" viewBox="0 0 24 24"><path d="m3 10 9-7 9 7v10a1 1 0 0 1-1 1h-5v-7H9v7H4a1 1 0 0 1-1-1z"/></symbol>
+    <symbol id="refresh" viewBox="0 0 24 24"><path d="M20 7v5h-5M4 17v-5h5"/><path d="M5.6 9A7 7 0 0 1 17.3 6L20 12M4 12l2.7 6A7 7 0 0 0 18.4 15"/></symbol>
+    <symbol id="sparkles" viewBox="0 0 24 24"><path d="m12 3 1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8zM19 15l1.1 2.9L23 19l-2.9 1.1L19 23l-1.1-2.9L15 19l2.9-1.1z"/></symbol>
+    <symbol id="features" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></symbol>
+    <symbol id="terms" viewBox="0 0 24 24"><path d="M6 3h9l4 4v14H6z"/><path d="M14 3v5h5M9 13h7M9 17h7"/></symbol>
+    <symbol id="chevron-down" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></symbol>
+    <symbol id="arrow-up-right" viewBox="0 0 24 24"><path d="M7 17 17 7M8 7h9v9"/></symbol>
+  </defs>
+  <use href="#brand" width="64" height="64"/>
+</svg>
