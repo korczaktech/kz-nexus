@@ -49,15 +49,15 @@ try {
 
   async function processMemory() {
     try {
-      const result = await browserSession.send("SystemInfo.getProcessInfo");
-      const rawProcesses = result.processInfo ?? [];
-      const pids = rawProcesses.map((p) => String(p.id)).filter((id) => /^\\d+$/.test(id));
-      const ps = pids.length ? spawnSync("ps", ["-o", "pid=,rss=", "-p", pids.join(",")], { encoding: "utf8" }) : null;
-      const rssByPid = new Map((ps?.stdout ?? "").trim().split("\\n").filter(Boolean).map((line) => {
-        const [pid, rssKb] = line.trim().split(/\\s+/);
-        return [pid, Number(rssKb)];
-      }));
-      const processes = await Promise.all(rawProcesses.map(async (p) => {
+      // Enumerate the Chromium process group via ps; CDP process IDs can be
+      // outside the runner's visible PID namespace, so do not depend on them.
+      const ps = spawnSync("ps", ["-eo", "pid=,rss=,args="], { encoding: "utf8" });
+      if (ps.error || ps.status !== 0) throw new Error(ps.error?.message ?? ps.stderr ?? "ps failed");
+      const rows = (ps.stdout ?? "").split("\\n").map((line) => {
+        const match = line.trim().match(/^(\\d+)\\s+(\\d+)\\s+(.+)$/);
+        return match ? { id: Number(match[1]), rssKb: Number(match[2]), command: match[3] } : null;
+      }).filter((row) => row && /(?:^|[\\/\\s])(?:chrome|chromium)(?:\\s|$)/i.test(row.command));
+      const processes = await Promise.all(rows.map(async (p) => {
         let privateMemoryMB = null;
         let privateSource = "unavailable";
         try {
@@ -69,26 +69,24 @@ try {
             privateSource = "proc-smaps_rollup";
           }
         } catch { /* /proc private-page accounting can be restricted */ }
-        if (privateMemoryMB === null && Number(p.memory ?? 0) > 0) {
-          privateMemoryMB = mb(Number(p.memory) * 1024);
-          privateSource = "cdp";
-        }
-        const rssKb = rssByPid.get(String(p.id));
+        const type = /--type=renderer/.test(p.command) ? "renderer"
+          : /--type=gpu-process/.test(p.command) ? "GPU"
+          : /--type=utility/.test(p.command) ? "utility"
+          : "browser-or-other";
         return {
-          type: p.type,
+          type,
           id: p.id,
+          residentMemoryMB: mb(p.rssKb * 1024),
           privateMemoryMB,
           privateSource,
-          residentMemoryMB: Number.isFinite(rssKb) ? mb(rssKb * 1024) : null,
         };
       }));
       const privateComplete = processes.length > 0 && processes.every((p) => p.privateMemoryMB !== null);
-      const rssComplete = processes.length > 0 && processes.every((p) => p.residentMemoryMB !== null);
       return {
         privateMemoryMB: privateComplete ? Number(processes.reduce((sum, p) => sum + p.privateMemoryMB, 0).toFixed(2)) : null,
-        totalResidentMemoryMB: rssComplete ? Number(processes.reduce((sum, p) => sum + p.residentMemoryMB, 0).toFixed(2)) : null,
+        totalResidentMemoryMB: processes.length ? Number(processes.reduce((sum, p) => sum + p.residentMemoryMB, 0).toFixed(2)) : null,
         processes,
-        note: "RSS é memória residente por processo; a soma pode contar páginas compartilhadas mais de uma vez. privateMemoryMB só é informado quando todos os processos têm uma medição privada disponível.",
+        note: "RSS é memória residente por processo; a soma pode contar páginas compartilhadas mais de uma vez. privateMemoryMB só é informado quando todos os processos Chrome têm medição privada disponível.",
       };
     } catch (error) {
       return { privateMemoryMB: null, totalResidentMemoryMB: null, unavailable: String(error), note: "Medição de memória de processos não suportada neste ambiente." };
