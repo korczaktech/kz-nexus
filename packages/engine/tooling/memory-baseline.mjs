@@ -53,16 +53,16 @@ try {
       // outside the runner's visible PID namespace, so do not depend on them.
       const ps = spawnSync("ps", ["-eo", "pid=,rss=,args="], { encoding: "utf8" });
       if (ps.error || ps.status !== 0) throw new Error(ps.error?.message ?? ps.stderr ?? "ps failed");
-      const rows = (ps.stdout ?? "").split("\\n").map((line) => {
-        const match = line.trim().match(/^(\\d+)\\s+(\\d+)\\s+(.+)$/);
+      const rows = (ps.stdout ?? "").split("\n").map((line) => {
+        const match = line.trim().match(/^(\d+)\s+(\d+)\s+(.+)$/);
         return match ? { id: Number(match[1]), rssKb: Number(match[2]), command: match[3] } : null;
-      }).filter((row) => row && /(?:^|[\\/\\s])(?:chrome-headless-shell|chrome|chromium)(?:\\s|$)/i.test(row.command));
+      }).filter((row) => row && /(?:^|[\/\s])(?:chrome-headless-shell|chrome|chromium)(?:\s|$)/i.test(row.command));
       const processes = await Promise.all(rows.map(async (p) => {
         let privateMemoryMB = null;
         let privateSource = "unavailable";
         try {
-          const status = await readFile(`/proc/${p.id}/smaps_rollup`, "utf8");
-          const values = [...status.matchAll(/^Private_(?:Clean|Dirty|Hugetlb):\\s+(\\d+) kB$/gm)]
+          const status = await readFile("/proc/" + p.id + "/smaps_rollup", "utf8");
+          const values = [...status.matchAll(/^Private_(?:Clean|Dirty|Hugetlb):\s+(\d+) kB$/gm)]
             .map((match) => Number(match[1]));
           if (values.length) {
             privateMemoryMB = mb(values.reduce((sum, value) => sum + value, 0) * 1024);
