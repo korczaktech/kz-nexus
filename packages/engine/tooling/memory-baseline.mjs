@@ -107,8 +107,9 @@ try {
   await wait(1200);
   samples.push(await snapshot("fixture-400-paragraphs"));
 
-  // Sample again after undo/redo to expose the current history footprint.
+  // Create a real edit so undo/redo exercise the history path rather than no-op on a clean fixture.
   await page.click('[data-testid="editor"] p');
+  await page.keyboard.type("x");
   await page.keyboard.press("Control+z");
   await page.keyboard.press("Control+y");
   await wait(500);
