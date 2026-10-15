@@ -1,11 +1,9 @@
 import { PreviewController } from "./services/controller";
-import { renderDocument } from "./editor/render";
-import { readDomSelection, writeDomSelection } from "./editor/dom-selection";
-import { attachInput } from "./editor/input";
+import { SmartCanvasSurface } from "./editor/smartcanvas";
 import { Inspector } from "./inspector/inspector";
 import { Diagnostics } from "./diagnostics/diagnostics";
 import { fileToBase64, readFileAsText, downloadText } from "./services/files";
-import type { Alignment, NexusDocument } from "@korczak/nexus-engine";
+import type { Alignment } from "@korczak/nexus-engine";
 
 function h<K extends keyof HTMLElementTagNameMap>(tag: K, props: Partial<Record<string, string>> = {}, ...children: (Node | string)[]): HTMLElementTagNameMap[K] {
   const node = document.createElement(tag);
@@ -131,23 +129,10 @@ export function mount(rootEl: HTMLElement): PreviewController {
   });
   toolbar.append(gHistory, gMarks, gColor, gAlign, gBlock, gTable, gMisc, fileInputImage);
 
-  // ── rendering loop ──
-  let lastDoc: NexusDocument | undefined;
-  let suppress = false;
+  // ── SmartCanvas surface + application toolbar state ──
+  const smartCanvas = new SmartCanvasSurface(surface, controller);
   const refresh = (force = false): void => {
-    const doc = controller.document;
-    if (force || doc !== lastDoc) {
-      suppress = true;
-      renderDocument(doc, surface);
-      if (document.activeElement === surface || surface.contains(document.activeElement)) writeDomSelection(surface, controller.selection);
-      suppress = false;
-      lastDoc = doc;
-    } else if (document.activeElement === surface) {
-      const dom = readDomSelection(surface);
-      const sel = controller.selection;
-      const differs = !dom || !sel || dom.anchor.blockId !== sel.anchor.blockId || dom.anchor.offset !== sel.anchor.offset || dom.focus.blockId !== sel.focus.blockId || dom.focus.offset !== sel.focus.offset;
-      if (differs && sel) writeDomSelection(surface, sel);
-    }
+    smartCanvas.refresh(force);
     // toolbar state
     buttons.get("undo")!.disabled = !controller.canUndo;
     buttons.get("redo")!.disabled = !controller.canRedo;
@@ -166,14 +151,11 @@ export function mount(rootEl: HTMLElement): PreviewController {
     if (sidePanel === "inspector") inspector.render();
     else diagnostics.render();
   };
-  void suppress;
 
   controller.subscribe(() => refresh());
-  attachInput(surface, controller);
   setPanel("inspector");
   refresh(true);
-  surface.focus();
-  writeDomSelection(surface, controller.selection);
+  smartCanvas.focus();
   return controller;
 }
 
