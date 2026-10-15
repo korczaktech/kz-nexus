@@ -151,6 +151,8 @@ main{{padding:35px 0 64px}}.eyebrow{{color:var(--blue);font-size:11px;font-weigh
 {card("CPU do processo", _number(cpu, "%") if cpu is not None else "Indisponível", "Amostra aproximada do processo Python")}
 {card("Memória do processo", f"{rss} MB" if rss is not None else "Indisponível", "Memória residente (RSS)")}
 {card("Latência do banco", _duration(database_latency_ms), "Ping MongoDB desta atualização")}
+{card("Requisições desde início", str(metrics.get("requests_total_since_start", 0)), "Desde a inicialização do processo")}
+{card("Respostas HTTP", "2xx " + str(status_counts.get("2xx", 0)) + " · 3xx " + str(status_counts.get("3xx", 0)) + " · 4xx " + str(status_counts.get("4xx", 0)) + " · 5xx " + str(status_counts.get("5xx", 0)), "Contadores desde o início")}
 </section>
 <div class="section-grid">
 <section class="panel"><h2>Tráfego recente</h2><p class="panel-intro">Requisições por intervalos de 30 segundos · janela de cinco minutos</p><div class="bars" role="img" aria-label="Gráfico de barras de requisições por intervalos de trinta segundos">{bars}</div><p class="legend">Contagem local ao processo. Intervalos vazios indicam ausência de requisições observadas, não necessariamente indisponibilidade.</p></section>
