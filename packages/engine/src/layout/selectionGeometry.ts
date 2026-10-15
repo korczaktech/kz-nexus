@@ -1,4 +1,4 @@
-import type { LayoutBlock, LayoutLine, LayoutPage, LayoutRect, LayoutResult, LayoutTextRun } from "./layout";
+import type { LayoutBlock, LayoutLine, LayoutPage, LayoutRect, LayoutResult } from "./layout";
 import type { Selection } from "../selection/selection";
 import type { HitTestMeasureText } from "./hitTesting";
 
