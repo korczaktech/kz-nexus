@@ -25,6 +25,7 @@ _LAST_CPU = (time.process_time(), time.monotonic())
 _CPU_PERCENT = 0.0
 _NUMERIC_SEGMENT = re.compile(r"^\\d+$")
 _UUID_SEGMENT = re.compile(r"^[0-9a-fA-F]{8}-[0-9a-fA-F-]{27,}$")
+_EMAIL_SEGMENT = re.compile(r"^[^/\\s@]+@[^/\\s@]+\\.[^/\\s@]+$")
 
 
 def _safe_path(path: str) -> str:
@@ -32,7 +33,7 @@ def _safe_path(path: str) -> str:
     for segment in path.split("/"):
         if _NUMERIC_SEGMENT.fullmatch(segment):
             parts.append(":id")
-        elif _UUID_SEGMENT.fullmatch(segment):
+        elif _UUID_SEGMENT.fullmatch(segment) or _EMAIL_SEGMENT.fullmatch(segment) or len(segment) > 48:
             parts.append(":id")
         else:
             parts.append(segment[:80])
