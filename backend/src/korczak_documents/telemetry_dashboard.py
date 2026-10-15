@@ -2,6 +2,45 @@ from __future__ import annotations
 
 from html import escape
 from typing import Any
+import time
+
+import httpx
+
+_CI_CACHE: dict[str, Any] = {"state": "unknown", "label": "SEM DADOS", "updated_at": None, "url": "https://github.com/korczaktech/kz-nexus/actions/workflows/kortex-validation.yml"}
+_CI_CACHE_AT = 0.0
+
+
+async def get_engine_ci_status() -> dict[str, Any]:
+    """Fetch the latest engine validation run, cached to respect GitHub rate limits."""
+    global _CI_CACHE_AT
+    now = time.monotonic()
+    if now - _CI_CACHE_AT < 300:
+        return dict(_CI_CACHE)
+    url = "https://api.github.com/repos/korczaktech/kz-nexus/actions/workflows/kortex-validation.yml/runs?branch=main&per_page=1"
+    try:
+        async with httpx.AsyncClient(timeout=2.5, headers={"Accept": "application/vnd.github+json", "User-Agent": "Korczak-Kortex-Telemetry"}) as client:
+            response = await client.get(url)
+            response.raise_for_status()
+            runs = response.json().get("workflow_runs", [])
+        if runs:
+            run = runs[0]
+            status = str(run.get("status", "unknown"))
+            conclusion = str(run.get("conclusion") or "")
+            if status != "completed":
+                state, label = "running", "EM EXECUÇÃO"
+            elif conclusion == "success":
+                state, label = "success", "ÚLTIMA VALIDAÇÃO OK"
+            else:
+                state, label = "failure", "VALIDAÇÃO COM FALHA"
+            _CI_CACHE.update({"state": state, "label": label, "updated_at": run.get("updated_at"), "url": run.get("html_url") or url})
+        else:
+            _CI_CACHE.update({"state": "unknown", "label": "SEM EXECUÇÕES", "updated_at": None, "url": url})
+    except (httpx.HTTPError, ValueError, TypeError):
+        # Keep the last known result if GitHub is temporarily unreachable.
+        if _CI_CACHE_AT == 0:
+            _CI_CACHE.update({"state": "unknown", "label": "INDISPONÍVEL", "updated_at": None, "url": url})
+    _CI_CACHE_AT = now
+    return dict(_CI_CACHE)
 
 
 def _duration(value: int | float | None) -> str:
@@ -16,7 +55,7 @@ def _number(value: int | float | None, suffix: str = "") -> str:
     return f"{value:,.1f}{suffix}".replace(",", "X").replace(".", ",").replace("X", ".")
 
 
-def render_dashboard(metrics: dict[str, Any], database_status: str, database_latency_ms: float | None) -> str:
+def render_dashboard(metrics: dict[str, Any], database_status: str, database_latency_ms: float | None, engine_ci: dict[str, Any] | None = None) -> str:
     api_ok = True
     db_ok = database_status == "operacional"
     overall = "Operacional" if api_ok and db_ok else "Degradado"
@@ -112,12 +151,12 @@ main{{padding:35px 0 64px}}.eyebrow{{color:var(--blue);font-size:11px;font-weigh
 <section class="panel"><h2>Integridade dos componentes</h2><p class="panel-intro">Verificações executadas na geração desta página</p><div class="health-list">
 <div class="health-item"><div><strong>API Kortex / Nexus</strong><small>Processo HTTP e renderização do painel</small></div><span class="pill">RESPONDENDO</span></div>
 <div class="health-item"><div><strong>MongoDB</strong><small>Comando ping: {escape(database_status)}</small></div><span class="pill {' ' if db_ok else 'warn'}">{'OPERACIONAL' if db_ok else 'DEGRADADO'}</span></div>
-<div class="health-item"><div><strong>Motor no navegador</strong><small>Execução local do editor não é exposta ao backend</small></div><span class="pill neutral">NÃO INSTRUMENTADO</span></div>
+<div class="health-item"><div><strong>Validação automatizada do motor</strong><small>Última execução: {escape(ci_updated)} · <a href="{escape(ci_url, quote=True)}" rel="noopener noreferrer">ver workflow</a></small></div><span class="{escape(ci_class)}">{escape(ci_label)}</span></div>\n<div class="health-item"><div><strong>Execução do motor no navegador</strong><small>O estado de cada editor aberto não é exposto ao backend</small></div><span class="pill neutral">NÃO INSTRUMENTADO</span></div>
 <div class="health-item"><div><strong>Recursos do sistema</strong><small>{f'{sys_available} MB disponíveis de {sys_total} MB' if sys_available is not None and sys_total is not None else 'Detalhes do host indisponíveis neste ambiente'}</small></div><span class="pill neutral">INFORMATIVO</span></div>
 </div></section>
 </div>
 <section class="panel table-wrap"><h2>Rotas mais acessadas</h2><p class="panel-intro">Somente os últimos cinco minutos. Identificadores numéricos são normalizados.</p><table><thead><tr><th>Rota</th><th>Requisições</th><th>Erros</th></tr></thead><tbody>{route_rows}</tbody></table></section>
 <section class="panel table-wrap"><h2>Eventos HTTP recentes</h2><p class="panel-intro">Respostas 4xx e 5xx observadas nesta instância; não inclui payloads, IPs, tokens ou query strings.</p><table><thead><tr><th>Horário (UTC)</th><th>Nível</th><th>Status</th><th>Rota</th><th>Duração</th></tr></thead><tbody>{event_rows}</tbody></table></section>
-<div class="note"><strong>Limites e privacidade.</strong> {scope_note} Os contadores são em memória e reiniciam quando o processo reinicia; em ambientes com múltiplas instâncias, cada instância possui seus próprios dados. CPU e memória dependem do que o host permite expor. Esta página não confirma a execução de comandos no editor cliente nem substitui alertas externos, logs persistentes ou monitoramento sintético.</div>
+<div class="note"><strong>Limites e privacidade.</strong> {scope_note} Os contadores são em memória e reiniciam quando o processo reinicia; em ambientes com múltiplas instâncias, cada instância possui seus próprios dados. CPU e memória dependem do que o host permite expor. O resultado de CI é a última validação automatizada, não uma medição de execução ao vivo. Esta página não confirma a execução de comandos em cada editor cliente nem substitui alertas externos, logs persistentes ou monitoramento sintético.</div>
 </main><footer><span>Korczak Technologies · Telemetria Kortex</span><span>HTML gerado no servidor · sem JavaScript · atualização por recarga da página</span><a href="https://nexus.korczaktech.com.br/Kortex/status.html">Voltar à Central Kortex</a></footer>
 </div></body></html>"""
