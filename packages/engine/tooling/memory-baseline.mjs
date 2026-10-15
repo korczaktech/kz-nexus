@@ -108,6 +108,7 @@ try {
   samples.push(await snapshot("fixture-400-paragraphs"));
 
   // Sample again after undo/redo to expose the current history footprint.
+  await page.click('[data-testid="editor"] p');
   await page.keyboard.press("Control+z");
   await page.keyboard.press("Control+y");
   await wait(500);
