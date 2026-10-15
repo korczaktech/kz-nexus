@@ -1,5 +1,5 @@
 import { useEffect, useRef } from "react";
-import type { CSSProperties } from "react";
+import type { CSSProperties, PointerEvent as ReactPointerEvent } from "react";
 import { hitTestLayout, type LayoutBlock, type LayoutLine, type LayoutPage, type LayoutResult, type Mark, type NexusDocument, type SmartCanvasHitTarget } from "../../../packages/engine/src/index";
 
 const PT_TO_CSS_PX = 96 / 72;
@@ -264,7 +264,7 @@ export function CanvasPage({ page, pageCount, document, headerText, footerText, 
     return () => { cancelled = true; };
   }, [page, pageCount, document, headerText, footerText, showPageNumbers, cssWidth, cssHeight]);
 
-  const handlePointerDown = (event: React.PointerEvent<HTMLCanvasElement>) => {
+  const handlePointerDown = (event: ReactPointerEvent<HTMLCanvasElement>) => {
     if (!onHitTest) return;
     const bounds = event.currentTarget.getBoundingClientRect();
     if (bounds.width <= 0 || bounds.height <= 0) return;
