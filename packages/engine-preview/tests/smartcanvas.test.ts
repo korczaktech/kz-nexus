@@ -60,9 +60,11 @@ describe("SmartCanvasSurface", () => {
   });
 
   it("keeps selection as a logical engine value passed through the adapter", () => {
-    Object.defineProperty(globalThis, "document", { configurable: true, value: { activeElement: null } });
+    const docState: { activeElement: HTMLElement | null } = { activeElement: null };
+    Object.defineProperty(globalThis, "document", { configurable: true, value: docState });
     const controller = new PreviewController();
     const root = fakeRoot();
+    docState.activeElement = root;
     const written: Array<Selection | undefined> = [];
     const surface = new SmartCanvasSurface(root, controller, {
       renderer: { render: () => undefined },
