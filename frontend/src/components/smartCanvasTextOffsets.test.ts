@@ -97,6 +97,11 @@ describe("SmartCanvas multiline cell navigation", () => {
     expect(verticalLineOffset(text, text.length - 1, 1)).toBe(text.length - 1);
   });
 
+  it("never places the vertical caret inside a grapheme in the target line", () => {
+    const text = "a😀b\nx😀z";
+    expect(verticalLineOffset(text, 2, 1, 2)).toBe(6);
+  });
+
   it("supports a trailing empty line after Enter", () => {
     const text = "abc\n";
     expect(verticalLineOffset(text, 3, 1)).toBe(4);
