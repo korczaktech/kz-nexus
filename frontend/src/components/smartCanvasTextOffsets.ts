@@ -119,7 +119,7 @@ export function nearestGraphemeOffset(text: string, offset: number): number {
 /** Returns the UTF-16 offset at the beginning of the visual line containing an offset in newline-separated text. */
 export function lineStartOffset(text: string, offset: number): number {
   const bounded = Math.max(0, Math.min(text.length, offset));
-  return bounded === 0 ? 0 : text.lastIndexOf("\n", bounded - 1) + 1;
+  return bounded === 0 ? 0 : text[bounded] === "\n" ? bounded : text.lastIndexOf("\n", bounded - 1) + 1;
 }
 
 /** Returns the UTF-16 offset at the end of the line, excluding its newline. */
