@@ -1,10 +1,10 @@
 import type { createEditor } from "../../../packages/engine/src/index";
-import { getEngineDomContext, restoreEngineDomSelection } from "../services/nexusEngineAdapter";
+import { getEngineLogicalContext } from "../services/nexusEngineAdapter";
 import { isCompositionInput } from "./editorComposition";
 
 type EngineInstance = ReturnType<typeof createEditor>;
 
-export type SmartCanvasSelectionContext = NonNullable<ReturnType<typeof getEngineDomContext>>;
+export type SmartCanvasSelectionContext = NonNullable<ReturnType<typeof getEngineLogicalContext>>;
 
 export type SmartCanvasDiagnostics = {
   reads: number;
@@ -45,15 +45,18 @@ export function readSmartCanvasSelection(
   root: HTMLElement,
 ): SmartCanvasSelectionContext | null {
   diagnostics.reads += 1;
-  const context = getEngineDomContext(engine, root);
+  const context = getEngineLogicalContext(engine);
   if (context) diagnostics.successfulReads += 1;
   else diagnostics.failedReads += 1;
   return context;
 }
 
-export function restoreSmartCanvasSelection(engine: EngineInstance, root: HTMLElement): void {
+export function restoreSmartCanvasSelection(_engine: EngineInstance, root: HTMLElement): void {
   diagnostics.restores += 1;
-  restoreEngineDomSelection(engine, root);
+  // Focus the SmartCanvas input surface only. Never restore a browser Range
+  // into the hidden legacy contentEditable projection.
+  const input = root.ownerDocument.querySelector<HTMLTextAreaElement>('textarea[aria-label="Entrada de texto do SmartCanvas"]');
+  input?.focus({ preventScroll: true });
 }
 
 
