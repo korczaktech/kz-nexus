@@ -121,6 +121,47 @@ describe("row/column operations", () => {
     expect(updatedCell.children[0].children[1].marks).toEqual([]);
   });
 
+  it("preserves suffix formatting when deleting text and keeps paragraph attributes", () => {
+    const { document, tableId } = tableDoc();
+    const table = document.content[1] as Table;
+    const row = table.children[0];
+    const cell = row.children[0];
+    const paragraph = {
+      ...cell.children[0],
+      align: "center" as const,
+      children: [
+        { ...cell.children[0].children[0], text: "remove ", marks: [{ type: "bold" as const }] },
+        { type: "text" as const, id: "suffix-run-test", text: "keep", marks: [{ type: "italic" as const }] },
+      ],
+    };
+    const seededCell = { ...cell, children: [paragraph] };
+    const seededRow = { ...row, children: [seededCell, ...row.children.slice(1)] };
+    const seededTable = { ...table, children: [seededRow, ...table.children.slice(1)] };
+    const seededDocument = {
+      ...document,
+      content: document.content.map(block => block.id === tableId ? seededTable : block),
+    };
+
+    const result = setCellText({ tableId, rowId: row.id, cellId: cell.id, text: "keep" })(seededDocument, ctx());
+    if (!result.ok) throw result.error;
+    const updatedParagraph = (result.value.document.content[1] as Table).children[0].children[0].children[0];
+    expect(updatedParagraph.align).toBe("center");
+    expect(updatedParagraph.children.map(run => run.text)).toEqual(["keep"]);
+    expect(updatedParagraph.children[0].marks).toEqual([{ type: "italic" }]);
+  });
+
+  it("preserves empty paragraphs when cell text contains consecutive newlines", () => {
+    const { document, tableId } = tableDoc();
+    const table = document.content[1] as Table;
+    const row = table.children[0];
+    const cell = row.children[0];
+    const result = setCellText({ tableId, rowId: row.id, cellId: cell.id, text: "first\n\nthird" })(document, ctx());
+    if (!result.ok) throw result.error;
+    const updatedCell = (result.value.document.content[1] as Table).children[0].children[0];
+    expect(updatedCell.children).toHaveLength(3);
+    expect(updatedCell.children.map(paragraph => getPlainText(paragraph))).toEqual(["first", "", "third"]);
+  });
+
   it("preserves newline-separated cell text as separate paragraphs", () => {
     const { document, tableId } = tableDoc();
     const table = document.content[1] as Table;
