@@ -152,7 +152,7 @@ describe("SmartCanvasPreview input integration", () => {
     if (!afterComposition || afterComposition.type !== "paragraph") throw new Error("Expected paragraph after composition");
     expect(getPlainText(afterComposition)).toBe("Olá SmartCanvas 😀日本語");
   });
-  it("replaces a cross-block selection as one undoable structural edit", async () => {
+  it("replaces a cross-block selection with rich content as one undoable structural edit", async () => {
     const document = createDocument({ title: "SmartCanvas cross-block edit" });
     const first = document.content[0];
     if (!first || first.type !== "paragraph") throw new Error("Expected initial paragraph");
@@ -176,13 +176,15 @@ describe("SmartCanvasPreview input integration", () => {
     });
     const hit = host.querySelector('[data-testid="smartcanvas-text-hit"]') as HTMLButtonElement | null;
     const input = host.querySelector('textarea[aria-label="Entrada de texto do SmartCanvas"]') as HTMLTextAreaElement | null;
-    const setter = Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, "value")?.set;
-    if (!input || !setter) throw new Error("SmartCanvas input surface was not mounted");
+    if (!input) throw new Error("SmartCanvas input surface was not mounted");
     await act(async () => { hit?.click(); });
     await act(async () => {
       input.dispatchEvent(new KeyboardEvent("keydown", { key: "a", ctrlKey: true, bubbles: true, cancelable: true }));
-      setter.call(input, "Merged");
-      input.dispatchEvent(new Event("input", { bubbles: true }));
+      const paste = new Event("paste", { bubbles: true, cancelable: true });
+      Object.defineProperty(paste, "clipboardData", {
+        value: { getData: (type: string) => type === "text/html" ? "<p><strong>Merged</strong></p>" : "Merged" },
+      });
+      input.dispatchEvent(paste);
     });
 
     const edited = engine.getDocument();
@@ -190,6 +192,7 @@ describe("SmartCanvasPreview input integration", () => {
     const merged = edited.content[0];
     if (!merged || merged.type !== "paragraph") throw new Error("Expected merged paragraph");
     expect(getPlainText(merged)).toBe("Merged");
+    expect(merged.children.some(run => run.marks.some(mark => mark.type === "bold"))).toBe(true);
     expect(onDocumentChange).toHaveBeenCalled();
 
     await act(async () => {
