@@ -321,8 +321,10 @@ export function CanvasPage({ page, pageCount, document, headerText, footerText, 
         context.fillStyle = "#667085";
         context.textBaseline = "top";
         context.textAlign = headerAlign;
-        const headerX = headerAlign === "left" ? page.content.x : headerAlign === "center" ? page.width / 2 : page.width - page.content.x;
-        context.fillText(headerText, headerX * PT_TO_CSS_PX, 12 * PT_TO_CSS_PX, page.content.width * PT_TO_CSS_PX);
+        const header = page.furniture.header;
+        const headerX = headerAlign === "left" ? header.x : headerAlign === "center" ? header.x + header.width / 2 : header.x + header.width;
+        const headerY = header.y + 4;
+        context.fillText(headerText, headerX * PT_TO_CSS_PX, headerY * PT_TO_CSS_PX, header.width * PT_TO_CSS_PX);
         context.textAlign = "left";
       }
       for (const block of page.blocks) drawBlock(context, block, document, imageCache);
@@ -330,18 +332,19 @@ export function CanvasPage({ page, pageCount, document, headerText, footerText, 
         context.font = `9pt Arial, sans-serif`;
         context.fillStyle = "#667085";
         context.textBaseline = "alphabetic";
-        const footerY = cssHeight - 12 * PT_TO_CSS_PX;
+        const footer = page.furniture.footer;
+        const footerY = (footer.y + 10) * PT_TO_CSS_PX;
         if (footerText) {
           context.textAlign = footerAlign;
-          const footerX = footerAlign === "left" ? page.content.x : footerAlign === "center" ? page.width / 2 : page.width - page.content.x;
-          context.fillText(footerText, footerX * PT_TO_CSS_PX, footerY, page.content.width * PT_TO_CSS_PX);
+          const footerX = footerAlign === "left" ? footer.x : footerAlign === "center" ? footer.x + footer.width / 2 : footer.x + footer.width;
+          context.fillText(footerText, footerX * PT_TO_CSS_PX, footerY, footer.width * PT_TO_CSS_PX);
           context.textAlign = "left";
         }
         if (showPageNumbers) {
           const label = `Página ${page.index + 1} de ${pageCount}`;
           const numberOnLeft = footerText && footerAlign === "right";
           context.textAlign = numberOnLeft ? "left" : "right";
-          const numberX = numberOnLeft ? page.content.x : page.width - page.content.x;
+          const numberX = numberOnLeft ? footer.x : footer.x + footer.width;
           context.fillText(label, numberX * PT_TO_CSS_PX, footerY);
           context.textAlign = "left";
         }
