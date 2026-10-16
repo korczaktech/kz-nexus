@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { addTableRow, collapsedAt, deleteBlock, deleteText, insertImportedBlocksAtSelection, insertText, removeImage, updateImage, getLineXAtOffset, getOffsetAtLineX, getPlainText, layoutDocument, mergeBlockWithPrevious, replaceRange, setCellText, splitBlock, toggleMark as toggleMarkCommand, type Editor as NexusEngineSession, type Mark, type NexusDocument, type Selection, type SmartCanvasHitTarget } from "../../../packages/engine/src/index";
+import { addTableRow, collapsedAt, deleteBlock, deleteText, insertImportedBlocksAtSelection, insertText, moveBlock, removeImage, updateEditorObject, updateImage, getLineXAtOffset, getOffsetAtLineX, getPlainText, layoutDocument, mergeBlockWithPrevious, replaceRange, setCellText, splitBlock, toggleMark as toggleMarkCommand, type Editor as NexusEngineSession, type Mark, type NexusDocument, type Selection, type SmartCanvasHitTarget } from "../../../packages/engine/src/index";
 import { CanvasDocumentRenderer } from "./CanvasDocumentRenderer";
 import { nexusDocumentFromHtml } from "../services/nexusEngineAdapter";
 import { lineEndOffset, lineStartOffset, nearestGraphemeOffset, nextCodePointOffset, nextWordOffset, previousCodePointOffset, previousWordOffset, verticalLineOffset, wordRangeAt } from "./smartCanvasTextOffsets";
@@ -93,7 +93,7 @@ function collectTableCells(nodes: readonly unknown[]): EditableCell[] {
   return cells;
 }
 
-type DocumentNodeLike = { id?: string; type?: string; alt?: string; width?: number; height?: number; children?: unknown };
+type DocumentNodeLike = { id?: string; type?: string; alt?: string; width?: number; height?: number; editorObject?: { kind: "note" | "textBox" | "shape"; label?: string; shape?: "rectangle" | "ellipse" | "triangle"; fill?: string; stroke?: string; width?: number; height?: number }; children?: unknown };
 
 function findDocumentNode(nodes: readonly unknown[], id: string): DocumentNodeLike | undefined {
   for (const value of nodes) {
@@ -316,6 +316,11 @@ export function SmartCanvasPreview({ document, engine, headerText = "", footerTe
   const [imageAltDraft, setImageAltDraft] = useState("");
   const [imageWidthDraft, setImageWidthDraft] = useState("");
   const [imageHeightDraft, setImageHeightDraft] = useState("");
+  const [objectLabelDraft, setObjectLabelDraft] = useState("");
+  const [objectWidthDraft, setObjectWidthDraft] = useState("");
+  const [objectHeightDraft, setObjectHeightDraft] = useState("");
+  const [objectFillDraft, setObjectFillDraft] = useState("#ffffff");
+  const [objectStrokeDraft, setObjectStrokeDraft] = useState("#111827");
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const composing = useRef(false);
   const preferredVerticalX = useRef<number | null>(null);
@@ -384,6 +389,13 @@ export function SmartCanvasPreview({ document, engine, headerText = "", footerTe
         setImageWidthDraft(selectedBlock.width == null ? "" : String(selectedBlock.width));
         setImageHeightDraft(selectedBlock.height == null ? "" : String(selectedBlock.height));
       }
+      if (selectedBlock?.editorObject) {
+        setObjectLabelDraft(selectedBlock.editorObject.label ?? "");
+        setObjectWidthDraft(String(selectedBlock.editorObject.width ?? 120));
+        setObjectHeightDraft(String(selectedBlock.editorObject.height ?? 60));
+        setObjectFillDraft(selectedBlock.editorObject.fill ?? "#ffffff");
+        setObjectStrokeDraft(selectedBlock.editorObject.stroke ?? "#111827");
+      }
       setSelection(null);
       engine.setSelection(undefined);
       inputRef.current?.focus({ preventScroll: true });
@@ -415,6 +427,41 @@ export function SmartCanvasPreview({ document, engine, headerText = "", footerTe
     }
     onDocumentChange(result.value.document);
     onStatus?.("Propriedades da imagem atualizadas.");
+  };
+  const applySelectedObjectProperties = () => {
+    if (readOnly || !activeBlockId) return;
+    const selected = findDocumentNode(engine.getDocument().content, activeBlockId);
+    if (!selected?.editorObject) return;
+    const width = Number(objectWidthDraft);
+    const height = Number(objectHeightDraft);
+    if (!Number.isFinite(width) || width < 1 || width > 2000 || !Number.isFinite(height) || height < 1 || height > 2000) {
+      onStatus?.("Largura e altura do objeto devem estar entre 1 e 2000 pontos.");
+      return;
+    }
+    if (objectLabelDraft.length > 200 || !/^#[0-9a-f]{6}$/i.test(objectFillDraft) || !/^#[0-9a-f]{6}$/i.test(objectStrokeDraft)) {
+      onStatus?.("Informe um rótulo de até 200 caracteres e cores hexadecimais válidas.");
+      return;
+    }
+    const result = engine.exec([updateEditorObject({
+      blockId: activeBlockId,
+      patch: { label: objectLabelDraft, width, height, fill: objectFillDraft, stroke: objectStrokeDraft },
+    })], { group: "structural" });
+    if (!result.ok) {
+      onStatus?.("Não foi possível atualizar o objeto: " + result.error.message);
+      return;
+    }
+    onDocumentChange(result.value.document);
+    onStatus?.("Propriedades do objeto atualizadas pelo motor.");
+  };
+  const moveSelectedObject = (direction: "up" | "down") => {
+    if (readOnly || !activeBlockId) return;
+    const result = engine.exec([moveBlock({ blockId: activeBlockId, direction })], { group: "structural" });
+    if (!result.ok) {
+      onStatus?.("Não foi possível mover o objeto: " + result.error.message);
+      return;
+    }
+    onDocumentChange(result.value.document);
+    onStatus?.(direction === "up" ? "Objeto movido para cima no documento." : "Objeto movido para baixo no documento.");
   };
   const commitText = (text: string) => {
     if (!text || readOnly) return;
@@ -965,6 +1012,26 @@ export function SmartCanvasPreview({ document, engine, headerText = "", footerTe
         <input aria-label="Altura da imagem em pixels" type="number" min={1} max={2000} value={imageHeightDraft} disabled={readOnly} onChange={event => setImageHeightDraft(event.currentTarget.value)} placeholder="Automática" style={{ width: 110, padding: "6px 8px", border: "1px solid #cbd5e1", borderRadius: 6 }} />
       </label>
       <button type="button" disabled={readOnly} onClick={applySelectedImageProperties} style={{ padding: "7px 12px", border: "1px solid #2563eb", borderRadius: 6, background: "#2563eb", color: "#fff", cursor: readOnly ? "not-allowed" : "pointer" }}>Aplicar</button>
+    </div> : null}
+    {activeBlockId && findDocumentNode(document.content, activeBlockId)?.editorObject ? <div role="group" aria-label="Propriedades do objeto selecionado" style={{ display: "flex", alignItems: "end", gap: 8, flexWrap: "wrap", marginBottom: 10, padding: 10, border: "1px solid #bfdbfe", borderRadius: 8, background: "#eff6ff" }}>
+      <label style={{ display: "grid", gap: 4, fontSize: 12 }}>Rótulo do objeto
+        <input aria-label="Rótulo do objeto" maxLength={200} value={objectLabelDraft} disabled={readOnly} onChange={event => setObjectLabelDraft(event.currentTarget.value)} style={{ minWidth: 150, padding: "6px 8px", border: "1px solid #cbd5e1", borderRadius: 6 }} />
+      </label>
+      <label style={{ display: "grid", gap: 4, fontSize: 12 }}>Largura (pt)
+        <input aria-label="Largura do objeto em pontos" type="number" min={1} max={2000} value={objectWidthDraft} disabled={readOnly} onChange={event => setObjectWidthDraft(event.currentTarget.value)} style={{ width: 100, padding: "6px 8px", border: "1px solid #cbd5e1", borderRadius: 6 }} />
+      </label>
+      <label style={{ display: "grid", gap: 4, fontSize: 12 }}>Altura (pt)
+        <input aria-label="Altura do objeto em pontos" type="number" min={1} max={2000} value={objectHeightDraft} disabled={readOnly} onChange={event => setObjectHeightDraft(event.currentTarget.value)} style={{ width: 100, padding: "6px 8px", border: "1px solid #cbd5e1", borderRadius: 6 }} />
+      </label>
+      <label style={{ display: "grid", gap: 4, fontSize: 12 }}>Preenchimento
+        <input aria-label="Preenchimento do objeto" type="color" value={objectFillDraft} disabled={readOnly} onChange={event => setObjectFillDraft(event.currentTarget.value)} />
+      </label>
+      <label style={{ display: "grid", gap: 4, fontSize: 12 }}>Contorno
+        <input aria-label="Contorno do objeto" type="color" value={objectStrokeDraft} disabled={readOnly} onChange={event => setObjectStrokeDraft(event.currentTarget.value)} />
+      </label>
+      <button type="button" disabled={readOnly} onClick={applySelectedObjectProperties} style={{ padding: "7px 12px", border: "1px solid #2563eb", borderRadius: 6, background: "#2563eb", color: "#fff", cursor: readOnly ? "not-allowed" : "pointer" }}>Aplicar</button>
+      <button type="button" disabled={readOnly} onClick={() => moveSelectedObject("up")} style={{ padding: "7px 12px", border: "1px solid #94a3b8", borderRadius: 6, background: "#fff", cursor: readOnly ? "not-allowed" : "pointer" }}>Mover para cima</button>
+      <button type="button" disabled={readOnly} onClick={() => moveSelectedObject("down")} style={{ padding: "7px 12px", border: "1px solid #94a3b8", borderRadius: 6, background: "#fff", cursor: readOnly ? "not-allowed" : "pointer" }}>Mover para baixo</button>
     </div> : null}
     <textarea ref={inputRef} disabled={readOnly} aria-label="Entrada de texto do SmartCanvas" autoCapitalize="off" autoComplete="off" spellCheck={false} defaultValue="" onChange={event => { if (!composing.current) handleInput(event.currentTarget.value); }} onKeyDown={handleKeyDown} onCopy={event => { if (activeCell) { const start = Math.min(activeCell.anchorOffset, activeCell.offset), end = Math.max(activeCell.anchorOffset, activeCell.offset); if (start === end) return; event.clipboardData.setData("text/plain", activeCell.text.slice(start, end)); event.preventDefault(); return; } const current = engine.getSelection(); if (!current || (current.anchor.blockId === current.focus.blockId && current.anchor.offset === current.focus.offset)) return; event.clipboardData.setData("text/plain", getSelectedText(engine.getDocument().content, current)); event.preventDefault(); }} onCut={event => { if (readOnly) { event.preventDefault(); return; } if (activeCell) { const start = Math.min(activeCell.anchorOffset, activeCell.offset), end = Math.max(activeCell.anchorOffset, activeCell.offset); if (start === end) return; event.clipboardData.setData("text/plain", activeCell.text.slice(start, end)); event.preventDefault(); commitCellText(activeCell.text.slice(0, start) + activeCell.text.slice(end), start); return; } const current = engine.getSelection(); if (!current || (current.anchor.blockId === current.focus.blockId && current.anchor.offset === current.focus.offset)) return; event.clipboardData.setData("text/plain", getSelectedText(engine.getDocument().content, current)); event.preventDefault(); if (current.anchor.blockId !== current.focus.blockId) { const blocks = collectTextBlocks(engine.getDocument().content); const anchorIndex = blocks.findIndex(item => item.id === current.anchor.blockId), focusIndex = blocks.findIndex(item => item.id === current.focus.blockId); if (anchorIndex < 0 || focusIndex < 0) { onStatus?.("A seleção não corresponde a blocos editáveis; o texto foi copiado sem removê-lo."); return; } const firstIndex = Math.min(anchorIndex, focusIndex), lastIndex = Math.max(anchorIndex, focusIndex); const first = blocks[firstIndex], last = blocks[lastIndex]; const start = anchorIndex < focusIndex ? current.anchor.offset : current.focus.offset, end = anchorIndex < focusIndex ? current.focus.offset : current.anchor.offset; const commands = [deleteText({ blockId: first.id, start, end: first.text.length }), ...blocks.slice(firstIndex + 1, lastIndex).map(item => deleteText({ blockId: item.id, start: 0, end: item.text.length })), deleteText({ blockId: last.id, start: 0, end }), ...blocks.slice(firstIndex + 1, lastIndex + 1).map(item => mergeBlockWithPrevious({ blockId: item.id }))]; const result = engine.exec(commands, { group: "structural" }); if (!result.ok) { onStatus?.("O texto foi copiado, mas não foi possível removê-lo: " + result.error.message); return; } setSelection(engine.getSelection() ?? null); onDocumentChange(result.value.document); return; } const block = findBlock(engine.getDocument().content, current.focus.blockId); if (!block) return; const start = Math.min(current.anchor.offset, current.focus.offset), end = Math.max(current.anchor.offset, current.focus.offset); const result = engine.exec([deleteText({ blockId: block.id, start, end })], { group: "typing" }); if (result.ok) { setSelection(result.value.selection ?? null); onDocumentChange(result.value.document); } }} onPaste={event => {
       event.preventDefault();
