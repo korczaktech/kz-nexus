@@ -3,7 +3,7 @@ import { createIdGenerator } from "../core/ids";
 import { createFixedClock } from "../core/clock";
 import { createEditor } from "./editor";
 import { deleteText, insertText } from "../commands/text";
-import { mergeBlockWithPrevious, splitBlock } from "../commands/block";
+import { deleteBlock, mergeBlockWithPrevious, splitBlock } from "../commands/block";
 import { getPlainText } from "../model/tree";
 import { applyMark } from "../commands/marks";
 import type { Paragraph } from "../model/types";
@@ -221,6 +221,24 @@ describe("Editor", () => {
 
     expect(editor.undo()).toBe(true);
     expect(editor.getDocument()).toEqual(beforeCut);
+  });
+
+  it("deletes a selected structural block as one undoable operation", () => {
+    const editor = newEditor();
+    const firstId = editor.getDocument().content[0].id;
+    expect(editor.exec([insertText({ blockId: firstId, offset: 0, text: "keep" })], { group: "typing" }).ok).toBe(true);
+    expect(editor.exec([splitBlock({ blockId: firstId, offset: 4 })], { group: "typing" }).ok).toBe(true);
+    const secondId = editor.getDocument().content[1].id;
+    expect(editor.exec([insertText({ blockId: secondId, offset: 0, text: "remove" })], { group: "typing" }).ok).toBe(true);
+    const beforeDelete = editor.getDocument();
+
+    const deleted = editor.exec([deleteBlock({ blockId: secondId })], { group: "structural" });
+    expect(deleted.ok).toBe(true);
+    expect(editor.getDocument().content).toHaveLength(1);
+    expect(getPlainText(editor.getDocument().content[0] as Paragraph)).toBe("keep");
+
+    expect(editor.undo()).toBe(true);
+    expect(editor.getDocument()).toEqual(beforeDelete);
   });
 
   it("replaces a selection spanning multiple paragraphs in one undo step", () => {
