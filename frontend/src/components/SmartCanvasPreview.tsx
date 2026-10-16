@@ -143,6 +143,20 @@ function findLayoutBlock(blocks: readonly import("../../../packages/engine/src/l
   return undefined;
 }
 
+function collectLayoutLines(
+  blocks: readonly import("../../../packages/engine/src/layout/layout").LayoutBlock[],
+  blockId: string,
+  result: Array<{ pageIndex: number; blockId: string; line: import("../../../packages/engine/src/layout/layout").LayoutLine }>,
+  pageIndex: number,
+): void {
+  for (const block of blocks) {
+    if (block.blockId === blockId) {
+      for (const line of block.lines) result.push({ pageIndex, blockId: block.blockId, line });
+    }
+    collectLayoutLines(block.children ?? [], blockId, result, pageIndex);
+  }
+}
+
 function createLayoutTextMeasurer(): (text: string, run?: import("../../../packages/engine/src/layout/layout").LayoutTextRun) => number {
   // Reuse one canvas/context for all measurements in a single navigation event.
   const canvas = window.document.createElement("canvas");
@@ -556,7 +570,7 @@ export function SmartCanvasPreview({ document, engine, headerText = "", footerTe
       syncSelection(event.shiftKey ? { anchor: current.anchor, focus } : collapsedAt(focus));
       return;
     }
-    if (event.key === "ArrowLeft" || event.key === "ArrowRight" || event.key === "Home" || event.key === "End") {
+    if (["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown", "Home", "End"].includes(event.key)) {
       const current = engine.getSelection();
       if (!current) return;
       const blocks = collectTextBlocks(engine.getDocument().content);
@@ -575,10 +589,44 @@ export function SmartCanvasPreview({ document, engine, headerText = "", footerTe
           (anchorBlockIndex === focusIndex && current.anchor.offset <= current.focus.offset);
         const start = ordered ? current.anchor : current.focus;
         const end = ordered ? current.focus : current.anchor;
-        const edge = backwards ? start : end;
         event.preventDefault();
-        syncSelection(collapsedAt(edge));
+        syncSelection(collapsedAt(backwards ? start : end));
         return;
+      }
+
+      if ((event.key === "ArrowUp" || event.key === "ArrowDown" || event.key === "Home" || event.key === "End") && layout) {
+        const visualLines: Array<{ pageIndex: number; blockId: string; line: import("../../../packages/engine/src/layout/layout").LayoutLine }> = [];
+        layout.pages.forEach(page => collectLayoutLines(page.blocks, current.focus.blockId, visualLines, page.index));
+        if (visualLines.length) {
+          let lineIndex = visualLines.findIndex(item =>
+            current.focus.offset >= item.line.startOffset && current.focus.offset <= item.line.endOffset
+          );
+          if (lineIndex < 0) lineIndex = visualLines.findIndex(item => item.line.endOffset >= current.focus.offset);
+          if (lineIndex < 0) lineIndex = visualLines.length - 1;
+          const currentLine = visualLines[lineIndex].line;
+          if (event.key === "Home" || event.key === "End") {
+            offset = event.key === "Home" ? currentLine.startOffset : currentLine.endOffset;
+          } else {
+            const targetLineIndex = lineIndex + (event.key === "ArrowUp" ? -1 : 1);
+            if (targetLineIndex >= 0 && targetLineIndex < visualLines.length) {
+              const target = visualLines[targetLineIndex];
+              const measure = createLayoutTextMeasurer();
+              const x = getLineXAtOffset(currentLine, current.focus.offset, measure);
+              nextBlock = blocks.find(item => item.id === target.blockId) ?? block;
+              offset = nearestGraphemeOffset(nextBlock.text, getOffsetAtLineX(target.line, x, measure));
+            } else if (event.key === "ArrowUp" && focusIndex > 0) {
+              nextBlock = blocks[focusIndex - 1];
+              offset = nextBlock.text.length;
+            } else if (event.key === "ArrowDown" && focusIndex < blocks.length - 1) {
+              nextBlock = blocks[focusIndex + 1];
+              offset = 0;
+            }
+          }
+          event.preventDefault();
+          const focus = { blockId: nextBlock.id, offset };
+          syncSelection(event.shiftKey ? { anchor: current.anchor, focus } : collapsedAt(focus));
+          return;
+        }
       }
 
       if (event.key === "Home") offset = 0;
@@ -589,7 +637,7 @@ export function SmartCanvasPreview({ document, engine, headerText = "", footerTe
           nextBlock = blocks[focusIndex - 1];
           offset = nextBlock.text.length;
         }
-      } else {
+      } else if (event.key === "ArrowRight") {
         if (offset < block.text.length) offset = nextCodePointOffset(block.text, offset);
         else if (focusIndex < blocks.length - 1) {
           nextBlock = blocks[focusIndex + 1];
