@@ -17,7 +17,7 @@ export function collectSmartCanvasTextBlocks(content: readonly unknown[]): Array
     if (!node || typeof node !== "object") return;
     const value = node as { type?: string; id?: string; children?: unknown[] };
     if ((value.type === "paragraph" || value.type === "heading") && typeof value.id === "string" && Array.isArray(value.children)) {
-      blocks.push(value as Extract<Block, { type: "paragraph" | "heading" }));
+      blocks.push(value as Extract<Block, { type: "paragraph" | "heading" }>);
       return;
     }
     for (const child of value.children ?? []) visit(child);
