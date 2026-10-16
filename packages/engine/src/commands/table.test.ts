@@ -93,6 +93,34 @@ describe("row/column operations", () => {
     expect(getPlainText(updatedTable.children[0].children[0].children[0])).toBe("Hello cell");
   });
 
+  it("preserves existing inline marks and inherits marks at the edit point", () => {
+    const { document, tableId } = tableDoc();
+    const table = document.content[1] as Table;
+    const row = table.children[0];
+    const cell = row.children[0];
+    const originalParagraph = cell.children[0];
+    const paragraph = {
+      ...originalParagraph,
+      children: [
+        { ...originalParagraph.children[0], text: "Hello ", marks: [{ type: "bold" as const }] },
+        { type: "text" as const, id: "normal-run-test", text: "world", marks: [] },
+      ],
+    };
+    const seededCell = { ...cell, children: [paragraph] };
+    const seededRow = { ...row, children: [seededCell, ...row.children.slice(1)] };
+    const seededTable = { ...table, children: [seededRow, ...table.children.slice(1)] };
+    const seededDocument = {
+      ...document,
+      content: document.content.map(block => block.id === tableId ? seededTable : block),
+    };
+    const result = setCellText({ tableId, rowId: row.id, cellId: cell.id, text: "Hello brave world" })(seededDocument, ctx());
+    if (!result.ok) throw result.error;
+    const updatedCell = (result.value.document.content[1] as Table).children[0].children[0];
+    expect(updatedCell.children[0].children.map(run => run.text)).toEqual(["Hello brave ", "world"]);
+    expect(updatedCell.children[0].children[0].marks).toEqual([{ type: "bold" }]);
+    expect(updatedCell.children[0].children[1].marks).toEqual([]);
+  });
+
   it("preserves newline-separated cell text as separate paragraphs", () => {
     const { document, tableId } = tableDoc();
     const table = document.content[1] as Table;
