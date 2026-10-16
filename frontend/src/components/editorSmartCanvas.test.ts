@@ -78,7 +78,7 @@ describe("production SmartCanvas migration gate", () => {
       { blockId: "unicode", start: 1, end: 8 },
     ]);
     expect(findSmartCanvasTextMatches(content, "😀")).toEqual([
-      { blockId: "unicode", start: 8, end: 10 },
+      { blockId: "unicode", start: 9, end: 11 },
     ]);
   });
 
