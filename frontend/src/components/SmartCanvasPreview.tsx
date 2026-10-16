@@ -556,7 +556,7 @@ export function SmartCanvasPreview({ document, engine, headerText = "", footerTe
       return;
     }
     const level = headingLevelDraft === "paragraph" ? "paragraph" : Number(headingLevelDraft);
-    if (level !== "paragraph" && ![1, 2, 3, 4, 5, 6].includes(level)) return;
+    if (level !== "paragraph" && (typeof level !== "number" || ![1, 2, 3, 4, 5, 6].includes(level))) return;
     const result = engine.exec([setHeadingLevel({ blockId: block.id, level: level as 1 | 2 | 3 | 4 | 5 | 6 | "paragraph" })], { group: "structural" });
     if (!result.ok) onStatus?.(result.error.message);
     else {
