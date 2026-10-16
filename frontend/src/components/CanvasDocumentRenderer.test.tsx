@@ -81,6 +81,35 @@ function makeRenderFixture(): NexusDocument {
     }],
   });
   document.content.push({
+    type: "heading",
+    id: "renderer-heading",
+    level: 2,
+    children: [{ type: "text", id: "renderer-heading-run", text: "Heading text", marks: [] }],
+  });
+  document.content.push({
+    type: "blockquote",
+    id: "renderer-quote",
+    children: [{
+      type: "paragraph",
+      id: "renderer-quote-paragraph",
+      children: [{ type: "text", id: "renderer-quote-run", text: "Quoted renderer text", marks: [] }],
+    }],
+  });
+  document.content.push({
+    type: "orderedList",
+    id: "renderer-list",
+    start: 2,
+    children: [{
+      type: "listItem",
+      id: "renderer-list-item",
+      children: [{
+        type: "paragraph",
+        id: "renderer-list-paragraph",
+        children: [{ type: "text", id: "renderer-list-run", text: "List item text", marks: [] }],
+      }],
+    }],
+  });
+  document.content.push({
     type: "image",
     id: "renderer-image",
     resourceId: "renderer-image-resource",
@@ -143,6 +172,10 @@ describe("CanvasDocumentRenderer visual regression contract", () => {
     expect(host.querySelector('[data-renderer="canvas-2d"]')).not.toBeNull();
     expect(textCalls).toContain("Shape label");
     expect(textCalls).toContain("Body text");
+    expect(textCalls).toContain("Heading text");
+    expect(textCalls).toContain("Quoted renderer text");
+    expect(textCalls).toContain("List item text");
+    expect(textCalls).toContain("2.");
     expect(textCalls).toContain("Table cell text");
     expect(textCalls).toContain("Image alternative text");
     expect(layout.pageCount).toBeGreaterThan(1);
