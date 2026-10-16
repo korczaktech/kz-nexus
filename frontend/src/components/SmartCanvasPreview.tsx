@@ -189,10 +189,17 @@ export function SmartCanvasPreview({ document, engine, headerText = "", footerTe
         setActiveCell({ ...activeCell, anchorOffset: 0, offset: activeCell.text.length });
         return;
       }
-      if (event.key === "Escape" || event.key === "Enter") {
+      if (event.key === "Escape") {
         event.preventDefault();
         setActiveCell(null);
         inputRef.current?.blur();
+        return;
+      }
+      if (event.key === "Enter") {
+        event.preventDefault();
+        const start = Math.min(activeCell.anchorOffset, activeCell.offset);
+        const end = Math.max(activeCell.anchorOffset, activeCell.offset);
+        commitCellText(activeCell.text.slice(0, start) + "\n" + activeCell.text.slice(end), start + 1);
         return;
       }
       if (event.key === "Tab") {
