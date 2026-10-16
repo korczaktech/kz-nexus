@@ -51,7 +51,7 @@ export interface LayoutBlock {
   depth?: number;
   quote?: boolean;
   style?: LayoutBlockStyle;
-  table?: { rows: Array<{ rowId: string; rect: LayoutRect; cells: Array<{ cellId: string; rect: LayoutRect; lines: LayoutLine[] }> }> };
+  table?: { rows: Array<{ rowId: string; rect: LayoutRect; cells: Array<{ cellId: string; rect: LayoutRect; lines: LayoutLine[]; images?: Array<{ resourceId: string; alt: string; rect: LayoutRect }> }> }> };
   continued?: boolean;
   /** True when this paragraph-like block represents a selectable semantic object. */
   object?: boolean;
@@ -380,8 +380,9 @@ export function layoutDocument(document: NexusDocument, options: LayoutOptions =
           const measuredParagraphs = cell.children.map(paragraph => blockTextLayout(
             paragraph, content.x + cellIndex * colWidth + 4, 0, Math.max(1, colWidth - 8), options
           ));
-          const cellHeight = 8 + measuredParagraphs.reduce((sum, item) => sum + item.height, 0);
-          return { cellId: cell.id, x: content.x + cellIndex * colWidth, width: colWidth, height: cellHeight, paragraphs: measuredParagraphs };
+          const imageHeights = (cell.images ?? []).map(image => Math.max(12, (image.height ?? 96) * 0.75));
+          const cellHeight = 8 + measuredParagraphs.reduce((sum, item) => sum + item.height, 0) + imageHeights.reduce((sum, value) => sum + value + 4, 0);
+          return { cellId: cell.id, x: content.x + cellIndex * colWidth, width: colWidth, height: cellHeight, paragraphs: measuredParagraphs, sourceImages: cell.images ?? [], imageHeights };
         });
         return { rowId: row.id, height: Math.max(24, ...cells.map(cell => cell.height)), cells };
       });
@@ -484,7 +485,15 @@ export function layoutDocument(document: NexusDocument, options: LayoutOptions =
             lines.push(...paragraph.lines.map(line => ({ ...line, x: cell.x + 4 + (line.x - (content.x + (row.cells.indexOf(cell)) * colWidth + 4)), y: cellY + line.y })));
             cellY += paragraph.height;
           }
-          return { cellId: cell.cellId, rect: { x: cell.x, y: rowY, width: cell.width, height: row.height }, lines };
+          const images = cell.sourceImages.map((image, index) => {
+            const imageHeight = cell.imageHeights[index] ?? 72;
+            const availableWidth = Math.max(12, cell.width - 8);
+            const imageWidth = Math.min(availableWidth, Math.max(12, (image.width ?? availableWidth / 0.75) * 0.75));
+            const rect = { x: cell.x + 4, y: cellY, width: imageWidth, height: imageHeight };
+            cellY += imageHeight + 4;
+            return { resourceId: image.resourceId, alt: image.alt, rect };
+          });
+          return { cellId: cell.cellId, rect: { x: cell.x, y: rowY, width: cell.width, height: row.height }, lines, images };
         });
         fragmentRows.push({ rowId: row.rowId, rect: { x: content.x, y: rowY, width: content.width, height: row.height }, cells });
         cursorY += row.height; fragmentHeight += row.height;
