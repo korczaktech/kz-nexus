@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { addTableRow, collapsedAt, convertBlockToList, deleteBlock, deleteText, insertImportedBlocksAtSelection, insertImageResource, insertTable as insertTableCommand, insertText, moveBlock, removeImage, updateEditorObject, updateImage, getLineXAtOffset, getOffsetAtLineX, getPlainText, layoutDocument, mergeBlockWithPrevious, replaceRange, setAlign, setCellText, setIndent, setParagraphStyle, splitBlock, toggleMark as toggleMarkCommand, type Editor as NexusEngineSession, type Mark, type NexusDocument, type Selection, type SmartCanvasHitTarget } from "../../../packages/engine/src/index";
+import { addTableColumn, addTableRow, collapsedAt, convertBlockToList, deleteBlock, deleteText, insertImportedBlocksAtSelection, insertImageResource, insertTable as insertTableCommand, insertText, moveBlock, removeImage, updateEditorObject, updateImage, getLineXAtOffset, getOffsetAtLineX, getPlainText, layoutDocument, mergeBlockWithPrevious, replaceRange, removeTableColumn, removeTableRow, setAlign, setCellText, setIndent, setParagraphStyle, splitBlock, toggleMark as toggleMarkCommand, type Editor as NexusEngineSession, type Mark, type NexusDocument, type Selection, type SmartCanvasHitTarget } from "../../../packages/engine/src/index";
 import { CanvasDocumentRenderer } from "./CanvasDocumentRenderer";
 import { nexusDocumentFromHtml } from "../services/nexusEngineAdapter";
 import { lineEndOffset, lineStartOffset, nearestGraphemeOffset, nextCodePointOffset, nextWordOffset, previousCodePointOffset, previousWordOffset, verticalLineOffset, wordRangeAt } from "./smartCanvasTextOffsets";
@@ -489,6 +489,56 @@ export function SmartCanvasPreview({ document, engine, headerText = "", footerTe
       onDocumentChange(result.value.document);
       onStatus?.("Formatação aplicada pelo SmartCanvas.");
     }
+  };
+  const mutateActiveTable = (action: "add-row" | "add-column" | "remove-row" | "remove-column") => {
+    if (readOnly || !activeCell) {
+      onStatus?.("Selecione uma célula antes de alterar a estrutura da tabela.");
+      return;
+    }
+    const document = engine.getDocument();
+    const table = document.content.find(block => block.type === "table" && block.id === activeCell.tableId);
+    if (!table || table.type !== "table") {
+      onStatus?.("A tabela selecionada não está mais disponível.");
+      return;
+    }
+    const row = table.children.find(item => item.id === activeCell.rowId);
+    const columnIndex = row?.children.findIndex(cell => cell.id === activeCell.cellId) ?? -1;
+    let command;
+    let message = "";
+    const resetCell = action === "remove-row" || action === "remove-column";
+    switch (action) {
+      case "add-row":
+        command = addTableRow({ tableId: activeCell.tableId, afterRowId: activeCell.rowId });
+        message = "Linha adicionada à tabela.";
+        break;
+      case "add-column":
+        command = addTableColumn({ tableId: activeCell.tableId, afterColumnIndex: Math.max(0, columnIndex) });
+        message = "Coluna adicionada à tabela.";
+        break;
+      case "remove-row":
+        command = removeTableRow({ tableId: activeCell.tableId, rowId: activeCell.rowId });
+        message = "Linha removida da tabela.";
+        break;
+      case "remove-column":
+        command = removeTableColumn({ tableId: activeCell.tableId, columnIndex: Math.max(0, columnIndex) });
+        message = "Coluna removida da tabela.";
+        break;
+    }
+    const result = engine.exec([command], { group: "structural" });
+    if (!result.ok) {
+      onStatus?.("Não foi possível alterar a tabela: " + result.error.message);
+      return;
+    }
+    if (resetCell) {
+      const updatedTable = result.value.document.content.find(block => block.type === "table" && block.id === activeCell.tableId);
+      const firstCell = updatedTable?.type === "table" ? collectTableCells([updatedTable])[0] : undefined;
+      if (firstCell) setActiveCell({ ...firstCell, anchorOffset: 0, offset: 0 });
+      else setActiveCell(null);
+      setActiveCellStoredMarks(null);
+    }
+    onDocumentChange(result.value.document);
+    onStatus?.(message);
+    inputRef.current?.focus({ preventScroll: true });
   };
   const convertSmartCanvasList = (ordered: boolean) => {
     if (readOnly) return;
@@ -1218,6 +1268,12 @@ export function SmartCanvasPreview({ document, engine, headerText = "", footerTe
       <div><strong>SmartCanvas — prévia experimental</strong><div style={{ fontSize: 12, opacity: .75 }}>Edição por comandos do motor: texto, seleção lógica, tabelas e objetos. O editor legado permanece disponível durante a validação.</div></div>
       <span style={{ fontSize: 12 }}>{layout ? layout.pageCount + " página(s)" : "Layout indisponível"}</span>
     </div>
+    {activeCell ? <div role="group" aria-label="Estrutura da tabela SmartCanvas" style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 8 }}>
+      <button type="button" disabled={readOnly} onMouseDown={event => event.preventDefault()} onClick={() => mutateActiveTable("add-row")} aria-label="Adicionar linha SmartCanvas">Adicionar linha</button>
+      <button type="button" disabled={readOnly} onMouseDown={event => event.preventDefault()} onClick={() => mutateActiveTable("add-column")} aria-label="Adicionar coluna SmartCanvas">Adicionar coluna</button>
+      <button type="button" disabled={readOnly} onMouseDown={event => event.preventDefault()} onClick={() => mutateActiveTable("remove-row")} aria-label="Remover linha SmartCanvas">Remover linha</button>
+      <button type="button" disabled={readOnly} onMouseDown={event => event.preventDefault()} onClick={() => mutateActiveTable("remove-column")} aria-label="Remover coluna SmartCanvas">Remover coluna</button>
+    </div> : null}
     <div role="toolbar" aria-label="Formatação SmartCanvas" style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap", marginBottom: 10 }}>
       <button type="button" disabled={readOnly} onMouseDown={event => event.preventDefault()} onClick={() => applySmartCanvasMark({ type: "bold" })} aria-label="Negrito SmartCanvas" title="Negrito (Ctrl+B)" style={{ padding: "6px 9px", border: "1px solid #cbd5e1", borderRadius: 6, background: "#fff", fontWeight: 700 }}>B</button>
       <button type="button" disabled={readOnly} onMouseDown={event => event.preventDefault()} onClick={() => applySmartCanvasMark({ type: "italic" })} aria-label="Itálico SmartCanvas" title="Itálico (Ctrl+I)" style={{ padding: "6px 9px", border: "1px solid #cbd5e1", borderRadius: 6, background: "#fff", fontStyle: "italic" }}>I</button>
