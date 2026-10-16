@@ -149,4 +149,6 @@ A migração é por capacidades, com a implementação nova opt-in e o caminho a
 
 - O comando `addTableRow` agora rejeita `afterRowId` inexistente em vez de inserir silenciosamente no início da tabela; testes unitários cobrem a posição de inserção e o erro `NODE_NOT_FOUND`. O teste foi adicionado, mas ainda não foi executado nesta sessão.
 
+- A exclusão por Backspace/Delete agora usa `removeImage` para blocos de imagem, limpando o recurso embutido quando ele não é mais referenciado e preservando recursos compartilhados por outras imagens; os demais blocos continuam usando `deleteBlock`. A integração visual ainda precisa de validação.
+
 **Limite de validação:** essas alterações foram gravadas no repositório, mas ainda não há resultado de build/testes confirmado nesta sessão. Não remover `contentEditable` nem alterar o editor padrão até validar os fluxos e a paridade de recursos.
