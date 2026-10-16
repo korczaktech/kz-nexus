@@ -291,18 +291,6 @@ export function CanvasPage({ page, pageCount, document, headerText, footerText, 
     const imageResources = document.resources.filter(
       resource => resource.kind === "image" && pageImageIds.has(resource.id),
     );
-    for (const resource of imageResources) {
-      const image = new Image();
-      imageCache.set(resource.id, image);
-      image.onload = () => {
-        if (!cancelled) paint();
-      };
-      image.onerror = () => {
-        if (!cancelled) paint();
-      };
-      image.src = `data:${resource.mimeType};base64,${resource.data}`;
-    }
-
     const paint = () => {
       if (cancelled) return;
       context.setTransform(ratio, 0, 0, ratio, 0, 0);
@@ -340,6 +328,19 @@ export function CanvasPage({ page, pageCount, document, headerText, footerText, 
         }
       }
     };
+    // Define paint before assigning image sources: some hosts can dispatch
+    // load/error synchronously from the src setter.
+    for (const resource of imageResources) {
+      const image = new Image();
+      imageCache.set(resource.id, image);
+      image.onload = () => {
+        if (!cancelled) paint();
+      };
+      image.onerror = () => {
+        if (!cancelled) paint();
+      };
+      image.src = `data:${resource.mimeType};base64,${resource.data}`;
+    }
     paint();
     return () => { cancelled = true; };
   }, [page, pageCount, document, headerText, footerText, headerAlign, footerAlign, showPageNumbers, cssWidth, cssHeight]);
