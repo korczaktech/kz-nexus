@@ -105,6 +105,36 @@ function drawBlock(ctx: CanvasRenderingContext2D, block: LayoutBlock, document: 
     ctx.lineWidth = block.style.borderWidth * PT_TO_CSS_PX;
     ctx.strokeRect(x, y, width, height);
   }
+  const model = findTopLevelBlock(document, block.blockId);
+  if ((model?.type === "paragraph" || model?.type === "heading") && model.editorObject) {
+    const object = model.editorObject;
+    const objectWidth = Math.min(width, Math.max(1, (object.width ?? block.rect.width) * PT_TO_CSS_PX));
+    const objectHeight = Math.min(height, Math.max(1, (object.height ?? block.rect.height) * PT_TO_CSS_PX));
+    const objectX = x;
+    const objectY = y;
+    ctx.fillStyle = object.fill ?? (object.kind === "note" ? "#fff7cc" : "#ffffff");
+    ctx.strokeStyle = object.stroke ?? "#667085";
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    if (object.shape === "ellipse") {
+      ctx.ellipse(objectX + objectWidth / 2, objectY + objectHeight / 2, objectWidth / 2, objectHeight / 2, 0, 0, Math.PI * 2);
+    } else if (object.shape === "triangle") {
+      ctx.moveTo(objectX + objectWidth / 2, objectY);
+      ctx.lineTo(objectX + objectWidth, objectY + objectHeight);
+      ctx.lineTo(objectX, objectY + objectHeight);
+      ctx.closePath();
+    } else {
+      ctx.rect(objectX, objectY, objectWidth, objectHeight);
+    }
+    ctx.fill();
+    ctx.stroke();
+    if (object.label) {
+      ctx.fillStyle = "#344054";
+      ctx.font = "10pt Arial, sans-serif";
+      ctx.textBaseline = "middle";
+      ctx.fillText(object.label, objectX + 6, objectY + objectHeight / 2, Math.max(0, objectWidth - 12));
+    }
+  }
   if (block.quote) {
     ctx.strokeStyle = "#98a2b3";
     ctx.lineWidth = 3;
