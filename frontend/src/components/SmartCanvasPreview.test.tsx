@@ -2,7 +2,7 @@
 import { act, createElement } from "react";
 import { createRoot } from "react-dom/client";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { createDocument, createEditor, getPlainText, insertImageResource } from "../../../packages/engine/src/index";
+import { createDocument, createEditor, getPlainText, insertImageResource, insertTable } from "../../../packages/engine/src/index";
 import type { NexusDocument, SmartCanvasHitTarget } from "../../../packages/engine/src/index";
 import { SmartCanvasPreview } from "./SmartCanvasPreview";
 
@@ -37,6 +37,21 @@ vi.mock("./CanvasDocumentRenderer", () => ({
         "data-testid": "smartcanvas-image-hit",
         onClick: () => onHitTest?.({ kind: "block", pageIndex: 0, blockId: item.id }, 1),
       }, "Select image")),
+      ...document.content.filter(item => item.type === "table").flatMap(table =>
+        table.children.flatMap(row => row.children.map(cell => createElement("button", {
+          key: cell.id,
+          type: "button",
+          "data-testid": "smartcanvas-cell-hit",
+          onClick: () => onHitTest?.({
+            kind: "table-cell",
+            pageIndex: 0,
+            blockId: table.id,
+            cellId: cell.id,
+            offset: 0,
+            lineIndex: 0,
+          }, 1),
+        }, "Select cell"))),
+      ),
     );
   },
 }));
@@ -162,6 +177,51 @@ describe("SmartCanvasPreview input integration", () => {
     expect(image.alt).toBe("Accessible logo");
     expect(image.width).toBe(128);
     expect(image.height).toBe(64);
+    expect(onDocumentChange).toHaveBeenCalled();
+  });
+
+  it("edits a table cell and creates a row when Tab leaves the final cell", async () => {
+    const document = createDocument({ title: "SmartCanvas table integration" });
+    engine = createEditor({ document });
+    const paragraph = engine.getDocument().content[0];
+    if (!paragraph || paragraph.type !== "paragraph") throw new Error("Expected initial paragraph");
+    expect(engine.exec([insertTable({ afterBlockId: paragraph.id, rows: 1, columns: 1 })]).ok).toBe(true);
+    const onDocumentChange = vi.fn();
+    host = window.document.createElement("div");
+    window.document.body.append(host);
+    root = createRoot(host);
+
+    await act(async () => {
+      root?.render(createElement(SmartCanvasPreview, {
+        document: engine!.getDocument(),
+        engine: engine!,
+        onDocumentChange,
+      }));
+    });
+    const cellHit = host.querySelector('[data-testid="smartcanvas-cell-hit"]') as HTMLButtonElement | null;
+    expect(cellHit).not.toBeNull();
+    await act(async () => { cellHit?.click(); });
+    const input = host.querySelector('textarea[aria-label="Entrada de texto do SmartCanvas"]') as HTMLTextAreaElement | null;
+    const setter = Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, "value")?.set;
+    if (!input || !setter) throw new Error("SmartCanvas input surface was not mounted");
+    await act(async () => {
+      setter.call(input, "Cell text 😀");
+      input.dispatchEvent(new Event("input", { bubbles: true }));
+    });
+
+    const tableAfterText = engine.getDocument().content.find(item => item.type === "table");
+    if (!tableAfterText || tableAfterText.type !== "table") throw new Error("Expected table after cell edit");
+    const firstCell = tableAfterText.children[0]?.children[0];
+    const firstParagraph = firstCell?.children[0];
+    if (!firstParagraph || firstParagraph.type !== "paragraph") throw new Error("Expected paragraph in edited cell");
+    expect(getPlainText(firstParagraph)).toBe("Cell text 😀");
+
+    await act(async () => {
+      input.dispatchEvent(new KeyboardEvent("keydown", { key: "Tab", bubbles: true, cancelable: true }));
+    });
+    const tableAfterTab = engine.getDocument().content.find(item => item.type === "table");
+    if (!tableAfterTab || tableAfterTab.type !== "table") throw new Error("Expected table after Tab");
+    expect(tableAfterTab.children).toHaveLength(2);
     expect(onDocumentChange).toHaveBeenCalled();
   });
 
