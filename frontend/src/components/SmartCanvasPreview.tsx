@@ -24,6 +24,43 @@ function collectTextBlocks(nodes: readonly unknown[]): TextBlock[] {
 }
 
 type EditableCell = { tableId: string; rowId: string; cellId: string; text: string };
+type CellParagraph = { id: string; text: string; start: number };
+
+function collectCellParagraphs(nodes: readonly unknown[], tableId: string, rowId: string, cellId: string): CellParagraph[] {
+  for (const value of nodes) {
+    if (!value || typeof value !== "object") continue;
+    const node = value as { id?: unknown; type?: unknown; children?: unknown };
+    if (node.type === "table" && node.id === tableId && Array.isArray(node.children)) {
+      for (const rowValue of node.children) {
+        if (!rowValue || typeof rowValue !== "object") continue;
+        const row = rowValue as { id?: unknown; children?: unknown };
+        if (row.id !== rowId || !Array.isArray(row.children)) continue;
+        for (const cellValue of row.children) {
+          if (!cellValue || typeof cellValue !== "object") continue;
+          const cell = cellValue as { id?: unknown; children?: unknown };
+          if (cell.id !== cellId || !Array.isArray(cell.children)) continue;
+          let start = 0;
+          const paragraphs: CellParagraph[] = [];
+          for (const child of cell.children as unknown[]) {
+            if (!child || typeof child !== "object") continue;
+            const block = child as { id?: unknown; type?: unknown; children?: unknown };
+            if (typeof block.id !== "string" || (block.type !== "paragraph" && block.type !== "heading")) continue;
+            const text = getPlainText(child as Extract<NexusDocument["content"][number], { type: "paragraph" | "heading" }>);
+            paragraphs.push({ id: block.id, text, start });
+            start += text.length + 1;
+          }
+          return paragraphs;
+        }
+      }
+      return [];
+    }
+    if (Array.isArray(node.children)) {
+      const nested = collectCellParagraphs(node.children, tableId, rowId, cellId);
+      if (nested.length) return nested;
+    }
+  }
+  return [];
+}
 
 function collectTableCells(nodes: readonly unknown[]): EditableCell[] {
   const cells: EditableCell[] = [];
@@ -208,7 +245,32 @@ export function SmartCanvasPreview({ document, engine, headerText = "", footerTe
     if (activeCell) {
       if ((event.ctrlKey || event.metaKey) && ["b", "i", "u"].includes(event.key.toLowerCase())) {
         event.preventDefault();
-        onStatus?.("A formatação por atalho dentro de células será habilitada junto ao controlador de marcas de tabela.");
+        const key = event.key.toLowerCase();
+        const mark = key === "b" ? { type: "bold" as const } : key === "i" ? { type: "italic" as const } : { type: "underline" as const };
+        const start = Math.min(activeCell.anchorOffset, activeCell.offset);
+        const end = Math.max(activeCell.anchorOffset, activeCell.offset);
+        if (start === end) {
+          onStatus?.("Selecione texto dentro da célula para aplicar a formatação.");
+          return;
+        }
+        const paragraphs = collectCellParagraphs(engine.getDocument().content, activeCell.tableId, activeCell.rowId, activeCell.cellId);
+        const commands = paragraphs.flatMap(paragraph => {
+          const localStart = Math.max(0, start - paragraph.start);
+          const localEnd = Math.min(paragraph.text.length, end - paragraph.start);
+          return localEnd > localStart
+            ? [toggleMarkCommand({ blockId: paragraph.id, start: localStart, end: localEnd, mark })]
+            : [];
+        });
+        if (!commands.length) {
+          onStatus?.("Não foi possível mapear o intervalo selecionado para os parágrafos da célula.");
+          return;
+        }
+        const result = engine.exec(commands, { group: "formatting" });
+        if (!result.ok) onStatus?.(result.error.message);
+        else {
+          onDocumentChange(result.value.document);
+          onStatus?.("Formatação aplicada ao texto selecionado na célula.");
+        }
         return;
       }
       if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "a") {
@@ -244,8 +306,8 @@ export function SmartCanvasPreview({ document, engine, headerText = "", footerTe
         const orderedStart = Math.min(activeCell.anchorOffset, activeCell.offset);
         const orderedEnd = Math.max(activeCell.anchorOffset, activeCell.offset);
         const offset = event.key === "Home" ? 0 : event.key === "End" ? activeCell.text.length :
-          event.key === "ArrowLeft" ? (hasRange && !event.shiftKey ? orderedStart : previousCodePointOffset(activeCell.text, activeCell.offset)) :
-          (hasRange && !event.shiftKey ? orderedEnd : nextCodePointOffset(activeCell.text, activeCell.offset));
+          event.key === "ArrowLeft" ? (hasRange && !event.shiftKey ? orderedStart : event.ctrlKey || event.metaKey ? previousWordOffset(activeCell.text, activeCell.offset) : previousCodePointOffset(activeCell.text, activeCell.offset)) :
+          (hasRange && !event.shiftKey ? orderedEnd : event.ctrlKey || event.metaKey ? nextWordOffset(activeCell.text, activeCell.offset) : nextCodePointOffset(activeCell.text, activeCell.offset));
         setActiveCell({ ...activeCell, anchorOffset: event.shiftKey ? activeCell.anchorOffset : offset, offset });
         return;
       }
