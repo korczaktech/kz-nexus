@@ -111,6 +111,34 @@ describe("SmartCanvasPreview input integration", () => {
     });
   });
 
+  it("inserts a table through the canonical SmartCanvas engine", async () => {
+    const document = createDocument({ title: "SmartCanvas table insertion" });
+    engine = createEditor({ document });
+    const onDocumentChange = vi.fn();
+    const onStatus = vi.fn();
+    host = window.document.createElement("div");
+    window.document.body.append(host);
+    root = createRoot(host);
+    await act(async () => {
+      root?.render(createElement(SmartCanvasPreview, {
+        document: engine!.getDocument(),
+        engine: engine!,
+        onDocumentChange,
+        onStatus,
+      }));
+    });
+    const insert = host.querySelector('[aria-label="Inserir tabela SmartCanvas"]') as HTMLButtonElement | null;
+    if (!insert) throw new Error("SmartCanvas table insertion control was not mounted");
+    await act(async () => { insert.click(); });
+
+    const table = engine.getDocument().content.find(block => block.type === "table");
+    if (!table || table.type !== "table") throw new Error("Expected canonical table");
+    expect(table.children).toHaveLength(3);
+    expect(table.children.every(row => row.children.length === 3)).toBe(true);
+    expect(onDocumentChange).toHaveBeenCalled();
+    expect(onStatus).toHaveBeenLastCalledWith("Tabela 3×3 inserida pelo motor. Use Tab para navegar e criar novas linhas.");
+  });
+
   it("applies formatting and paragraph alignment through SmartCanvas controls", async () => {
     const document = createDocument({ title: "SmartCanvas formatting controls" });
     engine = createEditor({ document });
