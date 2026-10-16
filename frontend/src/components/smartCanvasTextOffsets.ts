@@ -147,5 +147,5 @@ export function verticalLineOffset(text: string, offset: number, direction: -1 |
   if (targetLine < 0 || targetLine >= starts.length) return bounded;
   const targetStart = starts[targetLine] ?? 0;
   const targetEnd = targetLine + 1 < starts.length ? (starts[targetLine + 1] ?? text.length) - 1 : text.length;
-  return Math.min(targetEnd, targetStart + column);
+  return nearestGraphemeOffset(text, Math.min(targetEnd, targetStart + column));
 }
