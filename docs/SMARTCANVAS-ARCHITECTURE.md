@@ -147,4 +147,6 @@ A migração é por capacidades, com a implementação nova opt-in e o caminho a
 - Tab avança entre células e cria uma linha ao sair da última célula; Shift+Tab recua sem circular para o fim da tabela.
 - Backspace/Delete remove blocos/objetos selecionados quando a operação estrutural é compatível; Escape cancela a seleção. Há teste do motor para exclusão estrutural com undo e testes dos auxiliares de navegação multilinear.
 
+- O comando `addTableRow` agora rejeita `afterRowId` inexistente em vez de inserir silenciosamente no início da tabela; testes unitários cobrem a posição de inserção e o erro `NODE_NOT_FOUND`. O teste foi adicionado, mas ainda não foi executado nesta sessão.
+
 **Limite de validação:** essas alterações foram gravadas no repositório, mas ainda não há resultado de build/testes confirmado nesta sessão. Não remover `contentEditable` nem alterar o editor padrão até validar os fluxos e a paridade de recursos.
