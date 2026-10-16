@@ -1,5 +1,5 @@
 import { useMemo, useRef, useState } from "react";
-import { collapsedAt, deleteText, getPlainText, layoutDocument, type Editor as NexusEngineSession, type NexusDocument, type Selection, type SmartCanvasHitTarget } from "../../../packages/engine/src/index";
+import { collapsedAt, deleteText, getPlainText, layoutDocument, mergeBlockWithPrevious, type Editor as NexusEngineSession, type NexusDocument, type Selection, type SmartCanvasHitTarget } from "../../../packages/engine/src/index";
 import { CanvasDocumentRenderer } from "./CanvasDocumentRenderer";
 
 type TextBlock = { id: string; text: string };
@@ -152,6 +152,25 @@ export function SmartCanvasPreview({ document, engine, headerText = "", footerTe
       if (!block) return;
       let start = Math.min(current.anchor.offset, current.focus.offset);
       let end = Math.max(current.anchor.offset, current.focus.offset);
+      const blocks = collectTextBlocks(engine.getDocument().content);
+      if (start === end && event.key === "Backspace" && start === 0) {
+        const index = blocks.findIndex(item => item.id === block.id);
+        if (index <= 0) return;
+        const result = engine.exec([mergeBlockWithPrevious({ blockId: block.id })], { group: "typing" });
+        if (!result.ok) { onStatus?.(result.error.message); return; }
+        setSelection(engine.getSelection() ?? null);
+        onDocumentChange(result.value.document);
+        return;
+      }
+      if (start === end && event.key === "Delete" && end === block.text.length) {
+        const index = blocks.findIndex(item => item.id === block.id);
+        if (index < 0 || index >= blocks.length - 1) return;
+        const result = engine.exec([mergeBlockWithPrevious({ blockId: blocks[index + 1].id })], { group: "typing" });
+        if (!result.ok) { onStatus?.(result.error.message); return; }
+        setSelection(engine.getSelection() ?? null);
+        onDocumentChange(result.value.document);
+        return;
+      }
       if (start === end) {
         if (event.key === "Backspace") start = Math.max(0, start - 1);
         else end = Math.min(block.text.length, end + 1);
