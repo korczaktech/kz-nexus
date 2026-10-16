@@ -118,13 +118,15 @@ A migração é por capacidades, com a implementação nova opt-in e o caminho a
 
 ### Etapa 3 — edição própria
 - [x] Controlador experimental cobre digitação/IME, seleção com Shift, navegação entre blocos e linhas visuais com setas, Home/End na linha renderizada, Ctrl/Cmd+A, atalhos de formatação, navegação por palavra, exclusão por palavra, duplo clique para selecionar palavra, triplo clique para selecionar parágrafo, clipboard de texto e undo/redo.
-- [ ] Ainda faltam integração confiável para seleção estrutural de imagens/objetos, formatação pendente em célula vazia, colagem rica e testes de integração/IME.
+- [x] Seleção/exclusão de objetos semânticos e imagens, propriedades básicas de imagem, formatação pendente em célula vazia, colagem HTML sanitizada em parágrafo e testes de integração para IME e operações estruturais estão cobertos por testes automatizados.
+- [ ] Ainda faltam edição completa de objetos (mover/redimensionar), colagem rica dentro de células e seleções que atravessam blocos, e validação manual de IME nos navegadores suportados.
 - [ ] O conteúdo do corpo não depende de contentEditable nem de execCommand.
 - [ ] Undo/redo restaura documento e seleção sem histórico paralelo divergente.
 - [ ] Cabeçalho e rodapé também têm fluxo de edição próprio, ou um escopo de compatibilidade explicitamente isolado até sua migração.
 
 ### Etapa 4 — paridade
-- [ ] Testes de integração cobrem edição, paginação, tabelas, imagens, HTML import/export, salvamento, rascunhos e versões.
+- [x] Testes de integração cobrem entrada de texto, seleção/substituição entre blocos com undo, edição de células, imagens/objetos, colagem HTML sanitizada, persistência .nsx e exportação HTML.
+- [ ] Ainda falta uma bateria end-to-end com API real para paginação, autosave, recuperação de rascunhos, conflitos de versão e exportação DOCX/PDF a partir do modo SmartCanvas.
 - [ ] Comparação de regressão entre modo legado e SmartCanvas em documentos representativos.
 - [ ] O modo SmartCanvas permanece opt-in até a aprovação de todos os critérios críticos.
 
@@ -157,3 +159,13 @@ A migração é por capacidades, com a implementação nova opt-in e o caminho a
 - Adicionado teste para garantir que remover uma imagem não apague um recurso ainda referenciado por outra imagem. O teste foi escrito, mas não executado nesta sessão.
 
 **Limite de validação:** essas alterações foram gravadas no repositório, mas ainda não há resultado de build/testes confirmado nesta sessão. Não remover `contentEditable` nem alterar o editor padrão até validar os fluxos e a paridade de recursos.
+
+## Incremento de integração e regressão — 2026-10-16
+
+- [x] O comando de edição de célula aceita marcas explícitas para texto recém-digitado, permitindo Ctrl/Cmd+B, I e U numa célula vazia sem alterar o conteúdo anterior; os testes verificam marcas explícitas e preservação das marcas do sufixo.
+- [x] A colagem HTML no SmartCanvas passa pelo adaptador de importação HTML e pelo sanitizador existente antes de inserir blocos no modelo canônico. O caminho rico é usado para seleção dentro de parágrafo/cabeçalho simples; células e seleções complexas ainda usam fallback de texto simples.
+- [x] Adicionados testes de componente para ciclo de composição IME (texto intermediário não é inserido; o resultado final é inserido uma vez), colagem HTML sanitizada, edição de célula vazia com marca pendente, exclusão de objeto semântico, remoção de imagem e limpeza de recursos não utilizados, e substituição estrutural entre blocos com undo.
+- [x] A persistência do editor agora força o estado dirty e agenda o autosave quando um comando SmartCanvas muda o documento canônico mesmo se a projeção HTML serializada permanecer igual.
+- [x] Validação do commit de código 9b4107b8a4b743683e427e01b34821fccbb36315: [Kortex validation](https://github.com/korczaktech/kz-nexus/actions/runs/38845028939) concluiu com sucesso, incluindo testes do motor, testes do preview, typecheck e builds. A baseline de memória em Chromium estava em execução durante a atualização; seus resultados devem ser conferidos antes de declarar a validação de memória encerrada.
+
+**Limite atual:** isto fecha a cobertura automatizada das capacidades listadas, mas não declara paridade total do editor de produção. O modo experimental continua opt-in; a edição completa de objetos, colagem rica em células, teste com API real e validação manual multi-navegador continuam pendentes. Não trocar o editor padrão nem remover o fallback legado nesta etapa.
