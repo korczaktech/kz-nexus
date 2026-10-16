@@ -167,15 +167,37 @@ export function SmartCanvasPreview({ document, engine, headerText = "", footerTe
     if (event.key === "Backspace" || event.key === "Delete") {
       event.preventDefault();
       const current = engine.getSelection();
-      if (!current || current.anchor.blockId !== current.focus.blockId) {
-        onStatus?.("A exclusão entre blocos ainda não está disponível no SmartCanvas.");
+      if (!current) return;
+      const blocks = collectTextBlocks(engine.getDocument().content);
+      if (current.anchor.blockId !== current.focus.blockId) {
+        const anchorIndex = blocks.findIndex(item => item.id === current.anchor.blockId);
+        const focusIndex = blocks.findIndex(item => item.id === current.focus.blockId);
+        if (anchorIndex < 0 || focusIndex < 0) {
+          onStatus?.("A seleção atual não corresponde a blocos editáveis.");
+          return;
+        }
+        const firstIndex = Math.min(anchorIndex, focusIndex);
+        const lastIndex = Math.max(anchorIndex, focusIndex);
+        const first = blocks[firstIndex];
+        const last = blocks[lastIndex];
+        const start = anchorIndex < focusIndex ? current.anchor.offset : current.focus.offset;
+        const end = anchorIndex < focusIndex ? current.focus.offset : current.anchor.offset;
+        const commands = [
+          deleteText({ blockId: first.id, start, end: first.text.length }),
+          ...blocks.slice(firstIndex + 1, lastIndex).map(item => deleteText({ blockId: item.id, start: 0, end: item.text.length })),
+          deleteText({ blockId: last.id, start: 0, end }),
+          ...blocks.slice(firstIndex + 1, lastIndex + 1).map(item => mergeBlockWithPrevious({ blockId: item.id })),
+        ];
+        const result = engine.exec(commands, { group: "typing" });
+        if (!result.ok) { onStatus?.("Não foi possível excluir entre esses blocos: " + result.error.message); return; }
+        setSelection(engine.getSelection() ?? null);
+        onDocumentChange(result.value.document);
         return;
       }
       const block = findBlock(engine.getDocument().content, current.focus.blockId);
       if (!block) return;
       let start = Math.min(current.anchor.offset, current.focus.offset);
       let end = Math.max(current.anchor.offset, current.focus.offset);
-      const blocks = collectTextBlocks(engine.getDocument().content);
       if (start === end && event.key === "Backspace" && start === 0) {
         const index = blocks.findIndex(item => item.id === block.id);
         if (index <= 0) return;
