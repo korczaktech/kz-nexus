@@ -222,6 +222,7 @@ describe("SmartCanvasPreview input integration", () => {
     });
     engine = createEditor({ document });
     const onDocumentChange = vi.fn();
+    const onStatus = vi.fn();
     host = window.document.createElement("div");
     window.document.body.append(host);
     root = createRoot(host);
@@ -231,6 +232,7 @@ describe("SmartCanvasPreview input integration", () => {
         document: engine!.getDocument(),
         engine: engine!,
         onDocumentChange,
+        onStatus,
       }));
     });
     const objectHit = host.querySelector('[data-testid="smartcanvas-object-hit"]') as HTMLButtonElement | null;
@@ -247,6 +249,7 @@ describe("SmartCanvasPreview input integration", () => {
     expect(result.content.some(block => block.id === "adjacent-text")).toBe(true);
     expect(getPlainText(result.content.find(block => block.id === "adjacent-text") as Extract<NexusDocument["content"][number], { type: "paragraph" }>)).toBe("Keep me");
     expect(onDocumentChange).toHaveBeenCalled();
+    expect(onStatus).toHaveBeenLastCalledWith("Bloco removido.");
   });
 
   it("pastes sanitized rich HTML and preserves inline formatting in the engine model", async () => {
@@ -271,7 +274,7 @@ describe("SmartCanvasPreview input integration", () => {
     const input = host.querySelector('textarea[aria-label="Entrada de texto do SmartCanvas"]') as HTMLTextAreaElement | null;
     if (!input) throw new Error("SmartCanvas input surface was not mounted");
 
-    const html = '<p><strong>Rich</strong> <em>paste</em><a href="javascript:alert(1)">safe text</a></p><script>window.__pasteAttack = true</script>';
+    const html = '<p><strong>Rich</strong> <em>paste</em> <a href="javascript:alert(1)">safe text</a></p><script>window.__pasteAttack = true</script>';
     const paste = new Event("paste", { bubbles: true, cancelable: true });
     Object.defineProperty(paste, "clipboardData", {
       value: { getData: (type: string) => type === "text/html" ? html : "Rich paste safe text" },
