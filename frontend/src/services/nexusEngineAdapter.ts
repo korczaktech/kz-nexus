@@ -697,7 +697,7 @@ function preserveStableBlockIds(previous: Block[], next: Block[], resourceIds: M
         const oldRow = old.children[rowIndex];
         return { ...row, id: oldRow?.id ?? row.id, children: row.children.map((cell, cellIndex) => {
           const oldCell = oldRow?.children[cellIndex];
-          return { ...cell, id: oldCell?.id ?? cell.id, children: preserveStableBlockIds(oldCell?.children ?? [], cell.children, resourceIds) as typeof cell.children };
+          return { ...cell, id: oldCell?.id ?? cell.id, children: preserveStableBlockIds(oldCell?.children ?? [], cell.children, resourceIds) as typeof cell.children, ...(cell.images ? { images: cell.images.map((image, imageIndex) => ({ ...image, id: oldCell?.images?.[imageIndex]?.id ?? image.id, resourceId: resourceIds.get(image.resourceId) ?? image.resourceId })) } : {}) };
         }) };
       }) };
     }
@@ -720,7 +720,7 @@ function blockShape(block: Block): unknown {
   if (block.type === "heading") return ["heading", block.level, block.align ?? null, block.indent ?? null, block.spacingBefore ?? null, block.spacingAfter ?? null, block.lineSpacing ?? null, block.backgroundColor ?? null, block.borderColor ?? null, block.borderWidth ?? null, block.padding ?? null, block.editorObject ?? null, marksShape(block.children)];
   if (block.type === "blockquote") return ["blockquote", block.children.map(blockShape)];
   if (block.type === "bulletList" || block.type === "orderedList") return [block.type, block.type === "orderedList" ? block.start : null, block.children.map(item => item.children.map(child => blockShape(child as Block)))];
-  if (block.type === "table") return ["table", block.children.map(row => row.children.map(cell => cell.children.map(blockShape)))];
+  if (block.type === "table") return ["table", block.children.map(row => row.children.map(cell => [cell.children.map(blockShape), (cell.images ?? []).map(image => [image.resourceId, image.alt, image.width ?? null, image.height ?? null])]))];
   if (block.type === "thematicBreak") return ["thematicBreak", block.kind ?? "rule"];
   return ["image", block.resourceId, block.alt];
 }
