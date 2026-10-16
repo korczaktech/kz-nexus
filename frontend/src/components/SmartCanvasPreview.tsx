@@ -265,7 +265,7 @@ function collectLayoutLines(
   }
 }
 
-function createCanvasLayoutMetrics(): import("../../../packages/engine/src/layout/layout").TextMetrics {
+export function createCanvasLayoutMetrics(): import("../../../packages/engine/src/layout/layout").TextMetrics {
   let context: CanvasRenderingContext2D | null = null;
   try {
     context = window.document.createElement("canvas").getContext("2d");
