@@ -115,3 +115,35 @@ export function nearestGraphemeOffset(text: string, offset: number): number {
   const next = nextCodePointOffset(text, bounded);
   return bounded - previous <= next - bounded ? previous : next;
 }
+
+/** Returns the UTF-16 offset at the beginning of the visual line containing an offset in newline-separated text. */
+export function lineStartOffset(text: string, offset: number): number {
+  const bounded = Math.max(0, Math.min(text.length, offset));
+  return text.lastIndexOf("\n", Math.max(0, bounded - 1)) + 1;
+}
+
+/** Returns the UTF-16 offset at the end of the line, excluding its newline. */
+export function lineEndOffset(text: string, offset: number): number {
+  const bounded = Math.max(0, Math.min(text.length, offset));
+  const newline = text.indexOf("\n", bounded);
+  return newline < 0 ? text.length : newline;
+}
+
+/** Moves vertically between newline-separated lines while preserving the desired character column. */
+export function verticalLineOffset(text: string, offset: number, direction: -1 | 1, preferredColumn?: number): number {
+  const bounded = Math.max(0, Math.min(text.length, offset));
+  const starts = [0];
+  for (let index = 0; index < text.length; index += 1) {
+    if (text[index] === "\n") starts.push(index + 1);
+  }
+  let currentLine = starts.findLastIndex(start => start <= bounded);
+  if (currentLine < 0) currentLine = 0;
+  const currentStart = starts[currentLine] ?? 0;
+  const currentEnd = currentLine + 1 < starts.length ? (starts[currentLine + 1] ?? text.length) - 1 : text.length;
+  const column = preferredColumn ?? Math.max(0, bounded - currentStart);
+  const targetLine = currentLine + direction;
+  if (targetLine < 0 || targetLine >= starts.length) return bounded;
+  const targetStart = starts[targetLine] ?? 0;
+  const targetEnd = targetLine + 1 < starts.length ? (starts[targetLine + 1] ?? text.length) - 1 : text.length;
+  return Math.min(targetEnd, targetStart + column);
+}
