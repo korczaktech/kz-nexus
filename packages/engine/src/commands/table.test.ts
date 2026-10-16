@@ -187,9 +187,10 @@ describe("row/column operations", () => {
     })(seededDocument, ctx());
     if (!result.ok) throw result.error;
     const updatedCell = (result.value.document.content[1] as Table).children[0].children[0];
-    expect(updatedCell.children[0].children.map(run => run.text)).toEqual(["new ", "suffix"]);
+    expect(updatedCell.children[0].children.map(run => run.text)).toEqual(["new", " ", "suffix"]);
     expect(updatedCell.children[0].children[0].marks).toEqual([{ type: "bold" }]);
-    expect(updatedCell.children[0].children[1].marks).toEqual([{ type: "italic" }]);
+    expect(updatedCell.children[0].children[1].marks).toEqual([{ type: "bold" }]);
+    expect(updatedCell.children[0].children[2].marks).toEqual([{ type: "italic" }]);
   });
 
   it("preserves suffix formatting when deleting text and keeps paragraph attributes", () => {
