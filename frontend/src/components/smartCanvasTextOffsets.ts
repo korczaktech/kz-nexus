@@ -142,7 +142,6 @@ export function verticalLineOffset(text: string, offset: number, direction: -1 |
     currentLine = index;
   }
   const currentStart = starts[currentLine] ?? 0;
-  const currentEnd = currentLine + 1 < starts.length ? (starts[currentLine + 1] ?? text.length) - 1 : text.length;
   const column = preferredColumn ?? Math.max(0, bounded - currentStart);
   const targetLine = currentLine + direction;
   if (targetLine < 0 || targetLine >= starts.length) return bounded;
