@@ -424,18 +424,18 @@ export function SmartCanvasPreview({ document, engine, headerText = "", footerTe
       // Cell editing has its own caret state and deliberately clears the
       // document-level selection. Do not let that clear the active cell.
       if (!next) return;
-      setActiveCell(() => {
+      setActiveCell(current => {
         const cells = collectTableCells(engine.getDocument().content);
         const owner = cells.find(cell => {
           const paragraphs = collectCellParagraphs(engine.getDocument().content, cell.tableId, cell.rowId, cell.cellId);
           return paragraphs.some(paragraph => paragraph.id === next.anchor.blockId) &&
             paragraphs.some(paragraph => paragraph.id === next.focus.blockId);
         });
-        if (!owner) return null;
+        if (!owner) return current;
         const paragraphs = collectCellParagraphs(engine.getDocument().content, owner.tableId, owner.rowId, owner.cellId);
         const anchorParagraph = paragraphs.find(paragraph => paragraph.id === next.anchor.blockId);
         const focusParagraph = paragraphs.find(paragraph => paragraph.id === next.focus.blockId);
-        if (!anchorParagraph || !focusParagraph) return null;
+        if (!anchorParagraph || !focusParagraph) return current;
         return {
           ...owner,
           anchorOffset: Math.max(0, Math.min(owner.text.length, anchorParagraph.start + next.anchor.offset)),
