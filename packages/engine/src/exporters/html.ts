@@ -45,7 +45,7 @@ export function renderBlockHtml(block: Block, resources: ResourceRef[] = []): st
       return renderBlockHtml(child as Block, resources);
     }).join("") + "</li>").join("") + "</" + tag + ">";
   }
-  if (block.type === "table") return "<table><tbody>" + block.children.map(row => "<tr>" + row.children.map(cell => "<td>" + cell.children.map(paragraph => renderParagraph(paragraph)).join("") + "</td>").join("") + "</tr>").join("") + "</tbody></table>";
+  if (block.type === "table") return "<table><tbody>" + block.children.map(row => "<tr>" + row.children.map(cell => "<td>" + cell.children.map(paragraph => renderParagraph(paragraph)).join("") + (cell.images ?? []).map(image => renderBlockHtml(image, resources)).join("") + "</td>").join("") + "</tr>").join("") + "</tbody></table>";
   if (block.type === "image") {
     const resource = resources.find(item => item.id === block.resourceId);
     if (!resource) return "<p>[" + escapeHtml(block.alt) + "]</p>";
