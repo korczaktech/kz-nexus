@@ -1,4 +1,4 @@
-import type { Block, Paragraph, Table, TableCell, TableRow } from "../model/types";
+import type { Block, Mark, Paragraph, Table, TableCell, TableRow, TextRun } from "../model/types";
 import { EngineError, engineError } from "../errors/errors";
 import { err, ok } from "../utils/result";
 import type { Command } from "./types";
@@ -92,6 +92,74 @@ export function removeTableColumn(params: { tableId: string; columnIndex: number
     });
 }
 
+function sameMarks(a: Mark[], b: Mark[]): boolean {
+  if (a.length !== b.length) return false;
+  const key = (mark: Mark): string => "value" in mark ? mark.type + ":" + String(mark.value) : mark.type;
+  const left = a.map(key).sort();
+  const right = b.map(key).sort();
+  return left.every((value, index) => value === right[index]);
+}
+
+/**
+ * Rebuilds cell paragraphs while preserving marks outside the single edited
+ * range. The cell controller submits the full text after each edit, so a
+ * common-prefix/suffix diff identifies the inserted/replaced range.
+ */
+function rebuildCellParagraphs(cell: TableCell, text: string, generateId: () => string): Paragraph[] {
+  const oldText = cell.children.map(paragraph => paragraph.children.map(run => run.text).join("")).join("\n");
+  const oldMarks: Mark[][] = [];
+  for (let paragraphIndex = 0; paragraphIndex < cell.children.length; paragraphIndex += 1) {
+    const paragraph = cell.children[paragraphIndex]!;
+    for (const run of paragraph.children) {
+      for (let offset = 0; offset < run.text.length; offset += 1) oldMarks.push(run.marks);
+    }
+    if (paragraphIndex < cell.children.length - 1) oldMarks.push([]);
+  }
+
+  let prefix = 0;
+  while (prefix < oldText.length && prefix < text.length && oldText[prefix] === text[prefix]) prefix += 1;
+  let suffix = 0;
+  while (suffix < oldText.length - prefix && suffix < text.length - prefix &&
+    oldText[oldText.length - suffix - 1] === text[text.length - suffix - 1]) suffix += 1;
+
+  const inheritedIndex = prefix < oldText.length && oldText[prefix] !== "\n"
+    ? prefix
+    : prefix > 0 && oldText[prefix - 1] !== "\n" ? prefix - 1 : -1;
+  const inheritedMarks = inheritedIndex >= 0 ? oldMarks[inheritedIndex] ?? [] : [];
+  const marksAt = (newOffset: number): Mark[] => {
+    if (newOffset < prefix) return oldMarks[newOffset] ?? [];
+    if (newOffset >= text.length - suffix) {
+      const oldOffset = oldText.length - (text.length - newOffset);
+      return oldMarks[oldOffset] ?? [];
+    }
+    return inheritedMarks;
+  };
+
+  let globalOffset = 0;
+  return text.split("\n").map((line, paragraphIndex) => {
+    const previous = cell.children[paragraphIndex];
+    const runs: TextRun[] = [];
+    for (let index = 0; index < line.length; index += 1) {
+      const marks = marksAt(globalOffset + index);
+      const last = runs[runs.length - 1];
+      if (last && sameMarks(last.marks, marks)) {
+        runs[runs.length - 1] = { ...last, text: last.text + line[index] };
+      } else {
+        runs.push({
+          type: "text",
+          id: runs.length === 0 && previous?.children[0] ? previous.children[0].id : generateId(),
+          text: line[index]!,
+          marks: [...marks],
+        });
+      }
+    }
+    if (!runs.length) {
+      runs.push({ type: "text", id: previous?.children[0]?.id ?? generateId(), text: "", marks: [] });
+    }
+    globalOffset += line.length + 1;
+    return { type: "paragraph" as const, id: previous?.id ?? generateId(), children: runs };
+  });
+}
 export function setCellText(params: { tableId: string; rowId: string; cellId: string; text: string }): Command {
   return (doc, ctx) =>
     withTable(doc, params.tableId, (table) => ({
@@ -103,23 +171,7 @@ export function setCellText(params: { tableId: string; rowId: string; cellId: st
               ...row,
               children: row.children.map((cell) => {
                 if (cell.id !== params.cellId) return cell;
-                const lines = params.text.split("\n");
-                const paragraphs = lines.map((line, index) => {
-                  const previous = cell.children[index];
-                  const previousParagraph = previous?.type === "paragraph" ? previous as Paragraph : undefined;
-                  const previousText = previousParagraph?.children[0];
-                  return {
-                    type: "paragraph" as const,
-                    id: previousParagraph?.id ?? ctx.generateId(),
-                    children: [{
-                      type: "text" as const,
-                      id: previousText?.type === "text" ? previousText.id : ctx.generateId(),
-                      text: line,
-                      marks: [],
-                    }],
-                  };
-                });
-                return { ...cell, children: paragraphs };
+                return { ...cell, children: rebuildCellParagraphs(cell, params.text, ctx.generateId) };
               }),
             },
       ),
