@@ -108,7 +108,7 @@ function sameMarks(a: Mark[], b: Mark[]): boolean {
  * range. The cell controller submits the full text after each edit, so a
  * common-prefix/suffix diff identifies the inserted/replaced range.
  */
-function rebuildCellParagraphs(cell: TableCell, text: string, generateId: () => string): Paragraph[] {
+function rebuildCellParagraphs(cell: TableCell, text: string, generateId: () => string, insertionMarks?: Mark[]): Paragraph[] {
   const oldText = cell.children.map(paragraph => paragraph.children.map(run => run.text).join("")).join("\n");
   const oldMarks: Mark[][] = [];
   for (let paragraphIndex = 0; paragraphIndex < cell.children.length; paragraphIndex += 1) {
@@ -128,7 +128,7 @@ function rebuildCellParagraphs(cell: TableCell, text: string, generateId: () => 
   const inheritedIndex = prefix > 0 && oldText[prefix - 1] !== "\n"
     ? prefix - 1
     : prefix < oldText.length && oldText[prefix] !== "\n" ? prefix : -1;
-  const inheritedMarks = inheritedIndex >= 0 ? oldMarks[inheritedIndex] ?? [] : [];
+  const inheritedMarks = insertionMarks ? insertionMarks.map(mark => ({ ...mark })) : inheritedIndex >= 0 ? oldMarks[inheritedIndex] ?? [] : [];
   const marksAt = (newOffset: number): Mark[] => {
     if (newOffset < prefix) return oldMarks[newOffset] ?? [];
     if (newOffset >= text.length - suffix) {
@@ -163,7 +163,7 @@ function rebuildCellParagraphs(cell: TableCell, text: string, generateId: () => 
     return { ...previous, type: "paragraph" as const, id: previous?.id ?? generateId(), children: runs };
   });
 }
-export function setCellText(params: { tableId: string; rowId: string; cellId: string; text: string }): Command {
+export function setCellText(params: { tableId: string; rowId: string; cellId: string; text: string; insertionMarks?: Mark[] }): Command {
   return (doc, ctx) =>
     withTable(doc, params.tableId, (table) => ({
       ...table,
