@@ -304,7 +304,12 @@ export function CanvasPage({ page, pageCount, document, headerText, footerText, 
     if (bounds.width <= 0 || bounds.height <= 0) return;
     const x = ((event.clientX - bounds.left) / bounds.width) * page.width;
     const y = ((event.clientY - bounds.top) / bounds.height) * page.height;
-    const target = hitTestLayout(layout, page.index, x, y);
+    const context = canvasRef.current?.getContext("2d");
+    const measureText = context ? (text: string, run?: LayoutTextRun) => {
+      if (run) context.font = markedFont(run.marks, run.fontSize, run.fontFamily);
+      return context.measureText(text).width * 72 / 96;
+    } : undefined;
+    const target = hitTestLayout(layout, page.index, x, y, { measureText });
     if (target) onHitTest(target);
   };
 
