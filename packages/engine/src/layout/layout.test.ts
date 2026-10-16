@@ -237,6 +237,35 @@ describe("native layout engine", () => {
     expect(fragments.every(fragment => fragment.rect.y + fragment.rect.height <= smallPage.height - smallPage.margins.bottom + 0.001)).toBe(true);
   });
 
+  it("keeps images inside oversized table rows on a single page fragment", () => {
+    const longText = "alpha bravo charlie delta echo foxtrot golf hotel india juliet kilo lima mike november oscar papa quebec romeo sierra tango uniform victor whiskey xray yankee zulu ".repeat(4).trim();
+    const table: Block = { type: "table", id: "image-table", children: [
+      { type: "tableRow", id: "image-row", children: [
+        { type: "tableCell", id: "image-cell", children: [
+          { type: "paragraph", id: "image-cell-p", children: [{ type: "text", id: "image-cell-run", text: longText, marks: [] }] }
+        ], images: [
+          { type: "image", id: "cell-image", resourceId: "image-resource", alt: "Chart inside table", width: 48, height: 48 }
+        ] }
+      ] }
+    ] };
+    const smallPage = { unit: "pt" as const, width: 160, height: 55, orientation: "landscape" as const, margins: { top: 5, right: 10, bottom: 5, left: 10 } };
+    const result = layoutDocument(documentWith([table], smallPage), { metrics });
+    const fragments = result.pages.flatMap(page => page.blocks.filter(block => block.blockId === "image-table"));
+    const images = fragments.flatMap(fragment => fragment.table?.rows || [])
+      .flatMap(row => row.cells).flatMap(cell => cell.images || []);
+    expect(fragments.length).toBeGreaterThan(1);
+    expect(images).toHaveLength(1);
+    expect(images[0]).toMatchObject({ resourceId: "image-resource", alt: "Chart inside table" });
+    const owningPage = result.pages.find(page => page.blocks.some(block =>
+      block.blockId === "image-table" && block.table?.rows.some(row => row.cells.some(cell =>
+        cell.images?.some(image => image.resourceId === "image-resource")
+      ))
+    ));
+    expect(owningPage).toBeDefined();
+    expect(images[0]!.rect.y).toBeGreaterThanOrEqual(smallPage.margins.top);
+    expect(images[0]!.rect.y + images[0]!.rect.height).toBeLessThanOrEqual(smallPage.height - smallPage.margins.bottom + 0.001);
+  });
+
   it("splits oversized plain-text list items across pages and keeps the marker once", () => {
     const longText = "one two three four five six seven eight nine ten eleven twelve thirteen fourteen fifteen sixteen seventeen eighteen nineteen twenty twentyone twentytwo twentythree twentyfour twentyfive twentysix twentyseven twentyeight twentynine thirty thirtyone thirtytwo thirtythree thirtyfour thirtyfive thirtysix thirtyseven thirtyeight thirtynine forty";
     const list: Block = { type: "orderedList", id: "long-list", start: 1, children: [
