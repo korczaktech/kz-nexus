@@ -83,7 +83,7 @@ describe("SmartCanvas canonical document round-trip", () => {
       start: 0,
       end: 7,
       mark: { type: "bold" },
-    }]).ok).toBe(true);
+    })]).ok).toBe(true);
 
     expect(editor.exec([insertTable({ afterBlockId: paragraph.id, rows: 1, columns: 1 })]).ok).toBe(true);
     const table = editor.getDocument().content.find(block => block.type === "table");
