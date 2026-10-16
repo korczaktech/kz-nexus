@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { nextCodePointOffset, previousCodePointOffset } from "./smartCanvasTextOffsets";
+import { nextCodePointOffset, nextWordOffset, previousCodePointOffset, previousWordOffset, wordRangeAt } from "./smartCanvasTextOffsets";
 
 describe("SmartCanvas Unicode caret offsets", () => {
   it("moves across a supplementary character as one grapheme", () => {
@@ -41,5 +41,29 @@ describe("SmartCanvas Unicode caret offsets", () => {
   it("does not move beyond string boundaries", () => {
     expect(previousCodePointOffset("😀", 0)).toBe(0);
     expect(nextCodePointOffset("😀", 2)).toBe(2);
+  });
+});
+
+
+describe("SmartCanvas word navigation", () => {
+  it("moves to previous and next word boundaries", () => {
+    const text = "alpha beta  gamma";
+    expect(previousWordOffset(text, 10)).toBe(6);
+    expect(previousWordOffset(text, 6)).toBe(0);
+    expect(nextWordOffset(text, 0)).toBe(6);
+    expect(nextWordOffset(text, 6)).toBe(12);
+  });
+
+  it("selects the token at the cursor and handles whitespace", () => {
+    expect(wordRangeAt("alpha beta", 2)).toEqual({ start: 0, end: 5 });
+    expect(wordRangeAt("alpha beta", 5)).toEqual({ start: 0, end: 5 });
+    expect(wordRangeAt("alpha beta", 6)).toEqual({ start: 6, end: 10 });
+    expect(wordRangeAt("", 0)).toEqual({ start: 0, end: 0 });
+  });
+
+  it("keeps grapheme sequences intact while moving by word", () => {
+    const text = "one 👩‍💻 two";
+    expect(nextWordOffset(text, 0)).toBe(4);
+    expect(previousWordOffset(text, text.length)).toBe(8);
   });
 });
