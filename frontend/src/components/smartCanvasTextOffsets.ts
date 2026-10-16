@@ -53,12 +53,12 @@ export function previousWordOffset(text: string, offset: number): number {
   let cursor = Math.max(0, Math.min(text.length, offset));
   while (cursor > 0) {
     const previous = previousCodePointOffset(text, cursor);
-    if (!/\\s/u.test(text.slice(previous, cursor))) break;
+    if (!/\s/u.test(text.slice(previous, cursor))) break;
     cursor = previous;
   }
   while (cursor > 0) {
     const previous = previousCodePointOffset(text, cursor);
-    if (/\\s/u.test(text.slice(previous, cursor))) break;
+    if (/\s/u.test(text.slice(previous, cursor))) break;
     cursor = previous;
   }
   return cursor;
@@ -69,12 +69,12 @@ export function nextWordOffset(text: string, offset: number): number {
   let cursor = Math.max(0, Math.min(text.length, offset));
   while (cursor < text.length) {
     const next = nextCodePointOffset(text, cursor);
-    if (/\\s/u.test(text.slice(cursor, next))) break;
+    if (/\s/u.test(text.slice(cursor, next))) break;
     cursor = next;
   }
   while (cursor < text.length) {
     const next = nextCodePointOffset(text, cursor);
-    if (!/\\s/u.test(text.slice(cursor, next))) break;
+    if (!/\s/u.test(text.slice(cursor, next))) break;
     cursor = next;
   }
   return cursor;
@@ -85,22 +85,22 @@ export function wordRangeAt(text: string, offset: number): { start: number; end:
   const bounded = Math.max(0, Math.min(text.length, offset));
   if (text.length === 0) return { start: 0, end: 0 };
   let probe = bounded === text.length && bounded > 0 ? previousCodePointOffset(text, bounded) : bounded;
-  if (probe < text.length && /\\s/u.test(text.slice(probe, nextCodePointOffset(text, probe)))) {
+  if (probe < text.length && /\s/u.test(text.slice(probe, nextCodePointOffset(text, probe)))) {
     const next = nextCodePointOffset(text, probe);
     const previous = probe > 0 ? previousCodePointOffset(text, probe) : probe;
-    if (probe > 0 && !/\\s/u.test(text.slice(previous, probe))) probe = previous;
-    else if (next < text.length && !/\\s/u.test(text.slice(next, nextCodePointOffset(text, next)))) probe = next;
+    if (probe > 0 && !/\s/u.test(text.slice(previous, probe))) probe = previous;
+    else if (next < text.length && !/\s/u.test(text.slice(next, nextCodePointOffset(text, next)))) probe = next;
   }
   let start = probe;
   let end = probe;
   while (start > 0) {
     const previous = previousCodePointOffset(text, start);
-    if (/\\s/u.test(text.slice(previous, start))) break;
+    if (/\s/u.test(text.slice(previous, start))) break;
     start = previous;
   }
   while (end < text.length) {
     const next = nextCodePointOffset(text, end);
-    if (/\\s/u.test(text.slice(end, next))) break;
+    if (/\s/u.test(text.slice(end, next))) break;
     end = next;
   }
   return { start, end };
