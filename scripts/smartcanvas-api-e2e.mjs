@@ -38,6 +38,7 @@ try {
     }));
   });
   const page = await context.newPage();
+  await page.setViewportSize({ width: 1280, height: 900 });
   page.setDefaultTimeout(15000);
   page.on("pageerror", error => console.error("[browser page error]", error.message));
 
@@ -45,7 +46,7 @@ try {
   // The app intentionally opens in guest mode when no session exists. Open the
   // registration overlay first; clicking the overlay toggle here would switch
   // registration back to login and invalidate the required registration fields.
-  await page.getByRole("button", { name: "Criar conta", exact: true }).first().click();
+  await page.locator(".top-actions .header-account-actions button.primary").click();
   await page.getByLabel("E-mail").waitFor();
   await page.getByLabel("Nome").fill("SmartCanvas API E2E");
   await page.getByLabel("E-mail").fill(email);
