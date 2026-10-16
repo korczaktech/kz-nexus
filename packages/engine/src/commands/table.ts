@@ -56,6 +56,9 @@ export function addTableRow(params: { tableId: string; afterRowId?: string }): C
       const columns = table.children[0]?.children.length ?? 1;
       const newRow = makeRow(ctx.generateId, columns);
       const index = params.afterRowId ? table.children.findIndex((row) => row.id === params.afterRowId) : table.children.length - 1;
+      if (params.afterRowId && index < 0) {
+        throw engineError("NODE_NOT_FOUND", `Row "${params.afterRowId}" not found in table "${params.tableId}"`, { path: params.afterRowId });
+      }
       const children = [...table.children];
       children.splice(index + 1, 0, newRow);
       return { ...table, children };
