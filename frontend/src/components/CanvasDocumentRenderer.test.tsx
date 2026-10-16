@@ -86,7 +86,7 @@ function makeRenderFixture(): NexusDocument {
 describe("CanvasDocumentRenderer visual regression contract", () => {
   let host: HTMLDivElement | undefined;
   let root: ReturnType<typeof createRoot> | undefined;
-  let contextSpy: ReturnType<typeof vi.spyOn> | undefined;
+  let contextSpy: { mockRestore: () => void } | undefined;
 
   afterEach(async () => {
     if (root) await act(async () => { root?.unmount(); });
