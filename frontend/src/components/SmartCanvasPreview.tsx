@@ -2,19 +2,23 @@ import { useMemo, useRef, useState } from "react";
 import { collapsedAt, deleteText, getPlainText, layoutDocument, type Editor as NexusEngineSession, type NexusDocument, type Selection, type SmartCanvasHitTarget } from "../../../packages/engine/src/index";
 import { CanvasDocumentRenderer } from "./CanvasDocumentRenderer";
 
-function findBlock(nodes: readonly unknown[], id: string): { id: string; text: string } | undefined {
+type TextBlock = { id: string; text: string };
+
+function collectTextBlocks(nodes: readonly unknown[]): TextBlock[] {
+  const blocks: TextBlock[] = [];
   for (const value of nodes) {
     if (!value || typeof value !== "object") continue;
     const node = value as { id?: unknown; type?: unknown; children?: unknown };
-    if (node.id === id && (node.type === "paragraph" || node.type === "heading")) {
-      return { id, text: getPlainText(value as Extract<NexusDocument["content"][number], { type: "paragraph" | "heading" }>) };
+    if (typeof node.id === "string" && (node.type === "paragraph" || node.type === "heading")) {
+      blocks.push({ id: node.id, text: getPlainText(value as Extract<NexusDocument["content"][number], { type: "paragraph" | "heading" }>) });
     }
-    if (Array.isArray(node.children)) {
-      const nested = findBlock(node.children, id);
-      if (nested) return nested;
-    }
+    if (Array.isArray(node.children)) blocks.push(...collectTextBlocks(node.children));
   }
-  return undefined;
+  return blocks;
+}
+
+function findBlock(nodes: readonly unknown[], id: string): TextBlock | undefined {
+  return collectTextBlocks(nodes).find(block => block.id === id);
 }
 
 export function SmartCanvasPreview({ document, engine, headerText = "", footerText = "", showPageNumbers = false, readOnly = false, onDocumentChange, onStatus }: {
@@ -65,12 +69,13 @@ export function SmartCanvasPreview({ document, engine, headerText = "", footerTe
   const handleKeyDown = (event: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (readOnly) { event.preventDefault(); return; }
     if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "a") {
-      const current = engine.getSelection();
-      const blockId = current?.focus.blockId;
-      const block = blockId ? findBlock(engine.getDocument().content, blockId) : undefined;
-      if (block) {
+      const blocks = collectTextBlocks(engine.getDocument().content);
+      if (blocks.length) {
         event.preventDefault();
-        syncSelection({ anchor: { blockId: block.id, offset: 0 }, focus: { blockId: block.id, offset: block.text.length } });
+        syncSelection({
+          anchor: { blockId: blocks[0].id, offset: 0 },
+          focus: { blockId: blocks[blocks.length - 1].id, offset: blocks[blocks.length - 1].text.length },
+        });
       }
       return;
     }
@@ -93,17 +98,49 @@ export function SmartCanvasPreview({ document, engine, headerText = "", footerTe
     }
     if (event.key === "ArrowLeft" || event.key === "ArrowRight" || event.key === "Home" || event.key === "End") {
       const current = engine.getSelection();
-      if (!current || current.anchor.blockId !== current.focus.blockId) return;
-      const block = findBlock(engine.getDocument().content, current.focus.blockId);
-      if (!block) return;
-      const low = Math.min(current.anchor.offset, current.focus.offset);
-      const high = Math.max(current.anchor.offset, current.focus.offset);
-      const offset = event.key === "Home" ? 0 : event.key === "End" ? block.text.length :
-        event.key === "ArrowLeft" ? (low !== high ? low : Math.max(0, current.focus.offset - 1)) :
-        (low !== high ? high : Math.min(block.text.length, current.focus.offset + 1));
+      if (!current) return;
+      const blocks = collectTextBlocks(engine.getDocument().content);
+      const focusIndex = blocks.findIndex(block => block.id === current.focus.blockId);
+      if (focusIndex < 0) return;
+      const block = blocks[focusIndex];
+      const lowIndex = blocks.findIndex(item => item.id === current.anchor.blockId);
+      const anchorIndex = lowIndex < 0 ? focusIndex : lowIndex;
+      const samePosition = current.anchor.blockId === current.focus.blockId && current.anchor.offset === current.focus.offset;
+      const hasRange = !samePosition;
+      const backwards = event.key === "ArrowLeft";
+      let nextBlock = block;
+      let offset = current.focus.offset;
+
+      if ((event.key === "ArrowLeft" || event.key === "ArrowRight") && hasRange && !event.shiftKey) {
+        const anchorBlockIndex = blocks.findIndex(item => item.id === current.anchor.blockId);
+        const ordered = anchorBlockIndex < focusIndex ||
+          (anchorBlockIndex === focusIndex && current.anchor.offset <= current.focus.offset);
+        const start = ordered ? current.anchor : current.focus;
+        const end = ordered ? current.focus : current.anchor;
+        const edge = backwards ? start : end;
+        event.preventDefault();
+        syncSelection(collapsedAt(edge));
+        return;
+      }
+
+      if (event.key === "Home") offset = 0;
+      else if (event.key === "End") offset = block.text.length;
+      else if (backwards) {
+        if (offset > 0) offset -= 1;
+        else if (focusIndex > 0) {
+          nextBlock = blocks[focusIndex - 1];
+          offset = nextBlock.text.length;
+        }
+      } else {
+        if (offset < block.text.length) offset += 1;
+        else if (focusIndex < blocks.length - 1) {
+          nextBlock = blocks[focusIndex + 1];
+          offset = 0;
+        }
+      }
       event.preventDefault();
-      const next = collapsedAt({ blockId: block.id, offset });
-      syncSelection(next);
+      const focus = { blockId: nextBlock.id, offset };
+      syncSelection(event.shiftKey ? { anchor: current.anchor, focus } : collapsedAt(focus));
       return;
     }
     if (event.key === "Backspace" || event.key === "Delete") {
