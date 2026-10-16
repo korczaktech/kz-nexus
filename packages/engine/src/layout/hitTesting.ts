@@ -21,7 +21,7 @@ function distanceToRect(x: number, y: number, rect: { x: number; y: number; widt
   return Math.hypot(dx, dy);
 }
 
-function offsetAtX(line: LayoutLine, x: number, measureText?: HitTestMeasureText): number {
+export function getOffsetAtLineX(line: LayoutLine, x: number, measureText?: HitTestMeasureText): number {
   if (!line.text.length || x <= line.x) return line.startOffset;
   if (measureText && line.runs?.length) {
     let cursorX = line.x;
@@ -41,6 +41,25 @@ function offsetAtX(line: LayoutLine, x: number, measureText?: HitTestMeasureText
   return Math.max(line.startOffset, Math.min(line.endOffset, line.startOffset + Math.round(line.text.length * fraction)));
 }
 
+/** Returns the page-local x coordinate for a logical offset on a line. Metrics are injected by the host. */
+export function getLineXAtOffset(line: LayoutLine, offset: number, measureText?: HitTestMeasureText): number {
+  const target = Math.max(line.startOffset, Math.min(line.endOffset, offset));
+  if (!line.runs?.length || !measureText) {
+    const fraction = (target - line.startOffset) / Math.max(1, line.endOffset - line.startOffset);
+    return line.x + Math.max(0, Math.min(1, fraction)) * line.width;
+  }
+  let cursorX = line.x;
+  for (const run of line.runs) {
+    const stop = Math.min(target, run.endOffset);
+    if (stop > run.startOffset) {
+      cursorX += Math.max(0, measureText(run.text.slice(0, stop - run.startOffset), run));
+    }
+    if (target <= run.endOffset) return cursorX;
+    cursorX += Math.max(0, run.width - measureText(run.text, run));
+  }
+  return cursorX;
+}
+
 function lineDistance(line: LayoutLine, x: number, y: number): number {
   return distanceToRect(x, y, { x: line.x, y: line.y, width: Math.max(1, line.width), height: Math.max(1, line.height) });
 }
@@ -54,7 +73,7 @@ function visitBlock(block: LayoutBlock, pageIndex: number, x: number, y: number,
   for (let lineIndex = 0; lineIndex < block.lines.length; lineIndex += 1) {
     const line = block.lines[lineIndex];
     candidates.push({
-      target: { kind: "text", pageIndex, blockId: block.blockId, position: { blockId: block.blockId, offset: offsetAtX(line, x, options.measureText) }, lineIndex },
+      target: { kind: "text", pageIndex, blockId: block.blockId, position: { blockId: block.blockId, offset: getOffsetAtLineX(line, x, options.measureText) }, lineIndex },
       distance: lineDistance(line, x, y),
       order: order.value++,
     });
@@ -64,7 +83,7 @@ function visitBlock(block: LayoutBlock, pageIndex: number, x: number, y: number,
       for (let lineIndex = 0; lineIndex < cell.lines.length; lineIndex += 1) {
         const line = cell.lines[lineIndex];
         candidates.push({
-          target: { kind: "table-cell", pageIndex, blockId: block.blockId, cellId: cell.cellId, offset: offsetAtX(line, x, options.measureText), lineIndex },
+          target: { kind: "table-cell", pageIndex, blockId: block.blockId, cellId: cell.cellId, offset: getOffsetAtLineX(line, x, options.measureText), lineIndex },
           distance: lineDistance(line, x, y),
           order: order.value++,
         });
