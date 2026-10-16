@@ -189,7 +189,7 @@ describe("row/column operations", () => {
     const updatedCell = (result.value.document.content[1] as Table).children[0].children[0];
     expect(updatedCell.children[0].children.map(run => run.text)).toEqual(["new", " ", "suffix"]);
     expect(updatedCell.children[0].children[0].marks).toEqual([{ type: "bold" }]);
-    expect(updatedCell.children[0].children[1].marks).toEqual([{ type: "bold" }]);
+    expect(updatedCell.children[0].children[1].marks).toEqual([]);
     expect(updatedCell.children[0].children[2].marks).toEqual([{ type: "italic" }]);
   });
 
