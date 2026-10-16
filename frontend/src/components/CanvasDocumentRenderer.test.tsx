@@ -30,7 +30,7 @@ function makeCanvasContext(textCalls: string[]): CanvasRenderingContext2D {
     restore: () => undefined,
     translate: () => undefined,
     setLineDash: () => undefined,
-    drawImage: () => undefined,
+    drawImage: () => { textCalls.push("__drawImage__"); },
   };
   return new Proxy(methods as unknown as CanvasRenderingContext2D, {
     get(target, property) {
@@ -77,6 +77,14 @@ function makeRenderFixture(): NexusDocument {
           id: "renderer-cell-paragraph",
           children: [{ type: "text", id: "renderer-cell-run", text: "Table cell text", marks: [] }],
         }],
+        images: [{
+          type: "image",
+          id: "renderer-cell-image",
+          resourceId: "renderer-cell-image-resource",
+          alt: "Table cell image",
+          width: 24,
+          height: 24,
+        }],
       }],
     }],
   });
@@ -122,14 +130,24 @@ function makeRenderFixture(): NexusDocument {
     id: "renderer-page-break",
     kind: "pageBreak",
   });
-  document.resources.push({
-    id: "renderer-image-resource",
-    kind: "image",
-    mimeType: "image/png",
-    data: "iVBORw0KGgo=",
-    byteLength: 8,
-    name: "fixture.png",
-  });
+  document.resources.push(
+    {
+      id: "renderer-image-resource",
+      kind: "image",
+      mimeType: "image/png",
+      data: "iVBORw0KGgo=",
+      byteLength: 8,
+      name: "fixture.png",
+    },
+    {
+      id: "renderer-cell-image-resource",
+      kind: "image",
+      mimeType: "image/png",
+      data: "iVBORw0KGgo=",
+      byteLength: 8,
+      name: "cell-fixture.png",
+    },
+  );
   return document;
 }
 
@@ -137,18 +155,32 @@ describe("CanvasDocumentRenderer visual regression contract", () => {
   let host: HTMLDivElement | undefined;
   let root: ReturnType<typeof createRoot> | undefined;
   let contextSpy: { mockRestore: () => void } | undefined;
+  let imageSpy: { mockRestore: () => void } | undefined;
 
   afterEach(async () => {
     if (root) await act(async () => { root?.unmount(); });
     contextSpy?.mockRestore();
+    imageSpy?.mockRestore();
+    vi.restoreAllMocks();
     host?.remove();
     host = undefined;
     root = undefined;
     contextSpy = undefined;
+    imageSpy = undefined;
   });
 
   it("draws text, table cells, semantic objects, header, footer, and page numbers", async () => {
     const document = makeRenderFixture();
+    imageSpy = vi.spyOn(window, "Image").mockImplementation(() => {
+      const image = window.document.createElement("img");
+      Object.defineProperty(image, "complete", { configurable: true, value: true });
+      Object.defineProperty(image, "naturalWidth", { configurable: true, value: 1 });
+      Object.defineProperty(image, "src", {
+        configurable: true,
+        set: () => image.onload?.call(image, new Event("load") as unknown as Event),
+      });
+      return image;
+    });
     const layout = layoutDocument(document);
     const textCalls: string[] = [];
     const context = makeCanvasContext(textCalls);
@@ -177,6 +209,7 @@ describe("CanvasDocumentRenderer visual regression contract", () => {
     expect(textCalls).toContain("List item text");
     expect(textCalls).toContain("2.");
     expect(textCalls).toContain("Table cell text");
+    expect(textCalls.filter(value => value === "__drawImage__")).toHaveLength(2);
     expect(textCalls).toContain("Image alternative text");
     expect(layout.pageCount).toBeGreaterThan(1);
     expect(textCalls).toContain("Document header");
