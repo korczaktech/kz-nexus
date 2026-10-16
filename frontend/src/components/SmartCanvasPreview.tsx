@@ -608,8 +608,13 @@ export function SmartCanvasPreview({ document, engine, headerText = "", footerTe
       }
 
       if ((event.key === "ArrowUp" || event.key === "ArrowDown" || event.key === "Home" || event.key === "End") && layout) {
-        const visualLines: Array<{ pageIndex: number; blockId: string; line: import("../../../packages/engine/src/layout/layout").LayoutLine }> = [];
-        layout.pages.forEach(page => collectLayoutLines(page.blocks, null, visualLines, page.index));
+        const allVisualLines: Array<{ pageIndex: number; blockId: string; line: import("../../../packages/engine/src/layout/layout").LayoutLine }> = [];
+        layout.pages.forEach(page => collectLayoutLines(page.blocks, null, allVisualLines, page.index));
+        // Table-cell lines have their own active-cell controller and flattened offsets.
+        // Exclude them here so document-level navigation never applies a cell offset
+        // to an unrelated paragraph when crossing a table boundary.
+        const editableBlockIds = new Set(blocks.map(item => item.id));
+        const visualLines = allVisualLines.filter(item => editableBlockIds.has(item.blockId));
         if (visualLines.length) {
           const movingUp = event.key === "ArrowUp";
           let lineIndex = visualLines.findIndex(item =>
