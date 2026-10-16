@@ -157,7 +157,7 @@ function rebuildCellParagraphs(cell: TableCell, text: string, generateId: () => 
       runs.push({ type: "text", id: previous?.children[0]?.id ?? generateId(), text: "", marks: [] });
     }
     globalOffset += line.length + 1;
-    return { type: "paragraph" as const, id: previous?.id ?? generateId(), children: runs };
+    return { ...previous, type: "paragraph" as const, id: previous?.id ?? generateId(), children: runs };
   });
 }
 export function setCellText(params: { tableId: string; rowId: string; cellId: string; text: string }): Command {
