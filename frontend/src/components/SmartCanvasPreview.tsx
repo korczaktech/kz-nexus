@@ -1125,6 +1125,22 @@ export function SmartCanvasPreview({ document, engine, headerText = "", footerTe
       if (event.key === "ArrowLeft" || event.key === "ArrowRight" || event.key === "Home" || event.key === "End") {
         event.preventDefault();
         const hasRange = activeCell.anchorOffset !== activeCell.offset;
+        if (!event.shiftKey && !hasRange && !event.ctrlKey && !event.metaKey) {
+          const atCellStart = event.key === "ArrowLeft" && activeCell.offset === 0;
+          const atCellEnd = event.key === "ArrowRight" && activeCell.offset === activeCell.text.length;
+          if (atCellStart || atCellEnd) {
+            const cells = collectTableCells(engine.getDocument().content);
+            const currentIndex = cells.findIndex(cell => cell.tableId === activeCell.tableId && cell.rowId === activeCell.rowId && cell.cellId === activeCell.cellId);
+            const nextIndex = currentIndex + (atCellStart ? -1 : 1);
+            const next = currentIndex >= 0 ? cells[nextIndex] : undefined;
+            if (next) {
+              const offset = atCellStart ? next.text.length : 0;
+              setActiveCell({ ...next, anchorOffset: offset, offset });
+              setActiveCellStoredMarks(null);
+              return;
+            }
+          }
+        }
         const orderedStart = Math.min(activeCell.anchorOffset, activeCell.offset);
         const orderedEnd = Math.max(activeCell.anchorOffset, activeCell.offset);
         const offset = event.key === "Home"

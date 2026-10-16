@@ -11,16 +11,19 @@ vi.mock("./CanvasDocumentRenderer", () => ({
     document,
     layout,
     selection,
+    activeCellId,
     onHitTest,
   }: {
     document: NexusDocument;
     layout?: { pages: unknown[] } | null;
     selection?: Selection | null;
+    activeCellId?: string;
     onHitTest?: (target: SmartCanvasHitTarget, clickCount?: number) => void;
   }) => {
     const block = document.content[0];
     return createElement("div", null,
       createElement("output", { "data-testid": "smartcanvas-layout", "data-page-count": String(layout?.pages.length ?? 0) }, String(layout?.pages.length ?? 0)),
+      createElement("output", { "data-testid": "smartcanvas-active-cell", "data-active-cell-id": activeCellId ?? "" }, activeCellId ?? ""),
       createElement("output", {
         "data-testid": "smartcanvas-selection",
         "data-anchor-block": selection?.anchor.blockId ?? "",
@@ -173,6 +176,41 @@ describe("SmartCanvasPreview input integration", () => {
     });
     const layout = host.querySelector('[data-testid="smartcanvas-layout"]');
     expect(Number(layout?.getAttribute("data-page-count"))).toBeGreaterThan(1);
+  });
+
+
+  it("moves the table-cell caret horizontally between adjacent cells at boundaries", async () => {
+    const document = createDocument({ title: "SmartCanvas table cell navigation" });
+    const first = document.content[0];
+    if (!first || first.type !== "paragraph") throw new Error("Expected initial paragraph");
+    const inserted = engine = createEditor({ document });
+    const tableResult = inserted.exec([insertTable({ afterBlockId: first.id, rows: 1, columns: 2 })]);
+    expect(tableResult.ok).toBe(true);
+    const table = inserted.getDocument().content.find(block => block.type === "table");
+    if (!table || table.type !== "table") throw new Error("Expected table");
+    const [left, right] = table.children[0]!.children;
+    host = window.document.createElement("div");
+    window.document.body.append(host);
+    root = createRoot(host);
+    await act(async () => {
+      root?.render(createElement(SmartCanvasPreview, {
+        document: inserted.getDocument(),
+        engine: inserted,
+        onDocumentChange: vi.fn(),
+      }));
+    });
+    const cells = host.querySelectorAll('[data-testid="smartcanvas-cell-hit"]');
+    await act(async () => { (cells[0] as HTMLButtonElement).click(); });
+    const input = host.querySelector('textarea[aria-label="Entrada de texto do SmartCanvas"]') as HTMLTextAreaElement | null;
+    if (!input) throw new Error("SmartCanvas input surface was not mounted");
+    await act(async () => {
+      input.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowRight", bubbles: true, cancelable: true }));
+    });
+    expect(host.querySelector('[data-testid="smartcanvas-active-cell"]')?.getAttribute("data-active-cell-id")).toBe(right!.id);
+    await act(async () => {
+      input.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowLeft", bubbles: true, cancelable: true }));
+    });
+    expect(host.querySelector('[data-testid="smartcanvas-active-cell"]')?.getAttribute("data-active-cell-id")).toBe(left!.id);
   });
 
   it("edits header, footer, alignment and page numbering through SmartCanvas controls", async () => {
