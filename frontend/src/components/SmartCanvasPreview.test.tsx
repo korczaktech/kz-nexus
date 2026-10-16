@@ -279,6 +279,21 @@ describe("SmartCanvasPreview input integration", () => {
     if (!spaced || spaced.type !== "paragraph") throw new Error("Expected spaced paragraph");
     expect(spaced.lineSpacing).toBe(1.2);
     expect(spaced.spacingAfter).toBe(8);
+
+    const headingSelect = host.querySelector('[aria-label="Nível de título SmartCanvas"]') as HTMLSelectElement | null;
+    const headingApply = host.querySelector('[aria-label="Aplicar estilo de bloco SmartCanvas"]') as HTMLButtonElement | null;
+    if (!headingSelect || !headingApply) throw new Error("SmartCanvas heading controls were not mounted");
+    const selectSetter = Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, "value")?.set;
+    if (!selectSetter) throw new Error("Select value setter was not available");
+    await act(async () => {
+      selectSetter.call(headingSelect, "2");
+      headingSelect.dispatchEvent(new Event("change", { bubbles: true }));
+    });
+    await act(async () => { headingApply.click(); });
+    const heading = engine.getDocument().content[0];
+    expect(heading?.type).toBe("heading");
+    if (!heading || heading.type !== "heading") throw new Error("Expected canonical heading");
+    expect(heading.level).toBe(2);
     expect(onDocumentChange).toHaveBeenCalled();
   });
 
