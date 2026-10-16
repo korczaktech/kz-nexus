@@ -424,18 +424,21 @@ describe("SmartCanvasPreview input integration", () => {
     if (!input) throw new Error("SmartCanvas input surface was not mounted");
     const paste = new Event("paste", { bubbles: true, cancelable: true });
     Object.defineProperty(paste, "clipboardData", {
-      value: { getData: (type: string) => type === "text/html" ? "<p><strong>Bold</strong> <em>italic</em></p>" : "Bold italic" },
+      value: { getData: (type: string) => type === "text/html" ? "<p><strong>Bold</strong></p><p><em>italic</em></p>" : "Bold\\nitalic" },
     });
     await act(async () => { input.dispatchEvent(paste); });
 
     const table = engine.getDocument().content.find(block => block.type === "table");
     if (!table || table.type !== "table") throw new Error("Expected table after rich paste");
     const cell = table.children[0]?.children[0];
-    const cellParagraph = cell?.children[0];
-    if (!cellParagraph || cellParagraph.type !== "paragraph") throw new Error("Expected paragraph in cell after rich paste");
-    expect(getPlainText(cellParagraph)).toBe("Bold italic");
-    expect(cellParagraph.children.some(run => run.text === "Bold" && run.marks.some(mark => mark.type === "bold"))).toBe(true);
-    expect(cellParagraph.children.some(run => run.text === "italic" && run.marks.some(mark => mark.type === "italic"))).toBe(true);
+    const firstParagraph = cell?.children[0];
+    const secondParagraph = cell?.children[1];
+    if (!firstParagraph || firstParagraph.type !== "paragraph" || !secondParagraph || secondParagraph.type !== "paragraph") {
+      throw new Error("Expected two paragraphs in cell after rich paste");
+    }
+    expect(cell?.children.map(paragraph => getPlainText(paragraph))).toEqual(["Bold", "italic"]);
+    expect(firstParagraph.children.some(run => run.text === "Bold" && run.marks.some(mark => mark.type === "bold"))).toBe(true);
+    expect(secondParagraph.children.some(run => run.text === "italic" && run.marks.some(mark => mark.type === "italic"))).toBe(true);
     expect(onDocumentChange).toHaveBeenCalled();
     expect(onStatus).toHaveBeenLastCalledWith("Conteúdo formatado colado na célula com sanitização.");
   });
