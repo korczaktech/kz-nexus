@@ -217,8 +217,8 @@ describe("SmartCanvasPreview input integration", () => {
     };
     document.content.push({
       type: "paragraph",
-      id: "adjacent-text",
-      children: [{ type: "text", id: "adjacent-run", text: "Keep me", marks: [] }],
+      id: "adjacenttext",
+      children: [{ type: "text", id: "adjacentrun", text: "Keep me", marks: [] }],
     });
     engine = createEditor({ document });
     const onDocumentChange = vi.fn();
@@ -247,7 +247,7 @@ describe("SmartCanvasPreview input integration", () => {
     expect(onStatus).toHaveBeenLastCalledWith("Bloco removido.");
     const result = engine.getDocument();
     expect(result.content.some(block => block.id === objectParagraph.id)).toBe(false);
-    expect(result.content.some(block => block.id === "adjacent-text")).toBe(true);
+    expect(result.content.some(block => block.id === "adjacenttext")).toBe(true);
     expect(getPlainText(result.content.find(block => block.id === "adjacent-text") as Extract<NexusDocument["content"][number], { type: "paragraph" }>)).toBe("Keep me");
     expect(onDocumentChange).toHaveBeenCalled();
   });
