@@ -92,7 +92,7 @@ function collectTableCells(nodes: readonly unknown[]): EditableCell[] {
   return cells;
 }
 
-type DocumentNodeLike = { id?: unknown; type?: unknown; alt?: unknown; width?: unknown; height?: unknown; children?: unknown };
+type DocumentNodeLike = { id?: string; type?: string; alt?: string; width?: number; height?: number; children?: unknown };
 
 function findDocumentNode(nodes: readonly unknown[], id: string): DocumentNodeLike | undefined {
   for (const value of nodes) {
