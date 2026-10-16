@@ -151,6 +151,20 @@ export function SmartCanvasPreview({ document, engine, headerText = "", footerTe
     syncSelection(result.value.selection);
     onDocumentChange(result.value.document);
   };
+  const refreshActiveCell = (nextDocument: NexusDocument) => {
+    setActiveCell(current => {
+      if (!current) return null;
+      const restored = collectTableCells(nextDocument.content).find(cell =>
+        cell.tableId === current.tableId && cell.rowId === current.rowId && cell.cellId === current.cellId
+      );
+      if (!restored) return null;
+      return {
+        ...restored,
+        anchorOffset: Math.min(current.anchorOffset, restored.text.length),
+        offset: Math.min(current.offset, restored.text.length),
+      };
+    });
+  };
   const commitCellText = (nextText: string, nextOffset: number) => {
     if (!activeCell || readOnly) return;
     const result = engine.exec([setCellText({ tableId: activeCell.tableId, rowId: activeCell.rowId, cellId: activeCell.cellId, text: nextText })], { group: "typing" });
@@ -229,7 +243,9 @@ export function SmartCanvasPreview({ document, engine, headerText = "", footerTe
       if (event.shiftKey ? engine.redo() : engine.undo()) {
         const next = engine.getSelection();
         setSelection(next ?? null);
-        onDocumentChange(engine.getDocument());
+        const restoredDocument = engine.getDocument();
+        refreshActiveCell(restoredDocument);
+        onDocumentChange(restoredDocument);
       }
       return;
     }
@@ -237,7 +253,9 @@ export function SmartCanvasPreview({ document, engine, headerText = "", footerTe
       event.preventDefault();
       if (engine.redo()) {
         setSelection(engine.getSelection() ?? null);
-        onDocumentChange(engine.getDocument());
+        const restoredDocument = engine.getDocument();
+        refreshActiveCell(restoredDocument);
+        onDocumentChange(restoredDocument);
       }
       return;
     }
