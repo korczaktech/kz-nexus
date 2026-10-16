@@ -218,6 +218,9 @@ describe("SmartCanvasPreview input integration", () => {
     expect(cellHit).not.toBeNull();
     await act(async () => { cellHit?.click(); });
     const input = host.querySelector('textarea[aria-label="Entrada de texto do SmartCanvas"]') as HTMLTextAreaElement | null;
+    await act(async () => {
+      input?.dispatchEvent(new KeyboardEvent("keydown", { key: "b", ctrlKey: true, bubbles: true, cancelable: true }));
+    });
     const setter = Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, "value")?.set;
     if (!input || !setter) throw new Error("SmartCanvas input surface was not mounted");
     await act(async () => {
@@ -231,6 +234,7 @@ describe("SmartCanvasPreview input integration", () => {
     const firstParagraph = firstCell?.children[0];
     if (!firstParagraph || firstParagraph.type !== "paragraph") throw new Error("Expected paragraph in edited cell");
     expect(getPlainText(firstParagraph)).toBe("Cell text 😀");
+    expect(firstParagraph.children[0]?.marks).toContainEqual({ type: "bold" });
 
     await act(async () => {
       input.dispatchEvent(new KeyboardEvent("keydown", { key: "Tab", bubbles: true, cancelable: true }));
