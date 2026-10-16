@@ -318,8 +318,10 @@ export function CanvasPage({ page, pageCount, document, headerText, footerText, 
         }
         if (showPageNumbers) {
           const label = `Página ${page.index + 1} de ${pageCount}`;
-          context.textAlign = "right";
-          context.fillText(label, (page.width - page.content.x) * PT_TO_CSS_PX, footerY);
+          const numberOnLeft = footerText && footerAlign === "right";
+          context.textAlign = numberOnLeft ? "left" : "right";
+          const numberX = numberOnLeft ? page.content.x : page.width - page.content.x;
+          context.fillText(label, numberX * PT_TO_CSS_PX, footerY);
           context.textAlign = "left";
         }
       }
