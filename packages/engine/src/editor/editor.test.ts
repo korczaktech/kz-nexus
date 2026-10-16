@@ -213,7 +213,7 @@ describe("Editor", () => {
       deleteText({ blockId: thirdId, start: 0, end: 4 }),
       mergeBlockWithPrevious({ blockId: secondId }),
       mergeBlockWithPrevious({ blockId: thirdId }),
-    ], { group: "typing" });
+    ], { group: "structural" });
 
     expect(cut.ok).toBe(true);
     expect(editor.getDocument().content).toHaveLength(1);
