@@ -151,4 +151,6 @@ A migração é por capacidades, com a implementação nova opt-in e o caminho a
 
 - A exclusão por Backspace/Delete agora usa `removeImage` para blocos de imagem, limpando o recurso embutido quando ele não é mais referenciado e preservando recursos compartilhados por outras imagens; os demais blocos continuam usando `deleteBlock`. A integração visual ainda precisa de validação.
 
+- A prévia agora exibe controles para a imagem selecionada: texto alternativo, largura e altura. A ação usa `updateImage` no motor, valida dimensões entre 1 e 2000 px e permite deixar dimensões vazias para voltar ao tamanho automático. O foco do mouse foi ajustado para não roubar a interação dos campos/botão. Build e testes seguem pendentes de execução confirmada.
+
 **Limite de validação:** essas alterações foram gravadas no repositório, mas ainda não há resultado de build/testes confirmado nesta sessão. Não remover `contentEditable` nem alterar o editor padrão até validar os fluxos e a paridade de recursos.
