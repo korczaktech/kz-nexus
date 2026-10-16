@@ -583,11 +583,12 @@ export function SmartCanvasPreview({ document, engine, headerText = "", footerTe
   const insertSmartCanvasBreak = (kind: "page" | "rule") => {
     if (readOnly) return;
     const current = engine.getSelection();
-    const afterBlockId = activeCell?.tableId ?? current
-      ? (activeCell?.tableId ?? engine.getDocument().content.find(block =>
-          block.id === current?.focus.blockId && (block.type === "paragraph" || block.type === "heading")
-        )?.id)
+    const selectedTopLevel = current
+      ? engine.getDocument().content.find(block =>
+          block.id === current.focus.blockId && (block.type === "paragraph" || block.type === "heading")
+        )
       : undefined;
+    const afterBlockId = activeCell?.tableId ?? selectedTopLevel?.id;
     if (!afterBlockId) {
       onStatus?.("Selecione um parágrafo ou uma tabela antes de inserir uma quebra.");
       return;
