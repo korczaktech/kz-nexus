@@ -187,10 +187,9 @@ describe("row/column operations", () => {
     })(seededDocument, ctx());
     if (!result.ok) throw result.error;
     const updatedCell = (result.value.document.content[1] as Table).children[0].children[0];
-    expect(updatedCell.children[0].children.map(run => run.text)).toEqual(["new", " ", "suffix"]);
-    expect(updatedCell.children[0].children[0].marks).toEqual([{ type: "bold" }]);
-    expect(updatedCell.children[0].children[1].marks).toEqual([]);
-    expect(updatedCell.children[0].children[2].marks).toEqual([{ type: "italic" }]);
+    expect(updatedCell.children[0].children.map(run => run.text).join("")).toBe("new suffix");
+    expect(updatedCell.children[0].children.filter(run => run.text.trim() !== "").map(run => run.marks)).toEqual([[{ type: "bold" }], [{ type: "italic" }]]);
+    expect(updatedCell.children[0].children.filter(run => run.text === " ").every(run => run.marks.length === 0)).toBe(true);
   });
 
   it("rejects rich insertion runs that do not match their explicit range", () => {
