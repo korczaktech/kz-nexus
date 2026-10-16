@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { addTableRow, collapsedAt, convertBlockToList, deleteBlock, deleteText, insertImportedBlocksAtSelection, insertImageResource, insertTable as insertTableCommand, insertText, moveBlock, removeImage, updateEditorObject, updateImage, getLineXAtOffset, getOffsetAtLineX, getPlainText, layoutDocument, mergeBlockWithPrevious, replaceRange, setAlign, setCellText, splitBlock, toggleMark as toggleMarkCommand, type Editor as NexusEngineSession, type Mark, type NexusDocument, type Selection, type SmartCanvasHitTarget } from "../../../packages/engine/src/index";
+import { addTableRow, collapsedAt, convertBlockToList, deleteBlock, deleteText, insertImportedBlocksAtSelection, insertImageResource, insertTable as insertTableCommand, insertText, moveBlock, removeImage, updateEditorObject, updateImage, getLineXAtOffset, getOffsetAtLineX, getPlainText, layoutDocument, mergeBlockWithPrevious, replaceRange, setAlign, setCellText, setIndent, setParagraphStyle, splitBlock, toggleMark as toggleMarkCommand, type Editor as NexusEngineSession, type Mark, type NexusDocument, type Selection, type SmartCanvasHitTarget } from "../../../packages/engine/src/index";
 import { CanvasDocumentRenderer } from "./CanvasDocumentRenderer";
 import { nexusDocumentFromHtml } from "../services/nexusEngineAdapter";
 import { lineEndOffset, lineStartOffset, nearestGraphemeOffset, nextCodePointOffset, nextWordOffset, previousCodePointOffset, previousWordOffset, verticalLineOffset, wordRangeAt } from "./smartCanvasTextOffsets";
@@ -93,7 +93,7 @@ function collectTableCells(nodes: readonly unknown[]): EditableCell[] {
   return cells;
 }
 
-type DocumentNodeLike = { id?: string; type?: string; alt?: string; width?: number; height?: number; editorObject?: { kind: "note" | "textBox" | "shape"; label?: string; shape?: "rectangle" | "ellipse" | "triangle"; fill?: string; stroke?: string; width?: number; height?: number }; children?: unknown };
+type DocumentNodeLike = { id?: string; type?: string; alt?: string; width?: number; height?: number; indent?: number; spacingAfter?: number; lineSpacing?: number; editorObject?: { kind: "note" | "textBox" | "shape"; label?: string; shape?: "rectangle" | "ellipse" | "triangle"; fill?: string; stroke?: string; width?: number; height?: number }; children?: unknown };
 
 function findDocumentNode(nodes: readonly unknown[], id: string): DocumentNodeLike | undefined {
   for (const value of nodes) {
@@ -326,6 +326,8 @@ export function SmartCanvasPreview({ document, engine, headerText = "", footerTe
   const [textColorDraft, setTextColorDraft] = useState("#111827");
   const [highlightDraft, setHighlightDraft] = useState("#fff59d");
   const [linkDraft, setLinkDraft] = useState("");
+  const [lineSpacingDraft, setLineSpacingDraft] = useState("1.2");
+  const [spacingAfterDraft, setSpacingAfterDraft] = useState("8");
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const composing = useRef(false);
   const preferredVerticalX = useRef<number | null>(null);
@@ -542,6 +544,49 @@ export function SmartCanvasPreview({ document, engine, headerText = "", footerTe
     onDocumentChange(result.value.document);
     onStatus?.("Tabela 3×3 inserida pelo motor. Use Tab para navegar e criar novas linhas.");
     inputRef.current?.focus({ preventScroll: true });
+  };
+  const applySmartCanvasIndent = (direction: "increase" | "decrease") => {
+    if (readOnly) return;
+    const blockId = activeCell
+      ? collectCellParagraphs(engine.getDocument().content, activeCell.tableId, activeCell.rowId, activeCell.cellId)
+          .find(item => activeCell.offset >= item.start && activeCell.offset <= item.start + item.text.length)?.id
+      : engine.getSelection()?.focus.blockId;
+    if (!blockId) {
+      onStatus?.("Selecione um parágrafo antes de alterar o recuo.");
+      return;
+    }
+    const target = findDocumentNode(engine.getDocument().content, blockId);
+    const currentIndent = target?.indent ?? 0;
+    const nextIndent = Math.max(0, Math.min(720, currentIndent + (direction === "increase" ? 18 : -18)));
+    const result = engine.exec([setIndent({ blockId, indent: nextIndent })], { group: "formatting" });
+    if (!result.ok) onStatus?.(result.error.message);
+    else {
+      onDocumentChange(result.value.document);
+      onStatus?.("Recuo do parágrafo atualizado pelo SmartCanvas.");
+    }
+  };
+  const applySmartCanvasParagraphSpacing = () => {
+    if (readOnly) return;
+    const blockId = activeCell
+      ? collectCellParagraphs(engine.getDocument().content, activeCell.tableId, activeCell.rowId, activeCell.cellId)
+          .find(item => activeCell.offset >= item.start && activeCell.offset <= item.start + item.text.length)?.id
+      : engine.getSelection()?.focus.blockId;
+    if (!blockId) {
+      onStatus?.("Selecione um parágrafo antes de alterar o espaçamento.");
+      return;
+    }
+    const lineSpacing = Number(lineSpacingDraft);
+    const spacingAfter = Number(spacingAfterDraft);
+    if (!Number.isFinite(lineSpacing) || lineSpacing < 0.5 || lineSpacing > 4 || !Number.isFinite(spacingAfter) || spacingAfter < 0 || spacingAfter > 720) {
+      onStatus?.("Entrelinha deve ficar entre 0,5 e 4; espaçamento posterior entre 0 e 720 pontos.");
+      return;
+    }
+    const result = engine.exec([setParagraphStyle({ blockId, lineSpacing, spacingAfter })], { group: "formatting" });
+    if (!result.ok) onStatus?.(result.error.message);
+    else {
+      onDocumentChange(result.value.document);
+      onStatus?.("Espaçamento do parágrafo atualizado pelo SmartCanvas.");
+    }
   };
   const applySmartCanvasLink = () => {
     const raw = linkDraft.trim();
@@ -1217,6 +1262,19 @@ export function SmartCanvasPreview({ document, engine, headerText = "", footerTe
       <button type="button" disabled={readOnly} onMouseDown={event => event.preventDefault()} onClick={() => applySmartCanvasAlignment("center")} aria-label="Centralizar SmartCanvas" title="Centralizar" style={{ padding: "6px 9px", border: "1px solid #cbd5e1", borderRadius: 6, background: "#fff" }}>↔</button>
       <button type="button" disabled={readOnly} onMouseDown={event => event.preventDefault()} onClick={() => applySmartCanvasAlignment("end")} aria-label="Alinhar à direita SmartCanvas" title="Alinhar à direita" style={{ padding: "6px 9px", border: "1px solid #cbd5e1", borderRadius: 6, background: "#fff" }}>⇥</button>
       <button type="button" disabled={readOnly} onMouseDown={event => event.preventDefault()} onClick={() => applySmartCanvasAlignment("justify")} aria-label="Justificar SmartCanvas" title="Justificar" style={{ padding: "6px 9px", border: "1px solid #cbd5e1", borderRadius: 6, background: "#fff" }}>☷</button>
+      <button type="button" disabled={readOnly} onMouseDown={event => event.preventDefault()} onClick={() => applySmartCanvasIndent("decrease")} aria-label="Diminuir recuo SmartCanvas" title="Diminuir recuo" style={{ padding: "6px 9px", border: "1px solid #cbd5e1", borderRadius: 6, background: "#fff" }}>⇤−</button>
+      <button type="button" disabled={readOnly} onMouseDown={event => event.preventDefault()} onClick={() => applySmartCanvasIndent("increase")} aria-label="Aumentar recuo SmartCanvas" title="Aumentar recuo" style={{ padding: "6px 9px", border: "1px solid #cbd5e1", borderRadius: 6, background: "#fff" }}>⇥+</button>
+      <label style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 12 }}>
+        <span>Entrelinha</span>
+        <select aria-label="Entrelinha SmartCanvas" value={lineSpacingDraft} disabled={readOnly} onChange={event => setLineSpacingDraft(event.currentTarget.value)} style={{ padding: "5px 6px", border: "1px solid #cbd5e1", borderRadius: 6, background: "#fff" }}>
+          {["0.5", "0.75", "1", "1.15", "1.2", "1.5", "2", "2.5", "3", "4"].map(value => <option key={value} value={value}>{value}</option>)}
+        </select>
+      </label>
+      <label style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 12 }}>
+        <span>Espaço após (pt)</span>
+        <input aria-label="Espaçamento após SmartCanvas" type="number" min={0} max={720} value={spacingAfterDraft} disabled={readOnly} onChange={event => setSpacingAfterDraft(event.currentTarget.value)} style={{ width: 70, padding: "5px 6px", border: "1px solid #cbd5e1", borderRadius: 6 }} />
+      </label>
+      <button type="button" disabled={readOnly} onMouseDown={event => event.preventDefault()} onClick={applySmartCanvasParagraphSpacing} aria-label="Aplicar espaçamento SmartCanvas" style={{ padding: "6px 8px", border: "1px solid #cbd5e1", borderRadius: 6, background: "#fff" }}>Aplicar</button>
     </div>
     {activeBlockId && findDocumentNode(document.content, activeBlockId)?.type === "image" ? <div role="group" aria-label="Propriedades da imagem selecionada" style={{ display: "flex", alignItems: "end", gap: 8, flexWrap: "wrap", marginBottom: 10, padding: 10, border: "1px solid #bfdbfe", borderRadius: 8, background: "#eff6ff" }}>
       <label style={{ display: "grid", gap: 4, fontSize: 12 }}>Texto alternativo
