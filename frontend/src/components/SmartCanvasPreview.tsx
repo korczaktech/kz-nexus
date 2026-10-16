@@ -145,12 +145,12 @@ function findLayoutBlock(blocks: readonly import("../../../packages/engine/src/l
 
 function collectLayoutLines(
   blocks: readonly import("../../../packages/engine/src/layout/layout").LayoutBlock[],
-  blockId: string,
+  blockId: string | null,
   result: Array<{ pageIndex: number; blockId: string; line: import("../../../packages/engine/src/layout/layout").LayoutLine }>,
   pageIndex: number,
 ): void {
   for (const block of blocks) {
-    if (block.blockId === blockId) {
+    if (blockId === null || block.blockId === blockId) {
       for (const line of block.lines) result.push({ pageIndex, blockId: block.blockId, line });
     }
     collectLayoutLines(block.children ?? [], blockId, result, pageIndex);
@@ -596,17 +596,18 @@ export function SmartCanvasPreview({ document, engine, headerText = "", footerTe
 
       if ((event.key === "ArrowUp" || event.key === "ArrowDown" || event.key === "Home" || event.key === "End") && layout) {
         const visualLines: Array<{ pageIndex: number; blockId: string; line: import("../../../packages/engine/src/layout/layout").LayoutLine }> = [];
-        layout.pages.forEach(page => collectLayoutLines(page.blocks, current.focus.blockId, visualLines, page.index));
+        layout.pages.forEach(page => collectLayoutLines(page.blocks, null, visualLines, page.index));
         if (visualLines.length) {
           let lineIndex = visualLines.findIndex(item =>
+            item.blockId === current.focus.blockId &&
             current.focus.offset >= item.line.startOffset && current.focus.offset <= item.line.endOffset
           );
-          if (lineIndex < 0) lineIndex = visualLines.findIndex(item => item.line.endOffset >= current.focus.offset);
-          if (lineIndex < 0) lineIndex = visualLines.length - 1;
-          const currentLine = visualLines[lineIndex].line;
-          if (event.key === "Home" || event.key === "End") {
+          if (lineIndex < 0) lineIndex = visualLines.findIndex(item => item.blockId === current.focus.blockId && item.line.endOffset >= current.focus.offset);
+          if (lineIndex < 0) lineIndex = visualLines.findIndex(item => item.blockId === current.focus.blockId);
+          const currentLine = lineIndex >= 0 ? visualLines[lineIndex].line : undefined;
+          if (currentLine && (event.key === "Home" || event.key === "End")) {
             offset = event.key === "Home" ? currentLine.startOffset : currentLine.endOffset;
-          } else {
+          } else if (currentLine) {
             const targetLineIndex = lineIndex + (event.key === "ArrowUp" ? -1 : 1);
             if (targetLineIndex >= 0 && targetLineIndex < visualLines.length) {
               const target = visualLines[targetLineIndex];
