@@ -552,7 +552,8 @@ export function getEngineLogicalContext(engine: ReturnType<typeof createEditor>)
     : anchorIndex > focusIndex
       ? selection.anchor.offset
       : Math.max(selection.anchor.offset, selection.focus.offset);
-  if (startOffset < 0 || endOffset < startOffset ||
+  if (startOffset < 0 || endOffset < 0 ||
+      (blockIndex === endBlockIndex && endOffset < startOffset) ||
       endOffset > logicalTextLength(endBlock) || startOffset > logicalTextLength(block)) return null;
 
   let topLevelBlock: Block | undefined;
