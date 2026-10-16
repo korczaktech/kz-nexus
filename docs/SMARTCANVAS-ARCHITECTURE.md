@@ -153,4 +153,7 @@ A migração é por capacidades, com a implementação nova opt-in e o caminho a
 
 - A prévia agora exibe controles para a imagem selecionada: texto alternativo, largura e altura. A ação usa `updateImage` no motor, valida dimensões entre 1 e 2000 px e permite deixar dimensões vazias para voltar ao tamanho automático. O foco do mouse foi ajustado para não roubar a interação dos campos/botão. Build e testes seguem pendentes de execução confirmada.
 
+- Corrigida uma falha de integração dos controles de imagem: a busca anterior `findBlock` só reconhecia parágrafos/cabeçalhos, portanto não localizava blocos `image`. A prévia agora usa uma busca genérica na árvore do documento para ler propriedades, aplicar alterações e excluir imagens selecionadas. O campo de texto alternativo também limita a entrada a 2000 caracteres, igual ao motor.
+- Adicionado teste para garantir que remover uma imagem não apague um recurso ainda referenciado por outra imagem. O teste foi escrito, mas não executado nesta sessão.
+
 **Limite de validação:** essas alterações foram gravadas no repositório, mas ainda não há resultado de build/testes confirmado nesta sessão. Não remover `contentEditable` nem alterar o editor padrão até validar os fluxos e a paridade de recursos.
