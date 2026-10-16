@@ -116,7 +116,7 @@ A migração é por capacidades, com a implementação nova opt-in e o caminho a
 - [ ] Imagens, tabelas, marcas, objetos, cabeçalho/rodapé e quebras têm cobertura explícita.
 
 ### Etapa 3 — edição própria
-- [ ] Controlador inicial implementado para digitação, IME, seleção estendida com Shift, navegação entre blocos, Home/End, Backspace/Delete, Ctrl/Cmd+A, cópia, recorte, colagem de texto e undo/redo; ainda faltam Enter/Tab, seleção de intervalos entre blocos para exclusão e testes de integração.
+- [ ] Controlador inicial implementado para digitação, IME, seleção estendida com Shift, navegação entre blocos, Home/End, Backspace/Delete, Ctrl/Cmd+A, cópia, recorte, colagem de texto e undo/redo; ainda faltam Tab, seleção de intervalos entre blocos para exclusão e testes de integração.
 - [ ] O conteúdo do corpo não depende de contentEditable nem de execCommand.
 - [ ] Undo/redo restaura documento e seleção sem histórico paralelo divergente.
 - [ ] Cabeçalho e rodapé também têm fluxo de edição próprio, ou um escopo de compatibilidade explicitamente isolado até sua migração.
@@ -134,6 +134,6 @@ A migração é por capacidades, com a implementação nova opt-in e o caminho a
 
 **Implementado nesta iteração:** hit-testing puro; caret e geometria de seleção no overlay; seleção visual entre blocos e páginas; prévia opt-in sob `?smartCanvas=1`; controlador ligado à sessão do motor para digitação, exclusão no mesmo bloco, Shift+setas, navegação entre blocos, Home/End, Ctrl/Cmd+A, cópia/recorte/colagem de texto, composição IME e undo/redo. Backspace no início e Delete no fim tentam unir parágrafos adjacentes via comando semântico do motor. O documento é propagado ao fluxo existente de salvamento/rascunhos. O modo somente leitura desativa o controlador. O editor legado continua disponível como fallback.
 
-**Limitações conhecidas:** exclusão de uma seleção que atravessa blocos ainda não está implementada; unir blocos só funciona quando o motor aceita a estrutura adjacente; Enter/Tab, navegação vertical, edição de células de tabela e testes de integração ainda faltam. A seleção lógica entre blocos tem teste unitário de geometria, mas a compilação e os testes completos ainda não foram executados neste ambiente.
+**Limitações conhecidas:** exclusão de uma seleção que atravessa blocos ainda não está implementada; unir blocos só funciona quando o motor aceita a estrutura adjacente; Tab, navegação vertical, edição de células de tabela e testes de integração ainda faltam; Enter já divide o parágrafo via comando do motor. A seleção lógica entre blocos tem teste unitário de geometria, mas a compilação e os testes completos ainda não foram executados neste ambiente.
 
-**Próxima tarefa:** implementar Enter/quebra de parágrafo e exclusão de seleção entre blocos com comandos semânticos; depois, edição de células e testes de integração/persistência. Não remover contentEditable nem alterar o caminho padrão antes de validar os fluxos e a paridade de recursos.
+**Próxima tarefa:** implementar exclusão de seleção entre blocos com comandos semânticos; depois, navegação por Tab/edição de células e testes de integração/persistência. Não remover contentEditable nem alterar o caminho padrão antes de validar os fluxos e a paridade de recursos.
