@@ -214,4 +214,5 @@ export function setCellText(params: { tableId: string; rowId: string; cellId: st
             },
       ),
     }));
+  };
 }
