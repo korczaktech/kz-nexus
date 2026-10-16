@@ -13,6 +13,8 @@ type CanvasPageProps = {
   document: NexusDocument;
   headerText: string;
   footerText: string;
+  headerAlign: "left" | "center" | "right";
+  footerAlign: "left" | "center" | "right";
   showPageNumbers: boolean;
   layout: LayoutResult;
   onHitTest?: (target: SmartCanvasHitTarget, clickCount?: number) => void;
@@ -213,7 +215,7 @@ function pageText(page: LayoutPage): string {
   return parts.join(" ").replace(/\s+/g, " ").trim();
 }
 
-export function CanvasPage({ page, pageCount, document, headerText, footerText, showPageNumbers, layout, onHitTest, selection, showCaret = false, activeCellId, activeCellSelection }: CanvasPageProps) {
+export function CanvasPage({ page, pageCount, document, headerText, footerText, headerAlign, footerAlign, showPageNumbers, layout, onHitTest, selection, showCaret = false, activeCellId, activeCellSelection }: CanvasPageProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const overlayRef = useRef<HTMLCanvasElement>(null);
   const cssWidth = page.width * PT_TO_CSS_PX;
@@ -279,7 +281,10 @@ export function CanvasPage({ page, pageCount, document, headerText, footerText, 
         context.font = `9pt Arial, sans-serif`;
         context.fillStyle = "#667085";
         context.textBaseline = "top";
-        context.fillText(headerText, page.content.x * PT_TO_CSS_PX, 12 * PT_TO_CSS_PX, page.content.width * PT_TO_CSS_PX);
+        context.textAlign = headerAlign;
+        const headerX = headerAlign === "left" ? page.content.x : headerAlign === "center" ? page.width / 2 : page.width - page.content.x;
+        context.fillText(headerText, headerX * PT_TO_CSS_PX, 12 * PT_TO_CSS_PX, page.content.width * PT_TO_CSS_PX);
+        context.textAlign = "left";
       }
       for (const block of page.blocks) drawBlock(context, block, document, imageCache);
       if (footerText || showPageNumbers) {
@@ -287,7 +292,12 @@ export function CanvasPage({ page, pageCount, document, headerText, footerText, 
         context.fillStyle = "#667085";
         context.textBaseline = "alphabetic";
         const footerY = cssHeight - 12 * PT_TO_CSS_PX;
-        if (footerText) context.fillText(footerText, page.content.x * PT_TO_CSS_PX, footerY, page.content.width * PT_TO_CSS_PX);
+        if (footerText) {
+          context.textAlign = footerAlign;
+          const footerX = footerAlign === "left" ? page.content.x : footerAlign === "center" ? page.width / 2 : page.width - page.content.x;
+          context.fillText(footerText, footerX * PT_TO_CSS_PX, footerY, page.content.width * PT_TO_CSS_PX);
+          context.textAlign = "left";
+        }
         if (showPageNumbers) {
           const label = `Página ${page.index + 1} de ${pageCount}`;
           context.textAlign = "right";
@@ -298,7 +308,7 @@ export function CanvasPage({ page, pageCount, document, headerText, footerText, 
     };
     paint();
     return () => { cancelled = true; };
-  }, [page, pageCount, document, headerText, footerText, showPageNumbers, cssWidth, cssHeight]);
+  }, [page, pageCount, document, headerText, footerText, headerAlign, footerAlign, showPageNumbers, cssWidth, cssHeight]);
 
   useEffect(() => {
     const overlay = overlayRef.current;
@@ -426,11 +436,13 @@ export function CanvasPage({ page, pageCount, document, headerText, footerText, 
   </div>;
 }
 
-export function CanvasDocumentRenderer({ layout, document, headerText = "", footerText = "", showPageNumbers = false, onHitTest, selection, showCaret = false, activeCellId, activeCellSelection }: {
+export function CanvasDocumentRenderer({ layout, document, headerText = "", footerText = "", headerAlign = "left", footerAlign = "left", showPageNumbers = false, onHitTest, selection, showCaret = false, activeCellId, activeCellSelection }: {
   layout: LayoutResult;
   document: NexusDocument;
   headerText?: string;
   footerText?: string;
+  headerAlign?: "left" | "center" | "right";
+  footerAlign?: "left" | "center" | "right";
   showPageNumbers?: boolean;
   onHitTest?: (target: SmartCanvasHitTarget, clickCount?: number) => void;
   selection?: Selection;
@@ -459,6 +471,8 @@ export function CanvasDocumentRenderer({ layout, document, headerText = "", foot
       document={document}
       headerText={headerText}
       footerText={footerText}
+      headerAlign={headerAlign}
+      footerAlign={footerAlign}
       showPageNumbers={showPageNumbers}
     />)}
   </div>;
