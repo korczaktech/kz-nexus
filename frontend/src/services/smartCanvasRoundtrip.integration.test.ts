@@ -70,6 +70,8 @@ describe("SmartCanvas canonical document round-trip", () => {
     if (!encoded.ok) return;
 
     expect(encoded.value).toContain('"format": "korczak-nexus"');
-    expect(encoded.value).not.toMatch(/<\\/?(?:p|div|html|body)(?:\\s|>)/i);
+    expect(encoded.value).not.toContain("<html");
+    expect(encoded.value).not.toContain("<body");
+    expect(encoded.value).not.toContain("<p>");
   });
 });
