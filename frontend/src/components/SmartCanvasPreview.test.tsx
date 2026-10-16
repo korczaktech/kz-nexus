@@ -117,6 +117,22 @@ describe("SmartCanvasPreview input integration", () => {
     const redone = engine.getDocument().content[0];
     if (!redone || redone.type !== "paragraph") throw new Error("Expected paragraph after redo");
     expect(getPlainText(redone)).toBe("Olá SmartCanvas 😀");
+
+    await act(async () => {
+      input.dispatchEvent(new CompositionEvent("compositionstart", { bubbles: true, data: "" }));
+      valueSetter.call(input, "日本語");
+      input.dispatchEvent(new Event("input", { bubbles: true }));
+    });
+    const duringComposition = engine.getDocument().content[0];
+    if (!duringComposition || duringComposition.type !== "paragraph") throw new Error("Expected paragraph during composition");
+    expect(getPlainText(duringComposition)).toBe("Olá SmartCanvas 😀");
+
+    await act(async () => {
+      input.dispatchEvent(new CompositionEvent("compositionend", { bubbles: true, data: "日本語" }));
+    });
+    const afterComposition = engine.getDocument().content[0];
+    if (!afterComposition || afterComposition.type !== "paragraph") throw new Error("Expected paragraph after composition");
+    expect(getPlainText(afterComposition)).toBe("Olá SmartCanvas 😀日本語");
   });
   it("selects an image and applies validated properties through the engine", async () => {
     const document = createDocument({ title: "SmartCanvas image integration" });
