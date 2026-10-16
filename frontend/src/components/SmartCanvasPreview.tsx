@@ -204,8 +204,10 @@ export function SmartCanvasPreview({ document, engine, headerText = "", footerTe
       onStatus?.(clickCount >= 3 ? "Texto da célula selecionado." : clickCount >= 2 ? "Palavra da célula selecionada." : "Editando célula da tabela. Use Tab para avançar entre células.");
     } else {
       setActiveBlockId(target.blockId);
+      setSelection(null);
+      engine.setSelection(undefined);
       inputRef.current?.focus({ preventScroll: true });
-      onStatus?.("Bloco " + target.blockId + " selecionado no SmartCanvas.");
+      onStatus?.("Bloco " + target.blockId + " selecionado no SmartCanvas. A edição de texto está suspensa até que um bloco de texto seja selecionado.");
     }
   };
   const commitText = (text: string) => {
