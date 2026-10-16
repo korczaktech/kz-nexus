@@ -80,13 +80,26 @@ function visitBlock(block: LayoutBlock, pageIndex: number, x: number, y: number,
   }
   if (block.table) {
     for (const row of block.table.rows) for (const cell of row.cells) {
+      let baseOffset = 0;
+      let previousLocalStart = -1;
+      let previousGlobalEnd = 0;
       for (let lineIndex = 0; lineIndex < cell.lines.length; lineIndex += 1) {
         const line = cell.lines[lineIndex];
+        // Paragraph lines have local offsets. Translate them to the cell's
+        // joined text offsets, where paragraphs are separated by one newline.
+        if (lineIndex > 0 && (line.startOffset < previousLocalStart ||
+          (line.startOffset === 0 && previousLocalStart === 0))) {
+          baseOffset = previousGlobalEnd + 1;
+        }
+        const localOffset = getOffsetAtLineX(line, x, options.measureText);
+        const globalEnd = baseOffset + line.endOffset;
         candidates.push({
-          target: { kind: "table-cell", pageIndex, blockId: block.blockId, cellId: cell.cellId, offset: getOffsetAtLineX(line, x, options.measureText), lineIndex },
+          target: { kind: "table-cell", pageIndex, blockId: block.blockId, cellId: cell.cellId, offset: baseOffset + localOffset, lineIndex },
           distance: lineDistance(line, x, y),
           order: order.value++,
         });
+        previousLocalStart = line.startOffset;
+        previousGlobalEnd = globalEnd;
       }
       candidates.push({
         target: { kind: "table-cell", pageIndex, blockId: block.blockId, cellId: cell.cellId, offset: 0, lineIndex: -1 },
