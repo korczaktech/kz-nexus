@@ -101,7 +101,7 @@ Este mapa foi produzido por inspeção do código e não comprova comportamento 
 - Com `?smartCanvas=1`, o evento `beforeinput` agora passa por `dispatchSmartCanvasBeforeInput()` antes de chegar ao handler de comandos já existente. Sem a flag, o despacho legado continua direto.
 - O adaptador registra em memória a quantidade de eventos `beforeinput` e quantos coincidem com um estado/evento de composição IME. Ele não chama `preventDefault()`, não altera texto e não declara uma operação bem-sucedida; a decisão continua no handler, que converte operações conhecidas em comandos do motor Nexus.
 - Testes verificam o encaminhamento do evento, a preservação do evento de composição e os contadores. A mudança é uma extração explícita de fronteira/instrumentação, não uma nova implementação de digitação ou IME.
-- Próxima validação necessária: testes e build frontend no CI; depois disso, a próxima fatia deve cobrir casos de input que ainda caem no fallback, especialmente seleção cruzando blocos e composição real em navegador.
+- Validação de testes/build frontend concluída no CI para o incremento de 2026-10-16; a seleção rica entre blocos de texto de topo e o ciclo de composição IME têm testes de componente. Próxima fatia: fallback para estruturas aninhadas, composição IME em navegador real e fluxo end-to-end com API.
 
 ## Atualização após a regressão automatizada — 2026-10-16
 
