@@ -429,6 +429,14 @@ export function SmartCanvasPreview({ document, engine, headerText = "", footerTe
       onStatus?.("Bloco removido.");
       return;
     }
+    if (event.key === "Escape" && activeBlockId) {
+      event.preventDefault();
+      setActiveBlockId(null);
+      setSelection(null);
+      engine.setSelection(undefined);
+      onStatus?.("Seleção do bloco removida.");
+      return;
+    }
     // Formatting shortcuts are routed to the engine, including stored marks for future typing.
     if ((event.ctrlKey || event.metaKey) && !event.altKey) {
       const key = event.key.toLowerCase();
