@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { addTableRow, collapsedAt, deleteBlock, deleteText, insertImportedBlocksAtSelection, insertText, removeImage, updateImage, getLineXAtOffset, getOffsetAtLineX, getPlainText, layoutDocument, mergeBlockWithPrevious, replaceRange, setCellText, splitBlock, toggleMark as toggleMarkCommand, type Editor as NexusEngineSession, type Mark, type NexusDocument, type Selection, type SmartCanvasHitTarget } from "../../../packages/engine/src/index";
 import { CanvasDocumentRenderer } from "./CanvasDocumentRenderer";
 import { nexusDocumentFromHtml } from "../services/nexusEngineAdapter";
@@ -284,6 +284,22 @@ export function SmartCanvasPreview({ document, engine, headerText = "", footerTe
     try { return layoutDocument(document); }
     catch { return null; }
   }, [document]);
+
+  // Give the engine a valid insertion point as soon as SmartCanvas mounts.
+  // Keyboard input must not depend on a prior click on a text glyph.
+  useEffect(() => {
+    const current = engine.getSelection();
+    if (current) {
+      setSelection(current);
+      return;
+    }
+    const first = collectTextBlocks(engine.getDocument().content)[0];
+    if (!first) return;
+    const initial = collapsedAt({ blockId: first.id, offset: 0 });
+    engine.setSelection(initial);
+    setSelection(initial);
+  }, [engine]);
+
   const syncSelection = (next: Selection | undefined) => {
     if (!next) return;
     setSelection(next);
@@ -333,7 +349,7 @@ export function SmartCanvasPreview({ document, engine, headerText = "", footerTe
       inputRef.current?.focus({ preventScroll: true });
       onStatus?.(selectedBlock?.type === "image"
         ? "Imagem selecionada. Edite o texto alternativo e as dimensões nos controles do SmartCanvas."
-        : "Bloco " + target.blockId + " selecionado no SmartCanvas. A edição de texto está suspensa até que um bloco de texto seja selecionado.");
+        : "Bloco " + target.blockId + " selecionado no SmartCanvas. Use os comandos de objeto disponíveis para operar este bloco.");
     }
   };
   const applySelectedImageProperties = () => {
@@ -890,12 +906,12 @@ export function SmartCanvasPreview({ document, engine, headerText = "", footerTe
     }
     if (event.key === "Tab") {
       event.preventDefault();
-      onStatus?.("Navegação por Tab entre células ainda não está habilitada no SmartCanvas.");
+      onStatus?.("Para navegar em uma tabela, selecione uma célula e use Tab ou Shift+Tab.");
     }
   };
   return <section className="kz-smartcanvas-experiment" aria-label="Prévia experimental SmartCanvas" style={{ margin: "0 0 16px", padding: 16, border: "1px solid #93c5fd", borderRadius: 12, background: "rgba(59,130,246,.04)", position: "relative" }} onPointerDownCapture={event => { if ((event.target as HTMLElement).closest("input, button, textarea, select")) return; inputRef.current?.focus({ preventScroll: true }); }}>
     <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, flexWrap: "wrap", marginBottom: 8 }}>
-      <div><strong>SmartCanvas — prévia experimental</strong><div style={{ fontSize: 12, opacity: .75 }}>Edição inicial por seleção lógica: digitação, seleção e navegação entre blocos. O editor legado permanece disponível.</div></div>
+      <div><strong>SmartCanvas — prévia experimental</strong><div style={{ fontSize: 12, opacity: .75 }}>Edição por comandos do motor: texto, seleção lógica, tabelas e objetos. O editor legado permanece disponível durante a validação.</div></div>
       <span style={{ fontSize: 12 }}>{layout ? layout.pageCount + " página(s)" : "Layout indisponível"}</span>
     </div>
     {activeBlockId && findDocumentNode(document.content, activeBlockId)?.type === "image" ? <div role="group" aria-label="Propriedades da imagem selecionada" style={{ display: "flex", alignItems: "end", gap: 8, flexWrap: "wrap", marginBottom: 10, padding: 10, border: "1px solid #bfdbfe", borderRadius: 8, background: "#eff6ff" }}>
