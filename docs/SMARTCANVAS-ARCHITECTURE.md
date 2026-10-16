@@ -109,7 +109,7 @@ A migração é por capacidades, com a implementação nova opt-in e o caminho a
 - [ ] Contratos de interação e seleção validados com testes de implementação nas próximas etapas.
 
 ### Etapa 2 — SmartCanvas
-- [ ] O caminho experimental renderiza todas as páginas a partir do mesmo LayoutResult do motor.
+- [x] O caminho experimental opt-in renderiza as páginas a partir do layout do motor via SmartCanvasPreview; validar visualmente em execução antes de considerar paridade concluída.
 - [x] Hit-testing do motor mapeia coordenadas em pontos para posições lógicas, blocos e células sem consultar seleção DOM; há testes unitários dedicados.
 - [x] O renderer Canvas aceita um callback opcional de pointer hit-test, mantendo o comportamento existente quando não configurado.
 - [x] Caret e seleção de texto de um único bloco podem ser desenhados em um canvas overlay independente do conteúdo, quando a seleção lógica é fornecida.
@@ -132,6 +132,6 @@ A migração é por capacidades, com a implementação nova opt-in e o caminho a
 
 ## 5. Progresso e próxima tarefa
 
-**Implementado nesta iteração:** função pura hitTestLayout no pacote público do motor; alvos tipados para texto, bloco e célula de tabela; medição de texto injetável para posicionar o caret; callback opcional de hit-test por pointer no renderer Canvas; cálculo de geometria de caret/seleção; canvas overlay separado para desenhar caret e destaque de seleção quando o host fornece uma seleção lógica; testes unitários de geometria. O callback e o overlay continuam opcionais e ainda não estão ligados ao editor principal.
+**Implementado nesta iteração:** função pura hitTestLayout no pacote público do motor; alvos tipados para texto, bloco e célula de tabela; medição de texto injetável; callback opcional de hit-test por pointer; geometria de caret/seleção e canvas overlay independente; testes unitários dedicados; componente SmartCanvasPreview integrado ao Editor sob `?smartCanvas=1`. No modo experimental, o clique em texto atualiza a seleção lógica do motor e desenha o caret/destaque sem tornar o Canvas a fonte de verdade. A prévia é mostrada acima do editor legado para comparação e não substitui a edição principal.
 
-**Próxima tarefa:** desenhar caret e retângulos de seleção como overlays independentes do conteúdo, depois conectar o pointer-hit-test à seleção lógica do motor sob a flag ?smartCanvas=1. Não remover contentEditable nem alterar o caminho padrão antes que o controlador consiga editar texto, preservar IME e restaurar undo/redo com seleção.
+**Próxima tarefa:** criar o controlador próprio de teclado e inserção de texto sobre a seleção lógica, começando por texto simples e backspace/delete, com testes de undo/redo e IME. Em seguida, ligar navegação por teclado e clipboard. Não remover contentEditable nem alterar o caminho padrão antes de validar esses fluxos e a paridade de recursos.
