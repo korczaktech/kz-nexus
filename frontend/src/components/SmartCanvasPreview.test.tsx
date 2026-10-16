@@ -243,8 +243,8 @@ describe("SmartCanvasPreview input integration", () => {
     };
     document.content.push({
       type: "paragraph",
-      id: "object_neighbor0001",
-      children: [{ type: "text", id: "object_neighbor_run1", text: "Neighbor", marks: [] }],
+      id: "objectpara0001",
+      children: [{ type: "text", id: "objectrun0002", text: "Neighbor", marks: [] }],
     });
     engine = createEditor({ document });
     const onDocumentChange = vi.fn();
