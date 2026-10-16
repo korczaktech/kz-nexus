@@ -260,8 +260,8 @@ export function Editor({document,versions,onSave,onClose,onConflict}:{document:D
  useEffect(()=>()=>{if(timer.current)window.clearTimeout(timer.current)},[]);
  useEffect(()=>{const t=plainText(currentDocumentHtml()).trim();setWordCount(t?t.split(/\s+/).length:0)},[content]);
  function currentHistorySnapshot(){const engine=nexusEngineRef.current;if(!engine)return null;const encoded=encodeNexusDocument(engine.getDocument());return encoded.ok?encoded.value:null}
-  function resetHistoryToCurrent(){const snapshot=currentHistorySnapshot();history.current=snapshot?[snapshot]:[];future.current=[]}
-  function recordHistorySnapshot(){const snapshot=currentHistorySnapshot();if(!snapshot)return;if(history.current[history.current.length-1]!==snapshot){history.current.push(snapshot);if(history.current.length>150)history.current.shift()}future.current=[]}
+  function resetHistoryToCurrent(){if(isProductionSmartCanvasEnabled()){history.current=[];future.current=[];return}const snapshot=currentHistorySnapshot();history.current=snapshot?[snapshot]:[];future.current=[]}
+  function recordHistorySnapshot(){if(isProductionSmartCanvasEnabled())return;const snapshot=currentHistorySnapshot();if(!snapshot)return;if(history.current[history.current.length-1]!==snapshot){history.current.push(snapshot);if(history.current.length>150)history.current.shift()}future.current=[]}
   function markDirty(html?:string,_syncEngine=false,force=false){const next=sanitizeHtml(html??(readEditorHtml()||content));if(next===lastHtml.current&&!force)return;lastHtml.current=next;setContent(next);setState('dirty');setMessage('Alterações não salvas');if(force)setSmartCanvasRevision(revision=>revision+1);recordHistorySnapshot()}
  const [smartCanvasRevision,setSmartCanvasRevision]=useState(0);
  const compositionActive=useRef(false);
