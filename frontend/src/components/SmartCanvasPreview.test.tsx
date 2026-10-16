@@ -37,6 +37,12 @@ vi.mock("./CanvasDocumentRenderer", () => ({
         "data-testid": "smartcanvas-image-hit",
         onClick: () => onHitTest?.({ kind: "block", pageIndex: 0, blockId: item.id }, 1),
       }, "Select image")),
+      ...document.content.filter(item => item.type === "paragraph" && item.editorObject).map(item => createElement("button", {
+        key: item.id,
+        type: "button",
+        "data-testid": "smartcanvas-object-hit",
+        onClick: () => onHitTest?.({ kind: "block", pageIndex: 0, blockId: item.id }, 1),
+      }, "Select object")),
       ...document.content.filter(item => item.type === "table").flatMap(table =>
         table.children.flatMap(row => row.children.map(cell => createElement("button", {
           key: cell.id,
@@ -134,6 +140,54 @@ describe("SmartCanvasPreview input integration", () => {
     if (!afterComposition || afterComposition.type !== "paragraph") throw new Error("Expected paragraph after composition");
     expect(getPlainText(afterComposition)).toBe("Olá SmartCanvas 😀日本語");
   });
+  it("deletes a selected semantic object through the engine without targeting adjacent text", async () => {
+    const document = createDocument({ title: "SmartCanvas object deletion" });
+    const objectParagraph = document.content[0];
+    if (!objectParagraph || objectParagraph.type !== "paragraph") throw new Error("Expected initial paragraph");
+    objectParagraph.children[0]!.text = "Shape text";
+    objectParagraph.editorObject = {
+      kind: "shape",
+      shape: "rectangle",
+      label: "Test shape",
+      fill: "#ffffff",
+      stroke: "#111827",
+      width: 120,
+      height: 60,
+    };
+    document.content.push({
+      type: "paragraph",
+      id: "adjacent-text",
+      children: [{ type: "text", id: "adjacent-run", text: "Keep me", marks: [] }],
+    });
+    engine = createEditor({ document });
+    const onDocumentChange = vi.fn();
+    host = window.document.createElement("div");
+    window.document.body.append(host);
+    root = createRoot(host);
+
+    await act(async () => {
+      root?.render(createElement(SmartCanvasPreview, {
+        document: engine!.getDocument(),
+        engine: engine!,
+        onDocumentChange,
+      }));
+    });
+    const objectHit = host.querySelector('[data-testid="smartcanvas-object-hit"]') as HTMLButtonElement | null;
+    const input = host.querySelector('textarea[aria-label="Entrada de texto do SmartCanvas"]') as HTMLTextAreaElement | null;
+    expect(objectHit).not.toBeNull();
+    if (!input) throw new Error("SmartCanvas input surface was not mounted");
+    await act(async () => { objectHit?.click(); });
+    await act(async () => {
+      input.dispatchEvent(new KeyboardEvent("keydown", { key: "Delete", bubbles: true, cancelable: true }));
+    });
+
+    const result = engine.getDocument();
+    expect(result.content.some(block => block.id === objectParagraph.id)).toBe(false);
+    expect(result.content.some(block => block.id === "adjacent-text")).toBe(true);
+    expect(getPlainText(result.content.find(block => block.id === "adjacent-text") as Extract<NexusDocument["content"][number], { type: "paragraph" }>)).toBe("Keep me");
+    expect(onDocumentChange).toHaveBeenCalled();
+  });
+
   it("pastes sanitized rich HTML and preserves inline formatting in the engine model", async () => {
     const document = createDocument({ title: "SmartCanvas rich paste" });
     engine = createEditor({ document });
