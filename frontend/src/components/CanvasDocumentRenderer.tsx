@@ -151,7 +151,8 @@ function drawBlock(ctx: CanvasRenderingContext2D, block: LayoutBlock, document: 
     ctx.fillText(block.marker, x, y + 2 * PT_TO_CSS_PX);
     ctx.textAlign = "left";
   }
-  if (block.type === "thematicBreak") {
+  const isPageBreak = model?.type === "thematicBreak" && model.kind === "pageBreak";
+  if (block.type === "thematicBreak" && !isPageBreak) {
     ctx.strokeStyle = "#98a2b3";
     ctx.lineWidth = 1;
     ctx.beginPath();
