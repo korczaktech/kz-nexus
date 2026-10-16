@@ -95,4 +95,18 @@ describe("SmartCanvas hit testing", () => {
       kind: "table-cell", blockId: "table-1", cellId: "cell-1", lineIndex: -1,
     });
   });
+  it("prioritizes semantic objects over the text line inside them", () => {
+    const objectLayout = {
+      ...baseLayout,
+      pages: [{
+        ...baseLayout.pages[0],
+        blocks: [{ ...baseLayout.pages[0].blocks[0], object: true }],
+      }],
+    } as unknown as LayoutResult;
+    expect(hitTestLayout(objectLayout, 0, 35, 25)).toMatchObject({
+      kind: "block", blockId: "paragraph-1",
+    });
+  });
+
+
 });
