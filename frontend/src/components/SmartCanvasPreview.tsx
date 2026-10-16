@@ -348,7 +348,7 @@ function getSelectedText(nodes: readonly unknown[], selection: Selection): strin
   }).join("\n");
 }
 
-export function SmartCanvasPreview({ document, engine, headerText = "", footerText = "", headerAlign = "left", footerAlign = "left", showPageNumbers = false, readOnly = false, onHeaderTextChange, onFooterTextChange, onHeaderAlignChange, onFooterAlignChange, onShowPageNumbersChange, onDocumentChange, onStatus }: {
+export function SmartCanvasPreview({ document, engine, headerText = "", footerText = "", headerAlign = "left", footerAlign = "left", showPageNumbers = false, trackChangesActive = false, readOnly = false, onHeaderTextChange, onFooterTextChange, onHeaderAlignChange, onFooterAlignChange, onShowPageNumbersChange, onDocumentChange, onStatus }: {
   document: NexusDocument;
   engine: NexusEngineSession;
   headerText?: string;
@@ -356,6 +356,7 @@ export function SmartCanvasPreview({ document, engine, headerText = "", footerTe
   headerAlign?: "left" | "center" | "right";
   footerAlign?: "left" | "center" | "right";
   showPageNumbers?: boolean;
+  trackChangesActive?: boolean;
   readOnly?: boolean;
   onHeaderTextChange?: (value: string) => void;
   onFooterTextChange?: (value: string) => void;
@@ -1482,7 +1483,7 @@ export function SmartCanvasPreview({ document, engine, headerText = "", footerTe
       onStatus?.("Para navegar em uma tabela, selecione uma célula e use Tab ou Shift+Tab.");
     }
   };
-  return <section className="kz-smartcanvas-experiment" aria-label="Prévia experimental SmartCanvas" style={{ margin: "0 0 16px", padding: 16, border: "1px solid #93c5fd", borderRadius: 12, background: "rgba(59,130,246,.04)", position: "relative" }} onPointerDownCapture={event => { if ((event.target as HTMLElement).closest("input, button, textarea, select")) return; inputRef.current?.focus({ preventScroll: true }); }}>
+  return <section className="kz-smartcanvas-experiment" aria-label="Prévia experimental SmartCanvas" style={{ margin: "0 0 16px", padding: 16, border: "1px solid #93c5fd", borderRadius: 12, background: "rgba(59,130,246,.04)", position: "relative", outline: trackChangesActive ? "2px dashed #d97706" : undefined, outlineOffset: trackChangesActive ? 3 : undefined }} onPointerDownCapture={event => { if ((event.target as HTMLElement).closest("input, button, textarea, select")) return; inputRef.current?.focus({ preventScroll: true }); }}>
     <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, flexWrap: "wrap", marginBottom: 8 }}>
       <div><strong>SmartCanvas — prévia experimental</strong><div style={{ fontSize: 12, opacity: .75 }}>Edição por comandos do motor: texto, seleção lógica, tabelas e objetos. O editor legado permanece disponível durante a validação.</div></div>
       <span style={{ fontSize: 12 }}>{layout ? layout.pageCount + " página(s)" : "Layout indisponível"}</span>
