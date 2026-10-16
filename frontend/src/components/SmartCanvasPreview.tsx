@@ -956,21 +956,83 @@ export function SmartCanvasPreview({ document, engine, headerText = "", footerTe
           onStatus?.("A colagem formatada na célula não pôde ser interpretada; foi usado texto simples.");
         }
       }
-      if (!activeCell && richHtml && current && current.anchor.blockId === current.focus.blockId) {
-        const source = engine.getDocument().content.find(block => block.id === current.focus.blockId);
-        if (source && (source.type === "paragraph" || source.type === "heading")) {
-          try {
-            const imported = nexusDocumentFromHtml(richHtml, engine.getDocument().metadata.title);
-            const result = engine.exec([insertImportedBlocksAtSelection({
-              blockId: source.id,
-              start: Math.min(current.anchor.offset, current.focus.offset),
-              end: Math.max(current.anchor.offset, current.focus.offset),
-              blocks: imported.content,
-              resources: imported.resources,
-            })], { group: "structural" });
-            if (!result.ok) {
-              onStatus?.("A colagem formatada não pôde ser aplicada: " + result.error.message);
-              handleInput(event.clipboardData.getData("text/plain"));
+      if (!activeCell && richHtml && current) {
+        try {
+          const documentNow = engine.getDocument();
+          const imported = nexusDocumentFromHtml(richHtml, documentNow.metadata.title);
+          if (current.anchor.blockId === current.focus.blockId) {
+            const source = documentNow.content.find(block => block.id === current.focus.blockId);
+            if (source && (source.type === "paragraph" || source.type === "heading")) {
+              const result = engine.exec([insertImportedBlocksAtSelection({
+                blockId: source.id,
+                start: Math.min(current.anchor.offset, current.focus.offset),
+                end: Math.max(current.anchor.offset, current.focus.offset),
+                blocks: imported.content,
+                resources: imported.resources,
+              })], { group: "structural" });
+              if (!result.ok) {
+                onStatus?.("A colagem formatada não pôde ser aplicada: " + result.error.message);
+                handleInput(event.clipboardData.getData("text/plain"));
+                return;
+              }
+              syncSelection(result.value.selection ?? engine.getSelection());
+              onDocumentChange(result.value.document);
+              onStatus?.("Conteúdo formatado colado com sanitização.");
+              return;
+            }
+          } else {
+            const textBlocks = collectTextBlocks(documentNow.content);
+            const anchorIndex = textBlocks.findIndex(block => block.id === current.anchor.blockId);
+            const focusIndex = textBlocks.findIndex(block => block.id === current.focus.blockId);
+            if (anchorIndex >= 0 && focusIndex >= 0) {
+              const firstIndex = Math.min(anchorIndex, focusIndex);
+              const lastIndex = Math.max(anchorIndex, focusIndex);
+              const first = textBlocks[firstIndex]!;
+              const last = textBlocks[lastIndex]!;
+              const startOffset = anchorIndex < focusIndex ? current.anchor.offset : current.focus.offset;
+              const endOffset = anchorIndex < focusIndex ? current.focus.offset : current.anchor.offset;
+              const firstTopIndex = documentNow.content.findIndex(block => block.id === first.id);
+              const lastTopIndex = documentNow.content.findIndex(block => block.id === last.id);
+              const selectedTopLevel = firstTopIndex >= 0 && lastTopIndex >= firstTopIndex
+                ? documentNow.content.slice(firstTopIndex, lastTopIndex + 1)
+                : [];
+              const supportedStructure = selectedTopLevel.length === lastIndex - firstIndex + 1 &&
+                selectedTopLevel.every(block => block.type === "paragraph" || block.type === "heading");
+              if (supportedStructure) {
+                const commands = [];
+                if (startOffset < first.text.length) commands.push(deleteText({ blockId: first.id, start: startOffset, end: first.text.length }));
+                for (const block of textBlocks.slice(firstIndex + 1, lastIndex)) {
+                  if (block.text.length) commands.push(deleteText({ blockId: block.id, start: 0, end: block.text.length }));
+                }
+                if (endOffset > 0) commands.push(deleteText({ blockId: last.id, start: 0, end: endOffset }));
+                for (const block of textBlocks.slice(firstIndex + 1, lastIndex + 1)) {
+                  commands.push(mergeBlockWithPrevious({ blockId: block.id }));
+                }
+                commands.push(insertImportedBlocksAtSelection({
+                  blockId: first.id,
+                  start: startOffset,
+                  end: startOffset,
+                  blocks: imported.content,
+                  resources: imported.resources,
+                }));
+                const result = engine.exec(commands, { group: "structural" });
+                if (!result.ok) {
+                  onStatus?.("A colagem formatada entre blocos não pôde ser aplicada: " + result.error.message);
+                  handleInput(event.clipboardData.getData("text/plain"));
+                  return;
+                }
+                syncSelection(result.value.selection ?? engine.getSelection());
+                onDocumentChange(result.value.document);
+                onStatus?.("Conteúdo formatado colado sobre a seleção entre blocos.");
+                return;
+              }
+            }
+          }
+        } catch {
+          onStatus?.("A colagem formatada não pôde ser interpretada; foi usado texto simples.");
+        }
+      }
+      handleInput(event.clipboardData.getData("text/plain"));
               return;
             }
             syncSelection(result.value.selection ?? engine.getSelection());
