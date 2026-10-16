@@ -102,6 +102,9 @@ describe("Editor SmartCanvas save integration", () => {
     });
 
     expect(host.querySelector(".editor-canvas")?.classList.contains("editor-canvas-legacy-fallback")).toBe(true);
+    const legacyBody = host.querySelector(".editor-canvas-legacy-fallback .rich-editor") as HTMLDivElement | null;
+    expect(legacyBody).not.toBeNull();
+    expect(legacyBody?.contentEditable).toBe("false");
     const hit = host.querySelector('[data-testid="editor-smartcanvas-hit"]') as HTMLButtonElement | null;
     expect(hit).not.toBeNull();
     await act(async () => { hit?.click(); });
