@@ -1038,7 +1038,9 @@ export function SmartCanvasPreview({ document, engine, headerText = "", footerTe
       const clipboardImage = Array.from(event.clipboardData.items ?? [])
         .filter(item => item.kind === "file")
         .map(item => item.getAsFile())
-        .find((file): file is File => !!file && /^image\/(?:png|jpeg|gif|webp)$/i.test(file.type));
+        .find((file): file is File => !!file && /^image\/(?:png|jpeg|gif|webp)$/i.test(file.type))
+        ?? Array.from(event.clipboardData.files ?? [])
+          .find((file): file is File => /^image\/(?:png|jpeg|gif|webp)$/i.test(file.type));
       if (clipboardImage) {
         if (activeCell) {
           onStatus?.("A colagem de imagem dentro de células ainda não está disponível; a célula não foi alterada.");
