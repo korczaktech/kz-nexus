@@ -108,9 +108,14 @@ try {
   // Verify that DOCX and PDF export use the same canonical content as the real API save.
   await page.getByRole("button", { name: "Arquivo", exact: true }).click();
   await page.getByRole("button", { name: "Exportar", exact: true }).click();
-  const downloadPromise = page.waitForEvent("download");
-  await page.getByRole("button", { name: /Word \(\.docx\)/ }).click();
-  const download = await downloadPromise;
+  const downloadPromise = page.waitForEvent("download", { timeout: 30000 });
+  await page.getByRole("button", { name: /Word \\(\\.docx\\)/ }).click();
+  const exportErrorPromise = page.getByRole("alert").waitFor({ state: "visible", timeout: 30000 })
+    .then(async () => {
+      const message = await page.getByRole("alert").innerText();
+      throw new Error("DOCX export did not download a file: " + message);
+    });
+  const download = await Promise.race([downloadPromise, exportErrorPromise]);
   const downloadedPath = await download.path();
   assert.ok(downloadedPath, "DOCX export should create a downloadable file");
   assert.ok((await stat(downloadedPath)).size > 100, "DOCX export should not be empty");
