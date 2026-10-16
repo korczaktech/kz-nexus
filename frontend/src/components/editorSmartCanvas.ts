@@ -77,12 +77,26 @@ export function findSmartCanvasTextMatches(content: readonly unknown[], term: st
   const matches: SmartCanvasTextMatch[] = [];
   for (const block of collectSmartCanvasTextBlocks(content)) {
     const text = block.children.map(run => run.text).join("");
-    const haystack = text.toLocaleLowerCase();
+    let folded = "";
+    const sourceStarts: number[] = [];
+    const sourceEnds: number[] = [];
+    for (let offset = 0; offset < text.length;) {
+      const codePoint = String.fromCodePoint(text.codePointAt(offset)!);
+      const lower = codePoint.toLocaleLowerCase();
+      for (let index = 0; index < lower.length; index += 1) {
+        folded += lower[index];
+        sourceStarts.push(offset);
+        sourceEnds.push(offset + codePoint.length);
+      }
+      offset += codePoint.length;
+    }
     let from = 0;
     while (true) {
-      const at = haystack.indexOf(needle, from);
+      const at = folded.indexOf(needle, from);
       if (at < 0) break;
-      matches.push({ blockId: block.id, start: at, end: at + term.length });
+      const start = sourceStarts[at];
+      const end = sourceEnds[at + needle.length - 1];
+      if (start !== undefined && end !== undefined) matches.push({ blockId: block.id, start, end });
       from = at + Math.max(1, needle.length);
     }
   }

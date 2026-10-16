@@ -71,6 +71,17 @@ describe("production SmartCanvas migration gate", () => {
   });
 
 
+
+  it("maps case-folded Unicode matches back to original UTF-16 offsets", () => {
+    const content = [{ type: "paragraph", id: "unicode", children: [{ text: "İstanbul 😀" }] }];
+    expect(findSmartCanvasTextMatches(content, "stanbul")).toEqual([
+      { blockId: "unicode", start: 1, end: 8 },
+    ]);
+    expect(findSmartCanvasTextMatches(content, "😀")).toEqual([
+      { blockId: "unicode", start: 8, end: 10 },
+    ]);
+  });
+
   it("maps forward and reverse selections across table and list text without flattening containers", () => {
     const content = [
       { type: "paragraph", id: "first", children: [{ text: "Alpha" }] },
