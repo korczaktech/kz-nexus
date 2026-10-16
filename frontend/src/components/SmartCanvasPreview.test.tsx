@@ -232,7 +232,7 @@ describe("SmartCanvasPreview input integration", () => {
       value: { setData: (type: string, value: string) => { if (type === "text/plain") copied = value; } },
     });
     await act(async () => { input.dispatchEvent(copy); });
-    expect(copied).toBe("Before\\nInside cell");
+    expect(copied).toBe("Before\nInside cell");
     expect(copy.defaultPrevented).toBe(true);
     await act(async () => {
       const setter = Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, "value")?.set;
