@@ -152,7 +152,21 @@ function drawBlock(ctx: CanvasRenderingContext2D, block: LayoutBlock, document: 
       ctx.fillStyle = "#344054";
       ctx.font = "10pt Arial, sans-serif";
       ctx.textBaseline = "middle";
-      ctx.fillText(object.label, objectX + 6, objectY + objectHeight / 2, Math.max(0, objectWidth - 12));
+      ctx.textAlign = "center";
+      ctx.fillText(object.label, objectX + objectWidth / 2, objectY + objectHeight / 2, Math.max(0, objectWidth - 12));
+      ctx.textAlign = "left";
+    } else {
+      // Object paragraphs are laid out like text, but the text belongs inside
+      // the shape instead of being painted a second time at the page margin.
+      ctx.save();
+      ctx.beginPath();
+      ctx.rect(objectX + 4, objectY + 4, Math.max(0, objectWidth - 8), Math.max(0, objectHeight - 8));
+      ctx.clip();
+      ctx.translate(6, 5);
+      if (!((model?.type === "paragraph" || model?.type === "heading") && model.editorObject)) {
+    for (const line of block.lines) drawLine(ctx, line);
+  }
+      ctx.restore();
     }
   }
   if (block.quote) {
