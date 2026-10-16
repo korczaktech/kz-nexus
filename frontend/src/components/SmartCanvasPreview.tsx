@@ -415,6 +415,28 @@ export function SmartCanvasPreview({ document, engine, headerText = "", footerTe
   useEffect(() => {
     const unsubscribeSelection = engine.on("selectionChanged", ({ selection: next }) => {
       setSelection(next ?? null);
+      if (!next) {
+        setActiveCell(null);
+        return;
+      }
+      setActiveCell(() => {
+        const cells = collectTableCells(engine.getDocument().content);
+        const owner = cells.find(cell => {
+          const paragraphs = collectCellParagraphs(engine.getDocument().content, cell.tableId, cell.rowId, cell.cellId);
+          return paragraphs.some(paragraph => paragraph.id === next.anchor.blockId) &&
+            paragraphs.some(paragraph => paragraph.id === next.focus.blockId);
+        });
+        if (!owner) return null;
+        const paragraphs = collectCellParagraphs(engine.getDocument().content, owner.tableId, owner.rowId, owner.cellId);
+        const anchorParagraph = paragraphs.find(paragraph => paragraph.id === next.anchor.blockId);
+        const focusParagraph = paragraphs.find(paragraph => paragraph.id === next.focus.blockId);
+        if (!anchorParagraph || !focusParagraph) return null;
+        return {
+          ...owner,
+          anchorOffset: Math.max(0, Math.min(owner.text.length, anchorParagraph.start + next.anchor.offset)),
+          offset: Math.max(0, Math.min(owner.text.length, focusParagraph.start + next.focus.offset)),
+        };
+      });
     });
     const unsubscribeDocument = engine.on("documentChanged", ({ document: nextDocument }) => {
       setActiveCell(current => {
