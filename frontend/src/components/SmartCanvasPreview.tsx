@@ -273,7 +273,7 @@ export function SmartCanvasPreview({ document, engine, headerText = "", footerTe
       if (end > 0) commands.push(deleteText({ blockId: last.id, start: 0, end }));
       for (const block of blocks.slice(firstIndex + 1, lastIndex + 1)) commands.push(mergeBlockWithPrevious({ blockId: block.id }));
       commands.push(insertText({ blockId: first.id, offset: start, text, marks: marksAtTextOffset(engine.getDocument().content, first.id, start, engine) }));
-      const result = engine.exec(commands, { group: "typing" });
+      const result = engine.exec(commands, { group: "structural" });
       if (!result.ok) { onStatus?.("Não foi possível substituir a seleção entre blocos: " + result.error.message); return; }
       syncSelection(result.value.selection);
       onDocumentChange(result.value.document);
@@ -625,7 +625,7 @@ export function SmartCanvasPreview({ document, engine, headerText = "", footerTe
           deleteText({ blockId: last.id, start: 0, end }),
           ...blocks.slice(firstIndex + 1, lastIndex + 1).map(item => mergeBlockWithPrevious({ blockId: item.id })),
         ];
-        const result = engine.exec(commands, { group: "typing" });
+        const result = engine.exec(commands, { group: "structural" });
         if (!result.ok) { onStatus?.("Não foi possível excluir entre esses blocos: " + result.error.message); return; }
         setSelection(engine.getSelection() ?? null);
         onDocumentChange(result.value.document);
