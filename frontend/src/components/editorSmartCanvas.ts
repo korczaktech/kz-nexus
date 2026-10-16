@@ -26,6 +26,28 @@ export function collectSmartCanvasTextBlocks(content: readonly unknown[]): Array
   return blocks;
 }
 
+
+export type SmartCanvasTextMatch = { blockId: string; start: number; end: number };
+
+/** Finds case-insensitive matches in document order, including text nested in tables and lists. */
+export function findSmartCanvasTextMatches(content: readonly unknown[], term: string): SmartCanvasTextMatch[] {
+  if (!term) return [];
+  const needle = term.toLocaleLowerCase();
+  const matches: SmartCanvasTextMatch[] = [];
+  for (const block of collectSmartCanvasTextBlocks(content)) {
+    const text = block.children.map(run => run.text).join("");
+    const haystack = text.toLocaleLowerCase();
+    let from = 0;
+    while (true) {
+      const at = haystack.indexOf(needle, from);
+      if (at < 0) break;
+      matches.push({ blockId: block.id, start: at, end: at + term.length });
+      from = at + Math.max(1, needle.length);
+    }
+  }
+  return matches;
+}
+
 export type SmartCanvasDiagnostics = {
   reads: number;
   successfulReads: number;

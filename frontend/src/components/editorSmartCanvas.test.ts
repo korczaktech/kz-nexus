@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
   collectSmartCanvasTextBlocks,
+  findSmartCanvasTextMatches,
   dispatchSmartCanvasBeforeInput,
   getSmartCanvasDiagnostics,
   isProductionSmartCanvasEnabled,
@@ -39,6 +40,33 @@ describe("production SmartCanvas migration gate", () => {
     expect(collectSmartCanvasTextBlocks(content).map(block => block.id)).toEqual([
       "top", "cell-paragraph", "list-paragraph", "after",
     ]);
+  });
+
+
+  it("finds case-insensitive matches in nested table and list paragraphs in document order", () => {
+    const content = [
+      { type: "paragraph", id: "top", children: [{ text: "Alpha alpha" }] },
+      { type: "table", id: "table", children: [
+        { type: "tableRow", id: "row", children: [
+          { type: "tableCell", id: "cell", children: [
+            { type: "paragraph", id: "cell-p", children: [{ text: "ALPHA" }] },
+            { type: "bulletList", id: "list", children: [
+              { type: "listItem", id: "item", children: [
+                { type: "paragraph", id: "list-p", children: [{ text: "alpha beta alpha" }] },
+              ] },
+            ] },
+          ] },
+        ] },
+      ] },
+    ];
+    expect(findSmartCanvasTextMatches(content, "alpha")).toEqual([
+      { blockId: "top", start: 0, end: 5 },
+      { blockId: "top", start: 6, end: 11 },
+      { blockId: "cell-p", start: 0, end: 5 },
+      { blockId: "list-p", start: 0, end: 5 },
+      { blockId: "list-p", start: 11, end: 16 },
+    ]);
+    expect(findSmartCanvasTextMatches(content, "")).toEqual([]);
   });
 
   it("keeps diagnostic counters isolated and returns a snapshot", () => {
