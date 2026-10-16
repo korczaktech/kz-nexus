@@ -1,5 +1,5 @@
 import { useMemo, useRef, useState } from "react";
-import { addTableRow, collapsedAt, deleteBlock, deleteText, insertText, removeImage, getLineXAtOffset, getOffsetAtLineX, getPlainText, layoutDocument, mergeBlockWithPrevious, replaceRange, setCellText, splitBlock, toggleMark as toggleMarkCommand, type Editor as NexusEngineSession, type Mark, type NexusDocument, type Selection, type SmartCanvasHitTarget } from "../../../packages/engine/src/index";
+import { addTableRow, collapsedAt, deleteBlock, deleteText, insertText, removeImage, updateImage, getLineXAtOffset, getOffsetAtLineX, getPlainText, layoutDocument, mergeBlockWithPrevious, replaceRange, setCellText, splitBlock, toggleMark as toggleMarkCommand, type Editor as NexusEngineSession, type Mark, type NexusDocument, type Selection, type SmartCanvasHitTarget } from "../../../packages/engine/src/index";
 import { CanvasDocumentRenderer } from "./CanvasDocumentRenderer";
 import { lineEndOffset, lineStartOffset, nearestGraphemeOffset, nextCodePointOffset, nextWordOffset, previousCodePointOffset, previousWordOffset, verticalLineOffset, wordRangeAt } from "./smartCanvasTextOffsets";
 
@@ -215,6 +215,9 @@ export function SmartCanvasPreview({ document, engine, headerText = "", footerTe
   const [selection, setSelection] = useState<Selection | null>(engine.getSelection() ?? null);
   const [activeCell, setActiveCell] = useState<(EditableCell & { anchorOffset: number; offset: number }) | null>(null);
   const [activeBlockId, setActiveBlockId] = useState<string | null>(null);
+  const [imageAltDraft, setImageAltDraft] = useState("");
+  const [imageWidthDraft, setImageWidthDraft] = useState("");
+  const [imageHeightDraft, setImageHeightDraft] = useState("");
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const composing = useRef(false);
   const preferredVerticalX = useRef<number | null>(null);
@@ -260,11 +263,43 @@ export function SmartCanvasPreview({ document, engine, headerText = "", footerTe
       onStatus?.(clickCount >= 3 ? "Texto da célula selecionado." : clickCount >= 2 ? "Palavra da célula selecionada." : "Editando célula da tabela. Use Tab para avançar entre células.");
     } else {
       setActiveBlockId(target.blockId);
+      const selectedBlock = findBlock(engine.getDocument().content, target.blockId);
+      if (selectedBlock?.type === "image") {
+        setImageAltDraft(selectedBlock.alt ?? "");
+        setImageWidthDraft(selectedBlock.width == null ? "" : String(selectedBlock.width));
+        setImageHeightDraft(selectedBlock.height == null ? "" : String(selectedBlock.height));
+      }
       setSelection(null);
       engine.setSelection(undefined);
       inputRef.current?.focus({ preventScroll: true });
-      onStatus?.("Bloco " + target.blockId + " selecionado no SmartCanvas. A edição de texto está suspensa até que um bloco de texto seja selecionado.");
+      onStatus?.(selectedBlock?.type === "image"
+        ? "Imagem selecionada. Edite o texto alternativo e as dimensões nos controles do SmartCanvas."
+        : "Bloco " + target.blockId + " selecionado no SmartCanvas. A edição de texto está suspensa até que um bloco de texto seja selecionado.");
     }
+  };
+  const applySelectedImageProperties = () => {
+    if (readOnly || !activeBlockId) return;
+    const selected = findBlock(engine.getDocument().content, activeBlockId);
+    if (!selected || selected.type !== "image") return;
+    const width = imageWidthDraft.trim() === "" ? null : Number(imageWidthDraft);
+    const height = imageHeightDraft.trim() === "" ? null : Number(imageHeightDraft);
+    if ((width !== null && (!Number.isFinite(width) || width <= 0 || width > 2000)) ||
+        (height !== null && (!Number.isFinite(height) || height <= 0 || height > 2000))) {
+      onStatus?.("Largura e altura devem estar entre 1 e 2000 pixels, ou vazias para usar o tamanho automático.");
+      return;
+    }
+    const result = engine.exec([updateImage({
+      blockId: selected.id,
+      alt: imageAltDraft,
+      width,
+      height,
+    })], { group: "structural" });
+    if (!result.ok) {
+      onStatus?.("Não foi possível atualizar a imagem: " + result.error.message);
+      return;
+    }
+    onDocumentChange(result.value.document);
+    onStatus?.("Propriedades da imagem atualizadas.");
   };
   const commitText = (text: string) => {
     if (!text || readOnly) return;
@@ -788,6 +823,18 @@ export function SmartCanvasPreview({ document, engine, headerText = "", footerTe
       <div><strong>SmartCanvas — prévia experimental</strong><div style={{ fontSize: 12, opacity: .75 }}>Edição inicial por seleção lógica: digitação, seleção e navegação entre blocos. O editor legado permanece disponível.</div></div>
       <span style={{ fontSize: 12 }}>{layout ? layout.pageCount + " página(s)" : "Layout indisponível"}</span>
     </div>
+    {activeBlockId && findBlock(document.content, activeBlockId)?.type === "image" ? <div role="group" aria-label="Propriedades da imagem selecionada" style={{ display: "flex", alignItems: "end", gap: 8, flexWrap: "wrap", marginBottom: 10, padding: 10, border: "1px solid #bfdbfe", borderRadius: 8, background: "#eff6ff" }}>
+      <label style={{ display: "grid", gap: 4, fontSize: 12 }}>Texto alternativo
+        <input aria-label="Texto alternativo da imagem" value={imageAltDraft} disabled={readOnly} onChange={event => setImageAltDraft(event.currentTarget.value)} style={{ minWidth: 180, padding: "6px 8px", border: "1px solid #cbd5e1", borderRadius: 6 }} />
+      </label>
+      <label style={{ display: "grid", gap: 4, fontSize: 12 }}>Largura (px)
+        <input aria-label="Largura da imagem em pixels" type="number" min={1} max={2000} value={imageWidthDraft} disabled={readOnly} onChange={event => setImageWidthDraft(event.currentTarget.value)} placeholder="Automática" style={{ width: 110, padding: "6px 8px", border: "1px solid #cbd5e1", borderRadius: 6 }} />
+      </label>
+      <label style={{ display: "grid", gap: 4, fontSize: 12 }}>Altura (px)
+        <input aria-label="Altura da imagem em pixels" type="number" min={1} max={2000} value={imageHeightDraft} disabled={readOnly} onChange={event => setImageHeightDraft(event.currentTarget.value)} placeholder="Automática" style={{ width: 110, padding: "6px 8px", border: "1px solid #cbd5e1", borderRadius: 6 }} />
+      </label>
+      <button type="button" disabled={readOnly} onClick={applySelectedImageProperties} style={{ padding: "7px 12px", border: "1px solid #2563eb", borderRadius: 6, background: "#2563eb", color: "#fff", cursor: readOnly ? "not-allowed" : "pointer" }}>Aplicar</button>
+    </div> : null}
     <textarea ref={inputRef} disabled={readOnly} aria-label="Entrada de texto do SmartCanvas" autoCapitalize="off" autoComplete="off" spellCheck={false} defaultValue="" onChange={event => { if (!composing.current) handleInput(event.currentTarget.value); }} onKeyDown={handleKeyDown} onCopy={event => { if (activeCell) { const start = Math.min(activeCell.anchorOffset, activeCell.offset), end = Math.max(activeCell.anchorOffset, activeCell.offset); if (start === end) return; event.clipboardData.setData("text/plain", activeCell.text.slice(start, end)); event.preventDefault(); return; } const current = engine.getSelection(); if (!current || (current.anchor.blockId === current.focus.blockId && current.anchor.offset === current.focus.offset)) return; event.clipboardData.setData("text/plain", getSelectedText(engine.getDocument().content, current)); event.preventDefault(); }} onCut={event => { if (readOnly) { event.preventDefault(); return; } if (activeCell) { const start = Math.min(activeCell.anchorOffset, activeCell.offset), end = Math.max(activeCell.anchorOffset, activeCell.offset); if (start === end) return; event.clipboardData.setData("text/plain", activeCell.text.slice(start, end)); event.preventDefault(); commitCellText(activeCell.text.slice(0, start) + activeCell.text.slice(end), start); return; } const current = engine.getSelection(); if (!current || (current.anchor.blockId === current.focus.blockId && current.anchor.offset === current.focus.offset)) return; event.clipboardData.setData("text/plain", getSelectedText(engine.getDocument().content, current)); event.preventDefault(); if (current.anchor.blockId !== current.focus.blockId) { const blocks = collectTextBlocks(engine.getDocument().content); const anchorIndex = blocks.findIndex(item => item.id === current.anchor.blockId), focusIndex = blocks.findIndex(item => item.id === current.focus.blockId); if (anchorIndex < 0 || focusIndex < 0) { onStatus?.("A seleção não corresponde a blocos editáveis; o texto foi copiado sem removê-lo."); return; } const firstIndex = Math.min(anchorIndex, focusIndex), lastIndex = Math.max(anchorIndex, focusIndex); const first = blocks[firstIndex], last = blocks[lastIndex]; const start = anchorIndex < focusIndex ? current.anchor.offset : current.focus.offset, end = anchorIndex < focusIndex ? current.focus.offset : current.anchor.offset; const commands = [deleteText({ blockId: first.id, start, end: first.text.length }), ...blocks.slice(firstIndex + 1, lastIndex).map(item => deleteText({ blockId: item.id, start: 0, end: item.text.length })), deleteText({ blockId: last.id, start: 0, end }), ...blocks.slice(firstIndex + 1, lastIndex + 1).map(item => mergeBlockWithPrevious({ blockId: item.id }))]; const result = engine.exec(commands, { group: "structural" }); if (!result.ok) { onStatus?.("O texto foi copiado, mas não foi possível removê-lo: " + result.error.message); return; } setSelection(engine.getSelection() ?? null); onDocumentChange(result.value.document); return; } const block = findBlock(engine.getDocument().content, current.focus.blockId); if (!block) return; const start = Math.min(current.anchor.offset, current.focus.offset), end = Math.max(current.anchor.offset, current.focus.offset); const result = engine.exec([deleteText({ blockId: block.id, start, end })], { group: "typing" }); if (result.ok) { setSelection(result.value.selection ?? null); onDocumentChange(result.value.document); } }} onPaste={event => { event.preventDefault(); handleInput(event.clipboardData.getData("text/plain")); }} onCompositionStart={() => { composing.current = true; }} onCompositionEnd={event => { composing.current = false; handleInput(event.currentTarget.value); }} style={{ position: "absolute", width: 1, height: 1, opacity: 0, padding: 0, border: 0, overflow: "hidden", left: 0, bottom: 0, resize: "none" }} />
     {layout ? <div style={{ maxHeight: 560, overflow: "auto", background: "#e5e7eb", borderRadius: 8 }}>
       <CanvasDocumentRenderer layout={layout} document={document} headerText={headerText} footerText={footerText} headerAlign={headerAlign} footerAlign={footerAlign} showPageNumbers={showPageNumbers} selection={selection || undefined} showCaret={!!selection && !activeCell} activeCellId={activeCell?.cellId} activeCellSelection={activeCell || undefined} activeBlockId={activeBlockId || undefined} onHitTest={handleHit} />
