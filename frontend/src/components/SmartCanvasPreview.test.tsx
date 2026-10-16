@@ -88,6 +88,29 @@ describe("SmartCanvasPreview input integration", () => {
     engine = undefined;
   });
 
+  it("initializes a logical insertion point without requiring a prior text hit", async () => {
+    const document = createDocument({ title: "SmartCanvas initial selection" });
+    const first = document.content[0];
+    if (!first || first.type !== "paragraph") throw new Error("Expected initial paragraph");
+    engine = createEditor({ document });
+    host = window.document.createElement("div");
+    window.document.body.append(host);
+    root = createRoot(host);
+
+    await act(async () => {
+      root?.render(createElement(SmartCanvasPreview, {
+        document: engine!.getDocument(),
+        engine: engine!,
+        onDocumentChange: vi.fn(),
+      }));
+    });
+
+    expect(engine.getSelection()).toEqual({
+      anchor: { blockId: first.id, offset: 0 },
+      focus: { blockId: first.id, offset: 0 },
+    });
+  });
+
   it("routes text input, undo, and redo through the canonical engine session", async () => {
     const document = createDocument({ title: "SmartCanvas input integration" });
     engine = createEditor({ document });
