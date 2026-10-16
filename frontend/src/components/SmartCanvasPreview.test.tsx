@@ -779,7 +779,7 @@ describe("SmartCanvasPreview input integration", () => {
     expect(image?.type, JSON.stringify(onStatus.mock.calls)).toBe("image");
     expect(result.resources.some(resource => resource.kind === "image" && resource.name === "pasted.png")).toBe(true);
     expect(onDocumentChange).toHaveBeenCalled();
-    expect(onStatus).toHaveBeenLastCalledWith("Imagem colada e incorporada ao documento pelo SmartCanvas.");
+    expect(onStatus).toHaveBeenLastCalledWith("Imagem inserida pelo SmartCanvas.");
   });
 
   it("defers intermediate IME input and commits the composed text once", async () => {
