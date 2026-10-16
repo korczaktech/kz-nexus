@@ -214,6 +214,27 @@ function collectLayoutLines(
   }
 }
 
+function createCanvasLayoutMetrics(): import("../../../packages/engine/src/layout/layout").TextMetrics {
+  let context: CanvasRenderingContext2D | null = null;
+  try {
+    context = window.document.createElement("canvas").getContext("2d");
+  } catch {
+    // Non-browser test hosts may not implement Canvas; the engine fallback remains deterministic.
+  }
+  return {
+    measureText(text, fontSize, fontFamily, marks = []) {
+      if (!context) return text.length * fontSize * 0.52;
+      const bold = marks.some(mark => mark.type === "bold") ? "700 " : "400 ";
+      const italic = marks.some(mark => mark.type === "italic") ? "italic " : "";
+      context.font = `${italic}${bold}${fontSize * (96 / 72)}px ${fontFamily || "Arial"}`;
+      return context.measureText(text).width * (72 / 96);
+    },
+    lineHeight(fontSize) {
+      return fontSize * 1.2;
+    },
+  };
+}
+
 function createLayoutTextMeasurer(): (text: string, run?: import("../../../packages/engine/src/layout/layout").LayoutTextRun) => number {
   // Reuse one canvas/context for all measurements in a single navigation event.
   const canvas = window.document.createElement("canvas");
@@ -281,7 +302,7 @@ export function SmartCanvasPreview({ document, engine, headerText = "", footerTe
   const preferredVerticalX = useRef<number | null>(null);
   const preferredCellColumn = useRef<number | null>(null);
   const layout = useMemo(() => {
-    try { return layoutDocument(document); }
+    try { return layoutDocument(document, { metrics: createCanvasLayoutMetrics() }); }
     catch { return null; }
   }, [document]);
 
