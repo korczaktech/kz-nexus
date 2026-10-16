@@ -398,6 +398,48 @@ describe("SmartCanvasPreview input integration", () => {
     expect(getPlainText(committed)).toBe("にほん");
   });
 
+  it("pastes rich inline formatting into a table cell without flattening marks", async () => {
+    const document = createDocument({ title: "SmartCanvas rich cell paste" });
+    engine = createEditor({ document });
+    const paragraph = engine.getDocument().content[0];
+    if (!paragraph || paragraph.type !== "paragraph") throw new Error("Expected initial paragraph");
+    expect(engine.exec([insertTable({ afterBlockId: paragraph.id, rows: 1, columns: 1 })]).ok).toBe(true);
+    const onDocumentChange = vi.fn();
+    const onStatus = vi.fn();
+    host = window.document.createElement("div");
+    window.document.body.append(host);
+    root = createRoot(host);
+
+    await act(async () => {
+      root?.render(createElement(SmartCanvasPreview, {
+        document: engine!.getDocument(),
+        engine: engine!,
+        onDocumentChange,
+        onStatus,
+      }));
+    });
+    const cellHit = host.querySelector('[data-testid="smartcanvas-cell-hit"]') as HTMLButtonElement | null;
+    await act(async () => { cellHit?.click(); });
+    const input = host.querySelector('textarea[aria-label="Entrada de texto do SmartCanvas"]') as HTMLTextAreaElement | null;
+    if (!input) throw new Error("SmartCanvas input surface was not mounted");
+    const paste = new Event("paste", { bubbles: true, cancelable: true });
+    Object.defineProperty(paste, "clipboardData", {
+      value: { getData: (type: string) => type === "text/html" ? "<p><strong>Bold</strong> <em>italic</em></p>" : "Bold italic" },
+    });
+    await act(async () => { input.dispatchEvent(paste); });
+
+    const table = engine.getDocument().content.find(block => block.type === "table");
+    if (!table || table.type !== "table") throw new Error("Expected table after rich paste");
+    const cell = table.children[0]?.children[0];
+    const cellParagraph = cell?.children[0];
+    if (!cellParagraph || cellParagraph.type !== "paragraph") throw new Error("Expected paragraph in cell after rich paste");
+    expect(getPlainText(cellParagraph)).toBe("Bold italic");
+    expect(cellParagraph.children.some(run => run.text === "Bold" && run.marks.some(mark => mark.type === "bold"))).toBe(true);
+    expect(cellParagraph.children.some(run => run.text === "italic" && run.marks.some(mark => mark.type === "italic"))).toBe(true);
+    expect(onDocumentChange).toHaveBeenCalled();
+    expect(onStatus).toHaveBeenLastCalledWith("Conteúdo formatado colado na célula com sanitização.");
+  });
+
   it("edits a table cell and creates a row when Tab leaves the final cell", async () => {
     const document = createDocument({ title: "SmartCanvas table integration" });
     engine = createEditor({ document });
