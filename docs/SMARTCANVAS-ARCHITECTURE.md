@@ -112,11 +112,11 @@ A migração é por capacidades, com a implementação nova opt-in e o caminho a
 - [x] O caminho experimental opt-in renderiza as páginas a partir do layout do motor via SmartCanvasPreview; validar visualmente em execução antes de considerar paridade concluída.
 - [x] Hit-testing do motor mapeia coordenadas em pontos para posições lógicas, blocos e células sem consultar seleção DOM; há testes unitários dedicados.
 - [x] O renderer Canvas aceita um callback opcional de pointer hit-test, mantendo o comportamento existente quando não configurado.
-- [x] Caret e seleção de texto de um único bloco podem ser desenhados em um canvas overlay independente do conteúdo, quando a seleção lógica é fornecida.
+- [x] Caret e seleção lógica visual são desenhados em overlay independente do conteúdo; a geometria agora cobre seleções entre blocos e páginas, com teste dedicado entre blocos.
 - [ ] Imagens, tabelas, marcas, objetos, cabeçalho/rodapé e quebras têm cobertura explícita.
 
 ### Etapa 3 — edição própria
-- [ ] Controlador inicial de entrada implementado para digitação, IME, seleção de bloco, setas esquerda/direita, Home/End, Backspace/Delete, Ctrl/Cmd+A, cópia, recorte, colagem de texto e undo/redo; ainda faltam seleção estendida, navegação entre blocos, Enter/Tab e testes de integração.
+- [ ] Controlador inicial implementado para digitação, IME, seleção estendida com Shift, navegação entre blocos, Home/End, Backspace/Delete, Ctrl/Cmd+A, cópia, recorte, colagem de texto e undo/redo; ainda faltam Enter/Tab, seleção de intervalos entre blocos para exclusão e testes de integração.
 - [ ] O conteúdo do corpo não depende de contentEditable nem de execCommand.
 - [ ] Undo/redo restaura documento e seleção sem histórico paralelo divergente.
 - [ ] Cabeçalho e rodapé também têm fluxo de edição próprio, ou um escopo de compatibilidade explicitamente isolado até sua migração.
@@ -132,8 +132,8 @@ A migração é por capacidades, com a implementação nova opt-in e o caminho a
 
 ## 5. Progresso e próxima tarefa
 
-**Implementado nesta iteração:** função pura hitTestLayout; geometria de caret/seleção e overlay; testes unitários do motor; prévia opt-in sob `?smartCanvas=1`; controlador inicial ligado à sessão do motor para inserir texto, excluir caracteres/seleção no mesmo bloco, navegar com setas esquerda/direita e Home/End, selecionar o texto do bloco, copiar/recortar/colar texto, processar composição IME e desfazer/refazer. O estado do documento é propagado ao editor para manter o salvamento e os rascunhos existentes. O modo somente leitura desativa o controlador. O editor legado continua disponível como fallback.
+**Implementado nesta iteração:** hit-testing puro; caret e geometria de seleção no overlay; seleção visual entre blocos e páginas; prévia opt-in sob `?smartCanvas=1`; controlador ligado à sessão do motor para digitação, exclusão no mesmo bloco, Shift+setas, navegação entre blocos, Home/End, Ctrl/Cmd+A, cópia/recorte/colagem de texto, composição IME e undo/redo. Backspace no início e Delete no fim tentam unir parágrafos adjacentes via comando semântico do motor. O documento é propagado ao fluxo existente de salvamento/rascunhos. O modo somente leitura desativa o controlador. O editor legado continua disponível como fallback.
 
-**Limitações conhecidas:** a seleção é restrita a um bloco; exclusão não atravessa blocos; Enter e Tab ainda não editam estrutura; navegação vertical e seleção estendida com Shift ainda faltam. A prévia não é fonte única da verdade e os testes/build ainda precisam ser executados.
+**Limitações conhecidas:** exclusão de uma seleção que atravessa blocos ainda não está implementada; unir blocos só funciona quando o motor aceita a estrutura adjacente; Enter/Tab, navegação vertical, edição de células de tabela e testes de integração ainda faltam. A seleção lógica entre blocos tem teste unitário de geometria, mas a compilação e os testes completos ainda não foram executados neste ambiente.
 
-**Próxima tarefa:** adicionar testes do controlador e do fluxo de persistência; implementar seleção estendida e navegação entre blocos; em seguida, implementar Enter/quebra de parágrafo e edição de células. Não remover contentEditable nem alterar o caminho padrão antes de validar os fluxos e a paridade de recursos.
+**Próxima tarefa:** implementar Enter/quebra de parágrafo e exclusão de seleção entre blocos com comandos semânticos; depois, edição de células e testes de integração/persistência. Não remover contentEditable nem alterar o caminho padrão antes de validar os fluxos e a paridade de recursos.
