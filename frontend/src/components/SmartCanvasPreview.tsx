@@ -366,6 +366,7 @@ export function SmartCanvasPreview({ document, engine, headerText = "", footerTe
   onStatus?: (message: string) => void;
 }) {
   const [selection, setSelection] = useState<Selection | null>(engine.getSelection() ?? null);
+  const selectionRef = useRef<Selection | null>(engine.getSelection() ?? null);
   const [activeCell, setActiveCell] = useState<(EditableCell & { anchorOffset: number; offset: number }) | null>(null);
   const [activeCellStoredMarks, setActiveCellStoredMarks] = useState<Mark[] | null>(null);
   const [activeBlockId, setActiveBlockId] = useState<string | null>(null);
@@ -400,12 +401,14 @@ export function SmartCanvasPreview({ document, engine, headerText = "", footerTe
   useEffect(() => {
     const current = engine.getSelection();
     if (current) {
+      selectionRef.current = current;
       setSelection(current);
       return;
     }
     const first = collectTextBlocks(engine.getDocument().content)[0];
     if (!first) return;
     const initial = collapsedAt({ blockId: first.id, offset: 0 });
+    selectionRef.current = initial;
     engine.setSelection(initial);
     setSelection(initial);
   }, [engine]);
@@ -414,7 +417,10 @@ export function SmartCanvasPreview({ document, engine, headerText = "", footerTe
   // triggered by the outer editor toolbar (not only by this component's keys).
   useEffect(() => {
     const unsubscribeSelection = engine.on("selectionChanged", ({ selection: next }) => {
+      const changed = selectionRef.current !== (next ?? null);
+      selectionRef.current = next ?? null;
       setSelection(next ?? null);
+      if (!changed) return;
       if (!next) {
         setActiveCell(null);
         return;
