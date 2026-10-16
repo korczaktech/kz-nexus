@@ -9,7 +9,7 @@ describe('DOCX import/export round-trip',()=>{
   afterEach(()=>{vi.unstubAllGlobals();window?.close()});
   it('retains common structure and inline formatting',async()=>{
     window=new Window();vi.stubGlobal('DOMParser',window.DOMParser);
-    const mod=await import('html-to-docx');
+    const mod=await import('@turbodocx/html-to-docx');
     const convert=(mod as any).default||mod;
     const html=normalizeHtmlForDocx('<h1>Relatório</h1><p>Texto <strong>forte</strong> e <em>itálico</em>.</p><ul><li>Primeiro</li><li>Segundo</li></ul><table><tr><td>A</td><td>B</td></tr></table>');
     const output=await convert('<html><body>'+html+'</body></html>',null,{});
@@ -24,7 +24,7 @@ describe('DOCX import/export round-trip',()=>{
   },15000);
   it('retains embedded raster images through DOCX export and import',async()=>{
     window=new Window();vi.stubGlobal('DOMParser',window.DOMParser);
-    const mod=await import('html-to-docx');
+    const mod=await import('@turbodocx/html-to-docx');
     const convert=(mod as any).default||mod;
     const png='data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+j7V8AAAAASUVORK5CYII=';
     const html=normalizeHtmlForDocx('<p><img src="'+png+'" alt="pixel"></p>');

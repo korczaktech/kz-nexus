@@ -220,7 +220,7 @@ export async function saveCloudFile(file:CloudFile,content:string):Promise<void>
   }
   const ext=(file.name.split(".").pop()||"").toLowerCase();
   if(ext==="docx"||file.mimeType===docx){
-    const mod=await import("html-to-docx");
+    const mod=await import("@turbodocx/html-to-docx");
     const convert=(mod as any).default||mod;
     const blob=await convert("<html><body>"+normalizeHtmlForDocx(content)+"</body></html>",null,{});
     await request("https://www.googleapis.com/upload/drive/v3/files/"+encodeURIComponent(file.id)+"?uploadType=media",{method:"PATCH",headers:{"Content-Type":docx},body:blob instanceof Blob?blob:new Blob([blob],{type:docx})});
