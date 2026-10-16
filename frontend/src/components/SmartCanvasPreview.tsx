@@ -304,7 +304,7 @@ export function SmartCanvasPreview({ document, engine, headerText = "", footerTe
       return;
     }
     const result = engine.exec([updateImage({
-      blockId: selected.id,
+      blockId: activeBlockId,
       alt: imageAltDraft,
       width,
       height,
