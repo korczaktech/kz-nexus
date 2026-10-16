@@ -582,6 +582,14 @@ export function SmartCanvasPreview({ document, engine, headerText = "", footerTe
       const focusIndex = blocks.findIndex(block => block.id === current.focus.blockId);
       if (focusIndex < 0) return;
       const block = blocks[focusIndex];
+      if ((event.ctrlKey || event.metaKey) && (event.key === "Home" || event.key === "End")) {
+        event.preventDefault();
+        const targetBlock = event.key === "Home" ? blocks[0] : blocks[blocks.length - 1];
+        if (!targetBlock) return;
+        const focus = { blockId: targetBlock.id, offset: event.key === "Home" ? 0 : targetBlock.text.length };
+        syncSelection(event.shiftKey ? { anchor: current.anchor, focus } : collapsedAt(focus));
+        return;
+      }
       const samePosition = current.anchor.blockId === current.focus.blockId && current.anchor.offset === current.focus.offset;
       const hasRange = !samePosition;
       const backwards = event.key === "ArrowLeft";
