@@ -201,6 +201,19 @@ describe("SmartCanvasPreview input integration", () => {
     const centered = engine.getDocument().content[0];
     if (!centered || centered.type !== "paragraph") throw new Error("Expected centered paragraph");
     expect(centered.align).toBe("center");
+
+    const indent = host.querySelector('[aria-label="Aumentar recuo SmartCanvas"]') as HTMLButtonElement | null;
+    const spacing = host.querySelector('[aria-label="Aplicar espaçamento SmartCanvas"]') as HTMLButtonElement | null;
+    if (!indent || !spacing) throw new Error("SmartCanvas paragraph layout controls were not mounted");
+    await act(async () => { indent.click(); });
+    const indented = engine.getDocument().content[0];
+    if (!indented || indented.type !== "paragraph") throw new Error("Expected indented paragraph");
+    expect(indented.indent).toBe(18);
+    await act(async () => { spacing.click(); });
+    const spaced = engine.getDocument().content[0];
+    if (!spaced || spaced.type !== "paragraph") throw new Error("Expected spaced paragraph");
+    expect(spaced.lineSpacing).toBe(1.2);
+    expect(spaced.spacingAfter).toBe(8);
     expect(onDocumentChange).toHaveBeenCalled();
   });
 
