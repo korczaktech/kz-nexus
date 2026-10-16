@@ -476,7 +476,7 @@ describe("SmartCanvasPreview input integration", () => {
     const file = new File(["small-image-fixture"], "pasted.png", { type: "image/png" });
     const readerSpy = vi.spyOn(FileReader.prototype, "readAsDataURL").mockImplementation(function (this: FileReader) {
       Object.defineProperty(this, "result", { configurable: true, value: "data:image/png;base64,c21hbGwtaW1hZ2UtZml4dHVyZQ==" });
-      this.dispatchEvent(new ProgressEvent("load"));
+      this.onload?.call(this, new ProgressEvent("load") as ProgressEvent<FileReader>);
     });
     const paste = new Event("paste", { bubbles: true, cancelable: true });
     Object.defineProperty(paste, "clipboardData", {
