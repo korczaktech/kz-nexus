@@ -602,8 +602,8 @@ export function SmartCanvasPreview({ document, engine, headerText = "", footerTe
           let lineIndex = visualLines.findIndex(item =>
             item.blockId === current.focus.blockId &&
             (movingUp
-              ? current.focus.offset > item.line.startOffset && current.focus.offset <= item.line.endOffset
-              : current.focus.offset >= item.line.startOffset && current.focus.offset < item.line.endOffset)
+              ? current.focus.offset >= item.line.startOffset && current.focus.offset < item.line.endOffset
+              : current.focus.offset > item.line.startOffset && current.focus.offset <= item.line.endOffset)
           );
           if (lineIndex < 0) lineIndex = visualLines.findIndex(item => item.blockId === current.focus.blockId && item.line.endOffset >= current.focus.offset);
           if (lineIndex < 0) lineIndex = visualLines.findIndex(item => item.blockId === current.focus.blockId);
