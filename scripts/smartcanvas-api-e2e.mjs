@@ -86,7 +86,7 @@ try {
     document.dispatchEvent(new Event("visibilitychange"));
     delete document.visibilityState;
   });
-  await page.locator('button[aria-label="Sair"]').click({ force: true });
+  await page.locator(".editor-head .editor-actions button").filter({ hasText: "Sair" }).click({ force: true });
   await page.getByRole("button", { name: "Editar documento", exact: true }).waitFor();
   await page.getByRole("button", { name: "Editar documento", exact: true }).click();
   await waitForEditorProjection(page, initialSentinel);
