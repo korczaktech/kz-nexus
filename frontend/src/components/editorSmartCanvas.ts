@@ -65,7 +65,7 @@ export function getSmartCanvasTextSelectionRanges(
   if (ranges.some(range => !Number.isInteger(range.start) || !Number.isInteger(range.end) ||
       range.start < 0 || range.end < range.start ||
       range.end > range.block.children.reduce((length, run) => length + run.text.length, 0))) return null;
-  return ranges.filter(range => range.end > range.start);
+  return ranges;
 }
 
 export type SmartCanvasTextMatch = { blockId: string; start: number; end: number };
