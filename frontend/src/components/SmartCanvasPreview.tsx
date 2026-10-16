@@ -703,6 +703,7 @@ export function SmartCanvasPreview({ document, engine, headerText = "", footerTe
         setSelection(engine.getSelection() ?? null);
         const restoredDocument = engine.getDocument();
         refreshActiveCell(restoredDocument);
+        setActiveCellStoredMarks(null);
         onDocumentChange(restoredDocument);
       }
       return;
