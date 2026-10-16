@@ -817,8 +817,8 @@ export function layoutDocument(document: NexusDocument, options: LayoutOptions =
         let lineHeightSum = 0;
         while (lineOffset + count < measured.lines.length) {
           const nextHeight = measured.lines[lineOffset + count].height;
-          if (count > 0 && lineHeightSum + nextHeight > available + 0.001) break;
-          if (count === 0 && nextHeight > available && cursorY > content.y) break;
+          if (!block.editorObject && count > 0 && lineHeightSum + nextHeight > available + 0.001) break;
+          if (!block.editorObject && count === 0 && nextHeight > available && cursorY > content.y) break;
           lineHeightSum += nextHeight;
           count += 1;
         }
