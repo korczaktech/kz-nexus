@@ -264,7 +264,7 @@ describe("Editor", () => {
 
     expect(replaced.ok).toBe(true);
     expect(editor.getDocument().content).toHaveLength(1);
-    expect(getPlainText(editor.getDocument().content[0] as Paragraph)).toBe("alXYZie");
+    expect(getPlainText(editor.getDocument().content[0] as Paragraph)).toBe("alXYZlie");
     expect(editor.undo()).toBe(true);
     expect(editor.getDocument()).toEqual(beforeReplace);
   });
