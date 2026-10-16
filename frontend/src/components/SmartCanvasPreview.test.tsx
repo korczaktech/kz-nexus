@@ -111,6 +111,34 @@ describe("SmartCanvasPreview input integration", () => {
     });
   });
 
+  it("creates a bulleted list through the canonical SmartCanvas engine", async () => {
+    const document = createDocument({ title: "SmartCanvas list creation" });
+    const first = document.content[0];
+    if (!first || first.type !== "paragraph") throw new Error("Expected initial paragraph");
+    first.children[0]!.text = "List item";
+    engine = createEditor({ document });
+    const onDocumentChange = vi.fn();
+    host = window.document.createElement("div");
+    window.document.body.append(host);
+    root = createRoot(host);
+    await act(async () => {
+      root?.render(createElement(SmartCanvasPreview, {
+        document: engine!.getDocument(),
+        engine: engine!,
+        onDocumentChange,
+      }));
+    });
+    const listButton = host.querySelector('[aria-label="Lista com marcadores SmartCanvas"]') as HTMLButtonElement | null;
+    if (!listButton) throw new Error("SmartCanvas list control was not mounted");
+    await act(async () => { listButton.click(); });
+
+    const list = engine.getDocument().content[0];
+    expect(list?.type).toBe("bulletList");
+    if (!list || list.type !== "bulletList") throw new Error("Expected canonical bulleted list");
+    expect(list.children[0]?.children[0]?.type).toBe("paragraph");
+    expect(onDocumentChange).toHaveBeenCalled();
+  });
+
   it("inserts a table through the canonical SmartCanvas engine", async () => {
     const document = createDocument({ title: "SmartCanvas table insertion" });
     engine = createEditor({ document });
