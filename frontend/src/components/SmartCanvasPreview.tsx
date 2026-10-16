@@ -162,6 +162,7 @@ export function SmartCanvasPreview({ document, engine, headerText = "", footerTe
 }) {
   const [selection, setSelection] = useState<Selection | null>(engine.getSelection() ?? null);
   const [activeCell, setActiveCell] = useState<(EditableCell & { anchorOffset: number; offset: number }) | null>(null);
+  const [activeBlockId, setActiveBlockId] = useState<string | null>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const composing = useRef(false);
   const layout = useMemo(() => {
@@ -175,6 +176,7 @@ export function SmartCanvasPreview({ document, engine, headerText = "", footerTe
   };
   const handleHit = (target: SmartCanvasHitTarget, clickCount = 1) => {
     if (target.kind === "text") {
+      setActiveBlockId(null);
       const block = findBlock(engine.getDocument().content, target.blockId);
       const targetOffset = block ? nearestGraphemeOffset(block.text, target.position.offset) : target.position.offset;
       if (block && clickCount >= 2) {
@@ -192,6 +194,7 @@ export function SmartCanvasPreview({ document, engine, headerText = "", footerTe
       inputRef.current?.focus({ preventScroll: true });
       onStatus?.(clickCount >= 3 ? "Parágrafo selecionado." : clickCount >= 2 ? "Palavra selecionada." : "SmartCanvas: cursor no bloco " + target.blockId + ", posição " + target.position.offset + ".");
     } else if (target.kind === "table-cell") {
+      setActiveBlockId(null);
       const cell = collectTableCells(engine.getDocument().content).find(item => item.tableId === target.blockId && item.cellId === target.cellId);
       if (!cell) { onStatus?.("Não foi possível localizar a célula selecionada."); return; }
       const boundedOffset = nearestGraphemeOffset(cell.text, target.offset);
@@ -200,7 +203,9 @@ export function SmartCanvasPreview({ document, engine, headerText = "", footerTe
       inputRef.current?.focus({ preventScroll: true });
       onStatus?.(clickCount >= 3 ? "Texto da célula selecionado." : clickCount >= 2 ? "Palavra da célula selecionada." : "Editando célula da tabela. Use Tab para avançar entre células.");
     } else {
-      onStatus?.("Bloco " + target.blockId + " identificado. Seleção estrutural ainda não está habilitada.");
+      setActiveBlockId(target.blockId);
+      inputRef.current?.focus({ preventScroll: true });
+      onStatus?.("Bloco " + target.blockId + " selecionado no SmartCanvas.");
     }
   };
   const commitText = (text: string) => {
@@ -622,7 +627,7 @@ export function SmartCanvasPreview({ document, engine, headerText = "", footerTe
     </div>
     <textarea ref={inputRef} disabled={readOnly} aria-label="Entrada de texto do SmartCanvas" autoCapitalize="off" autoComplete="off" spellCheck={false} defaultValue="" onChange={event => { if (!composing.current) handleInput(event.currentTarget.value); }} onKeyDown={handleKeyDown} onCopy={event => { if (activeCell) { const start = Math.min(activeCell.anchorOffset, activeCell.offset), end = Math.max(activeCell.anchorOffset, activeCell.offset); if (start === end) return; event.clipboardData.setData("text/plain", activeCell.text.slice(start, end)); event.preventDefault(); return; } const current = engine.getSelection(); if (!current || (current.anchor.blockId === current.focus.blockId && current.anchor.offset === current.focus.offset)) return; event.clipboardData.setData("text/plain", getSelectedText(engine.getDocument().content, current)); event.preventDefault(); }} onCut={event => { if (readOnly) { event.preventDefault(); return; } if (activeCell) { const start = Math.min(activeCell.anchorOffset, activeCell.offset), end = Math.max(activeCell.anchorOffset, activeCell.offset); if (start === end) return; event.clipboardData.setData("text/plain", activeCell.text.slice(start, end)); event.preventDefault(); commitCellText(activeCell.text.slice(0, start) + activeCell.text.slice(end), start); return; } const current = engine.getSelection(); if (!current || (current.anchor.blockId === current.focus.blockId && current.anchor.offset === current.focus.offset)) return; event.clipboardData.setData("text/plain", getSelectedText(engine.getDocument().content, current)); event.preventDefault(); if (current.anchor.blockId !== current.focus.blockId) { const blocks = collectTextBlocks(engine.getDocument().content); const anchorIndex = blocks.findIndex(item => item.id === current.anchor.blockId), focusIndex = blocks.findIndex(item => item.id === current.focus.blockId); if (anchorIndex < 0 || focusIndex < 0) { onStatus?.("A seleção não corresponde a blocos editáveis; o texto foi copiado sem removê-lo."); return; } const firstIndex = Math.min(anchorIndex, focusIndex), lastIndex = Math.max(anchorIndex, focusIndex); const first = blocks[firstIndex], last = blocks[lastIndex]; const start = anchorIndex < focusIndex ? current.anchor.offset : current.focus.offset, end = anchorIndex < focusIndex ? current.focus.offset : current.anchor.offset; const commands = [deleteText({ blockId: first.id, start, end: first.text.length }), ...blocks.slice(firstIndex + 1, lastIndex).map(item => deleteText({ blockId: item.id, start: 0, end: item.text.length })), deleteText({ blockId: last.id, start: 0, end }), ...blocks.slice(firstIndex + 1, lastIndex + 1).map(item => mergeBlockWithPrevious({ blockId: item.id }))]; const result = engine.exec(commands, { group: "structural" }); if (!result.ok) { onStatus?.("O texto foi copiado, mas não foi possível removê-lo: " + result.error.message); return; } setSelection(engine.getSelection() ?? null); onDocumentChange(result.value.document); return; } const block = findBlock(engine.getDocument().content, current.focus.blockId); if (!block) return; const start = Math.min(current.anchor.offset, current.focus.offset), end = Math.max(current.anchor.offset, current.focus.offset); const result = engine.exec([deleteText({ blockId: block.id, start, end })], { group: "typing" }); if (result.ok) { setSelection(result.value.selection ?? null); onDocumentChange(result.value.document); } }} onPaste={event => { event.preventDefault(); handleInput(event.clipboardData.getData("text/plain")); }} onCompositionStart={() => { composing.current = true; }} onCompositionEnd={event => { composing.current = false; handleInput(event.currentTarget.value); }} style={{ position: "absolute", width: 1, height: 1, opacity: 0, padding: 0, border: 0, overflow: "hidden", left: 0, bottom: 0, resize: "none" }} />
     {layout ? <div style={{ maxHeight: 560, overflow: "auto", background: "#e5e7eb", borderRadius: 8 }}>
-      <CanvasDocumentRenderer layout={layout} document={document} headerText={headerText} footerText={footerText} headerAlign={headerAlign} footerAlign={footerAlign} showPageNumbers={showPageNumbers} selection={selection || undefined} showCaret={!!selection && !activeCell} activeCellId={activeCell?.cellId} activeCellSelection={activeCell || undefined} onHitTest={handleHit} />
+      <CanvasDocumentRenderer layout={layout} document={document} headerText={headerText} footerText={footerText} headerAlign={headerAlign} footerAlign={footerAlign} showPageNumbers={showPageNumbers} selection={selection || undefined} showCaret={!!selection && !activeCell} activeCellId={activeCell?.cellId} activeCellSelection={activeCell || undefined} activeBlockId={activeBlockId || undefined} onHitTest={handleHit} />
     </div> : <p role="status">Aguardando documento/layout do motor.</p>}
   </section>;
 }
