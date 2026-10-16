@@ -36,4 +36,4 @@ jobs:
       - name: Type-check and build frontend
         run: npm run build
       - name: Run engine tests
-        run: npx vitest run ../packages/engine/src
+        run: npx vitest run --root .. packages/engine/src
