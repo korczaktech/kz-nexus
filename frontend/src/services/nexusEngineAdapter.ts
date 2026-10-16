@@ -529,6 +529,76 @@ export function getEngineDomContext(
   return { block: selected, blockIndex: startIndex, endBlockIndex: endIndex, endBlockId: endSelected.id, endTopLevelBlock, endTopLevelIndex, startOffset, endOffset, anchorBlockId: modelBlocks[anchorIndex].id, anchorOffset, focusBlockId: modelBlocks[focusIndex].id, focusOffset, topLevelBlock, topLevelIndex, list, listItemId, table, rowId, cellId, columnIndex };
 }
 
+/** Maps the engine-owned logical selection to the same context shape used by legacy DOM selection. */
+export function getEngineLogicalContext(engine: ReturnType<typeof createEditor>): EngineDomContext | null {
+  const selection = engine.getSelection();
+  if (!selection) return null;
+  const document = engine.getDocument();
+  const modelBlocks = logicalTextBlocks(document.content);
+  const anchorIndex = modelBlocks.findIndex(block => block.id === selection.anchor.blockId);
+  const focusIndex = modelBlocks.findIndex(block => block.id === selection.focus.blockId);
+  if (anchorIndex < 0 || focusIndex < 0) return null;
+  const blockIndex = Math.min(anchorIndex, focusIndex);
+  const endBlockIndex = Math.max(anchorIndex, focusIndex);
+  const block = modelBlocks[blockIndex]!;
+  const endBlock = modelBlocks[endBlockIndex]!;
+  const startOffset = anchorIndex < focusIndex
+    ? selection.anchor.offset
+    : anchorIndex > focusIndex
+      ? selection.focus.offset
+      : Math.min(selection.anchor.offset, selection.focus.offset);
+  const endOffset = anchorIndex < focusIndex
+    ? selection.focus.offset
+    : anchorIndex > focusIndex
+      ? selection.anchor.offset
+      : Math.max(selection.anchor.offset, selection.focus.offset);
+  if (startOffset < 0 || endOffset < startOffset ||
+      endOffset > logicalTextLength(endBlock) || startOffset > logicalTextLength(block)) return null;
+
+  let topLevelBlock: Block | undefined;
+  let topLevelIndex = -1;
+  let list: EngineDomContext["list"];
+  let listItemId: string | undefined;
+  let table: EngineDomContext["table"];
+  let rowId: string | undefined;
+  let cellId: string | undefined;
+  let columnIndex: number | undefined;
+  const visit = (candidate: Block, topIndex: number, listOwner?: EngineDomContext["list"], itemId?: string,
+    tableOwner?: EngineDomContext["table"], row?: string, cell?: string, column?: number): boolean => {
+    if ((candidate.type === "paragraph" || candidate.type === "heading") && candidate.id === block.id) {
+      topLevelBlock = document.content[topIndex]!;
+      topLevelIndex = topIndex;
+      list = listOwner;
+      listItemId = itemId;
+      table = tableOwner;
+      rowId = row;
+      cellId = cell;
+      columnIndex = column;
+      return true;
+    }
+    if (candidate.type === "blockquote") return candidate.children.some(child => visit(child, topIndex, listOwner, itemId, tableOwner, row, cell, column));
+    if (candidate.type === "bulletList" || candidate.type === "orderedList") {
+      return candidate.children.some(item => item.children.some(child => visit(child as Block, topIndex, candidate, item.id, tableOwner, row, cell, column)));
+    }
+    if (candidate.type === "table") {
+      return candidate.children.some(rowNode => rowNode.children.some((cellNode, index) =>
+        cellNode.children.some(child => visit(child, topIndex, listOwner, itemId, candidate, rowNode.id, cellNode.id, index))));
+    }
+    return false;
+  };
+  document.content.some((candidate, index) => visit(candidate, index));
+  if (!topLevelBlock) return null;
+  const endTopLevelIndex = document.content.findIndex(candidate => containsLogicalBlock(candidate, endBlock.id));
+  const endTopLevelBlock = endTopLevelIndex >= 0 ? document.content[endTopLevelIndex] : undefined;
+  if (!endTopLevelBlock) return null;
+  return {
+    block, blockIndex, endBlockIndex, endBlockId: endBlock.id, endTopLevelBlock, endTopLevelIndex,
+    startOffset, endOffset, anchorBlockId: selection.anchor.blockId, anchorOffset: selection.anchor.offset,
+    focusBlockId: selection.focus.blockId, focusOffset: selection.focus.offset, topLevelBlock, topLevelIndex,
+    list, listItemId, table, rowId, cellId, columnIndex,
+  };
+}
+
 /** Re-renders the canonical model through the adapter, not through browser editing commands. */
 export function renderEngineIntoDom(engine: ReturnType<typeof createEditor>, root: HTMLElement): void {
   root.innerHTML = htmlFromNexusDocument(engine.getDocument());
