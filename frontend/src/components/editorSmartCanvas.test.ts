@@ -103,6 +103,11 @@ describe("production SmartCanvas migration gate", () => {
     expect(getSmartCanvasTextSelectionRanges(content, {
       anchor: { blockId: "missing", offset: 0 }, focus: { blockId: "last", offset: 1 },
     })).toBeNull();
+    expect(getSmartCanvasTextSelectionRanges(content, {
+      anchor: { blockId: "first", offset: 5 }, focus: { blockId: "cell-p", offset: 2 },
+    })?.map(range => [range.block.id, range.start, range.end])).toEqual([
+      ["first", 5, 5], ["cell-p", 0, 2],
+    ]);
   });
 
   it("keeps diagnostic counters isolated and returns a snapshot", () => {
