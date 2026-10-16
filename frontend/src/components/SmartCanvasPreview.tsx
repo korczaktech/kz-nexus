@@ -230,6 +230,7 @@ export function SmartCanvasPreview({ document, engine, headerText = "", footerTe
   };
   const handleHit = (target: SmartCanvasHitTarget, clickCount = 1) => {
     preferredVerticalX.current = null;
+    preferredCellColumn.current = null;
     if (target.kind === "text") {
       setActiveBlockId(null);
       const block = findBlock(engine.getDocument().content, target.blockId);
