@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { addTableRow, collapsedAt, deleteBlock, deleteText, insertImportedBlocksAtSelection, insertImageResource, insertText, moveBlock, removeImage, updateEditorObject, updateImage, getLineXAtOffset, getOffsetAtLineX, getPlainText, layoutDocument, mergeBlockWithPrevious, replaceRange, setCellText, splitBlock, toggleMark as toggleMarkCommand, type Editor as NexusEngineSession, type Mark, type NexusDocument, type Selection, type SmartCanvasHitTarget } from "../../../packages/engine/src/index";
+import { addTableRow, collapsedAt, deleteBlock, deleteText, insertImportedBlocksAtSelection, insertImageResource, insertText, moveBlock, removeImage, updateEditorObject, updateImage, getLineXAtOffset, getOffsetAtLineX, getPlainText, layoutDocument, mergeBlockWithPrevious, replaceRange, setAlign, setCellText, splitBlock, toggleMark as toggleMarkCommand, type Editor as NexusEngineSession, type Mark, type NexusDocument, type Selection, type SmartCanvasHitTarget } from "../../../packages/engine/src/index";
 import { CanvasDocumentRenderer } from "./CanvasDocumentRenderer";
 import { nexusDocumentFromHtml } from "../services/nexusEngineAdapter";
 import { lineEndOffset, lineStartOffset, nearestGraphemeOffset, nextCodePointOffset, nextWordOffset, previousCodePointOffset, previousWordOffset, verticalLineOffset, wordRangeAt } from "./smartCanvasTextOffsets";
@@ -402,6 +402,104 @@ export function SmartCanvasPreview({ document, engine, headerText = "", footerTe
       onStatus?.(selectedBlock?.type === "image"
         ? "Imagem selecionada. Edite o texto alternativo e as dimensões nos controles do SmartCanvas."
         : "Bloco " + target.blockId + " selecionado no SmartCanvas. Use os comandos de objeto disponíveis para operar este bloco.");
+    }
+  };
+  const applySmartCanvasMark = (mark: Mark) => {
+    if (readOnly) return;
+    if (activeCell) {
+      const start = Math.min(activeCell.anchorOffset, activeCell.offset);
+      const end = Math.max(activeCell.anchorOffset, activeCell.offset);
+      if (start === end) {
+        const currentMarks = activeCellStoredMarks ?? marksAtCellOffset(engine.getDocument().content, activeCell, activeCell.offset);
+        const existing = currentMarks.find(item => item.type === mark.type);
+        const nextMarks = existing
+          ? currentMarks.filter(item => item.type !== mark.type)
+          : [...currentMarks.filter(item => item.type !== mark.type), mark];
+        setActiveCellStoredMarks(nextMarks);
+        return;
+      }
+      const paragraphs = collectCellParagraphs(engine.getDocument().content, activeCell.tableId, activeCell.rowId, activeCell.cellId);
+      const commands = paragraphs.flatMap(paragraph => {
+        const localStart = Math.max(0, start - paragraph.start);
+        const localEnd = Math.min(paragraph.text.length, end - paragraph.start);
+        return localEnd > localStart
+          ? [toggleMarkCommand({ blockId: paragraph.id, start: localStart, end: localEnd, mark })]
+          : [];
+      });
+      if (!commands.length) {
+        onStatus?.("Não foi possível mapear a seleção da célula para o motor.");
+        return;
+      }
+      const result = engine.exec(commands, { group: "formatting" });
+      if (!result.ok) onStatus?.(result.error.message);
+      else {
+        setActiveCellStoredMarks(null);
+        onDocumentChange(result.value.document);
+        onStatus?.("Formatação aplicada pelo SmartCanvas.");
+      }
+      return;
+    }
+    const current = engine.getSelection();
+    if (!current) {
+      onStatus?.("Selecione um ponto de inserção ou um trecho de texto.");
+      return;
+    }
+    if (current.anchor.blockId === current.focus.blockId && current.anchor.offset === current.focus.offset) {
+      const before = engine.getDocument();
+      const result = engine.toggleStoredMark(mark);
+      if (!result.ok) onStatus?.(result.error.message);
+      else {
+        setSelection(engine.getSelection() ?? null);
+        if (engine.getDocument() !== before) onDocumentChange(engine.getDocument());
+        onStatus?.("Formatação de digitação atualizada.");
+      }
+      return;
+    }
+    const blocks = collectTextBlocks(engine.getDocument().content);
+    const anchorIndex = blocks.findIndex(block => block.id === current.anchor.blockId);
+    const focusIndex = blocks.findIndex(block => block.id === current.focus.blockId);
+    if (anchorIndex < 0 || focusIndex < 0) {
+      onStatus?.("A seleção atual não corresponde a blocos de texto editáveis.");
+      return;
+    }
+    const firstIndex = Math.min(anchorIndex, focusIndex);
+    const lastIndex = Math.max(anchorIndex, focusIndex);
+    const start = anchorIndex < focusIndex ? current.anchor.offset : current.focus.offset;
+    const end = anchorIndex < focusIndex ? current.focus.offset : current.anchor.offset;
+    const commands = blocks.slice(firstIndex, lastIndex + 1).flatMap((block, index) => {
+      const from = index === 0 ? start : 0;
+      const to = index === lastIndex - firstIndex ? end : block.text.length;
+      return to > from ? [toggleMarkCommand({ blockId: block.id, start: from, end: to, mark })] : [];
+    });
+    if (!commands.length) {
+      onStatus?.("Selecione texto para aplicar a formatação.");
+      return;
+    }
+    const result = engine.exec(commands, { group: "formatting" });
+    if (!result.ok) onStatus?.(result.error.message);
+    else {
+      setSelection(engine.getSelection() ?? null);
+      onDocumentChange(result.value.document);
+      onStatus?.("Formatação aplicada pelo SmartCanvas.");
+    }
+  };
+  const applySmartCanvasAlignment = (align: "start" | "center" | "end" | "justify") => {
+    if (readOnly) return;
+    let blockId = engine.getSelection()?.focus.blockId;
+    if (activeCell) {
+      const paragraph = collectCellParagraphs(engine.getDocument().content, activeCell.tableId, activeCell.rowId, activeCell.cellId)
+        .find(item => activeCell.offset >= item.start && activeCell.offset <= item.start + item.text.length);
+      blockId = paragraph?.id;
+    }
+    if (!blockId) {
+      onStatus?.("Selecione um parágrafo antes de alterar o alinhamento.");
+      return;
+    }
+    const result = engine.exec([setAlign({ blockId, align })], { group: "formatting" });
+    if (!result.ok) onStatus?.(result.error.message);
+    else {
+      onDocumentChange(result.value.document);
+      onStatus?.("Alinhamento atualizado pelo SmartCanvas.");
     }
   };
   const applySelectedImageProperties = () => {
@@ -1000,6 +1098,19 @@ export function SmartCanvasPreview({ document, engine, headerText = "", footerTe
     <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, flexWrap: "wrap", marginBottom: 8 }}>
       <div><strong>SmartCanvas — prévia experimental</strong><div style={{ fontSize: 12, opacity: .75 }}>Edição por comandos do motor: texto, seleção lógica, tabelas e objetos. O editor legado permanece disponível durante a validação.</div></div>
       <span style={{ fontSize: 12 }}>{layout ? layout.pageCount + " página(s)" : "Layout indisponível"}</span>
+    </div>
+    <div role="toolbar" aria-label="Formatação SmartCanvas" style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap", marginBottom: 10 }}>
+      <button type="button" disabled={readOnly} onClick={() => applySmartCanvasMark({ type: "bold" })} aria-label="Negrito SmartCanvas" title="Negrito (Ctrl+B)" style={{ padding: "6px 9px", border: "1px solid #cbd5e1", borderRadius: 6, background: "#fff", fontWeight: 700 }}>B</button>
+      <button type="button" disabled={readOnly} onClick={() => applySmartCanvasMark({ type: "italic" })} aria-label="Itálico SmartCanvas" title="Itálico (Ctrl+I)" style={{ padding: "6px 9px", border: "1px solid #cbd5e1", borderRadius: 6, background: "#fff", fontStyle: "italic" }}>I</button>
+      <button type="button" disabled={readOnly} onClick={() => applySmartCanvasMark({ type: "underline" })} aria-label="Sublinhado SmartCanvas" title="Sublinhado (Ctrl+U)" style={{ padding: "6px 9px", border: "1px solid #cbd5e1", borderRadius: 6, background: "#fff", textDecoration: "underline" }}>U</button>
+      <button type="button" disabled={readOnly} onClick={() => applySmartCanvasMark({ type: "strike" })} aria-label="Tachado SmartCanvas" title="Tachado" style={{ padding: "6px 9px", border: "1px solid #cbd5e1", borderRadius: 6, background: "#fff", textDecoration: "line-through" }}>S</button>
+      <button type="button" disabled={readOnly} onClick={() => applySmartCanvasMark({ type: "superscript" })} aria-label="Sobrescrito SmartCanvas" title="Sobrescrito" style={{ padding: "6px 9px", border: "1px solid #cbd5e1", borderRadius: 6, background: "#fff" }}>x²</button>
+      <button type="button" disabled={readOnly} onClick={() => applySmartCanvasMark({ type: "subscript" })} aria-label="Subscrito SmartCanvas" title="Subscrito" style={{ padding: "6px 9px", border: "1px solid #cbd5e1", borderRadius: 6, background: "#fff" }}>x₂</button>
+      <span aria-hidden="true" style={{ width: 1, height: 24, background: "#cbd5e1", margin: "0 3px" }} />
+      <button type="button" disabled={readOnly} onClick={() => applySmartCanvasAlignment("start")} aria-label="Alinhar à esquerda SmartCanvas" title="Alinhar à esquerda" style={{ padding: "6px 9px", border: "1px solid #cbd5e1", borderRadius: 6, background: "#fff" }}>⇤</button>
+      <button type="button" disabled={readOnly} onClick={() => applySmartCanvasAlignment("center")} aria-label="Centralizar SmartCanvas" title="Centralizar" style={{ padding: "6px 9px", border: "1px solid #cbd5e1", borderRadius: 6, background: "#fff" }}>↔</button>
+      <button type="button" disabled={readOnly} onClick={() => applySmartCanvasAlignment("end")} aria-label="Alinhar à direita SmartCanvas" title="Alinhar à direita" style={{ padding: "6px 9px", border: "1px solid #cbd5e1", borderRadius: 6, background: "#fff" }}>⇥</button>
+      <button type="button" disabled={readOnly} onClick={() => applySmartCanvasAlignment("justify")} aria-label="Justificar SmartCanvas" title="Justificar" style={{ padding: "6px 9px", border: "1px solid #cbd5e1", borderRadius: 6, background: "#fff" }}>☷</button>
     </div>
     {activeBlockId && findDocumentNode(document.content, activeBlockId)?.type === "image" ? <div role="group" aria-label="Propriedades da imagem selecionada" style={{ display: "flex", alignItems: "end", gap: 8, flexWrap: "wrap", marginBottom: 10, padding: 10, border: "1px solid #bfdbfe", borderRadius: 8, background: "#eff6ff" }}>
       <label style={{ display: "grid", gap: 4, fontSize: 12 }}>Texto alternativo
