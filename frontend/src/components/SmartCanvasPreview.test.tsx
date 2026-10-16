@@ -9,13 +9,16 @@ import { SmartCanvasPreview } from "./SmartCanvasPreview";
 vi.mock("./CanvasDocumentRenderer", () => ({
   CanvasDocumentRenderer: ({
     document,
+    layout,
     onHitTest,
   }: {
     document: NexusDocument;
+    layout?: { pages: unknown[] } | null;
     onHitTest?: (target: SmartCanvasHitTarget, clickCount?: number) => void;
   }) => {
     const block = document.content[0];
     return createElement("div", null,
+      createElement("output", { "data-testid": "smartcanvas-layout", "data-page-count": String(layout?.pages.length ?? 0) }, String(layout?.pages.length ?? 0)),
       createElement("button", {
         type: "button",
         "data-testid": "smartcanvas-text-hit",
@@ -86,6 +89,28 @@ describe("SmartCanvasPreview input integration", () => {
     host = undefined;
     root = undefined;
     engine = undefined;
+  });
+
+  it("projects engine-owned pagination and explicit page breaks into SmartCanvas", async () => {
+    const document = createDocument({ title: "SmartCanvas pagination ownership" });
+    document.content.push(
+      { type: "thematicBreak", id: "pagebreak_0001", kind: "pageBreak" },
+      { type: "paragraph", id: "afterpage_0001", children: [{ type: "text", id: "afterrun_0001", text: "After break", marks: [] }] },
+    );
+    engine = createEditor({ document });
+    host = window.document.createElement("div");
+    window.document.body.append(host);
+    root = createRoot(host);
+    await act(async () => {
+      root?.render(createElement(SmartCanvasPreview, {
+        document: engine!.getDocument(),
+        engine: engine!,
+        onDocumentChange: vi.fn(),
+      }));
+    });
+
+    const layout = host.querySelector('[data-testid="smartcanvas-layout"]');
+    expect(layout?.getAttribute("data-page-count")).toBe("2");
   });
 
   it("initializes a logical insertion point without requiring a prior text hit", async () => {
