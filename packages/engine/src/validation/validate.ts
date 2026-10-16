@@ -203,6 +203,7 @@ function checkTable(
   seen: Set<string>,
   issues: ValidationIssue[],
   limits: EngineLimits,
+  resourceIds: Set<string>,
   counter: Counter,
   depth: number,
 ): void {
@@ -301,7 +302,7 @@ function checkBlock(
       checkList(block, path, seen, issues, limits, resourceIds, counter, depth);
       return;
     case "table":
-      checkTable(block, path, seen, issues, limits, counter, depth);
+      checkTable(block, path, seen, issues, limits, resourceIds, counter, depth);
       return;
     case "image":
       checkImage(block, path, seen, issues, resourceIds, counter, depth);
