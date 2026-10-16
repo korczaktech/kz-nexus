@@ -297,7 +297,7 @@ function getSelectedText(nodes: readonly unknown[], selection: Selection): strin
   }).join("\n");
 }
 
-export function SmartCanvasPreview({ document, engine, headerText = "", footerText = "", headerAlign = "left", footerAlign = "left", showPageNumbers = false, readOnly = false, onDocumentChange, onStatus }: {
+export function SmartCanvasPreview({ document, engine, headerText = "", footerText = "", headerAlign = "left", footerAlign = "left", showPageNumbers = false, readOnly = false, onHeaderTextChange, onFooterTextChange, onHeaderAlignChange, onFooterAlignChange, onShowPageNumbersChange, onDocumentChange, onStatus }: {
   document: NexusDocument;
   engine: NexusEngineSession;
   headerText?: string;
@@ -306,6 +306,11 @@ export function SmartCanvasPreview({ document, engine, headerText = "", footerTe
   footerAlign?: "left" | "center" | "right";
   showPageNumbers?: boolean;
   readOnly?: boolean;
+  onHeaderTextChange?: (value: string) => void;
+  onFooterTextChange?: (value: string) => void;
+  onHeaderAlignChange?: (value: "left" | "center" | "right") => void;
+  onFooterAlignChange?: (value: "left" | "center" | "right") => void;
+  onShowPageNumbersChange?: (value: boolean) => void;
   onDocumentChange: (document: NexusDocument) => void;
   onStatus?: (message: string) => void;
 }) {
@@ -1380,6 +1385,29 @@ export function SmartCanvasPreview({ document, engine, headerText = "", footerTe
       <div><strong>SmartCanvas — prévia experimental</strong><div style={{ fontSize: 12, opacity: .75 }}>Edição por comandos do motor: texto, seleção lógica, tabelas e objetos. O editor legado permanece disponível durante a validação.</div></div>
       <span style={{ fontSize: 12 }}>{layout ? layout.pageCount + " página(s)" : "Layout indisponível"}</span>
     </div>
+    <details style={{ marginBottom: 10, border: "1px solid #cbd5e1", borderRadius: 8, padding: "8px 10px", background: "#fff" }}>
+      <summary style={{ cursor: "pointer", fontWeight: 600 }}>Cabeçalho e rodapé</summary>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 10, marginTop: 10 }}>
+        <label style={{ display: "grid", gap: 4, fontSize: 12 }}>
+          <span>Cabeçalho</span>
+          <input aria-label="Texto do cabeçalho SmartCanvas" value={headerText} maxLength={2000} disabled={readOnly || !onHeaderTextChange} onChange={event => onHeaderTextChange?.(event.currentTarget.value)} placeholder="Texto do cabeçalho" style={{ minWidth: 0, padding: "7px 8px", border: "1px solid #cbd5e1", borderRadius: 6 }} />
+          <select aria-label="Alinhamento do cabeçalho SmartCanvas" value={headerAlign} disabled={readOnly || !onHeaderAlignChange} onChange={event => onHeaderAlignChange?.(event.currentTarget.value as "left" | "center" | "right")} style={{ padding: "6px 8px", border: "1px solid #cbd5e1", borderRadius: 6 }}>
+            <option value="left">À esquerda</option><option value="center">Centralizado</option><option value="right">À direita</option>
+          </select>
+        </label>
+        <label style={{ display: "grid", gap: 4, fontSize: 12 }}>
+          <span>Rodapé</span>
+          <input aria-label="Texto do rodapé SmartCanvas" value={footerText} maxLength={2000} disabled={readOnly || !onFooterTextChange} onChange={event => onFooterTextChange?.(event.currentTarget.value)} placeholder="Texto do rodapé" style={{ minWidth: 0, padding: "7px 8px", border: "1px solid #cbd5e1", borderRadius: 6 }} />
+          <select aria-label="Alinhamento do rodapé SmartCanvas" value={footerAlign} disabled={readOnly || !onFooterAlignChange} onChange={event => onFooterAlignChange?.(event.currentTarget.value as "left" | "center" | "right")} style={{ padding: "6px 8px", border: "1px solid #cbd5e1", borderRadius: 6 }}>
+            <option value="left">À esquerda</option><option value="center">Centralizado</option><option value="right">À direita</option>
+          </select>
+        </label>
+      </div>
+      <label style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 10, fontSize: 12 }}>
+        <input aria-label="Mostrar números de página SmartCanvas" type="checkbox" checked={showPageNumbers} disabled={readOnly || !onShowPageNumbersChange} onChange={event => onShowPageNumbersChange?.(event.currentTarget.checked)} />
+        Mostrar números de página
+      </label>
+    </details>
     {activeCell ? <div role="group" aria-label="Estrutura da tabela SmartCanvas" style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 8 }}>
       <button type="button" disabled={readOnly} onMouseDown={event => event.preventDefault()} onClick={() => mutateActiveTable("add-row")} aria-label="Adicionar linha SmartCanvas">Adicionar linha</button>
       <button type="button" disabled={readOnly} onMouseDown={event => event.preventDefault()} onClick={() => mutateActiveTable("add-column")} aria-label="Adicionar coluna SmartCanvas">Adicionar coluna</button>
