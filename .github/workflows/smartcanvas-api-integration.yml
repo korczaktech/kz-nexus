@@ -1,0 +1,56 @@
+name: SmartCanvas API integration
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - ".github/workflows/smartcanvas-api-integration.yml"
+      - "backend/**"
+      - "frontend/src/components/Editor.tsx"
+      - "frontend/src/components/SmartCanvasPreview.tsx"
+      - "frontend/src/services/nexusDocumentPersistence.ts"
+      - "frontend/src/components/EditorSmartCanvasSave.integration.test.tsx"
+
+permissions:
+  contents: read
+
+jobs:
+  api-integration:
+    name: Real API save, autosave, versions and conflict checks
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    services:
+      mongodb:
+        image: mongo:7
+        ports:
+          - 27017:27017
+        options: >-
+          --health-cmd "mongosh --quiet --eval 'db.adminCommand({ ping: 1 }).ok'"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      APP_ENV: testing
+      API_HOST: 127.0.0.1
+      API_PORT: 8000
+      FRONTEND_URL: http://localhost:5173
+      MONGODB_URI: mongodb://127.0.0.1:27017
+      MONGODB_DATABASE: KZDocsSmartCanvasCI
+      MONGODB_ACCOUNTS_DATABASE: ContasSmartCanvasCI
+      MONGODB_SERVER_SELECTION_TIMEOUT_MS: 10000
+      LOG_LEVEL: WARNING
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: backend/pyproject.toml
+      - name: Install backend and test dependencies
+        working-directory: backend
+        run: python -m pip install -e ".[test]"
+      - name: Run real MongoDB-backed API integration
+        working-directory: backend
+        run: python -m pytest tests/test_api_integration.py -m integration
