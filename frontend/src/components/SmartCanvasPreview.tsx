@@ -240,7 +240,7 @@ export function SmartCanvasPreview({ document, engine, headerText = "", footerTe
         const sourceLine = lines[lineIndex];
         const targetLine = lines[targetLineIndex];
         const measure = (text: string, run?: import("../../../packages/engine/src/layout/layout").LayoutTextRun) => {
-          const canvas = document.createElement("canvas");
+          const canvas = window.document.createElement("canvas");
           const context = canvas.getContext("2d");
           if (!context) return text.length * (run?.fontSize ?? 11) * 0.55;
           context.font = `${run?.fontSize ?? 11}px ${run?.fontFamily ?? "Arial"}`;
