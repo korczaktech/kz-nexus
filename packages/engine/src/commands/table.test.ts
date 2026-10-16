@@ -193,6 +193,56 @@ describe("row/column operations", () => {
     expect(updatedCell.children[0].children[2].marks).toEqual([{ type: "italic" }]);
   });
 
+  it("rejects rich insertion runs that do not match their explicit range", () => {
+    const { document, tableId } = tableDoc();
+    const table = document.content[1] as Table;
+    const row = table.children[0];
+    const cell = row.children[0];
+    const result = setCellText({
+      tableId,
+      rowId: row.id,
+      cellId: cell.id,
+      text: "text",
+      insertionRange: { start: 0, end: 4 },
+      insertionRuns: [{ text: "different", marks: [{ type: "bold" }] }],
+    })(document, ctx());
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.error.code).toBe("INVALID_DOCUMENT");
+  });
+
+  it("rejects invalid rich insertion ranges", () => {
+    const { document, tableId } = tableDoc();
+    const table = document.content[1] as Table;
+    const row = table.children[0];
+    const cell = row.children[0];
+    const result = setCellText({
+      tableId,
+      rowId: row.id,
+      cellId: cell.id,
+      text: "text",
+      insertionRange: { start: -1, end: 2 },
+      insertionRuns: [{ text: "te", marks: [] }],
+    })(document, ctx());
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.error.code).toBe("INVALID_POSITION");
+  });
+
+  it("requires an explicit range for rich insertion runs", () => {
+    const { document, tableId } = tableDoc();
+    const table = document.content[1] as Table;
+    const row = table.children[0];
+    const cell = row.children[0];
+    const result = setCellText({
+      tableId,
+      rowId: row.id,
+      cellId: cell.id,
+      text: "text",
+      insertionRuns: [{ text: "text", marks: [] }],
+    })(document, ctx());
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.error.code).toBe("INVALID_DOCUMENT");
+  });
+
   it("preserves suffix formatting when deleting text and keeps paragraph attributes", () => {
     const { document, tableId } = tableDoc();
     const table = document.content[1] as Table;
