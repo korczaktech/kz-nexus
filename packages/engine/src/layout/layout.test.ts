@@ -20,7 +20,9 @@ describe("native layout engine", () => {
 
   it("marks semantic objects as independently selectable layout blocks", () => {
     const object: Block = {
-      ...paragraph("shape", "Label"),
+      type: "paragraph",
+      id: "shape",
+      children: [{ type: "text", id: "shape-run", text: "Label", marks: [] }],
       editorObject: { kind: "shape", shape: "ellipse", fill: "#ffffff", stroke: "#111111", width: 40, height: 20 },
     };
     const result = layoutDocument(documentWith([object]), { metrics });
