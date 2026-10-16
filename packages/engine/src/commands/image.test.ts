@@ -35,9 +35,9 @@ describe("insertImageResource", () => {
     editor.dispose();
   });
   it("keeps a shared image resource when another image still references it", () => {
-    const document = createDocument(createIdGenerator("shared-doc", 1), createFixedClock(0).now);
+    const document = createDocument(createIdGenerator("shareddoc", 1), createFixedClock(0).now);
     const paragraph = document.content[0] as Paragraph;
-    const editor = createEditor({ document, idGenerator: createIdGenerator("shared-id", 1), clock: createFixedClock(1).now });
+    const editor = createEditor({ document, idGenerator: createIdGenerator("sharedid", 1), clock: createFixedClock(1).now });
     const inserted = editor.exec([insertImageResource({
       afterBlockId: paragraph.id,
       mimeType: "image/png",
