@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { nearestGraphemeOffset, nextCodePointOffset, nextWordOffset, previousCodePointOffset, previousWordOffset, wordRangeAt } from "./smartCanvasTextOffsets";
+import { lineEndOffset, lineStartOffset, nearestGraphemeOffset, nextCodePointOffset, nextWordOffset, previousCodePointOffset, previousWordOffset, verticalLineOffset, wordRangeAt } from "./smartCanvasTextOffsets";
 
 describe("SmartCanvas Unicode caret offsets", () => {
   it("moves across a supplementary character as one grapheme", () => {
@@ -74,5 +74,33 @@ describe("SmartCanvas pointer offset normalization", () => {
     expect(nearestGraphemeOffset("A😀B", 2)).toBe(1);
     expect(nearestGraphemeOffset("A😀B", 3)).toBe(3);
     expect(nearestGraphemeOffset("Ae\u0301B", 2)).toBe(1);
+  });
+});
+
+describe("SmartCanvas multiline cell navigation", () => {
+  it("finds line boundaries without including newline characters", () => {
+    const text = "abcd\nef\nghi";
+    expect(lineStartOffset(text, 0)).toBe(0);
+    expect(lineStartOffset(text, 5)).toBe(5);
+    expect(lineStartOffset(text, 7)).toBe(7);
+    expect(lineEndOffset(text, 1)).toBe(4);
+    expect(lineEndOffset(text, 5)).toBe(7);
+    expect(lineEndOffset(text, text.length)).toBe(text.length);
+  });
+
+  it("moves between lines and clamps to shorter target lines", () => {
+    const text = "abcdef\nxy\n12345";
+    expect(verticalLineOffset(text, 4, 1)).toBe(9);
+    expect(verticalLineOffset(text, 9, 1, 4)).toBe(14);
+    expect(verticalLineOffset(text, 9, -1, 4)).toBe(4);
+    expect(verticalLineOffset(text, 2, -1)).toBe(2);
+    expect(verticalLineOffset(text, text.length - 1, 1)).toBe(text.length - 1);
+  });
+
+  it("supports a trailing empty line after Enter", () => {
+    const text = "abc\n";
+    expect(verticalLineOffset(text, 3, 1)).toBe(4);
+    expect(lineStartOffset(text, 4)).toBe(4);
+    expect(lineEndOffset(text, 4)).toBe(4);
   });
 });
