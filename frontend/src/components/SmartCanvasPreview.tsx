@@ -62,6 +62,26 @@ function findLayoutBlock(blocks: readonly import("../../../packages/engine/src/l
   return undefined;
 }
 
+function createLayoutTextMeasurer(): (text: string, run?: import("../../../packages/engine/src/layout/layout").LayoutTextRun) => number {
+  // Reuse one canvas/context for all measurements in a single navigation event.
+  const canvas = window.document.createElement("canvas");
+  const context = canvas.getContext("2d");
+  return (text, run) => {
+    const baseSize = run?.fontSize ?? 11;
+    const sizeMark = run?.marks.find(mark => mark.type === "fontSize");
+    const script = run?.marks.some(mark => mark.type === "superscript" || mark.type === "subscript");
+    const size = script ? baseSize * 0.75 : sizeMark?.type === "fontSize" ? sizeMark.value * 0.75 : baseSize;
+    if (!context) return text.length * size * 0.55;
+    const bold = run?.marks.some(mark => mark.type === "bold") ? "700 " : "400 ";
+    const italic = run?.marks.some(mark => mark.type === "italic") ? "italic " : "";
+    const familyMark = run?.marks.find(mark => mark.type === "fontFamily");
+    const family = familyMark?.type === "fontFamily" ? familyMark.value : run?.fontFamily ?? "Arial";
+    context.font = `${italic}${bold}${size * (96 / 72)}px ${family}`;
+    // Layout geometry is in points; Canvas text metrics are CSS pixels.
+    return context.measureText(text).width * (72 / 96);
+  };
+}
+
 function getSelectedText(nodes: readonly unknown[], selection: Selection): string {
   const blocks = collectTextBlocks(nodes);
   const anchorIndex = blocks.findIndex(block => block.id === selection.anchor.blockId);
@@ -239,17 +259,7 @@ export function SmartCanvasPreview({ document, engine, headerText = "", footerTe
       if (targetLineIndex >= 0 && targetLineIndex < lines.length) {
         const sourceLine = lines[lineIndex];
         const targetLine = lines[targetLineIndex];
-        const measure = (text: string, run?: import("../../../packages/engine/src/layout/layout").LayoutTextRun) => {
-          const canvas = window.document.createElement("canvas");
-          const context = canvas.getContext("2d");
-          const size = (run?.fontSize ?? 11) * (96 / 72);
-          if (!context) return text.length * (run?.fontSize ?? 11) * 0.55;
-          const bold = run?.marks.some(mark => mark.type === "bold") ? "700 " : "400 ";
-          const italic = run?.marks.some(mark => mark.type === "italic") ? "italic " : "";
-          context.font = `${italic}${bold}${size}px ${run?.fontFamily ?? "Arial"}`;
-          // Layout coordinates are points; Canvas text metrics are CSS pixels.
-          return context.measureText(text).width * (72 / 96);
-        };
+        const measure = createLayoutTextMeasurer();
         const sourceCaretX = getLineXAtOffset(sourceLine, current.focus.offset, measure);
         const targetLocalX = Math.max(0, sourceCaretX - sourceLine.x);
         targetOffset = getOffsetAtLineX(targetLine, targetLine.x + targetLocalX, measure);
