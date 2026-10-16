@@ -54,7 +54,7 @@ try {
   await page.getByLabel("Confirmar senha").fill(password);
   await page.locator('input[name="acceptTerms"]').check();
   await page.locator('input[name="acceptPrivacy"]').check();
-  await page.locator(".auth-card form button[type='submit']").click();
+  await page.locator(".auth-card form button.button-primary").click();
   await page.getByRole("button", { name: /Novo documento/ }).first().waitFor();
 
   const createResponsePromise = page.waitForResponse(response =>
