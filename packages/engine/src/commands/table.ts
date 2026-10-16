@@ -1,7 +1,8 @@
-import type { Block, Mark, Paragraph, Table, TableCell, TableRow, TextRun } from "../model/types";
+import type { Block, ImageBlock, Mark, Paragraph, Table, TableCell, TableRow, TextRun } from "../model/types";
 import { EngineError, engineError } from "../errors/errors";
 import { err, ok } from "../utils/result";
 import type { Command } from "./types";
+import { addResource } from "../resources/resources";
 
 function makeEmptyParagraph(generateId: () => string): Paragraph {
   return { type: "paragraph", id: generateId(), children: [{ type: "text", id: generateId(), text: "", marks: [] }] };
@@ -48,6 +49,35 @@ function withTable(doc: Parameters<Command>[0], tableId: string, transform: (tab
     if (error instanceof EngineError) return err(error);
     throw error;
   }
+}
+
+/** Adds an image resource to a table cell as a first-class part of the canonical document. */
+export function insertTableCellImageResource(params: {
+  tableId: string;
+  rowId: string;
+  cellId: string;
+  mimeType: string;
+  data: string;
+  alt: string;
+  name?: string;
+  width?: number;
+  height?: number;
+}): Command {
+  return (doc, ctx) => {
+    const cellExists = doc.content.some(block => block.type === "table" && block.id === params.tableId
+      && block.children.some(row => row.id === params.rowId && row.children.some(cell => cell.id === params.cellId)));
+    if (!cellExists) return err(engineError("NODE_NOT_FOUND", "Target table cell was not found", { path: params.cellId }));
+    const added = addResource(doc, { kind: "image", mimeType: params.mimeType, data: params.data, name: params.name }, ctx.generateId);
+    if (!added.ok) return added;
+    const image: ImageBlock = { type: "image", id: ctx.generateId(), resourceId: added.value.resource.id, alt: params.alt, width: params.width, height: params.height };
+    return withTable(added.value.document, params.tableId, table => ({
+      ...table,
+      children: table.children.map(row => row.id !== params.rowId ? row : ({
+        ...row,
+        children: row.children.map(cell => cell.id !== params.cellId ? cell : ({ ...cell, images: [...(cell.images ?? []), image] }))
+      }))
+    }));
+  };
 }
 
 export function addTableRow(params: { tableId: string; afterRowId?: string }): Command {
