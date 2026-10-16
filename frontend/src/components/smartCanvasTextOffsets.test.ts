@@ -2,8 +2,20 @@ import { describe, expect, it } from "vitest";
 import { nextCodePointOffset, previousCodePointOffset } from "./smartCanvasTextOffsets";
 
 describe("SmartCanvas Unicode caret offsets", () => {
-  it("moves across a supplementary character as one code point", () => {
+  it("moves across a supplementary character as one grapheme", () => {
     const text = "A😀B";
+    expect(nextCodePointOffset(text, 1)).toBe(3);
+    expect(previousCodePointOffset(text, 3)).toBe(1);
+  });
+
+  it("keeps a joined emoji sequence together", () => {
+    const text = "A👩‍💻B";
+    expect(nextCodePointOffset(text, 1)).toBe(6);
+    expect(previousCodePointOffset(text, 6)).toBe(1);
+  });
+
+  it("keeps a base character and combining mark together", () => {
+    const text = "Ae\u0301B";
     expect(nextCodePointOffset(text, 1)).toBe(3);
     expect(previousCodePointOffset(text, 3)).toBe(1);
   });
