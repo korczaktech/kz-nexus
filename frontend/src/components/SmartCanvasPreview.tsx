@@ -92,6 +92,21 @@ function collectTableCells(nodes: readonly unknown[]): EditableCell[] {
   return cells;
 }
 
+type DocumentNodeLike = { id?: unknown; type?: unknown; alt?: unknown; width?: unknown; height?: unknown; children?: unknown };
+
+function findDocumentNode(nodes: readonly unknown[], id: string): DocumentNodeLike | undefined {
+  for (const value of nodes) {
+    if (!value || typeof value !== "object") continue;
+    const node = value as DocumentNodeLike;
+    if (node.id === id && typeof node.type === "string") return node;
+    if (Array.isArray(node.children)) {
+      const nested = findDocumentNode(node.children, id);
+      if (nested) return nested;
+    }
+  }
+  return undefined;
+}
+
 function findBlock(nodes: readonly unknown[], id: string): TextBlock | undefined {
   return collectTextBlocks(nodes).find(block => block.id === id);
 }
@@ -263,7 +278,7 @@ export function SmartCanvasPreview({ document, engine, headerText = "", footerTe
       onStatus?.(clickCount >= 3 ? "Texto da célula selecionado." : clickCount >= 2 ? "Palavra da célula selecionada." : "Editando célula da tabela. Use Tab para avançar entre células.");
     } else {
       setActiveBlockId(target.blockId);
-      const selectedBlock = findBlock(engine.getDocument().content, target.blockId);
+      const selectedBlock = findDocumentNode(engine.getDocument().content, target.blockId);
       if (selectedBlock?.type === "image") {
         setImageAltDraft(selectedBlock.alt ?? "");
         setImageWidthDraft(selectedBlock.width == null ? "" : String(selectedBlock.width));
@@ -279,7 +294,7 @@ export function SmartCanvasPreview({ document, engine, headerText = "", footerTe
   };
   const applySelectedImageProperties = () => {
     if (readOnly || !activeBlockId) return;
-    const selected = findBlock(engine.getDocument().content, activeBlockId);
+    const selected = findDocumentNode(engine.getDocument().content, activeBlockId);
     if (!selected || selected.type !== "image") return;
     const width = imageWidthDraft.trim() === "" ? null : Number(imageWidthDraft);
     const height = imageHeightDraft.trim() === "" ? null : Number(imageHeightDraft);
@@ -489,7 +504,7 @@ export function SmartCanvasPreview({ document, engine, headerText = "", footerTe
     }
     if ((event.key === "Backspace" || event.key === "Delete") && activeBlockId) {
       event.preventDefault();
-      const selectedBlock = findBlock(engine.getDocument().content, activeBlockId);
+      const selectedBlock = findDocumentNode(engine.getDocument().content, activeBlockId);
       const deleteCommand = selectedBlock?.type === "image"
         ? removeImage({ blockId: activeBlockId })
         : deleteBlock({ blockId: activeBlockId });
@@ -823,7 +838,7 @@ export function SmartCanvasPreview({ document, engine, headerText = "", footerTe
       <div><strong>SmartCanvas — prévia experimental</strong><div style={{ fontSize: 12, opacity: .75 }}>Edição inicial por seleção lógica: digitação, seleção e navegação entre blocos. O editor legado permanece disponível.</div></div>
       <span style={{ fontSize: 12 }}>{layout ? layout.pageCount + " página(s)" : "Layout indisponível"}</span>
     </div>
-    {activeBlockId && findBlock(document.content, activeBlockId)?.type === "image" ? <div role="group" aria-label="Propriedades da imagem selecionada" style={{ display: "flex", alignItems: "end", gap: 8, flexWrap: "wrap", marginBottom: 10, padding: 10, border: "1px solid #bfdbfe", borderRadius: 8, background: "#eff6ff" }}>
+    {activeBlockId && findDocumentNode(document.content, activeBlockId)?.type === "image" ? <div role="group" aria-label="Propriedades da imagem selecionada" style={{ display: "flex", alignItems: "end", gap: 8, flexWrap: "wrap", marginBottom: 10, padding: 10, border: "1px solid #bfdbfe", borderRadius: 8, background: "#eff6ff" }}>
       <label style={{ display: "grid", gap: 4, fontSize: 12 }}>Texto alternativo
         <input aria-label="Texto alternativo da imagem" value={imageAltDraft} disabled={readOnly} onChange={event => setImageAltDraft(event.currentTarget.value)} style={{ minWidth: 180, padding: "6px 8px", border: "1px solid #cbd5e1", borderRadius: 6 }} />
       </label>
