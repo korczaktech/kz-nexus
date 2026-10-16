@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { addTableRow, collapsedAt, deleteBlock, deleteText, insertImportedBlocksAtSelection, insertImageResource, insertTable as insertTableCommand, insertText, moveBlock, removeImage, updateEditorObject, updateImage, getLineXAtOffset, getOffsetAtLineX, getPlainText, layoutDocument, mergeBlockWithPrevious, replaceRange, setAlign, setCellText, splitBlock, toggleMark as toggleMarkCommand, type Editor as NexusEngineSession, type Mark, type NexusDocument, type Selection, type SmartCanvasHitTarget } from "../../../packages/engine/src/index";
+import { addTableRow, collapsedAt, convertBlockToList, deleteBlock, deleteText, insertImportedBlocksAtSelection, insertImageResource, insertTable as insertTableCommand, insertText, moveBlock, removeImage, updateEditorObject, updateImage, getLineXAtOffset, getOffsetAtLineX, getPlainText, layoutDocument, mergeBlockWithPrevious, replaceRange, setAlign, setCellText, splitBlock, toggleMark as toggleMarkCommand, type Editor as NexusEngineSession, type Mark, type NexusDocument, type Selection, type SmartCanvasHitTarget } from "../../../packages/engine/src/index";
 import { CanvasDocumentRenderer } from "./CanvasDocumentRenderer";
 import { nexusDocumentFromHtml } from "../services/nexusEngineAdapter";
 import { lineEndOffset, lineStartOffset, nearestGraphemeOffset, nextCodePointOffset, nextWordOffset, previousCodePointOffset, previousWordOffset, verticalLineOffset, wordRangeAt } from "./smartCanvasTextOffsets";
@@ -482,6 +482,28 @@ export function SmartCanvasPreview({ document, engine, headerText = "", footerTe
       onDocumentChange(result.value.document);
       onStatus?.("Formatação aplicada pelo SmartCanvas.");
     }
+  };
+  const convertSmartCanvasList = (ordered: boolean) => {
+    if (readOnly) return;
+    const current = engine.getSelection();
+    const block = current
+      ? engine.getDocument().content.find(item =>
+          item.id === current.focus.blockId && (item.type === "paragraph" || item.type === "heading")
+        )
+      : undefined;
+    if (!block) {
+      onStatus?.("Para criar uma lista, posicione o cursor em um parágrafo de nível superior.");
+      return;
+    }
+    const result = engine.exec([convertBlockToList({ blockId: block.id, ordered })], { group: "structural" });
+    if (!result.ok) {
+      onStatus?.("Não foi possível criar a lista: " + result.error.message);
+      return;
+    }
+    setSelection(engine.getSelection() ?? null);
+    onDocumentChange(result.value.document);
+    onStatus?.(ordered ? "Lista numerada criada pelo SmartCanvas." : "Lista com marcadores criada pelo SmartCanvas.");
+    inputRef.current?.focus({ preventScroll: true });
   };
   const insertSmartCanvasTable = () => {
     if (readOnly) return;
@@ -1139,6 +1161,8 @@ export function SmartCanvasPreview({ document, engine, headerText = "", footerTe
       <button type="button" disabled={readOnly} onMouseDown={event => event.preventDefault()} onClick={() => applySmartCanvasMark({ type: "strike" })} aria-label="Tachado SmartCanvas" title="Tachado" style={{ padding: "6px 9px", border: "1px solid #cbd5e1", borderRadius: 6, background: "#fff", textDecoration: "line-through" }}>S</button>
       <button type="button" disabled={readOnly} onMouseDown={event => event.preventDefault()} onClick={() => applySmartCanvasMark({ type: "superscript" })} aria-label="Sobrescrito SmartCanvas" title="Sobrescrito" style={{ padding: "6px 9px", border: "1px solid #cbd5e1", borderRadius: 6, background: "#fff" }}>x²</button>
       <button type="button" disabled={readOnly} onMouseDown={event => event.preventDefault()} onClick={() => applySmartCanvasMark({ type: "subscript" })} aria-label="Subscrito SmartCanvas" title="Subscrito" style={{ padding: "6px 9px", border: "1px solid #cbd5e1", borderRadius: 6, background: "#fff" }}>x₂</button>
+      <button type="button" disabled={readOnly} onMouseDown={event => event.preventDefault()} onClick={() => convertSmartCanvasList(false)} aria-label="Lista com marcadores SmartCanvas" title="Lista com marcadores" style={{ padding: "6px 9px", border: "1px solid #cbd5e1", borderRadius: 6, background: "#fff" }}>• Lista</button>
+      <button type="button" disabled={readOnly} onMouseDown={event => event.preventDefault()} onClick={() => convertSmartCanvasList(true)} aria-label="Lista numerada SmartCanvas" title="Lista numerada" style={{ padding: "6px 9px", border: "1px solid #cbd5e1", borderRadius: 6, background: "#fff" }}>1. Lista</button>
       <button type="button" disabled={readOnly} onMouseDown={event => event.preventDefault()} onClick={insertSmartCanvasTable} aria-label="Inserir tabela SmartCanvas" title="Inserir tabela 3×3" style={{ padding: "6px 9px", border: "1px solid #cbd5e1", borderRadius: 6, background: "#fff" }}>▦ Tabela</button>
       <span aria-hidden="true" style={{ width: 1, height: 24, background: "#cbd5e1", margin: "0 3px" }} />
       <button type="button" disabled={readOnly} onMouseDown={event => event.preventDefault()} onClick={() => applySmartCanvasAlignment("start")} aria-label="Alinhar à esquerda SmartCanvas" title="Alinhar à esquerda" style={{ padding: "6px 9px", border: "1px solid #cbd5e1", borderRadius: 6, background: "#fff" }}>⇤</button>
