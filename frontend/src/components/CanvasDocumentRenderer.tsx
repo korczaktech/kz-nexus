@@ -18,6 +18,7 @@ type CanvasPageProps = {
   onHitTest?: (target: SmartCanvasHitTarget) => void;
   selection?: Selection;
   showCaret?: boolean;
+  activeCellId?: string;
 };
 
 function markedFont(marks: Mark[], fontSize: number, fontFamily: string): string {
@@ -180,7 +181,7 @@ function pageText(page: LayoutPage): string {
   return parts.join(" ").replace(/\s+/g, " ").trim();
 }
 
-export function CanvasPage({ page, pageCount, document, headerText, footerText, showPageNumbers, layout, onHitTest, selection, showCaret = false }: CanvasPageProps) {
+export function CanvasPage({ page, pageCount, document, headerText, footerText, showPageNumbers, layout, onHitTest, selection, showCaret = false, activeCellId }: CanvasPageProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const overlayRef = useRef<HTMLCanvasElement>(null);
   const cssWidth = page.width * PT_TO_CSS_PX;
@@ -277,6 +278,24 @@ export function CanvasPage({ page, pageCount, document, headerText, footerText, 
     overlay.height = Math.round(cssHeight * ratio);
     context.setTransform(ratio, 0, 0, ratio, 0, 0);
     context.clearRect(0, 0, cssWidth, cssHeight);
+    if (activeCellId) {
+      context.strokeStyle = "#2563eb";
+      context.lineWidth = 2;
+      context.setLineDash([]);
+      for (const block of page.blocks) {
+        for (const row of block.table?.rows ?? []) {
+          for (const cell of row.cells) {
+            if (cell.cellId !== activeCellId) continue;
+            context.strokeRect(
+              cell.rect.x * PT_TO_CSS_PX + 1,
+              cell.rect.y * PT_TO_CSS_PX + 1,
+              Math.max(0, cell.rect.width * PT_TO_CSS_PX - 2),
+              Math.max(0, cell.rect.height * PT_TO_CSS_PX - 2),
+            );
+          }
+        }
+      }
+    }
     if (!selection) return;
 
     const measureText = (text: string, run?: LayoutTextRun) => {
@@ -296,7 +315,7 @@ export function CanvasPage({ page, pageCount, document, headerText, footerText, 
       context.lineTo(geometry.caret.x * PT_TO_CSS_PX, (geometry.caret.y + geometry.caret.height) * PT_TO_CSS_PX);
       context.stroke();
     }
-  }, [layout, page.index, selection, showCaret, cssWidth, cssHeight]);
+  }, [layout, page.index, selection, showCaret, activeCellId, cssWidth, cssHeight]);
 
   const handlePointerDown = (event: ReactPointerEvent<HTMLCanvasElement>) => {
     if (!onHitTest) return;
@@ -333,7 +352,7 @@ export function CanvasPage({ page, pageCount, document, headerText, footerText, 
   </div>;
 }
 
-export function CanvasDocumentRenderer({ layout, document, headerText = "", footerText = "", showPageNumbers = false, onHitTest, selection, showCaret = false }: {
+export function CanvasDocumentRenderer({ layout, document, headerText = "", footerText = "", showPageNumbers = false, onHitTest, selection, showCaret = false, activeCellId }: {
   layout: LayoutResult;
   document: NexusDocument;
   headerText?: string;
@@ -342,6 +361,7 @@ export function CanvasDocumentRenderer({ layout, document, headerText = "", foot
   onHitTest?: (target: SmartCanvasHitTarget) => void;
   selection?: Selection;
   showCaret?: boolean;
+  activeCellId?: string;
 }) {
   return <div className="kortex-canvas-pages" data-renderer="canvas-2d" style={{
     display: "flex",
@@ -358,6 +378,7 @@ export function CanvasDocumentRenderer({ layout, document, headerText = "", foot
       onHitTest={onHitTest}
       selection={selection}
       showCaret={showCaret}
+      activeCellId={activeCellId}
       pageCount={layout.pageCount}
       document={document}
       headerText={headerText}
