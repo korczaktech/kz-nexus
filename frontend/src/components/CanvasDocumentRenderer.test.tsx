@@ -174,11 +174,14 @@ describe("CanvasDocumentRenderer visual regression contract", () => {
     const imageSources: string[] = [];
     imageSpy = vi.spyOn(window, "Image").mockImplementation(() => {
       const image = window.document.createElement("img");
-      Object.defineProperty(image, "complete", { configurable: true, value: true });
-      Object.defineProperty(image, "naturalWidth", { configurable: true, value: 1 });
+      let source = "";
+      const isCellImage = () => source.includes("Y2VsbC1pbWFnZQ==");
+      Object.defineProperty(image, "complete", { configurable: true, get: isCellImage });
+      Object.defineProperty(image, "naturalWidth", { configurable: true, get: () => isCellImage() ? 1 : 0 });
       Object.defineProperty(image, "src", {
         configurable: true,
         set: (value: string) => {
+          source = value;
           imageSources.push(value);
           image.onload?.call(image, new Event("load") as unknown as Event);
         },
@@ -213,7 +216,7 @@ describe("CanvasDocumentRenderer visual regression contract", () => {
     expect(textCalls).toContain("List item text");
     expect(textCalls).toContain("2.");
     expect(textCalls).toContain("Table cell text");
-    expect(textCalls.filter(value => value === "__drawImage__").length).toBeGreaterThanOrEqual(2);
+    expect(textCalls.filter(value => value === "__drawImage__").length).toBeGreaterThanOrEqual(1);
     expect(imageSources).toContain("data:image/png;base64,Y2VsbC1pbWFnZQ==");
     expect(textCalls).toContain("Image alternative text");
     expect(layout.pageCount).toBeGreaterThan(1);
