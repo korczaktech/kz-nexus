@@ -1,4 +1,4 @@
-import type { Block, createEditor } from "../../../packages/engine/src/index";
+import type { Block, Selection, createEditor } from "../../../packages/engine/src/index";
 import { getEngineLogicalContext } from "../services/nexusEngineAdapter";
 import { isCompositionInput } from "./editorComposition";
 
@@ -26,6 +26,47 @@ export function collectSmartCanvasTextBlocks(content: readonly unknown[]): Array
   return blocks;
 }
 
+
+
+export type SmartCanvasTextSelectionRange = {
+  block: Extract<Block, { type: "paragraph" | "heading" }>;
+  start: number;
+  end: number;
+};
+
+/**
+ * Maps a logical selection to text ranges in document order. It deliberately
+ * preserves container boundaries: callers can edit each selected text block
+ * without deleting or flattening the list/table/blockquote that owns it.
+ */
+export function getSmartCanvasTextSelectionRanges(
+  content: readonly unknown[],
+  selection: Selection,
+): SmartCanvasTextSelectionRange[] | null {
+  const blocks = collectSmartCanvasTextBlocks(content);
+  const anchorIndex = blocks.findIndex(block => block.id === selection.anchor.blockId);
+  const focusIndex = blocks.findIndex(block => block.id === selection.focus.blockId);
+  if (anchorIndex < 0 || focusIndex < 0) return null;
+  const forward = anchorIndex <= focusIndex;
+  const firstIndex = Math.min(anchorIndex, focusIndex);
+  const lastIndex = Math.max(anchorIndex, focusIndex);
+  const firstOffset = anchorIndex === focusIndex
+    ? Math.min(selection.anchor.offset, selection.focus.offset)
+    : forward ? selection.anchor.offset : selection.focus.offset;
+  const lastOffset = anchorIndex === focusIndex
+    ? Math.max(selection.anchor.offset, selection.focus.offset)
+    : forward ? selection.focus.offset : selection.anchor.offset;
+  const selected = blocks.slice(firstIndex, lastIndex + 1);
+  const ranges = selected.map((block, index) => ({
+    block,
+    start: index === 0 ? firstOffset : 0,
+    end: index === selected.length - 1 ? lastOffset : block.children.reduce((length, run) => length + run.text.length, 0),
+  }));
+  if (ranges.some(range => !Number.isInteger(range.start) || !Number.isInteger(range.end) ||
+      range.start < 0 || range.end < range.start ||
+      range.end > range.block.children.reduce((length, run) => length + run.text.length, 0))) return null;
+  return ranges.filter(range => range.end > range.start);
+}
 
 export type SmartCanvasTextMatch = { blockId: string; start: number; end: number };
 

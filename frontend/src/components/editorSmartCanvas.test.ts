@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
   collectSmartCanvasTextBlocks,
   findSmartCanvasTextMatches,
+  getSmartCanvasTextSelectionRanges,
   dispatchSmartCanvasBeforeInput,
   getSmartCanvasDiagnostics,
   isProductionSmartCanvasEnabled,
@@ -67,6 +68,41 @@ describe("production SmartCanvas migration gate", () => {
       { blockId: "list-p", start: 11, end: 16 },
     ]);
     expect(findSmartCanvasTextMatches(content, "")).toEqual([]);
+  });
+
+
+  it("maps forward and reverse selections across table and list text without flattening containers", () => {
+    const content = [
+      { type: "paragraph", id: "first", children: [{ text: "Alpha" }] },
+      { type: "table", id: "table", children: [
+        { type: "tableRow", id: "row", children: [
+          { type: "tableCell", id: "cell", children: [
+            { type: "paragraph", id: "cell-p", children: [{ text: "Bravo" }] },
+            { type: "bulletList", id: "list", children: [
+              { type: "listItem", id: "item", children: [
+                { type: "paragraph", id: "list-p", children: [{ text: "Charlie" }] },
+              ] },
+            ] },
+          ] },
+        ] },
+      ] },
+      { type: "paragraph", id: "last", children: [{ text: "Delta" }] },
+    ];
+    const forward = getSmartCanvasTextSelectionRanges(content, {
+      anchor: { blockId: "first", offset: 2 }, focus: { blockId: "last", offset: 3 },
+    });
+    expect(forward?.map(range => [range.block.id, range.start, range.end])).toEqual([
+      ["first", 2, 5], ["cell-p", 0, 5], ["list-p", 0, 7], ["last", 0, 3],
+    ]);
+    const reverse = getSmartCanvasTextSelectionRanges(content, {
+      anchor: { blockId: "last", offset: 3 }, focus: { blockId: "first", offset: 2 },
+    });
+    expect(reverse?.map(range => [range.block.id, range.start, range.end])).toEqual([
+      ["first", 2, 5], ["cell-p", 0, 5], ["list-p", 0, 7], ["last", 0, 3],
+    ]);
+    expect(getSmartCanvasTextSelectionRanges(content, {
+      anchor: { blockId: "missing", offset: 0 }, focus: { blockId: "last", offset: 1 },
+    })).toBeNull();
   });
 
   it("keeps diagnostic counters isolated and returns a snapshot", () => {
