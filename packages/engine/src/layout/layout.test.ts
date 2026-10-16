@@ -18,6 +18,15 @@ describe("native layout engine", () => {
     expect(result.pages[0].blocks[0].lines[0].text).toBe("Hello");
   });
 
+  it("marks semantic objects as independently selectable layout blocks", () => {
+    const object: Block = {
+      ...paragraph("shape", "Label"),
+      editorObject: { kind: "shape", shape: "ellipse", fill: "#ffffff", stroke: "#111111", width: 40, height: 20 },
+    };
+    const result = layoutDocument(documentWith([object]), { metrics });
+    expect(result.pages[0].blocks[0]).toMatchObject({ blockId: "shape", object: true });
+  });
+
   it("wraps text into measurable lines and splits long paragraphs at page boundaries", () => {
     const text = Array.from({ length: 180 }, (_, index) => "word" + index).join(" ");
     const result = layoutDocument(documentWith([paragraph("long", text)]), { metrics, fontSize: 12 });
