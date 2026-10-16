@@ -107,6 +107,47 @@ function findDocumentNode(nodes: readonly unknown[], id: string): DocumentNodeLi
   return undefined;
 }
 
+function marksAtCellOffset(
+  nodes: readonly unknown[],
+  cell: EditableCell,
+  offset: number,
+): Mark[] {
+  const paragraphs = collectCellParagraphs(nodes, cell.tableId, cell.rowId, cell.cellId);
+  const target = paragraphs.find(paragraph =>
+    offset >= paragraph.start && offset <= paragraph.start + paragraph.text.length
+  ) ?? paragraphs[paragraphs.length - 1];
+  if (!target) return [];
+  const findRuns = (items: readonly unknown[]): Array<{ text?: unknown; marks?: unknown }> | undefined => {
+    for (const value of items) {
+      if (!value || typeof value !== "object") continue;
+      const node = value as { id?: unknown; children?: unknown };
+      if (node.id === target.id && Array.isArray(node.children)) {
+        return node.children as Array<{ text?: unknown; marks?: unknown }>;
+      }
+      if (Array.isArray(node.children)) {
+        const nested = findRuns(node.children);
+        if (nested) return nested;
+      }
+    }
+    return undefined;
+  };
+  const runs = findRuns(nodes) ?? [];
+  const localOffset = Math.max(0, Math.min(target.text.length, offset - target.start));
+  let consumed = 0;
+  let selected: Mark[] | undefined;
+  for (const run of runs) {
+    const text = typeof run.text === "string" ? run.text : "";
+    const marks = Array.isArray(run.marks) ? run.marks as Mark[] : [];
+    if (localOffset < consumed + text.length || (localOffset === consumed && text.length > 0)) {
+      selected = marks;
+      break;
+    }
+    if (localOffset === consumed + text.length && text.length > 0) selected = marks;
+    consumed += text.length;
+  }
+  return (selected ?? []).map(mark => ({ ...mark }));
+}
+
 function findBlock(nodes: readonly unknown[], id: string): TextBlock | undefined {
   return collectTextBlocks(nodes).find(block => block.id === id);
 }
@@ -229,6 +270,7 @@ export function SmartCanvasPreview({ document, engine, headerText = "", footerTe
 }) {
   const [selection, setSelection] = useState<Selection | null>(engine.getSelection() ?? null);
   const [activeCell, setActiveCell] = useState<(EditableCell & { anchorOffset: number; offset: number }) | null>(null);
+  const [activeCellStoredMarks, setActiveCellStoredMarks] = useState<Mark[] | null>(null);
   const [activeBlockId, setActiveBlockId] = useState<string | null>(null);
   const [imageAltDraft, setImageAltDraft] = useState("");
   const [imageWidthDraft, setImageWidthDraft] = useState("");
@@ -274,6 +316,7 @@ export function SmartCanvasPreview({ document, engine, headerText = "", footerTe
       const boundedOffset = nearestGraphemeOffset(cell.text, target.offset);
       const range = clickCount >= 3 ? { start: 0, end: cell.text.length } : clickCount >= 2 ? wordRangeAt(cell.text, boundedOffset) : { start: boundedOffset, end: boundedOffset };
       setActiveCell({ ...cell, anchorOffset: range.start, offset: range.end });
+      setActiveCellStoredMarks(null);
       inputRef.current?.focus({ preventScroll: true });
       onStatus?.(clickCount >= 3 ? "Texto da célula selecionado." : clickCount >= 2 ? "Palavra da célula selecionada." : "Editando célula da tabela. Use Tab para avançar entre células.");
     } else {
@@ -368,7 +411,7 @@ export function SmartCanvasPreview({ document, engine, headerText = "", footerTe
   };
   const commitCellText = (nextText: string, nextOffset: number) => {
     if (!activeCell || readOnly) return;
-    const result = engine.exec([setCellText({ tableId: activeCell.tableId, rowId: activeCell.rowId, cellId: activeCell.cellId, text: nextText })], { group: "typing" });
+    const result = engine.exec([setCellText({ tableId: activeCell.tableId, rowId: activeCell.rowId, cellId: activeCell.cellId, text: nextText, ...(activeCellStoredMarks !== null ? { insertionMarks: activeCellStoredMarks } : {}) })], { group: "typing" });
     if (!result.ok) { onStatus?.(result.error.message); return; }
     setActiveCell({ ...activeCell, text: nextText, anchorOffset: nextOffset, offset: nextOffset });
     onDocumentChange(result.value.document);
@@ -398,9 +441,18 @@ export function SmartCanvasPreview({ document, engine, headerText = "", footerTe
         const start = Math.min(activeCell.anchorOffset, activeCell.offset);
         const end = Math.max(activeCell.anchorOffset, activeCell.offset);
         if (start === end) {
-          onStatus?.("Selecione texto dentro da célula para aplicar a formatação.");
+          const currentMarks = activeCellStoredMarks ?? marksAtCellOffset(engine.getDocument().content, activeCell, activeCell.offset);
+          const hasMark = currentMarks.some(item => item.type === mark.type);
+          const nextMarks = hasMark
+            ? currentMarks.filter(item => item.type !== mark.type)
+            : [...currentMarks.filter(item => item.type !== mark.type), mark];
+          setActiveCellStoredMarks(nextMarks);
+          onStatus?.(hasMark
+            ? "Formatação removida da digitação seguinte na célula."
+            : "Formatação ativada para o texto digitado em seguida na célula.");
           return;
         }
+        setActiveCellStoredMarks(null);
         const paragraphs = collectCellParagraphs(engine.getDocument().content, activeCell.tableId, activeCell.rowId, activeCell.cellId);
         const commands = paragraphs.flatMap(paragraph => {
           const localStart = Math.max(0, start - paragraph.start);
@@ -429,6 +481,7 @@ export function SmartCanvasPreview({ document, engine, headerText = "", footerTe
       if (event.key === "Escape") {
         event.preventDefault();
         setActiveCell(null);
+        setActiveCellStoredMarks(null);
         inputRef.current?.blur();
         return;
       }
@@ -455,6 +508,7 @@ export function SmartCanvasPreview({ document, engine, headerText = "", footerTe
           );
           const firstCell = addedCells[0];
           if (firstCell) setActiveCell({ ...firstCell, anchorOffset: 0, offset: 0 });
+          setActiveCellStoredMarks(null);
           onDocumentChange(result.value.document);
           onStatus?.("Nova linha adicionada à tabela.");
           return;
@@ -464,6 +518,7 @@ export function SmartCanvasPreview({ document, engine, headerText = "", footerTe
         if (next) {
           const offset = event.shiftKey ? next.text.length : 0;
           setActiveCell({ ...next, anchorOffset: offset, offset });
+          setActiveCellStoredMarks(null);
         }
         return;
       }
@@ -473,6 +528,7 @@ export function SmartCanvasPreview({ document, engine, headerText = "", footerTe
         if (preferredCellColumn.current === null) preferredCellColumn.current = activeCell.offset - lineStart;
         const offset = verticalLineOffset(activeCell.text, activeCell.offset, event.key === "ArrowUp" ? -1 : 1, preferredCellColumn.current);
         setActiveCell({ ...activeCell, anchorOffset: event.shiftKey ? activeCell.anchorOffset : offset, offset });
+        if (!event.shiftKey) setActiveCellStoredMarks(null);
         return;
       }
       if (event.key === "ArrowLeft" || event.key === "ArrowRight" || event.key === "Home" || event.key === "End") {
@@ -488,6 +544,7 @@ export function SmartCanvasPreview({ document, engine, headerText = "", footerTe
               ? (hasRange && !event.shiftKey ? orderedStart : event.ctrlKey || event.metaKey ? previousWordOffset(activeCell.text, activeCell.offset) : previousCodePointOffset(activeCell.text, activeCell.offset))
               : (hasRange && !event.shiftKey ? orderedEnd : event.ctrlKey || event.metaKey ? nextWordOffset(activeCell.text, activeCell.offset) : nextCodePointOffset(activeCell.text, activeCell.offset));
         setActiveCell({ ...activeCell, anchorOffset: event.shiftKey ? activeCell.anchorOffset : offset, offset });
+        if (!event.shiftKey) setActiveCellStoredMarks(null);
         return;
       }
       if (event.key === "Backspace" || event.key === "Delete") {
@@ -634,6 +691,7 @@ export function SmartCanvasPreview({ document, engine, headerText = "", footerTe
         setSelection(next ?? null);
         const restoredDocument = engine.getDocument();
         refreshActiveCell(restoredDocument);
+        setActiveCellStoredMarks(null);
         onDocumentChange(restoredDocument);
       }
       return;
