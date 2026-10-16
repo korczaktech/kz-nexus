@@ -219,6 +219,18 @@ describe("SmartCanvasPreview input integration", () => {
     await act(async () => { input.dispatchEvent(copy); });
     expect(copied).toBe("Before\\nInside cell");
     expect(copy.defaultPrevented).toBe(true);
+    await act(async () => {
+      const setter = Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, "value")?.set;
+      if (!setter) throw new Error("Textarea value setter was not available");
+      setter.call(input, "Replacement");
+      input.dispatchEvent(new Event("input", { bubbles: true }));
+    });
+    const replacedFirst = engine.getDocument().content[0];
+    if (!replacedFirst || replacedFirst.type !== "paragraph") throw new Error("Expected first paragraph after replacement");
+    expect(getPlainText(replacedFirst)).toBe("Replacement");
+    const retainedTable = engine.getDocument().content.find(block => block.type === "table");
+    if (!retainedTable || retainedTable.type !== "table") throw new Error("Expected table container after replacement");
+    expect(getPlainText(retainedTable.children[0]!.children[0]!.children[0]!)).toBe("");
   });
 
   it("moves the table-cell caret horizontally between adjacent cells at boundaries", async () => {
