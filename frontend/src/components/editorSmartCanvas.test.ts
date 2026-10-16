@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
+  collectSmartCanvasTextBlocks,
   dispatchSmartCanvasBeforeInput,
   getSmartCanvasDiagnostics,
   isProductionSmartCanvasEnabled,
@@ -15,6 +16,29 @@ describe("production SmartCanvas migration gate", () => {
     expect(isProductionSmartCanvasEnabled("?smartCanvas=0")).toBe(false);
     expect(isProductionSmartCanvasEnabled("?smartCanvas=1")).toBe(true);
     expect(isProductionSmartCanvasEnabled("?other=1&smartCanvas=1")).toBe(true);
+  });
+
+
+  it("includes text blocks nested inside tables and list containers in document order", () => {
+    const content = [
+      { type: "paragraph", id: "top", children: [{ text: "before" }] },
+      { type: "table", id: "table", children: [
+        { type: "tableRow", id: "row", children: [
+          { type: "tableCell", id: "cell-a", children: [
+            { type: "paragraph", id: "cell-paragraph", children: [{ text: "inside cell" }] },
+            { type: "bulletList", id: "nested-list", children: [
+              { type: "listItem", id: "item", children: [
+                { type: "paragraph", id: "list-paragraph", children: [{ text: "nested list text" }] },
+              ] },
+            ] },
+          ] },
+        ] },
+      ] },
+      { type: "heading", id: "after", children: [{ text: "after" }] },
+    ];
+    expect(collectSmartCanvasTextBlocks(content).map(block => block.id)).toEqual([
+      "top", "cell-paragraph", "list-paragraph", "after",
+    ]);
   });
 
   it("keeps diagnostic counters isolated and returns a snapshot", () => {

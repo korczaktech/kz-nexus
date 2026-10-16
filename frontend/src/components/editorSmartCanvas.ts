@@ -6,6 +6,26 @@ type EngineInstance = ReturnType<typeof createEditor>;
 
 export type SmartCanvasSelectionContext = NonNullable<ReturnType<typeof getEngineLogicalContext>>;
 
+/**
+ * Returns editable text blocks in document order, including blocks nested in
+ * table rows/cells. Search and structural selection must not silently skip a
+ * table merely because it is a container rather than a text block.
+ */
+export function collectSmartCanvasTextBlocks(content: readonly unknown[]): Array<{ type: "paragraph" | "heading"; id: string; children: Array<{ text: string }> }> {
+  const blocks: Array<{ type: "paragraph" | "heading"; id: string; children: Array<{ text: string }> }> = [];
+  const visit = (node: unknown): void => {
+    if (!node || typeof node !== "object") return;
+    const value = node as { type?: string; id?: string; children?: unknown[] };
+    if ((value.type === "paragraph" || value.type === "heading") && typeof value.id === "string" && Array.isArray(value.children)) {
+      blocks.push(value as { type: "paragraph" | "heading"; id: string; children: Array<{ text: string }> });
+      return;
+    }
+    for (const child of value.children ?? []) visit(child);
+  };
+  content.forEach(visit);
+  return blocks;
+}
+
 export type SmartCanvasDiagnostics = {
   reads: number;
   successfulReads: number;
