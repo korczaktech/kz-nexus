@@ -640,6 +640,44 @@ describe("SmartCanvasPreview input integration", () => {
     expect(engine.getDocument().resources).toHaveLength(0);
   });
 
+  it("inserts a local image file through the SmartCanvas file control", async () => {
+    const document = createDocument({ title: "SmartCanvas local image file" });
+    engine = createEditor({ document });
+    const onDocumentChange = vi.fn();
+    const onStatus = vi.fn();
+    host = window.document.createElement("div");
+    window.document.body.append(host);
+    root = createRoot(host);
+    await act(async () => {
+      root?.render(createElement(SmartCanvasPreview, {
+        document: engine!.getDocument(),
+        engine: engine!,
+        onDocumentChange,
+        onStatus,
+      }));
+    });
+    const fileInput = host.querySelector('[aria-label="Arquivo de imagem SmartCanvas"]') as HTMLInputElement | null;
+    if (!fileInput) throw new Error("SmartCanvas image file input was not mounted");
+    const file = new File(["small-image-fixture"], "from-file.png", { type: "image/png" });
+    const readerSpy = vi.spyOn(FileReader.prototype, "readAsDataURL").mockImplementation(function (this: FileReader) {
+      Object.defineProperty(this, "result", { configurable: true, value: "data:image/png;base64,c21hbGwtaW1hZ2UtZml4dHVyZQ==" });
+      this.onload?.call(this, new ProgressEvent("load") as ProgressEvent<FileReader>);
+    });
+    Object.defineProperty(fileInput, "files", { configurable: true, value: [file] });
+    await act(async () => {
+      fileInput.dispatchEvent(new Event("change", { bubbles: true }));
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+    readerSpy.mockRestore();
+
+    const result = engine.getDocument();
+    expect(result.content.some(block => block.type === "image")).toBe(true);
+    expect(result.resources.some(resource => resource.kind === "image" && resource.name === "from-file.png")).toBe(true);
+    expect(onDocumentChange).toHaveBeenCalled();
+    expect(onStatus).toHaveBeenLastCalledWith("Imagem inserida pelo SmartCanvas.");
+  });
+
   it("pastes an image resource into the canonical document", async () => {
     const document = createDocument({ title: "SmartCanvas image paste" });
     const first = document.content[0];
