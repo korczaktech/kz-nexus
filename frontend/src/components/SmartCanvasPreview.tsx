@@ -914,6 +914,48 @@ export function SmartCanvasPreview({ document, engine, headerText = "", footerTe
       event.preventDefault();
       const richHtml = event.clipboardData.getData("text/html");
       const current = engine.getSelection();
+      if (activeCell && richHtml) {
+        try {
+          const imported = nexusDocumentFromHtml(richHtml, engine.getDocument().metadata.title);
+          const paragraphBlocks = imported.content.filter(block => block.type === "paragraph" || block.type === "heading");
+          if (paragraphBlocks.length === imported.content.length && paragraphBlocks.length > 0) {
+            const insertionRuns: Array<{ text: string; marks: Mark[] }> = [];
+            paragraphBlocks.forEach((block, index) => {
+              if (block.type !== "paragraph" && block.type !== "heading") return;
+              for (const run of block.children) {
+                if (run.text) insertionRuns.push({ text: run.text, marks: run.marks.map(mark => ({ ...mark })) });
+              }
+              if (index < paragraphBlocks.length - 1) insertionRuns.push({ text: "\\n", marks: [] });
+            });
+            const pastedText = insertionRuns.map(run => run.text).join("");
+            if (pastedText) {
+              const start = Math.min(activeCell.anchorOffset, activeCell.offset);
+              const end = Math.max(activeCell.anchorOffset, activeCell.offset);
+              const nextText = activeCell.text.slice(0, start) + pastedText + activeCell.text.slice(end);
+              const result = engine.exec([setCellText({
+                tableId: activeCell.tableId,
+                rowId: activeCell.rowId,
+                cellId: activeCell.cellId,
+                text: nextText,
+                insertionRange: { start, end: start + pastedText.length },
+                insertionRuns,
+              })], { group: "typing" });
+              if (!result.ok) {
+                onStatus?.("A colagem formatada na célula não pôde ser aplicada: " + result.error.message);
+                handleInput(event.clipboardData.getData("text/plain"));
+                return;
+              }
+              setActiveCell({ ...activeCell, text: nextText, anchorOffset: start + pastedText.length, offset: start + pastedText.length });
+              setActiveCellStoredMarks(null);
+              onDocumentChange(result.value.document);
+              onStatus?.("Conteúdo formatado colado na célula com sanitização.");
+              return;
+            }
+          }
+        } catch {
+          onStatus?.("A colagem formatada na célula não pôde ser interpretada; foi usado texto simples.");
+        }
+      }
       if (!activeCell && richHtml && current && current.anchor.blockId === current.focus.blockId) {
         const source = engine.getDocument().content.find(block => block.id === current.focus.blockId);
         if (source && (source.type === "paragraph" || source.type === "heading")) {
