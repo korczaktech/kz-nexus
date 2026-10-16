@@ -3,6 +3,8 @@ import { createIdGenerator } from "../core/ids";
 import { createFixedClock } from "../core/clock";
 import { createEditor } from "./editor";
 import { deleteText, insertText } from "../commands/text";
+import { mergeBlockWithPrevious, splitBlock } from "../commands/block";
+import { getPlainText } from "../model/tree";
 import { applyMark } from "../commands/marks";
 import type { Paragraph } from "../model/types";
 
@@ -192,4 +194,33 @@ describe("Editor", () => {
       (doc as unknown as { id: string }).id = "tampered";
     }).toThrow();
   });
+  it("deletes a range spanning multiple paragraphs atomically and can undo it", () => {
+    const editor = newEditor();
+    const firstId = editor.getDocument().content[0].id;
+
+    expect(editor.exec([insertText({ blockId: firstId, offset: 0, text: "alpha" })], { group: "typing" }).ok).toBe(true);
+    expect(editor.exec([splitBlock({ blockId: firstId, offset: 5 })], { group: "typing" }).ok).toBe(true);
+    const secondId = editor.getDocument().content[1].id;
+    expect(editor.exec([insertText({ blockId: secondId, offset: 0, text: "bravo" })], { group: "typing" }).ok).toBe(true);
+    expect(editor.exec([splitBlock({ blockId: secondId, offset: 5 })], { group: "typing" }).ok).toBe(true);
+    const thirdId = editor.getDocument().content[2].id;
+    expect(editor.exec([insertText({ blockId: thirdId, offset: 0, text: "charlie" })], { group: "typing" }).ok).toBe(true);
+
+    const beforeCut = editor.getDocument();
+    const cut = editor.exec([
+      deleteText({ blockId: firstId, start: 2, end: 5 }),
+      deleteText({ blockId: secondId, start: 0, end: 5 }),
+      deleteText({ blockId: thirdId, start: 0, end: 4 }),
+      mergeBlockWithPrevious({ blockId: secondId }),
+      mergeBlockWithPrevious({ blockId: thirdId }),
+    ], { group: "typing" });
+
+    expect(cut.ok).toBe(true);
+    expect(editor.getDocument().content).toHaveLength(1);
+    expect(getPlainText(editor.getDocument().content[0] as Paragraph)).toBe("allie");
+
+    expect(editor.undo()).toBe(true);
+    expect(editor.getDocument()).toEqual(beforeCut);
+  });
+
 });
