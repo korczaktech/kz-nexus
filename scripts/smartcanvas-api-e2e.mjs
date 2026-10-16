@@ -50,7 +50,7 @@ try {
   await page.getByLabel("E-mail").waitFor();
   await page.getByLabel("Nome").fill("SmartCanvas API E2E");
   await page.getByLabel("E-mail").fill(email);
-  await page.getByLabel("Senha", { exact: true }).fill(password);
+  await page.locator(".auth-card form input[type=password]").nth(0).fill(password);
   await page.getByLabel("Confirmar senha").fill(password);
   await page.locator('input[name="acceptTerms"]').check();
   await page.locator('input[name="acceptPrivacy"]').check();
