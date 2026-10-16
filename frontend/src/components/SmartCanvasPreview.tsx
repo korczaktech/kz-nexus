@@ -24,6 +24,57 @@ function collectTextBlocks(nodes: readonly unknown[]): TextBlock[] {
   return blocks;
 }
 
+type PastedCellImage = { resourceId: string; alt: string; width?: number; height?: number };
+
+function flattenPastedCellContent(nodes: readonly unknown[], images: PastedCellImage[]): string[] {
+  const flattenNode = (value: unknown): string[] => {
+    if (!value || typeof value !== "object") return [];
+    const node = value as { type?: string; id?: string; alt?: string; resourceId?: string; width?: number; height?: number; start?: number; children?: unknown[]; images?: unknown[] };
+    if (node.type === "paragraph" || node.type === "heading") {
+      return [getPlainText(value as Extract<NexusDocument["content"][number], { type: "paragraph" | "heading" }>)];
+    }
+    if (node.type === "image" && typeof node.resourceId === "string") {
+      images.push({ resourceId: node.resourceId, alt: node.alt ?? "", width: node.width, height: node.height });
+      return [];
+    }
+    if (node.type === "thematicBreak") return [""];
+    if (node.type === "blockquote") return (node.children ?? []).flatMap(flattenNode);
+    if (node.type === "bulletList" || node.type === "orderedList") {
+      return (node.children ?? []).flatMap((item, index) => {
+        if (!item || typeof item !== "object") return [];
+        const itemNode = item as { children?: unknown[] };
+        const lines = (itemNode.children ?? []).flatMap(flattenNode);
+        const marker = node.type === "orderedList" ? String((node.start ?? 1) + index) + ". " : "• ";
+        return lines.length ? lines.map((line, lineIndex) => lineIndex === 0 ? marker + line : "  " + line) : [marker.trimEnd()];
+      });
+    }
+    if (node.type === "table") {
+      return (node.children ?? []).map(rowValue => {
+        if (!rowValue || typeof rowValue !== "object") return "";
+        const row = rowValue as { children?: unknown[] };
+        return (row.children ?? []).map(cellValue => {
+          if (!cellValue || typeof cellValue !== "object") return "";
+          const cell = cellValue as { children?: unknown[]; images?: unknown[] };
+          for (const image of cell.images ?? []) {
+            if (!image || typeof image !== "object") continue;
+            const item = image as { resourceId?: unknown; alt?: unknown; width?: unknown; height?: unknown };
+            if (typeof item.resourceId === "string") images.push({
+              resourceId: item.resourceId,
+              alt: typeof item.alt === "string" ? item.alt : "",
+              width: typeof item.width === "number" ? item.width : undefined,
+              height: typeof item.height === "number" ? item.height : undefined,
+            });
+          }
+          return (cell.children ?? []).flatMap(flattenNode).join("\n");
+        }).join(" | ");
+      });
+    }
+    if (node.type === "listItem") return (node.children ?? []).flatMap(flattenNode);
+    return (node.children ?? []).flatMap(flattenNode);
+  };
+  return nodes.flatMap(flattenNode);
+}
+
 type EditableCell = { tableId: string; rowId: string; cellId: string; text: string };
 type CellParagraph = { id: string; text: string; start: number };
 
@@ -1575,6 +1626,56 @@ export function SmartCanvasPreview({ document, engine, headerText = "", footerTe
               onStatus?.("Conteúdo formatado colado na célula com sanitização.");
               return;
             }
+          }
+          // Table cells currently store paragraphs plus anchored images, not
+          // nested list/table nodes. Preserve rich structures as readable cell
+          // text and import embedded images as first-class cell image resources.
+          const pastedImages: PastedCellImage[] = [];
+          const pastedLines = flattenPastedCellContent(imported.content, pastedImages);
+          const pastedText = pastedLines.join("\n");
+          const start = Math.min(activeCell.anchorOffset, activeCell.offset);
+          const end = Math.max(activeCell.anchorOffset, activeCell.offset);
+          const nextText = activeCell.text.slice(0, start) + pastedText + activeCell.text.slice(end);
+          const commands = [];
+          if (pastedText) {
+            commands.push(setCellText({
+              tableId: activeCell.tableId,
+              rowId: activeCell.rowId,
+              cellId: activeCell.cellId,
+              text: nextText,
+              insertionRange: { start, end: start + pastedText.length },
+              insertionRuns: [{ text: pastedText, marks: [] }],
+            }));
+          }
+          for (const image of pastedImages) {
+            const resource = imported.resources.find(item => item.id === image.resourceId && item.kind === "image");
+            if (!resource) continue;
+            commands.push(insertTableCellImageResource({
+              tableId: activeCell.tableId,
+              rowId: activeCell.rowId,
+              cellId: activeCell.cellId,
+              mimeType: resource.mimeType,
+              data: resource.data,
+              alt: image.alt,
+              name: resource.name,
+              width: image.width,
+              height: image.height,
+            }));
+          }
+          if (commands.length) {
+            const result = engine.exec(commands, { group: "structural" });
+            if (!result.ok) {
+              onStatus?.("A colagem estruturada na célula não pôde ser aplicada: " + result.error.message);
+              handleInput(event.clipboardData.getData("text/plain"));
+              return;
+            }
+            if (pastedText) setActiveCell({ ...activeCell, text: nextText, anchorOffset: start + pastedText.length, offset: start + pastedText.length });
+            setActiveCellStoredMarks(null);
+            onDocumentChange(result.value.document);
+            onStatus?.(pastedImages.length
+              ? "Conteúdo colado na célula; listas e tabelas foram convertidas em texto e imagens foram incorporadas."
+              : "Listas e tabelas coladas na célula foram convertidas em texto estruturado.");
+            return;
           }
         } catch {
           onStatus?.("A colagem formatada na célula não pôde ser interpretada; foi usado texto simples.");
