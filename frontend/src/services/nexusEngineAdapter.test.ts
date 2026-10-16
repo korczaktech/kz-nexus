@@ -1,7 +1,7 @@
 // @vitest-environment happy-dom
 import { describe, expect, it } from "vitest";
 import { createEditor, getPlainText } from "../../../packages/engine/src/index";
-import { getEngineDomContext, htmlFromNexusDocument, nexusDocumentFromHtml, restoreEngineDomSelection, syncNexusEngine } from "./nexusEngineAdapter";
+import { getEngineDomContext, getEngineLogicalContext, htmlFromNexusDocument, nexusDocumentFromHtml, restoreEngineDomSelection, syncNexusEngine } from "./nexusEngineAdapter";
 import type { Paragraph } from "../../../packages/engine/src/model/types";
 
 describe("Nexus editor adapter", () => {
@@ -21,6 +21,31 @@ describe("Nexus editor adapter", () => {
     if (!roundtripTable || roundtripTable.type !== "table") throw new Error("Expected round-tripped table");
     expect(roundtripTable.children[0].children[0].images).toHaveLength(1);
     expect(roundtrip.resources[0]?.data).toBe("aGVsbG8=");
+  });
+
+  it("maps engine-owned selection across blocks without reading a browser DOM range", () => {
+    const engine = createEditor({ document: nexusDocumentFromHtml("<p>Alpha</p><p>Beta</p>", "Logical selection test") });
+    const blocks = engine.getDocument().content.filter(block => block.type === "paragraph" || block.type === "heading");
+    const first = blocks[0]!;
+    const second = blocks[1]!;
+    const selected = engine.setSelection({
+      anchor: { blockId: first.id, offset: 3 },
+      focus: { blockId: second.id, offset: 2 },
+    });
+    expect(selected.ok).toBe(true);
+
+    const context = getEngineLogicalContext(engine);
+    expect(context).toMatchObject({
+      blockIndex: 0,
+      endBlockIndex: 1,
+      startOffset: 3,
+      endOffset: 2,
+      anchorBlockId: first.id,
+      focusBlockId: second.id,
+      topLevelBlock: { id: first.id },
+      endTopLevelBlock: { id: second.id },
+    });
+    engine.dispose();
   });
 
   it("does not map header or footer selections to body paragraphs", () => {
