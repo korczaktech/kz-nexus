@@ -1,5 +1,5 @@
 import { useMemo, useRef, useState } from "react";
-import { collapsedAt, deleteText, getPlainText, layoutDocument, mergeBlockWithPrevious, type Editor as NexusEngineSession, type NexusDocument, type Selection, type SmartCanvasHitTarget } from "../../../packages/engine/src/index";
+import { collapsedAt, deleteText, getPlainText, layoutDocument, mergeBlockWithPrevious, replaceRange, splitBlock, type Editor as NexusEngineSession, type NexusDocument, type Selection, type SmartCanvasHitTarget } from "../../../packages/engine/src/index";
 import { CanvasDocumentRenderer } from "./CanvasDocumentRenderer";
 
 type TextBlock = { id: string; text: string };
@@ -182,9 +182,29 @@ export function SmartCanvasPreview({ document, engine, headerText = "", footerTe
       onDocumentChange(result.value.document);
       return;
     }
-    if (event.key === "Enter" || event.key === "Tab") {
+    if (event.key === "Enter") {
       event.preventDefault();
-      onStatus?.(event.key === "Enter" ? "Quebra de parágrafo ainda não está habilitada no controlador SmartCanvas." : "Navegação por Tab ainda não está habilitada no SmartCanvas.");
+      const current = engine.getSelection();
+      if (!current || current.anchor.blockId !== current.focus.blockId) {
+        onStatus?.("Enter exige uma seleção dentro de um único parágrafo no SmartCanvas.");
+        return;
+      }
+      const block = findBlock(engine.getDocument().content, current.focus.blockId);
+      if (!block) return;
+      const start = Math.min(current.anchor.offset, current.focus.offset);
+      const end = Math.max(current.anchor.offset, current.focus.offset);
+      const commands = [];
+      if (start !== end) commands.push(replaceRange({ blockId: block.id, start, end, text: "" }));
+      commands.push(splitBlock({ blockId: block.id, offset: start }));
+      const result = engine.exec(commands, { group: "typing" });
+      if (!result.ok) { onStatus?.(result.error.message); return; }
+      setSelection(engine.getSelection() ?? null);
+      onDocumentChange(result.value.document);
+      return;
+    }
+    if (event.key === "Tab") {
+      event.preventDefault();
+      onStatus?.("Navegação por Tab entre células ainda não está habilitada no SmartCanvas.");
     }
   };
   return <section className="kz-smartcanvas-experiment" aria-label="Prévia experimental SmartCanvas" style={{ margin: "0 0 16px", padding: 16, border: "1px solid #93c5fd", borderRadius: 12, background: "rgba(59,130,246,.04)", position: "relative" }} onPointerDownCapture={() => inputRef.current?.focus({ preventScroll: true })}>
