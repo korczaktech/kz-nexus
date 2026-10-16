@@ -248,7 +248,7 @@ describe("SmartCanvasPreview input integration", () => {
     const result = engine.getDocument();
     expect(result.content.some(block => block.id === objectParagraph.id)).toBe(false);
     expect(result.content.some(block => block.id === "adjacent_text0001")).toBe(true);
-    expect(getPlainText(result.content.find(block => block.id === "adjacent-text") as Extract<NexusDocument["content"][number], { type: "paragraph" }>)).toBe("Keep me");
+    expect(getPlainText(result.content.find(block => block.id === "adjacent_text0001") as Extract<NexusDocument["content"][number], { type: "paragraph" }>)).toBe("Keep me");
     expect(onDocumentChange).toHaveBeenCalled();
   });
 
