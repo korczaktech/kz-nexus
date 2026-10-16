@@ -1,5 +1,5 @@
 import { useMemo, useRef, useState } from "react";
-import { collapsedAt, deleteBlock, deleteText, insertText, getLineXAtOffset, getOffsetAtLineX, getPlainText, layoutDocument, mergeBlockWithPrevious, replaceRange, setCellText, splitBlock, toggleMark as toggleMarkCommand, type Editor as NexusEngineSession, type Mark, type NexusDocument, type Selection, type SmartCanvasHitTarget } from "../../../packages/engine/src/index";
+import { addTableRow, collapsedAt, deleteBlock, deleteText, insertText, getLineXAtOffset, getOffsetAtLineX, getPlainText, layoutDocument, mergeBlockWithPrevious, replaceRange, setCellText, splitBlock, toggleMark as toggleMarkCommand, type Editor as NexusEngineSession, type Mark, type NexusDocument, type Selection, type SmartCanvasHitTarget } from "../../../packages/engine/src/index";
 import { CanvasDocumentRenderer } from "./CanvasDocumentRenderer";
 import { lineEndOffset, lineStartOffset, nearestGraphemeOffset, nextCodePointOffset, nextWordOffset, previousCodePointOffset, previousWordOffset, verticalLineOffset, wordRangeAt } from "./smartCanvasTextOffsets";
 
@@ -393,7 +393,23 @@ export function SmartCanvasPreview({ document, engine, headerText = "", footerTe
         event.preventDefault();
         const cells = collectTableCells(engine.getDocument().content).filter(cell => cell.tableId === activeCell.tableId);
         const index = cells.findIndex(cell => cell.cellId === activeCell.cellId);
-        const nextIndex = event.shiftKey ? (index - 1 + cells.length) % cells.length : (index + 1) % cells.length;
+        if (!event.shiftKey && index === cells.length - 1) {
+          const existingRowIds = new Set(cells.map(cell => cell.rowId));
+          const result = engine.exec([addTableRow({ tableId: activeCell.tableId, afterRowId: activeCell.rowId })], { group: "structural" });
+          if (!result.ok) {
+            onStatus?.(result.error.message);
+            return;
+          }
+          const addedCells = collectTableCells(result.value.document.content).filter(cell =>
+            cell.tableId === activeCell.tableId && !existingRowIds.has(cell.rowId)
+          );
+          const firstCell = addedCells[0];
+          if (firstCell) setActiveCell({ ...firstCell, anchorOffset: 0, offset: 0 });
+          onDocumentChange(result.value.document);
+          onStatus?.("Nova linha adicionada à tabela.");
+          return;
+        }
+        const nextIndex = event.shiftKey ? Math.max(0, index - 1) : Math.min(cells.length - 1, index + 1);
         const next = cells[nextIndex];
         if (next) setActiveCell({ ...next, anchorOffset: next.text.length, offset: next.text.length });
         return;
