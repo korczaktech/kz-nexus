@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { createIdGenerator } from "../core/ids";
 import { createFixedClock } from "../core/clock";
 import { createDocument } from "./document";
-import { addTableColumn, addTableRow, insertTable, removeTableColumn, removeTableRow, setCellText } from "./table";
+import { addTableColumn, addTableRow, insertTable, insertTableCellImageResource, removeTableColumn, removeTableRow, setCellText } from "./table";
 import { getPlainText } from "../model/tree";
 import type { Table } from "../model/types";
 
@@ -99,6 +99,24 @@ describe("row/column operations", () => {
     const tableId = created.value.document.content[1].id;
     const result = removeTableColumn({ tableId, columnIndex: 0 })(created.value.document, ctx());
     expect(result.ok).toBe(false);
+  });
+
+  it("inserts an image resource into a table cell", () => {
+    const { document, tableId } = tableDoc();
+    const table = document.content.find(block => block.type === "table" && block.id === tableId);
+    if (!table || table.type !== "table") throw new Error("Expected table");
+    const row = table.children[0];
+    const cell = row.children[0];
+    const result = insertTableCellImageResource({
+      tableId, rowId: row.id, cellId: cell.id,
+      mimeType: "image/png", data: "aGVsbG8=", alt: "Embedded image", name: "cell.png", width: 120, height: 96,
+    })(document, ctx());
+    if (!result.ok) throw result.error;
+    const updated = result.value.document.content.find(block => block.type === "table" && block.id === tableId);
+    if (!updated || updated.type !== "table") throw new Error("Expected updated table");
+    expect(updated.children[0].children[0].images).toHaveLength(1);
+    expect(result.value.document.resources).toHaveLength(1);
+    expect(result.value.document.resources[0].name).toBe("cell.png");
   });
 
   it("sets cell text", () => {
