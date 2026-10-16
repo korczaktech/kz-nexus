@@ -12,6 +12,8 @@ on:
       - "frontend/src/components/SmartCanvasPreview.tsx"
       - "frontend/src/services/nexusDocumentPersistence.ts"
       - "frontend/src/components/EditorSmartCanvasSave.integration.test.tsx"
+      - "scripts/smartcanvas-api-e2e.mjs"
+      - "frontend/package.json"
 
 permissions:
   contents: read
@@ -20,7 +22,7 @@ jobs:
   api-integration:
     name: Real API save, autosave, versions and conflict checks
     runs-on: ubuntu-24.04
-    timeout-minutes: 15
+    timeout-minutes: 25
     services:
       mongodb:
         image: mongo:7
@@ -54,3 +56,42 @@ jobs:
       - name: Run real MongoDB-backed API integration
         working-directory: backend
         run: python -m pytest tests/test_api_integration.py -m integration
+      - name: Install frontend and Playwright browser dependencies
+        working-directory: frontend
+        run: |
+          npm install --no-audit --no-fund
+          npm install --no-save playwright --no-audit --no-fund
+          npx playwright install --with-deps chromium
+      - name: Build frontend against the local API
+        working-directory: frontend
+        run: VITE_API_BASE_URL=http://127.0.0.1:8000 npm run build
+      - name: Start the real API server
+        run: |
+          nohup python -m uvicorn korczak_documents.main:app --host 127.0.0.1 --port 8000 > /tmp/smartcanvas-api.log 2>&1 &
+          for attempt in $(seq 1 30); do
+            if curl -fsS http://127.0.0.1:8000/openapi.json > /dev/null; then
+              echo "API is ready"
+              exit 0
+            fi
+            sleep 2
+          done
+          cat /tmp/smartcanvas-api.log
+          exit 1
+      - name: Start frontend preview
+        working-directory: frontend
+        run: |
+          nohup npm run preview -- --host 0.0.0.0 --port 5173 > /tmp/smartcanvas-frontend.log 2>&1 &
+          for attempt in $(seq 1 30); do
+            if curl -fsS http://localhost:5173/ > /dev/null; then
+              echo "Frontend is ready"
+              exit 0
+            fi
+            sleep 2
+          done
+          cat /tmp/smartcanvas-frontend.log
+          exit 1
+      - name: Run SmartCanvas browser E2E against real API
+        run: node scripts/smartcanvas-api-e2e.mjs
+        env:
+          SMARTCANVAS_E2E_BASE_URL: http://localhost:5173
+          SMARTCANVAS_E2E_API_URL: http://127.0.0.1:8000
