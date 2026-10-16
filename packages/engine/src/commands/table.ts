@@ -84,6 +84,7 @@ export function addTableColumn(params: { tableId: string; afterColumnIndex?: num
         return { ...row, children: cells };
       }),
     }));
+  };
 }
 
 export function removeTableColumn(params: { tableId: string; columnIndex: number }): Command {
@@ -186,8 +187,20 @@ function rebuildCellParagraphs(
   });
 }
 export function setCellText(params: { tableId: string; rowId: string; cellId: string; text: string; insertionMarks?: Mark[]; insertionRuns?: CellInsertionRun[]; insertionRange?: { start: number; end: number } }): Command {
-  return (doc, ctx) =>
-    withTable(doc, params.tableId, (table) => ({
+  return (doc, ctx) => {
+    if (params.insertionRuns && !params.insertionRange) {
+      return err(engineError("INVALID_DOCUMENT", "Rich insertion runs require an explicit insertion range"));
+    }
+    if (params.insertionRange) {
+      const { start, end } = params.insertionRange;
+      if (!Number.isInteger(start) || !Number.isInteger(end) || start < 0 || end < start || end > params.text.length) {
+        return err(engineError("INVALID_POSITION", "Invalid cell insertion range"));
+      }
+      if (params.insertionRuns && params.insertionRuns.map(run => run.text).join("") !== params.text.slice(start, end)) {
+        return err(engineError("INVALID_DOCUMENT", "Rich insertion runs must match the text in the insertion range"));
+      }
+    }
+    return withTable(doc, params.tableId, (table) => ({
       ...table,
       children: table.children.map((row) =>
         row.id !== params.rowId
