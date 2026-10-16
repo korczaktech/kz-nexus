@@ -88,6 +88,43 @@ describe("SmartCanvas layout hit testing", () => {
     });
   });
 
+  it("counts empty paragraphs when mapping offsets within a table cell", () => {
+    const tableLayout = {
+      ...layout,
+      pages: [{
+        ...layout.pages[0],
+        blocks: [{
+          blockId: "table-empty-paragraph",
+          type: "table",
+          pageIndex: 0,
+          rect: { x: 0, y: 0, width: 200, height: 100 },
+          lines: [],
+          table: {
+            rows: [{
+              rowId: "row-empty-paragraph",
+              rect: { x: 0, y: 0, width: 200, height: 80 },
+              cells: [{
+                cellId: "cell-empty-paragraph",
+                rect: { x: 10, y: 10, width: 100, height: 60 },
+                lines: [
+                  { ...line, text: "first", x: 15, y: 15, startOffset: 0, endOffset: 5 },
+                  { ...line, text: "", x: 15, y: 30, width: 0, startOffset: 0, endOffset: 0 },
+                  { ...line, text: "third", x: 15, y: 45, startOffset: 0, endOffset: 5 },
+                ],
+              }],
+            }],
+          },
+        }],
+      }],
+    } as unknown as LayoutResult;
+    expect(hitTestLayout(tableLayout, 0, 15, 45)).toMatchObject({
+      kind: "table-cell",
+      cellId: "cell-empty-paragraph",
+      offset: 7,
+      lineIndex: 2,
+    });
+  });
+
   it("returns no target for invalid coordinates or a missing page", () => {
     expect(hitTestLayout(layout, 4, 20, 20)).toBeUndefined();
     expect(hitTestLayout(layout, 0, Number.NaN, 20)).toBeUndefined();
