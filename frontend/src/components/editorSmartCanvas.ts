@@ -42,7 +42,7 @@ export function isProductionSmartCanvasEnabled(search?: string): boolean {
  */
 export function readSmartCanvasSelection(
   engine: EngineInstance,
-  root: HTMLElement,
+  _root: HTMLElement,
 ): SmartCanvasSelectionContext | null {
   diagnostics.reads += 1;
   const context = getEngineLogicalContext(engine);
