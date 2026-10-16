@@ -50,33 +50,57 @@ export function getSelectionGeometry(
   const empty: SelectionGeometry = { selectionRects: [] };
   if (!selection || !Number.isInteger(pageIndex)) return empty;
   const page: LayoutPage | undefined = layout.pages[pageIndex];
-  if (!page || selection.anchor.blockId !== selection.focus.blockId) return empty;
+  if (!page) return empty;
 
-  const block = findBlock(page.blocks, selection.anchor.blockId);
-  if (!block) return empty;
+  const blocks: Array<{ pageIndex: number; block: LayoutBlock }> = [];
+  const collect = (items: LayoutBlock[], currentPage: number) => {
+    for (const item of items) {
+      if (item.lines.length) blocks.push({ pageIndex: currentPage, block: item });
+      collect(item.children ?? [], currentPage);
+    }
+  };
+  layout.pages.forEach(item => collect(item.blocks, item.index));
+  const anchorIndex = blocks.findIndex(item => item.block.blockId === selection.anchor.blockId);
+  const focusIndex = blocks.findIndex(item => item.block.blockId === selection.focus.blockId);
+  if (anchorIndex < 0 || focusIndex < 0) return empty;
 
-  const anchor = selection.anchor.offset;
-  const focus = selection.focus.offset;
-  const start = Math.min(anchor, focus);
-  const end = Math.max(anchor, focus);
-
-  if (start === end) {
-    const line = block.lines.find(item => start >= item.startOffset && start <= item.endOffset);
+  if (anchorIndex === focusIndex && selection.anchor.offset === selection.focus.offset) {
+    const block = blocks[anchorIndex].block;
+    if (blocks[anchorIndex].pageIndex !== pageIndex) return empty;
+    const offset = selection.focus.offset;
+    const line = block.lines.find(item => offset >= item.startOffset && offset <= item.endOffset);
     if (!line) return empty;
     return {
-      caret: { x: xAtOffset(line, start, measureText), y: line.y, height: line.height },
+      caret: { x: xAtOffset(line, offset, measureText), y: line.y, height: line.height },
       selectionRects: [],
     };
   }
 
+  const forward = anchorIndex < focusIndex ||
+    (anchorIndex === focusIndex && selection.anchor.offset <= selection.focus.offset);
+  const firstIndex = forward ? anchorIndex : focusIndex;
+  const lastIndex = forward ? focusIndex : anchorIndex;
+  const startOffset = forward ? selection.anchor.offset : selection.focus.offset;
+  const endOffset = forward ? selection.focus.offset : selection.anchor.offset;
   const selectionRects: LayoutRect[] = [];
-  for (const line of block.lines) {
-    const from = Math.max(start, line.startOffset);
-    const to = Math.min(end, line.endOffset);
-    if (to <= from) continue;
-    const left = xAtOffset(line, from, measureText);
-    const right = xAtOffset(line, to, measureText);
-    selectionRects.push({ x: left, y: line.y, width: Math.max(0, right - left), height: line.height });
+
+  for (let index = firstIndex; index <= lastIndex; index++) {
+    const entry = blocks[index];
+    if (entry.pageIndex !== pageIndex) continue;
+    const lines = entry.block.lines;
+    if (!lines.length) continue;
+    const fromBlock = index === firstIndex;
+    const toBlock = index === lastIndex;
+    const start = fromBlock ? startOffset : lines[0].startOffset;
+    const end = toBlock ? endOffset : lines[lines.length - 1].endOffset;
+    for (const line of lines) {
+      const from = Math.max(start, line.startOffset);
+      const to = Math.min(end, line.endOffset);
+      if (to <= from) continue;
+      const left = xAtOffset(line, from, measureText);
+      const right = xAtOffset(line, to, measureText);
+      selectionRects.push({ x: left, y: line.y, width: Math.max(0, right - left), height: line.height });
+    }
   }
   return { selectionRects };
 }
