@@ -4,6 +4,28 @@ import { CanvasDocumentRenderer } from "./CanvasDocumentRenderer";
 
 type TextBlock = { id: string; text: string };
 
+function previousCodePointOffset(text: string, offset: number): number {
+  const bounded = Math.max(0, Math.min(text.length, offset));
+  if (bounded <= 0) return 0;
+  const previous = text.charCodeAt(bounded - 1);
+  if (previous >= 0xdc00 && previous <= 0xdfff && bounded >= 2) {
+    const lead = text.charCodeAt(bounded - 2);
+    if (lead >= 0xd800 && lead <= 0xdbff) return bounded - 2;
+  }
+  return bounded - 1;
+}
+
+function nextCodePointOffset(text: string, offset: number): number {
+  const bounded = Math.max(0, Math.min(text.length, offset));
+  if (bounded >= text.length) return text.length;
+  const current = text.charCodeAt(bounded);
+  if (current >= 0xd800 && current <= 0xdbff && bounded + 1 < text.length) {
+    const trail = text.charCodeAt(bounded + 1);
+    if (trail >= 0xdc00 && trail <= 0xdfff) return bounded + 2;
+  }
+  return bounded + 1;
+}
+
 function collectTextBlocks(nodes: readonly unknown[]): TextBlock[] {
   const blocks: TextBlock[] = [];
   for (const value of nodes) {
@@ -222,8 +244,8 @@ export function SmartCanvasPreview({ document, engine, headerText = "", footerTe
         const orderedStart = Math.min(activeCell.anchorOffset, activeCell.offset);
         const orderedEnd = Math.max(activeCell.anchorOffset, activeCell.offset);
         const offset = event.key === "Home" ? 0 : event.key === "End" ? activeCell.text.length :
-          event.key === "ArrowLeft" ? (hasRange && !event.shiftKey ? orderedStart : Math.max(0, activeCell.offset - 1)) :
-          (hasRange && !event.shiftKey ? orderedEnd : Math.min(activeCell.text.length, activeCell.offset + 1));
+          event.key === "ArrowLeft" ? (hasRange && !event.shiftKey ? orderedStart : previousCodePointOffset(activeCell.text, activeCell.offset)) :
+          (hasRange && !event.shiftKey ? orderedEnd : nextCodePointOffset(activeCell.text, activeCell.offset));
         setActiveCell({ ...activeCell, anchorOffset: event.shiftKey ? activeCell.anchorOffset : offset, offset });
         return;
       }
@@ -232,8 +254,8 @@ export function SmartCanvasPreview({ document, engine, headerText = "", footerTe
         let start = Math.min(activeCell.anchorOffset, activeCell.offset);
         let end = Math.max(activeCell.anchorOffset, activeCell.offset);
         if (start === end) {
-          if (event.key === "Backspace") start = Math.max(0, start - 1);
-          else end = Math.min(activeCell.text.length, end + 1);
+          if (event.key === "Backspace") start = previousCodePointOffset(activeCell.text, start);
+          else end = nextCodePointOffset(activeCell.text, end);
         }
         if (start !== end) commitCellText(activeCell.text.slice(0, start) + activeCell.text.slice(end), start);
         return;
@@ -338,13 +360,13 @@ export function SmartCanvasPreview({ document, engine, headerText = "", footerTe
       if (event.key === "Home") offset = 0;
       else if (event.key === "End") offset = block.text.length;
       else if (backwards) {
-        if (offset > 0) offset -= 1;
+        if (offset > 0) offset = previousCodePointOffset(block.text, offset);
         else if (focusIndex > 0) {
           nextBlock = blocks[focusIndex - 1];
           offset = nextBlock.text.length;
         }
       } else {
-        if (offset < block.text.length) offset += 1;
+        if (offset < block.text.length) offset = nextCodePointOffset(block.text, offset);
         else if (focusIndex < blocks.length - 1) {
           nextBlock = blocks[focusIndex + 1];
           offset = 0;
@@ -408,8 +430,8 @@ export function SmartCanvasPreview({ document, engine, headerText = "", footerTe
         return;
       }
       if (start === end) {
-        if (event.key === "Backspace") start = Math.max(0, start - 1);
-        else end = Math.min(block.text.length, end + 1);
+        if (event.key === "Backspace") start = previousCodePointOffset(block.text, start);
+        else end = nextCodePointOffset(block.text, end);
       }
       if (start === end) return;
       const result = engine.exec([deleteText({ blockId: block.id, start, end })], { group: "typing" });
