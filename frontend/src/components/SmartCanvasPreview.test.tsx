@@ -864,6 +864,51 @@ describe("SmartCanvasPreview input integration", () => {
     expect(onStatus).toHaveBeenLastCalledWith("Conteúdo formatado colado na célula com sanitização.");
   });
 
+  it("pastes lists and tables into a cell as structured text instead of dropping their content", async () => {
+    const document = createDocument({ title: "SmartCanvas structured cell paste" });
+    engine = createEditor({ document });
+    const paragraph = engine.getDocument().content[0];
+    if (!paragraph || paragraph.type !== "paragraph") throw new Error("Expected initial paragraph");
+    expect(engine.exec([insertTable({ afterBlockId: paragraph.id, rows: 1, columns: 1 })]).ok).toBe(true);
+    const onDocumentChange = vi.fn();
+    const onStatus = vi.fn();
+    host = window.document.createElement("div");
+    window.document.body.append(host);
+    root = createRoot(host);
+
+    await act(async () => {
+      root?.render(createElement(SmartCanvasPreview, {
+        document: engine!.getDocument(),
+        engine: engine!,
+        onDocumentChange,
+        onStatus,
+      }));
+    });
+    const cellHit = host.querySelector('[data-testid="smartcanvas-cell-hit"]') as HTMLButtonElement | null;
+    await act(async () => { cellHit?.click(); });
+    const input = host.querySelector('textarea[aria-label="Entrada de texto do SmartCanvas"]') as HTMLTextAreaElement | null;
+    if (!input) throw new Error("SmartCanvas input surface was not mounted");
+    const html = '<ul><li>Alpha item</li><li>Beta item</li></ul><table><tbody><tr><td>Left cell</td><td>Right cell</td></tr></tbody></table>';
+    const paste = new Event("paste", { bubbles: true, cancelable: true });
+    Object.defineProperty(paste, "clipboardData", {
+      value: { getData: (type: string) => type === "text/html" ? html : "Alpha item\nBeta item\nLeft cell\tRight cell" },
+    });
+    await act(async () => { input.dispatchEvent(paste); });
+
+    const table = engine.getDocument().content.find(block => block.type === "table");
+    if (!table || table.type !== "table") throw new Error("Expected destination table after paste");
+    const cell = table.children[0]?.children[0];
+    const pastedText = cell?.children.map(item => getPlainText(item)).join("\n") ?? "";
+    expect(pastedText).toContain("Alpha item");
+    expect(pastedText).toContain("Beta item");
+    expect(pastedText).toContain("Left cell");
+    expect(pastedText).toContain("Right cell");
+    expect(pastedText).toContain("• Alpha item");
+    expect(pastedText).toContain("• Beta item");
+    expect(onDocumentChange).toHaveBeenCalled();
+    expect(onStatus).toHaveBeenLastCalledWith("Listas e tabelas coladas na célula foram convertidas em texto estruturado.");
+  });
+
   it("edits a table cell and creates a row when Tab leaves the final cell", async () => {
     const document = createDocument({ title: "SmartCanvas table integration" });
     engine = createEditor({ document });
