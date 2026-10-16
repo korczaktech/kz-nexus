@@ -80,6 +80,27 @@ function makeRenderFixture(): NexusDocument {
       }],
     }],
   });
+  document.content.push({
+    type: "image",
+    id: "renderer-image",
+    resourceId: "renderer-image-resource",
+    alt: "Image alternative text",
+    width: 24,
+    height: 24,
+  });
+  document.content.push({
+    type: "thematicBreak",
+    id: "renderer-page-break",
+    kind: "pageBreak",
+  });
+  document.resources.push({
+    id: "renderer-image-resource",
+    kind: "image",
+    mimeType: "image/png",
+    data: "iVBORw0KGgo=",
+    byteLength: 8,
+    name: "fixture.png",
+  });
   return document;
 }
 
@@ -123,6 +144,8 @@ describe("CanvasDocumentRenderer visual regression contract", () => {
     expect(textCalls).toContain("Shape label");
     expect(textCalls).toContain("Body text");
     expect(textCalls).toContain("Table cell text");
+    expect(textCalls).toContain("Image alternative text");
+    expect(layout.pageCount).toBeGreaterThan(1);
     expect(textCalls).toContain("Document header");
     expect(textCalls).toContain("Document footer");
     expect(textCalls.some(value => value.startsWith("Página 1 de "))).toBe(true);
