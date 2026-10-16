@@ -354,7 +354,7 @@ export function CanvasPage({ page, pageCount, document, headerText, footerText, 
       context.lineTo(geometry.caret.x * PT_TO_CSS_PX, (geometry.caret.y + geometry.caret.height) * PT_TO_CSS_PX);
       context.stroke();
     }
-  }, [layout, page.index, selection, showCaret, activeCellId, cssWidth, cssHeight]);
+  }, [layout, page.index, selection, showCaret, activeCellId, activeCellSelection, cssWidth, cssHeight]);
 
   const handlePointerDown = (event: ReactPointerEvent<HTMLCanvasElement>) => {
     if (!onHitTest) return;
