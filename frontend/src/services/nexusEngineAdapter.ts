@@ -149,7 +149,7 @@ function listBlock(element: Element): Extract<Block, { type: "bulletList" | "ord
     : { type: "bulletList", id: nextId(), children };
 }
 
-function tableBlock(element: Element): Extract<Block, { type: "table" }> {
+function tableBlock(element: Element, resources: ResourceRef[]): Extract<Block, { type: "table" }> {
   const rows = Array.from(element.querySelectorAll("tr")).map(row => ({
     type: "tableRow" as const,
     id: nextId(),
@@ -158,7 +158,20 @@ function tableBlock(element: Element): Extract<Block, { type: "table" }> {
         const paragraph = makeParagraph(child);
         return paragraph.type === "heading" ? { type: "paragraph" as const, id: paragraph.id, align: paragraph.align, children: paragraph.children } : paragraph;
       });
-      return { type: "tableCell" as const, id: nextId(), children: nested.length ? nested : [makeParagraph(cell) as Extract<Block, { type: "paragraph" }>] };
+      const images = Array.from(cell.querySelectorAll("img")).flatMap(element => {
+        const src = element.getAttribute("src") || "";
+        const match = /^data:(image\/(?:png|jpeg|gif|webp|svg\+xml));base64,([a-z0-9+/=]+)$/i.exec(src);
+        if (!match) return [];
+        const mimeType = match[1].toLowerCase();
+        const data = match[2];
+        const resourceId = nextId();
+        const alt = element.getAttribute("alt") || "Imagem";
+        resources.push({ id: resourceId, kind: "image", mimeType, data, byteLength: Math.floor(data.replace(/=+$/, "").length * 3 / 4), name: alt });
+        const width = Number(element.getAttribute("width")) || undefined;
+        const height = Number(element.getAttribute("height")) || undefined;
+        return [{ type: "image" as const, id: nextId(), resourceId, alt, width, height }];
+      });
+      return { type: "tableCell" as const, id: nextId(), children: nested.length ? nested : [makeParagraph(cell) as Extract<Block, { type: "paragraph" }>], ...(images.length ? { images } : {}) };
     }),
   })).filter(row => row.children.length > 0);
   return { type: "table", id: nextId(), children: rows };
@@ -250,7 +263,7 @@ function blocksFromHtml(html: string, resources: ResourceRef[] = []): Block[] {
       const children = Array.from(element.children).filter(child => ["p", "div"].includes(child.tagName.toLowerCase())).map(child => makeParagraph(child) as Extract<Block, { type: "paragraph" }>);
       blocks.push({ type: "blockquote", id: nextId(), children: children.length ? children : [{ ...makeParagraph(element), type: "paragraph" }] });
     } else if (tag === "ul" || tag === "ol") blocks.push(listBlock(element));
-    else if (tag === "table") blocks.push(tableBlock(element));
+    else if (tag === "table") blocks.push(tableBlock(element, resources));
     else if (tag === "hr") blocks.push({ type: "thematicBreak", id: nextId() });
     else if (tag === "img") {
       const alt = element.getAttribute("alt") || "Imagem";
