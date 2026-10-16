@@ -955,17 +955,41 @@ export function SmartCanvasPreview({ document, engine, headerText = "", footerTe
     if (!text || readOnly) return;
     const current = engine.getSelection();
     if (current && current.anchor.blockId !== current.focus.blockId) {
-      const blocks = collectTextBlocks(engine.getDocument().content);
-      const anchorIndex = blocks.findIndex(block => block.id === current.anchor.blockId);
-      const focusIndex = blocks.findIndex(block => block.id === current.focus.blockId);
-      if (anchorIndex < 0 || focusIndex < 0) {
-        onStatus?.("A seleção não corresponde a blocos de texto editáveis.");
+      const documentContent = engine.getDocument().content;
+      const ranges = getSmartCanvasTextSelectionRanges(documentContent, current);
+      if (!ranges) {
+        onStatus?.("A seleção inclui um bloco que não aceita edição textual.");
         return;
       }
+      const topLevelTextOnly = ranges.every(range =>
+        documentContent.some(block =>
+          (block.type === "paragraph" || block.type === "heading") && block.id === range.block.id
+        )
+      );
+      if (!topLevelTextOnly) {
+        const firstRange = ranges[0]!;
+        const commands = ranges
+          .filter(range => range.end > range.start)
+          .map(range => deleteText({ blockId: range.block.id, start: range.start, end: range.end }));
+        commands.push(insertText({
+          blockId: firstRange.block.id,
+          offset: firstRange.start,
+          text,
+          marks: marksAtTextOffset(documentContent, firstRange.block.id, firstRange.start, engine),
+        }));
+        const result = engine.exec(commands, { group: "structural" });
+        if (!result.ok) { onStatus?.("Não foi possível substituir a seleção entre estruturas: " + result.error.message); return; }
+        syncSelection(result.value.selection);
+        onDocumentChange(result.value.document);
+        return;
+      }
+      const blocks = ranges.map(range => ({ id: range.block.id, text: getPlainText(range.block) }));
+      const anchorIndex = blocks.findIndex(block => block.id === current.anchor.blockId);
+      const focusIndex = blocks.findIndex(block => block.id === current.focus.blockId);
       const firstIndex = Math.min(anchorIndex, focusIndex);
       const lastIndex = Math.max(anchorIndex, focusIndex);
-      const first = blocks[firstIndex];
-      const last = blocks[lastIndex];
+      const first = blocks[firstIndex]!;
+      const last = blocks[lastIndex]!;
       const start = anchorIndex < focusIndex ? current.anchor.offset : current.focus.offset;
       const end = anchorIndex < focusIndex ? current.focus.offset : current.anchor.offset;
       const commands = [];
@@ -975,7 +999,7 @@ export function SmartCanvasPreview({ document, engine, headerText = "", footerTe
       }
       if (end > 0) commands.push(deleteText({ blockId: last.id, start: 0, end }));
       for (const block of blocks.slice(firstIndex + 1, lastIndex + 1)) commands.push(mergeBlockWithPrevious({ blockId: block.id }));
-      commands.push(insertText({ blockId: first.id, offset: start, text, marks: marksAtTextOffset(engine.getDocument().content, first.id, start, engine) }));
+      commands.push(insertText({ blockId: first.id, offset: start, text, marks: marksAtTextOffset(documentContent, first.id, start, engine) }));
       const result = engine.exec(commands, { group: "structural" });
       if (!result.ok) { onStatus?.("Não foi possível substituir a seleção entre blocos: " + result.error.message); return; }
       syncSelection(result.value.selection);
