@@ -1,5 +1,5 @@
 import { useMemo, useRef, useState } from "react";
-import { collapsedAt, deleteText, insertText, getLineXAtOffset, getOffsetAtLineX, getPlainText, layoutDocument, mergeBlockWithPrevious, replaceRange, setCellText, splitBlock, toggleMark as toggleMarkCommand, type Editor as NexusEngineSession, type Mark, type NexusDocument, type Selection, type SmartCanvasHitTarget } from "../../../packages/engine/src/index";
+import { collapsedAt, deleteBlock, deleteText, insertText, getLineXAtOffset, getOffsetAtLineX, getPlainText, layoutDocument, mergeBlockWithPrevious, replaceRange, setCellText, splitBlock, toggleMark as toggleMarkCommand, type Editor as NexusEngineSession, type Mark, type NexusDocument, type Selection, type SmartCanvasHitTarget } from "../../../packages/engine/src/index";
 import { CanvasDocumentRenderer } from "./CanvasDocumentRenderer";
 import { nearestGraphemeOffset, nextCodePointOffset, nextWordOffset, previousCodePointOffset, previousWordOffset, wordRangeAt } from "./smartCanvasTextOffsets";
 
@@ -414,6 +414,20 @@ export function SmartCanvasPreview({ document, engine, headerText = "", footerTe
         if (start !== end) commitCellText(activeCell.text.slice(0, start) + activeCell.text.slice(end), start);
         return;
       }
+    }
+    if ((event.key === "Backspace" || event.key === "Delete") && activeBlockId) {
+      event.preventDefault();
+      const result = engine.exec([deleteBlock({ blockId: activeBlockId })], { group: "structural" });
+      if (!result.ok) {
+        onStatus?.(result.error.message);
+        return;
+      }
+      setActiveBlockId(null);
+      setSelection(result.value.selection ?? null);
+      engine.setSelection(result.value.selection);
+      onDocumentChange(result.value.document);
+      onStatus?.("Bloco removido.");
+      return;
     }
     // Formatting shortcuts are routed to the engine, including stored marks for future typing.
     if ((event.ctrlKey || event.metaKey) && !event.altKey) {
