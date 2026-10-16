@@ -42,8 +42,11 @@ try {
   page.on("pageerror", error => console.error("[browser page error]", error.message));
 
   await page.goto(baseUrl + "/?smartCanvas=1", { waitUntil: "domcontentloaded" });
+  // The app intentionally opens in guest mode when no session exists. Open the
+  // registration overlay first; clicking the overlay toggle here would switch
+  // registration back to login and invalidate the required registration fields.
+  await page.getByRole("button", { name: "Criar conta", exact: true }).first().click();
   await page.getByLabel("E-mail").waitFor();
-  await page.locator(".auth-links button").nth(1).click();
   await page.getByLabel("Nome").fill("SmartCanvas API E2E");
   await page.getByLabel("E-mail").fill(email);
   await page.getByLabel("Senha").fill(password);
