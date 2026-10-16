@@ -217,6 +217,7 @@ export function SmartCanvasPreview({ document, engine, headerText = "", footerTe
   const [activeBlockId, setActiveBlockId] = useState<string | null>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const composing = useRef(false);
+  const preferredVerticalX = useRef<number | null>(null);
   const layout = useMemo(() => {
     try { return layoutDocument(document); }
     catch { return null; }
@@ -227,6 +228,7 @@ export function SmartCanvasPreview({ document, engine, headerText = "", footerTe
     engine.setSelection(next);
   };
   const handleHit = (target: SmartCanvasHitTarget, clickCount = 1) => {
+    preferredVerticalX.current = null;
     if (target.kind === "text") {
       setActiveBlockId(null);
       const block = findBlock(engine.getDocument().content, target.blockId);
@@ -320,6 +322,7 @@ export function SmartCanvasPreview({ document, engine, headerText = "", footerTe
     onDocumentChange(result.value.document);
   };
   const handleInput = (value: string) => {
+    preferredVerticalX.current = null;
     if (value && activeCell) {
       const start = Math.min(activeCell.anchorOffset, activeCell.offset);
       const end = Math.max(activeCell.anchorOffset, activeCell.offset);
@@ -329,6 +332,7 @@ export function SmartCanvasPreview({ document, engine, headerText = "", footerTe
     if (inputRef.current) inputRef.current.value = "";
   };
   const handleKeyDown = (event: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (event.key !== "ArrowUp" && event.key !== "ArrowDown") preferredVerticalX.current = null;
     if (readOnly) { event.preventDefault(); return; }
     if (activeCell) {
       if ((event.ctrlKey || event.metaKey) && ["b", "i", "u"].includes(event.key.toLowerCase())) {
@@ -615,7 +619,8 @@ export function SmartCanvasPreview({ document, engine, headerText = "", footerTe
             if (targetLineIndex >= 0 && targetLineIndex < visualLines.length) {
               const target = visualLines[targetLineIndex];
               const measure = createLayoutTextMeasurer();
-              const x = getLineXAtOffset(currentLine, current.focus.offset, measure);
+              const x = preferredVerticalX.current ?? getLineXAtOffset(currentLine, current.focus.offset, measure);
+              preferredVerticalX.current = x;
               nextBlock = blocks.find(item => item.id === target.blockId) ?? block;
               offset = nearestGraphemeOffset(nextBlock.text, getOffsetAtLineX(target.line, x, measure));
             } else if (event.key === "ArrowUp" && focusIndex > 0) {
