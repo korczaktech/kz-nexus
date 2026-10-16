@@ -1533,54 +1533,7 @@ export function SmartCanvasPreview({ document, engine, headerText = "", footerTe
         ?? Array.from(event.clipboardData.files ?? [])
           .find((file): file is File => /^image\/(?:png|jpeg|gif|webp)$/i.test(file.type));
       if (clipboardImage) {
-        if (activeCell) {
-          onStatus?.("A colagem de imagem dentro de células ainda não está disponível; a célula não foi alterada.");
-          return;
-        }
-        const current = engine.getSelection();
-        const selectedBlock = current
-          ? engine.getDocument().content.find(block =>
-              block.id === current.focus.blockId && (block.type === "paragraph" || block.type === "heading")
-            )
-          : undefined;
-        if (!selectedBlock) {
-          onStatus?.("Selecione um parágrafo ou título de nível superior antes de colar uma imagem.");
-          return;
-        }
-        void readClipboardImage(clipboardImage).then(({ mimeType, data }) => {
-          const stillExists = engine.getDocument().content.some(block => block.id === selectedBlock.id);
-          if (!stillExists) {
-            onStatus?.("A posição de inserção mudou; selecione novamente o local da imagem.");
-            return;
-          }
-          const result = engine.exec([insertImageResource({
-            afterBlockId: selectedBlock.id,
-            mimeType,
-            data,
-            alt: clipboardImage.name.slice(0, 2000),
-            name: clipboardImage.name.slice(0, 255),
-          })], { group: "structural" });
-          if (!result.ok) {
-            onStatus?.("Não foi possível inserir a imagem: " + result.error.message);
-            return;
-          }
-          const inserted = [...result.value.document.content].reverse().find(block =>
-            block.type === "image" && result.value.document.resources.some(resource => resource.id === block.resourceId && resource.data === data)
-          );
-          setSelection(null);
-          engine.setSelection(undefined);
-          setActiveCell(null);
-          setActiveBlockId(inserted?.id ?? null);
-          if (inserted?.type === "image") {
-            setImageAltDraft(inserted.alt);
-            setImageWidthDraft(inserted.width == null ? "" : String(inserted.width));
-            setImageHeightDraft(inserted.height == null ? "" : String(inserted.height));
-          }
-          onDocumentChange(result.value.document);
-          onStatus?.("Imagem colada e incorporada ao documento pelo SmartCanvas.");
-        }).catch(error => {
-          onStatus?.(error instanceof Error ? error.message : "Não foi possível ler a imagem da área de transferência.");
-        });
+        insertSmartCanvasImageFile(clipboardImage);
         return;
       }
       const richHtml = event.clipboardData.getData("text/html");
