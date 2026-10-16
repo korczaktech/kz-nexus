@@ -840,7 +840,7 @@ export function SmartCanvasPreview({ document, engine, headerText = "", footerTe
     </div>
     {activeBlockId && findDocumentNode(document.content, activeBlockId)?.type === "image" ? <div role="group" aria-label="Propriedades da imagem selecionada" style={{ display: "flex", alignItems: "end", gap: 8, flexWrap: "wrap", marginBottom: 10, padding: 10, border: "1px solid #bfdbfe", borderRadius: 8, background: "#eff6ff" }}>
       <label style={{ display: "grid", gap: 4, fontSize: 12 }}>Texto alternativo
-        <input aria-label="Texto alternativo da imagem" value={imageAltDraft} disabled={readOnly} onChange={event => setImageAltDraft(event.currentTarget.value)} style={{ minWidth: 180, padding: "6px 8px", border: "1px solid #cbd5e1", borderRadius: 6 }} />
+        <input aria-label="Texto alternativo da imagem" maxLength={2000} value={imageAltDraft} disabled={readOnly} onChange={event => setImageAltDraft(event.currentTarget.value)} style={{ minWidth: 180, padding: "6px 8px", border: "1px solid #cbd5e1", borderRadius: 6 }} />
       </label>
       <label style={{ display: "grid", gap: 4, fontSize: 12 }}>Largura (px)
         <input aria-label="Largura da imagem em pixels" type="number" min={1} max={2000} value={imageWidthDraft} disabled={readOnly} onChange={event => setImageWidthDraft(event.currentTarget.value)} placeholder="Automática" style={{ width: 110, padding: "6px 8px", border: "1px solid #cbd5e1", borderRadius: 6 }} />
