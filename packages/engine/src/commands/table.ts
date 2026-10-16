@@ -101,11 +101,26 @@ export function setCellText(params: { tableId: string; rowId: string; cellId: st
           ? row
           : {
               ...row,
-              children: row.children.map((cell) =>
-                cell.id !== params.cellId
-                  ? cell
-                  : { ...cell, children: [{ type: "paragraph", id: cell.children[0]?.id ?? ctx.generateId(), children: [{ type: "text", id: ctx.generateId(), text: params.text, marks: [] }] }] },
-              ),
+              children: row.children.map((cell) => {
+                if (cell.id !== params.cellId) return cell;
+                const lines = params.text.split("\n");
+                const paragraphs = lines.map((line, index) => {
+                  const previous = cell.children[index];
+                  const previousParagraph = previous?.type === "paragraph" ? previous as Paragraph : undefined;
+                  const previousText = previousParagraph?.children[0];
+                  return {
+                    type: "paragraph" as const,
+                    id: previousParagraph?.id ?? ctx.generateId(),
+                    children: [{
+                      type: "text" as const,
+                      id: previousText?.type === "text" ? previousText.id : ctx.generateId(),
+                      text: line,
+                      marks: [],
+                    }],
+                  };
+                });
+                return { ...cell, children: paragraphs };
+              }),
             },
       ),
     }));
