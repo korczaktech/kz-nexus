@@ -185,13 +185,26 @@ describe("SmartCanvasPreview input integration", () => {
     const first = document.content[0];
     if (!first || first.type !== "paragraph") throw new Error("Expected initial paragraph");
     first.children[0]!.text = "Before";
+    const table = {
+      type: "table" as const,
+      id: "table_selectall01",
+      children: [{
+        type: "tableRow" as const,
+        id: "row_selectall01",
+        children: [{
+          type: "tableCell" as const,
+          id: "cell_selectall01",
+          children: [{
+            type: "paragraph" as const,
+            id: "para_selectall01",
+            children: [{ type: "text" as const, id: "run_selectall01", text: "Inside cell", marks: [] }],
+          }],
+        }],
+      }],
+    };
+    document.content.push(table);
+    const paragraph = table.children[0]!.children[0]!.children[0]!; 
     engine = createEditor({ document });
-    expect(engine.exec([insertTable({ afterBlockId: first.id, rows: 1, columns: 1 })]).ok).toBe(true);
-    const table = engine.getDocument().content.find(block => block.type === "table");
-    if (!table || table.type !== "table") throw new Error("Expected table");
-    const cell = table.children[0]!.children[0]!;
-    const paragraph = cell.children[0]!;
-    paragraph.children[0]!.text = "Inside cell";
     host = window.document.createElement("div");
     window.document.body.append(host);
     root = createRoot(host);
