@@ -31,6 +31,18 @@ vi.mock("./CanvasDocumentRenderer", () => ({
           }
         },
       }, "Select text"),
+      ...document.content.slice(1).filter(item => item.type === "paragraph" || item.type === "heading").map(item => createElement("button", {
+        key: item.id,
+        type: "button",
+        "data-testid": "smartcanvas-additional-text-hit",
+        onClick: () => onHitTest?.({
+          kind: "text",
+          pageIndex: 0,
+          blockId: item.id,
+          position: { blockId: item.id, offset: 0 },
+          lineIndex: 0,
+        }, 1),
+      }, "Select additional text")),
       ...document.content.filter(item => item.type === "image").map(item => createElement("button", {
         key: item.id,
         type: "button",
@@ -140,6 +152,55 @@ describe("SmartCanvasPreview input integration", () => {
     if (!afterComposition || afterComposition.type !== "paragraph") throw new Error("Expected paragraph after composition");
     expect(getPlainText(afterComposition)).toBe("Olá SmartCanvas 😀日本語");
   });
+  it("replaces a cross-block selection as one undoable structural edit", async () => {
+    const document = createDocument({ title: "SmartCanvas cross-block edit" });
+    const first = document.content[0];
+    if (!first || first.type !== "paragraph") throw new Error("Expected initial paragraph");
+    first.children[0]!.text = "Alpha";
+    document.content.push({
+      type: "paragraph",
+      id: "second-paragraph",
+      children: [{ type: "text", id: "second-run", text: "Beta", marks: [] }],
+    });
+    engine = createEditor({ document });
+    const onDocumentChange = vi.fn();
+    host = window.document.createElement("div");
+    window.document.body.append(host);
+    root = createRoot(host);
+    await act(async () => {
+      root?.render(createElement(SmartCanvasPreview, {
+        document: engine!.getDocument(),
+        engine: engine!,
+        onDocumentChange,
+      }));
+    });
+    const hit = host.querySelector('[data-testid="smartcanvas-text-hit"]') as HTMLButtonElement | null;
+    const input = host.querySelector('textarea[aria-label="Entrada de texto do SmartCanvas"]') as HTMLTextAreaElement | null;
+    const setter = Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, "value")?.set;
+    if (!input || !setter) throw new Error("SmartCanvas input surface was not mounted");
+    await act(async () => { hit?.click(); });
+    await act(async () => {
+      input.dispatchEvent(new KeyboardEvent("keydown", { key: "a", ctrlKey: true, bubbles: true, cancelable: true }));
+      setter.call(input, "Merged");
+      input.dispatchEvent(new Event("input", { bubbles: true }));
+    });
+
+    const edited = engine.getDocument();
+    expect(edited.content).toHaveLength(1);
+    const merged = edited.content[0];
+    if (!merged || merged.type !== "paragraph") throw new Error("Expected merged paragraph");
+    expect(getPlainText(merged)).toBe("Merged");
+    expect(onDocumentChange).toHaveBeenCalled();
+
+    await act(async () => {
+      input.dispatchEvent(new KeyboardEvent("keydown", { key: "z", ctrlKey: true, bubbles: true, cancelable: true }));
+    });
+    const undone = engine.getDocument();
+    expect(undone.content).toHaveLength(2);
+    expect(getPlainText(undone.content[0] as Extract<NexusDocument["content"][number], { type: "paragraph" }>)).toBe("Alpha");
+    expect(getPlainText(undone.content[1] as Extract<NexusDocument["content"][number], { type: "paragraph" }>)).toBe("Beta");
+  });
+
   it("deletes a selected semantic object through the engine without targeting adjacent text", async () => {
     const document = createDocument({ title: "SmartCanvas object deletion" });
     const objectParagraph = document.content[0];
