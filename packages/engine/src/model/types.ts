@@ -125,6 +125,8 @@ export interface TableCell {
   type: "tableCell";
   id: string;
   children: Paragraph[];
+  /** Image resources anchored inside the cell, rendered after its paragraphs. */
+  images?: ImageBlock[];
 }
 
 export interface TableRow {
