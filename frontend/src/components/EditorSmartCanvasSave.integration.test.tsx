@@ -7,6 +7,7 @@ import type { DocumentItem } from "../services/api";
 import { encodeNexusDocument, decodeNexusDocument } from "../services/nexusDocumentPersistence";
 import { htmlFromNexusDocument } from "../services/nexusEngineAdapter";
 import { Editor } from "./Editor";
+import { recoverDraft, recoverNativeDraft } from "./editorPersistence";
 
 vi.mock("./CanvasDocumentRenderer", async () => {
   const React = await import("react");
@@ -83,9 +84,10 @@ describe("Editor SmartCanvas save integration", () => {
       native_content: encoded.value,
     };
     let savedPayload: Parameters<Parameters<typeof Editor>[0]["onSave"]>[0] | undefined;
-    const onSave = vi.fn(async (payload: Parameters<Parameters<typeof Editor>[0]["onSave"]>[0]) => {
+    let resolveSave: ((result: "saved") => void) | undefined;
+    const onSave = vi.fn((payload: Parameters<Parameters<typeof Editor>[0]["onSave"]>[0]) => {
       savedPayload = payload;
-      return "saved" as const;
+      return new Promise<"saved">(resolve => { resolveSave = resolve; });
     });
     host = window.document.createElement("div");
     window.document.body.append(host);
@@ -121,9 +123,19 @@ describe("Editor SmartCanvas save integration", () => {
     if (!saveButton) throw new Error("Editor save button was not mounted");
     await act(async () => {
       saveButton.click();
-      await new Promise(resolve => setTimeout(resolve, 0));
+      await Promise.resolve();
     });
 
+    expect(host.querySelector(".save-state")?.textContent).toContain("Salvando");
+    expect(saveButton.disabled).toBe(true);
+    await act(async () => {
+      if (!resolveSave) throw new Error("Save callback did not start");
+      resolveSave("saved");
+      await Promise.resolve();
+    });
+
+    expect(host.querySelector(".save-state")?.textContent).toContain("Salvo");
+    expect(saveButton.disabled).toBe(false);
     expect(onSave).toHaveBeenCalledTimes(1);
     expect(savedPayload?.content).toContain("After Before");
     expect(savedPayload?.native_content).toBeTruthy();
@@ -133,5 +145,18 @@ describe("Editor SmartCanvas save integration", () => {
     const restoredParagraph = restored.value.content[0];
     if (!restoredParagraph || restoredParagraph.type !== "paragraph") throw new Error("Expected saved paragraph");
     expect(getPlainText(restoredParagraph)).toBe("After Before");
+
+    onSave.mockImplementationOnce(async () => { throw new Error("offline"); });
+    await act(async () => {
+      setter.call(input, "Retry ");
+      input.dispatchEvent(new Event("input", { bubbles: true }));
+    });
+    await act(async () => {
+      saveButton.click();
+      await new Promise(resolve => setTimeout(resolve, 0));
+    });
+    expect(host.querySelector(".save-state")?.textContent).toContain("Falha ao salvar");
+    expect(recoverDraft(localStorage, document.id)).not.toBeNull();
+    expect(recoverNativeDraft(localStorage, document.id)).not.toBeNull();
   });
 });
