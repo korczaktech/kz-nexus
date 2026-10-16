@@ -41,7 +41,7 @@ function getSelectedText(nodes: readonly unknown[], selection: Selection): strin
     if (index === 0) return block.text.slice(start);
     if (index === selected.length - 1) return block.text.slice(0, end);
     return block.text;
-  }).join("\\n");
+  }).join("\n");
 }
 
 export function SmartCanvasPreview({ document, engine, headerText = "", footerText = "", showPageNumbers = false, readOnly = false, onDocumentChange, onStatus }: {
