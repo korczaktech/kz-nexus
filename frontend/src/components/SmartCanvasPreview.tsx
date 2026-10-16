@@ -1,5 +1,5 @@
 import { useMemo, useRef, useState } from "react";
-import { addTableRow, collapsedAt, deleteBlock, deleteText, insertText, getLineXAtOffset, getOffsetAtLineX, getPlainText, layoutDocument, mergeBlockWithPrevious, replaceRange, setCellText, splitBlock, toggleMark as toggleMarkCommand, type Editor as NexusEngineSession, type Mark, type NexusDocument, type Selection, type SmartCanvasHitTarget } from "../../../packages/engine/src/index";
+import { addTableRow, collapsedAt, deleteBlock, deleteText, insertText, removeImage, getLineXAtOffset, getOffsetAtLineX, getPlainText, layoutDocument, mergeBlockWithPrevious, replaceRange, setCellText, splitBlock, toggleMark as toggleMarkCommand, type Editor as NexusEngineSession, type Mark, type NexusDocument, type Selection, type SmartCanvasHitTarget } from "../../../packages/engine/src/index";
 import { CanvasDocumentRenderer } from "./CanvasDocumentRenderer";
 import { lineEndOffset, lineStartOffset, nearestGraphemeOffset, nextCodePointOffset, nextWordOffset, previousCodePointOffset, previousWordOffset, verticalLineOffset, wordRangeAt } from "./smartCanvasTextOffsets";
 
@@ -454,7 +454,11 @@ export function SmartCanvasPreview({ document, engine, headerText = "", footerTe
     }
     if ((event.key === "Backspace" || event.key === "Delete") && activeBlockId) {
       event.preventDefault();
-      const result = engine.exec([deleteBlock({ blockId: activeBlockId })], { group: "structural" });
+      const selectedBlock = findBlock(engine.getDocument().content, activeBlockId);
+      const deleteCommand = selectedBlock?.type === "image"
+        ? removeImage({ blockId: activeBlockId })
+        : deleteBlock({ blockId: activeBlockId });
+      const result = engine.exec([deleteCommand], { group: "structural" });
       if (!result.ok) {
         onStatus?.(result.error.message);
         return;
