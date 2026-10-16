@@ -113,6 +113,26 @@ describe("SmartCanvasPreview input integration", () => {
     expect(layout?.getAttribute("data-page-count")).toBe("2");
   });
 
+  it("paginates overflowing text using engine layout metrics", async () => {
+    const document = createDocument({ title: "SmartCanvas automatic pagination" });
+    const first = document.content[0];
+    if (!first || first.type !== "paragraph") throw new Error("Expected initial paragraph");
+    first.children[0]!.text = "Long document content ".repeat(500);
+    engine = createEditor({ document });
+    host = window.document.createElement("div");
+    window.document.body.append(host);
+    root = createRoot(host);
+    await act(async () => {
+      root?.render(createElement(SmartCanvasPreview, {
+        document: engine!.getDocument(),
+        engine: engine!,
+        onDocumentChange: vi.fn(),
+      }));
+    });
+    const layout = host.querySelector('[data-testid="smartcanvas-layout"]');
+    expect(Number(layout?.getAttribute("data-page-count"))).toBeGreaterThan(1);
+  });
+
   it("initializes a logical insertion point without requiring a prior text hit", async () => {
     const document = createDocument({ title: "SmartCanvas initial selection" });
     const first = document.content[0];
