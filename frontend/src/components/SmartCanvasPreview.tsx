@@ -2,15 +2,15 @@ import { useMemo, useRef, useState } from "react";
 import { collapsedAt, deleteText, getPlainText, layoutDocument, type Editor as NexusEngineSession, type NexusDocument, type Selection, type SmartCanvasHitTarget } from "../../../packages/engine/src/index";
 import { CanvasDocumentRenderer } from "./CanvasDocumentRenderer";
 
-function findBlock(blocks: NexusDocument["content"], id: string): { id: string; text: string } | undefined {
-  for (const block of blocks) {
-    if (block.id === id && (block.type === "paragraph" || block.type === "heading")) return { id: block.id, text: getPlainText(block) };
-    if ("children" in block && Array.isArray(block.children)) {
-      const nested = findBlock(block.children as unknown as NexusDocument["content"], id);
-      if (nested) return nested;
+function findBlock(nodes: readonly unknown[], id: string): { id: string; text: string } | undefined {
+  for (const value of nodes) {
+    if (!value || typeof value !== "object") continue;
+    const node = value as { id?: unknown; type?: unknown; children?: unknown };
+    if (node.id === id && (node.type === "paragraph" || node.type === "heading")) {
+      return { id, text: getPlainText(value as Extract<NexusDocument["content"][number], { type: "paragraph" | "heading" }>) };
     }
-    if (block.type === "table") for (const row of block.rows) for (const cell of row.cells) {
-      const nested = findBlock(cell.content as unknown as NexusDocument["content"], id);
+    if (Array.isArray(node.children)) {
+      const nested = findBlock(node.children, id);
       if (nested) return nested;
     }
   }
@@ -28,6 +28,7 @@ export function SmartCanvasPreview({ document, engine, headerText = "", footerTe
 }) {
   const [selection, setSelection] = useState<Selection | null>(engine.getSelection() ?? null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
+  const composing = useRef(false);
   const layout = useMemo(() => {
     try { return layoutDocument(document); }
     catch { return null; }
@@ -125,7 +126,7 @@ export function SmartCanvasPreview({ document, engine, headerText = "", footerTe
       <div><strong>SmartCanvas — prévia experimental</strong><div style={{ fontSize: 12, opacity: .75 }}>Edição inicial por seleção lógica: digitação, exclusão e navegação no bloco. O editor legado permanece disponível.</div></div>
       <span style={{ fontSize: 12 }}>{layout ? layout.pageCount + " página(s)" : "Layout indisponível"}</span>
     </div>
-    <textarea ref={inputRef} aria-label="Entrada de texto do SmartCanvas" autoCapitalize="off" autoComplete="off" spellCheck={false} value={undefined} defaultValue="" onChange={event => handleInput(event.currentTarget.value)} onKeyDown={handleKeyDown} onPaste={event => { event.preventDefault(); handleInput(event.clipboardData.getData("text/plain")); }} onCompositionEnd={event => handleInput(event.currentTarget.value)} style={{ position: "absolute", width: 1, height: 1, opacity: 0, padding: 0, border: 0, overflow: "hidden", left: 0, bottom: 0, resize: "none" }} />
+    <textarea ref={inputRef} aria-label="Entrada de texto do SmartCanvas" autoCapitalize="off" autoComplete="off" spellCheck={false} defaultValue="" onChange={event => { if (!composing.current) handleInput(event.currentTarget.value); }} onKeyDown={handleKeyDown} onPaste={event => { event.preventDefault(); handleInput(event.clipboardData.getData("text/plain")); }} onCompositionStart={() => { composing.current = true; }} onCompositionEnd={event => { composing.current = false; handleInput(event.currentTarget.value); }} style={{ position: "absolute", width: 1, height: 1, opacity: 0, padding: 0, border: 0, overflow: "hidden", left: 0, bottom: 0, resize: "none" }} />
     {layout ? <div style={{ maxHeight: 560, overflow: "auto", background: "#e5e7eb", borderRadius: 8 }}>
       <CanvasDocumentRenderer layout={layout} document={document} headerText={headerText} footerText={footerText} showPageNumbers={showPageNumbers} selection={selection || undefined} showCaret={!!selection} onHitTest={handleHit} />
     </div> : <p role="status">Aguardando documento/layout do motor.</p>}
