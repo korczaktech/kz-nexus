@@ -484,6 +484,7 @@ describe("SmartCanvasPreview input integration", () => {
     Object.defineProperty(paste, "clipboardData", {
       value: {
         items: [{ kind: "file", getAsFile: () => file }],
+        files: [file],
         getData: () => "",
       },
     });
