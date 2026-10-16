@@ -133,6 +133,61 @@ describe("SmartCanvasPreview input integration", () => {
     expect(Number(layout?.getAttribute("data-page-count"))).toBeGreaterThan(1);
   });
 
+  it("edits header, footer, alignment and page numbering through SmartCanvas controls", async () => {
+    const document = createDocument({ title: "SmartCanvas page furniture" });
+    engine = createEditor({ document });
+    const onHeaderTextChange = vi.fn();
+    const onFooterTextChange = vi.fn();
+    const onHeaderAlignChange = vi.fn();
+    const onFooterAlignChange = vi.fn();
+    const onShowPageNumbersChange = vi.fn();
+    host = window.document.createElement("div");
+    window.document.body.append(host);
+    root = createRoot(host);
+    await act(async () => {
+      root?.render(createElement(SmartCanvasPreview, {
+        document: engine!.getDocument(),
+        engine: engine!,
+        headerText: "Original header",
+        footerText: "Original footer",
+        onHeaderTextChange,
+        onFooterTextChange,
+        onHeaderAlignChange,
+        onFooterAlignChange,
+        onShowPageNumbersChange,
+        onDocumentChange: vi.fn(),
+      }));
+    });
+
+    const header = host.querySelector('[aria-label="Texto do cabeçalho SmartCanvas"]') as HTMLInputElement | null;
+    const footer = host.querySelector('[aria-label="Texto do rodapé SmartCanvas"]') as HTMLInputElement | null;
+    const headerAlign = host.querySelector('[aria-label="Alinhamento do cabeçalho SmartCanvas"]') as HTMLSelectElement | null;
+    const footerAlign = host.querySelector('[aria-label="Alinhamento do rodapé SmartCanvas"]') as HTMLSelectElement | null;
+    const pageNumbers = host.querySelector('[aria-label="Mostrar números de página SmartCanvas"]') as HTMLInputElement | null;
+    if (!header || !footer || !headerAlign || !footerAlign || !pageNumbers) throw new Error("SmartCanvas page layout controls were not mounted");
+    await act(async () => {
+      const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value")?.set;
+      if (!setter) throw new Error("Input value setter was not available");
+      setter.call(header, "Quarterly report");
+      header.dispatchEvent(new Event("input", { bubbles: true }));
+      setter.call(footer, "Confidential");
+      footer.dispatchEvent(new Event("input", { bubbles: true }));
+      const selectSetter = Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, "value")?.set;
+      if (!selectSetter) throw new Error("Select value setter was not available");
+      selectSetter.call(headerAlign, "center");
+      headerAlign.dispatchEvent(new Event("change", { bubbles: true }));
+      selectSetter.call(footerAlign, "right");
+      footerAlign.dispatchEvent(new Event("change", { bubbles: true }));
+      pageNumbers.checked = true;
+      pageNumbers.dispatchEvent(new Event("change", { bubbles: true }));
+    });
+    expect(onHeaderTextChange).toHaveBeenCalledWith("Quarterly report");
+    expect(onFooterTextChange).toHaveBeenCalledWith("Confidential");
+    expect(onHeaderAlignChange).toHaveBeenCalledWith("center");
+    expect(onFooterAlignChange).toHaveBeenCalledWith("right");
+    expect(onShowPageNumbersChange).toHaveBeenCalledWith(true);
+  });
+
   it("initializes a logical insertion point without requiring a prior text hit", async () => {
     const document = createDocument({ title: "SmartCanvas initial selection" });
     const first = document.content[0];
