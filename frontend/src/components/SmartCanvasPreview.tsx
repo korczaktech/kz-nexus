@@ -1,30 +1,9 @@
 import { useMemo, useRef, useState } from "react";
 import { collapsedAt, deleteText, getLineXAtOffset, getOffsetAtLineX, getPlainText, layoutDocument, mergeBlockWithPrevious, replaceRange, setCellText, splitBlock, type Editor as NexusEngineSession, type NexusDocument, type Selection, type SmartCanvasHitTarget } from "../../../packages/engine/src/index";
 import { CanvasDocumentRenderer } from "./CanvasDocumentRenderer";
+import { nextCodePointOffset, previousCodePointOffset } from "./smartCanvasTextOffsets";
 
 type TextBlock = { id: string; text: string };
-
-function previousCodePointOffset(text: string, offset: number): number {
-  const bounded = Math.max(0, Math.min(text.length, offset));
-  if (bounded <= 0) return 0;
-  const previous = text.charCodeAt(bounded - 1);
-  if (previous >= 0xdc00 && previous <= 0xdfff && bounded >= 2) {
-    const lead = text.charCodeAt(bounded - 2);
-    if (lead >= 0xd800 && lead <= 0xdbff) return bounded - 2;
-  }
-  return bounded - 1;
-}
-
-function nextCodePointOffset(text: string, offset: number): number {
-  const bounded = Math.max(0, Math.min(text.length, offset));
-  if (bounded >= text.length) return text.length;
-  const current = text.charCodeAt(bounded);
-  if (current >= 0xd800 && current <= 0xdbff && bounded + 1 < text.length) {
-    const trail = text.charCodeAt(bounded + 1);
-    if (trail >= 0xdc00 && trail <= 0xdfff) return bounded + 2;
-  }
-  return bounded + 1;
-}
 
 function collectTextBlocks(nodes: readonly unknown[]): TextBlock[] {
   const blocks: TextBlock[] = [];
