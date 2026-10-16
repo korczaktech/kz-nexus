@@ -53,6 +53,8 @@ export interface LayoutBlock {
   style?: LayoutBlockStyle;
   table?: { rows: Array<{ rowId: string; rect: LayoutRect; cells: Array<{ cellId: string; rect: LayoutRect; lines: LayoutLine[] }> }> };
   continued?: boolean;
+  /** True when this paragraph-like block represents a selectable semantic object. */
+  object?: boolean;
 }
 export interface LayoutPage {
   index: number;
@@ -286,12 +288,12 @@ export function layoutDocument(document: NexusDocument, options: LayoutOptions =
   });
   const addBlock = (block: Block, rect: LayoutRect, lines: LayoutLine[], extra: Partial<LayoutBlock> = {}) => {
     const style = block.type === "paragraph" || block.type === "heading" ? styleForParagraph(block) : undefined;
-    page.blocks.push({ blockId: block.id, type: block.type, pageIndex: page.index, rect, lines, ...(style ? { style } : {}), ...extra });
+    page.blocks.push({ blockId: block.id, type: block.type, pageIndex: page.index, rect, lines, ...(style ? { style } : {}), ...((block.type === "paragraph" || block.type === "heading") && block.editorObject ? { object: true } : {}), ...extra });
   };
   const paragraphChild = (paragraph: Paragraph, x: number, y: number, width: number): LayoutBlock => {
     const measured = blockTextLayout(paragraph, x, y, width, options);
     return { blockId: paragraph.id, type: "paragraph", pageIndex: page.index,
-      rect: { x, y, width, height: measured.height }, lines: measured.lines, style: styleForParagraph(paragraph) };
+      rect: { x, y, width, height: measured.height }, lines: measured.lines, style: styleForParagraph(paragraph), ...(paragraph.editorObject ? { object: true } : {}) };
   };
   const listItemHeight = (item: ListItem, depth: number): number => {
     let total = 4;
