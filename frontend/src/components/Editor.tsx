@@ -194,7 +194,9 @@ export function resolveEditorInitialHtml(nativeDocument:NexusDocument|null,legac
 }
 /** Resolve an export source from the canonical engine document, never stale legacy DOM HTML. */
 export function resolveEditorExportHtml(engine:{getDocument:()=>NexusDocument}|null,fallbackHtml:string):string{
- return engine?sanitizeHtml(htmlFromNexusDocument(engine.getDocument())):sanitizeHtml(fallbackHtml);
+ // The engine serializer escapes text and emits only canonical block/resource markup;
+ // sanitize the compatibility fallback, but do not require a DOM to read engine output.
+ return engine?htmlFromNexusDocument(engine.getDocument()):sanitizeHtml(fallbackHtml);
 }
 export function Editor({document,versions,onSave,onClose,onConflict}:{document:DocumentItem;versions:Version[];onSave:(data:{name:string;document_type:string;content:string;native_content:string;base_version_id:string|null;create_version?:boolean})=>Promise<'saved'|'conflict'>;onClose:()=>void;onConflict:()=>Promise<DocumentItem>}){
  const draft=useMemo(()=>{try{return recoverDraft(localStorage,document.id)}catch{return null}},[document.id]);
