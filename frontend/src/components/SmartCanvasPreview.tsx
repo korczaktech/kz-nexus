@@ -1,5 +1,5 @@
 import { useMemo, useRef, useState } from "react";
-import { collapsedAt, deleteText, getLineXAtOffset, getOffsetAtLineX, getPlainText, layoutDocument, mergeBlockWithPrevious, replaceRange, setCellText, splitBlock, toggleMark as toggleMarkCommand, type Editor as NexusEngineSession, type NexusDocument, type Selection, type SmartCanvasHitTarget } from "../../../packages/engine/src/index";
+import { collapsedAt, deleteText, insertText, getLineXAtOffset, getOffsetAtLineX, getPlainText, layoutDocument, mergeBlockWithPrevious, replaceRange, setCellText, splitBlock, toggleMark as toggleMarkCommand, type Editor as NexusEngineSession, type Mark, type NexusDocument, type Selection, type SmartCanvasHitTarget } from "../../../packages/engine/src/index";
 import { CanvasDocumentRenderer } from "./CanvasDocumentRenderer";
 import { nearestGraphemeOffset, nextCodePointOffset, nextWordOffset, previousCodePointOffset, previousWordOffset, wordRangeAt } from "./smartCanvasTextOffsets";
 
@@ -94,6 +94,44 @@ function collectTableCells(nodes: readonly unknown[]): EditableCell[] {
 
 function findBlock(nodes: readonly unknown[], id: string): TextBlock | undefined {
   return collectTextBlocks(nodes).find(block => block.id === id);
+}
+
+function findTextNode(nodes: readonly unknown[], id: string): { text: string; runs: Array<{ text: string; marks: Mark[] }> } | undefined {
+  for (const value of nodes) {
+    if (!value || typeof value !== "object") continue;
+    const node = value as { id?: unknown; type?: unknown; children?: unknown };
+    if (node.id === id && (node.type === "paragraph" || node.type === "heading") && Array.isArray(node.children)) {
+      const runs = node.children as Array<{ text?: unknown; marks?: unknown }>;
+      const normalizedRuns = runs.map(run => ({
+        text: typeof run.text === "string" ? run.text : "",
+        marks: Array.isArray(run.marks) ? run.marks as Mark[] : [],
+      }));
+      return { text: normalizedRuns.map(run => run.text).join(""), runs: normalizedRuns };
+    }
+    if (node.type !== "table" && Array.isArray(node.children)) {
+      const nested = findTextNode(node.children, id);
+      if (nested) return nested;
+    }
+  }
+  return undefined;
+}
+
+function marksAtTextOffset(nodes: readonly unknown[], blockId: string, offset: number, engine: NexusEngineSession): Mark[] {
+  const node = findTextNode(nodes, blockId);
+  if (!node) return [];
+  let consumed = 0;
+  let inherited: Mark[] = [];
+  for (const run of node.runs) {
+    if (offset <= consumed + run.text.length) { inherited = run.marks; break; }
+    consumed += run.text.length;
+    inherited = run.marks;
+  }
+  const stored = engine.getStoredMarkState();
+  if (stored.blockId === blockId) {
+    inherited = inherited.filter(mark => !stored.disabled.includes(mark.type));
+    for (const mark of stored.active) inherited = [...inherited.filter(item => item.type !== mark.type), mark];
+  }
+  return inherited.map(mark => ({ ...mark }));
 }
 
 function findLayoutBlock(blocks: readonly import("../../../packages/engine/src/layout/layout").LayoutBlock[], id: string): import("../../../packages/engine/src/layout/layout").LayoutBlock | undefined {
@@ -212,6 +250,35 @@ export function SmartCanvasPreview({ document, engine, headerText = "", footerTe
   };
   const commitText = (text: string) => {
     if (!text || readOnly) return;
+    const current = engine.getSelection();
+    if (current && current.anchor.blockId !== current.focus.blockId) {
+      const blocks = collectTextBlocks(engine.getDocument().content);
+      const anchorIndex = blocks.findIndex(block => block.id === current.anchor.blockId);
+      const focusIndex = blocks.findIndex(block => block.id === current.focus.blockId);
+      if (anchorIndex < 0 || focusIndex < 0) {
+        onStatus?.("A seleção não corresponde a blocos de texto editáveis.");
+        return;
+      }
+      const firstIndex = Math.min(anchorIndex, focusIndex);
+      const lastIndex = Math.max(anchorIndex, focusIndex);
+      const first = blocks[firstIndex];
+      const last = blocks[lastIndex];
+      const start = anchorIndex < focusIndex ? current.anchor.offset : current.focus.offset;
+      const end = anchorIndex < focusIndex ? current.focus.offset : current.anchor.offset;
+      const commands = [];
+      if (start < first.text.length) commands.push(deleteText({ blockId: first.id, start, end: first.text.length }));
+      for (const block of blocks.slice(firstIndex + 1, lastIndex)) {
+        if (block.text.length) commands.push(deleteText({ blockId: block.id, start: 0, end: block.text.length }));
+      }
+      if (end > 0) commands.push(deleteText({ blockId: last.id, start: 0, end }));
+      for (const block of blocks.slice(firstIndex + 1, lastIndex + 1)) commands.push(mergeBlockWithPrevious({ blockId: block.id }));
+      commands.push(insertText({ blockId: first.id, offset: start, text, marks: marksAtTextOffset(engine.getDocument().content, first.id, start, engine) }));
+      const result = engine.exec(commands, { group: "typing" });
+      if (!result.ok) { onStatus?.("Não foi possível substituir a seleção entre blocos: " + result.error.message); return; }
+      syncSelection(result.value.selection);
+      onDocumentChange(result.value.document);
+      return;
+    }
     const result = engine.insertTextAtSelection(text);
     if (!result.ok) { onStatus?.(result.error.message); return; }
     syncSelection(result.value.selection);
