@@ -134,18 +134,31 @@ export function SmartCanvasPreview({ document, engine, headerText = "", footerTe
     setSelection(next);
     engine.setSelection(next);
   };
-  const handleHit = (target: SmartCanvasHitTarget) => {
+  const handleHit = (target: SmartCanvasHitTarget, clickCount = 1) => {
     if (target.kind === "text") {
-      const next = collapsedAt(target.position);
-      syncSelection(next);
+      const block = findBlock(engine.getDocument().content, target.blockId);
+      if (block && clickCount >= 2) {
+        const range = clickCount >= 3
+          ? { start: 0, end: block.text.length }
+          : wordRangeAt(block.text, target.position.offset);
+        const next: Selection = {
+          anchor: { blockId: block.id, offset: range.start },
+          focus: { blockId: block.id, offset: range.end },
+        };
+        syncSelection(next);
+      } else {
+        syncSelection(collapsedAt(target.position));
+      }
       inputRef.current?.focus({ preventScroll: true });
-      onStatus?.("SmartCanvas: cursor no bloco " + target.blockId + ", posição " + target.position.offset + ".");
+      onStatus?.(clickCount >= 3 ? "Parágrafo selecionado." : clickCount >= 2 ? "Palavra selecionada." : "SmartCanvas: cursor no bloco " + target.blockId + ", posição " + target.position.offset + ".");
     } else if (target.kind === "table-cell") {
       const cell = collectTableCells(engine.getDocument().content).find(item => item.tableId === target.blockId && item.cellId === target.cellId);
       if (!cell) { onStatus?.("Não foi possível localizar a célula selecionada."); return; }
-      setActiveCell({ ...cell, anchorOffset: Math.max(0, Math.min(cell.text.length, target.offset)), offset: Math.max(0, Math.min(cell.text.length, target.offset)) });
+      const boundedOffset = Math.max(0, Math.min(cell.text.length, target.offset));
+      const range = clickCount >= 3 ? { start: 0, end: cell.text.length } : clickCount >= 2 ? wordRangeAt(cell.text, boundedOffset) : { start: boundedOffset, end: boundedOffset };
+      setActiveCell({ ...cell, anchorOffset: range.start, offset: range.end });
       inputRef.current?.focus({ preventScroll: true });
-      onStatus?.("Editando célula da tabela. Use Tab para avançar entre células.");
+      onStatus?.(clickCount >= 3 ? "Texto da célula selecionado." : clickCount >= 2 ? "Palavra da célula selecionada." : "Editando célula da tabela. Use Tab para avançar entre células.");
     } else {
       onStatus?.("Bloco " + target.blockId + " identificado. Seleção estrutural ainda não está habilitada.");
     }
