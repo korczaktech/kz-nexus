@@ -289,6 +289,43 @@ describe("SmartCanvasPreview input integration", () => {
     expect(onDocumentChange).toHaveBeenCalled();
   });
 
+  it("defers intermediate IME input and commits the composed text once", async () => {
+    const document = createDocument({ title: "SmartCanvas IME integration" });
+    engine = createEditor({ document });
+    host = window.document.createElement("div");
+    window.document.body.append(host);
+    root = createRoot(host);
+
+    await act(async () => {
+      root?.render(createElement(SmartCanvasPreview, {
+        document: engine!.getDocument(),
+        engine: engine!,
+        onDocumentChange: vi.fn(),
+      }));
+    });
+    const hit = host.querySelector('[data-testid="smartcanvas-text-hit"]') as HTMLButtonElement | null;
+    await act(async () => { hit?.click(); });
+    const input = host.querySelector('textarea[aria-label="Entrada de texto do SmartCanvas"]') as HTMLTextAreaElement | null;
+    const setter = Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, "value")?.set;
+    if (!input || !setter) throw new Error("SmartCanvas input surface was not mounted");
+
+    await act(async () => {
+      input.dispatchEvent(new Event("compositionstart", { bubbles: true }));
+      setter.call(input, "にほん");
+      input.dispatchEvent(new Event("input", { bubbles: true }));
+    });
+    const intermediate = engine.getDocument().content[0];
+    if (!intermediate || intermediate.type !== "paragraph") throw new Error("Expected paragraph during composition");
+    expect(getPlainText(intermediate)).toBe("");
+
+    await act(async () => {
+      input.dispatchEvent(new Event("compositionend", { bubbles: true }));
+    });
+    const committed = engine.getDocument().content[0];
+    if (!committed || committed.type !== "paragraph") throw new Error("Expected paragraph after composition");
+    expect(getPlainText(committed)).toBe("にほん");
+  });
+
   it("edits a table cell and creates a row when Tab leaves the final cell", async () => {
     const document = createDocument({ title: "SmartCanvas table integration" });
     engine = createEditor({ document });
