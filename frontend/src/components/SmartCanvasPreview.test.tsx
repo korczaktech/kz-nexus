@@ -2,23 +2,32 @@
 import { act, createElement } from "react";
 import { createRoot } from "react-dom/client";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { createDocument, createEditor, getPlainText, insertImageResource, insertTable } from "../../../packages/engine/src/index";
-import type { NexusDocument, SmartCanvasHitTarget } from "../../../packages/engine/src/index";
+import { createDocument, createEditor, getPlainText, insertImageResource, insertTable, insertText } from "../../../packages/engine/src/index";
+import type { NexusDocument, Selection, SmartCanvasHitTarget } from "../../../packages/engine/src/index";
 import { SmartCanvasPreview } from "./SmartCanvasPreview";
 
 vi.mock("./CanvasDocumentRenderer", () => ({
   CanvasDocumentRenderer: ({
     document,
     layout,
+    selection,
     onHitTest,
   }: {
     document: NexusDocument;
     layout?: { pages: unknown[] } | null;
+    selection?: Selection | null;
     onHitTest?: (target: SmartCanvasHitTarget, clickCount?: number) => void;
   }) => {
     const block = document.content[0];
     return createElement("div", null,
       createElement("output", { "data-testid": "smartcanvas-layout", "data-page-count": String(layout?.pages.length ?? 0) }, String(layout?.pages.length ?? 0)),
+      createElement("output", {
+        "data-testid": "smartcanvas-selection",
+        "data-anchor-block": selection?.anchor.blockId ?? "",
+        "data-anchor-offset": String(selection?.anchor.offset ?? ""),
+        "data-focus-block": selection?.focus.blockId ?? "",
+        "data-focus-offset": String(selection?.focus.offset ?? ""),
+      }),
       createElement("button", {
         type: "button",
         "data-testid": "smartcanvas-text-hit",
@@ -111,6 +120,39 @@ describe("SmartCanvasPreview input integration", () => {
 
     const layout = host.querySelector('[data-testid="smartcanvas-layout"]');
     expect(layout?.getAttribute("data-page-count")).toBe("2");
+  });
+
+  it("synchronizes logical selection when the outer editor triggers engine undo", async () => {
+    const document = createDocument({ title: "SmartCanvas external history selection" });
+    const first = document.content[0];
+    if (!first || first.type !== "paragraph") throw new Error("Expected initial paragraph");
+    engine = createEditor({ document });
+    host = window.document.createElement("div");
+    window.document.body.append(host);
+    root = createRoot(host);
+    await act(async () => {
+      root?.render(createElement(SmartCanvasPreview, {
+        document: engine!.getDocument(),
+        engine: engine!,
+        onDocumentChange: vi.fn(),
+      }));
+    });
+
+    const selection = (offset: number) => ({
+      anchor: { blockId: first.id, offset },
+      focus: { blockId: first.id, offset },
+    });
+    await act(async () => { engine!.setSelection(selection(0)); });
+    await act(async () => {
+      engine!.exec([insertText({ blockId: first.id, offset: 0, text: "A" })]);
+    });
+    await act(async () => { engine!.setSelection(selection(1)); });
+    expect(host.querySelector('[data-testid="smartcanvas-selection"]')?.getAttribute("data-focus-offset")).toBe("1");
+
+    await act(async () => { engine!.undo(); });
+    const overlaySelection = host.querySelector('[data-testid="smartcanvas-selection"]');
+    expect(overlaySelection?.getAttribute("data-anchor-block")).toBe(first.id);
+    expect(overlaySelection?.getAttribute("data-focus-offset")).toBe("0");
   });
 
   it("paginates overflowing text using engine layout metrics", async () => {
