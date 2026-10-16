@@ -255,6 +255,25 @@ function createLayoutTextMeasurer(): (text: string, run?: import("../../../packa
   };
 }
 
+async function readClipboardImage(file: File): Promise<{ mimeType: string; data: string }> {
+  const supportedType = /^image\/(?:png|jpeg|gif|webp)$/i;
+  if (!supportedType.test(file.type)) throw new Error("Formato de imagem não suportado.");
+  if (file.size <= 0 || file.size > 10 * 1024 * 1024) {
+    throw new Error("A imagem deve ter entre 1 byte e 10 MB.");
+  }
+  const dataUrl = await new Promise<string>((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onerror = () => reject(new Error("Não foi possível ler a imagem da área de transferência."));
+    reader.onload = () => typeof reader.result === "string"
+      ? resolve(reader.result)
+      : reject(new Error("A imagem da área de transferência está vazia."));
+    reader.readAsDataURL(file);
+  });
+  const match = /^data:(image\/(?:png|jpeg|gif|webp));base64,([A-Za-z0-9+/=]+)$/i.exec(dataUrl);
+  if (!match) throw new Error("A imagem da área de transferência não pôde ser validada.");
+  return { mimeType: match[1].toLowerCase(), data: match[2] };
+}
+
 function getSelectedText(nodes: readonly unknown[], selection: Selection): string {
   const blocks = collectTextBlocks(nodes);
   const anchorIndex = blocks.findIndex(block => block.id === selection.anchor.blockId);
@@ -949,6 +968,61 @@ export function SmartCanvasPreview({ document, engine, headerText = "", footerTe
     </div> : null}
     <textarea ref={inputRef} disabled={readOnly} aria-label="Entrada de texto do SmartCanvas" autoCapitalize="off" autoComplete="off" spellCheck={false} defaultValue="" onChange={event => { if (!composing.current) handleInput(event.currentTarget.value); }} onKeyDown={handleKeyDown} onCopy={event => { if (activeCell) { const start = Math.min(activeCell.anchorOffset, activeCell.offset), end = Math.max(activeCell.anchorOffset, activeCell.offset); if (start === end) return; event.clipboardData.setData("text/plain", activeCell.text.slice(start, end)); event.preventDefault(); return; } const current = engine.getSelection(); if (!current || (current.anchor.blockId === current.focus.blockId && current.anchor.offset === current.focus.offset)) return; event.clipboardData.setData("text/plain", getSelectedText(engine.getDocument().content, current)); event.preventDefault(); }} onCut={event => { if (readOnly) { event.preventDefault(); return; } if (activeCell) { const start = Math.min(activeCell.anchorOffset, activeCell.offset), end = Math.max(activeCell.anchorOffset, activeCell.offset); if (start === end) return; event.clipboardData.setData("text/plain", activeCell.text.slice(start, end)); event.preventDefault(); commitCellText(activeCell.text.slice(0, start) + activeCell.text.slice(end), start); return; } const current = engine.getSelection(); if (!current || (current.anchor.blockId === current.focus.blockId && current.anchor.offset === current.focus.offset)) return; event.clipboardData.setData("text/plain", getSelectedText(engine.getDocument().content, current)); event.preventDefault(); if (current.anchor.blockId !== current.focus.blockId) { const blocks = collectTextBlocks(engine.getDocument().content); const anchorIndex = blocks.findIndex(item => item.id === current.anchor.blockId), focusIndex = blocks.findIndex(item => item.id === current.focus.blockId); if (anchorIndex < 0 || focusIndex < 0) { onStatus?.("A seleção não corresponde a blocos editáveis; o texto foi copiado sem removê-lo."); return; } const firstIndex = Math.min(anchorIndex, focusIndex), lastIndex = Math.max(anchorIndex, focusIndex); const first = blocks[firstIndex], last = blocks[lastIndex]; const start = anchorIndex < focusIndex ? current.anchor.offset : current.focus.offset, end = anchorIndex < focusIndex ? current.focus.offset : current.anchor.offset; const commands = [deleteText({ blockId: first.id, start, end: first.text.length }), ...blocks.slice(firstIndex + 1, lastIndex).map(item => deleteText({ blockId: item.id, start: 0, end: item.text.length })), deleteText({ blockId: last.id, start: 0, end }), ...blocks.slice(firstIndex + 1, lastIndex + 1).map(item => mergeBlockWithPrevious({ blockId: item.id }))]; const result = engine.exec(commands, { group: "structural" }); if (!result.ok) { onStatus?.("O texto foi copiado, mas não foi possível removê-lo: " + result.error.message); return; } setSelection(engine.getSelection() ?? null); onDocumentChange(result.value.document); return; } const block = findBlock(engine.getDocument().content, current.focus.blockId); if (!block) return; const start = Math.min(current.anchor.offset, current.focus.offset), end = Math.max(current.anchor.offset, current.focus.offset); const result = engine.exec([deleteText({ blockId: block.id, start, end })], { group: "typing" }); if (result.ok) { setSelection(result.value.selection ?? null); onDocumentChange(result.value.document); } }} onPaste={event => {
       event.preventDefault();
+      const clipboardImage = Array.from(event.clipboardData.items)
+        .filter(item => item.kind === "file")
+        .map(item => item.getAsFile())
+        .find((file): file is File => !!file && /^image\/(?:png|jpeg|gif|webp)$/i.test(file.type));
+      if (clipboardImage) {
+        if (activeCell) {
+          onStatus?.("A colagem de imagem dentro de células ainda não está disponível; a célula não foi alterada.");
+          return;
+        }
+        const current = engine.getSelection();
+        const selectedBlock = current
+          ? engine.getDocument().content.find(block =>
+              block.id === current.focus.blockId && (block.type === "paragraph" || block.type === "heading")
+            )
+          : undefined;
+        if (!selectedBlock) {
+          onStatus?.("Selecione um parágrafo ou título de nível superior antes de colar uma imagem.");
+          return;
+        }
+        void readClipboardImage(clipboardImage).then(({ mimeType, data }) => {
+          const stillExists = engine.getDocument().content.some(block => block.id === selectedBlock.id);
+          if (!stillExists) {
+            onStatus?.("A posição de inserção mudou; selecione novamente o local da imagem.");
+            return;
+          }
+          const result = engine.exec([insertImageResource({
+            afterBlockId: selectedBlock.id,
+            mimeType,
+            data,
+            alt: clipboardImage.name.slice(0, 2000),
+            name: clipboardImage.name.slice(0, 255),
+          })], { group: "structural" });
+          if (!result.ok) {
+            onStatus?.("Não foi possível inserir a imagem: " + result.error.message);
+            return;
+          }
+          const inserted = [...result.value.document.content].reverse().find(block =>
+            block.type === "image" && result.value.document.resources.some(resource => resource.id === block.resourceId && resource.data === data)
+          );
+          setSelection(null);
+          engine.setSelection(undefined);
+          setActiveCell(null);
+          setActiveBlockId(inserted?.id ?? null);
+          if (inserted?.type === "image") {
+            setImageAltDraft(inserted.alt);
+            setImageWidthDraft(inserted.width == null ? "" : String(inserted.width));
+            setImageHeightDraft(inserted.height == null ? "" : String(inserted.height));
+          }
+          onDocumentChange(result.value.document);
+          onStatus?.("Imagem colada e incorporada ao documento pelo SmartCanvas.");
+        }).catch(error => {
+          onStatus?.(error instanceof Error ? error.message : "Não foi possível ler a imagem da área de transferência.");
+        });
+        return;
+      }
       const richHtml = event.clipboardData.getData("text/html");
       const current = engine.getSelection();
       if (activeCell && richHtml) {
