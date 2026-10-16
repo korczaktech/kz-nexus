@@ -1033,18 +1033,6 @@ export function SmartCanvasPreview({ document, engine, headerText = "", footerTe
         }
       }
       handleInput(event.clipboardData.getData("text/plain"));
-              return;
-            }
-            syncSelection(result.value.selection ?? engine.getSelection());
-            onDocumentChange(result.value.document);
-            onStatus?.("Conteúdo formatado colado com sanitização.");
-            return;
-          } catch {
-            onStatus?.("A colagem formatada não pôde ser interpretada; foi usado texto simples.");
-          }
-        }
-      }
-      handleInput(event.clipboardData.getData("text/plain"));
     }} onCompositionStart={() => { composing.current = true; }} onCompositionEnd={event => { composing.current = false; handleInput(event.currentTarget.value); }} style={{ position: "absolute", width: 1, height: 1, opacity: 0, padding: 0, border: 0, overflow: "hidden", left: 0, bottom: 0, resize: "none" }} />
     {layout ? <div style={{ maxHeight: 560, overflow: "auto", background: "#e5e7eb", borderRadius: 8 }}>
       <CanvasDocumentRenderer layout={layout} document={document} headerText={headerText} footerText={footerText} headerAlign={headerAlign} footerAlign={footerAlign} showPageNumbers={showPageNumbers} selection={selection || undefined} showCaret={!!selection && !activeCell} activeCellId={activeCell?.cellId} activeCellSelection={activeCell || undefined} activeBlockId={activeBlockId || undefined} onHitTest={handleHit} />
