@@ -1,7 +1,7 @@
 import { useMemo, useRef, useState } from "react";
 import { collapsedAt, deleteText, getLineXAtOffset, getOffsetAtLineX, getPlainText, layoutDocument, mergeBlockWithPrevious, replaceRange, setCellText, splitBlock, toggleMark as toggleMarkCommand, type Editor as NexusEngineSession, type NexusDocument, type Selection, type SmartCanvasHitTarget } from "../../../packages/engine/src/index";
 import { CanvasDocumentRenderer } from "./CanvasDocumentRenderer";
-import { nextCodePointOffset, nextWordOffset, previousCodePointOffset, previousWordOffset, wordRangeAt } from "./smartCanvasTextOffsets";
+import { nearestGraphemeOffset, nextCodePointOffset, nextWordOffset, previousCodePointOffset, previousWordOffset, wordRangeAt } from "./smartCanvasTextOffsets";
 
 type TextBlock = { id: string; text: string };
 
@@ -137,24 +137,25 @@ export function SmartCanvasPreview({ document, engine, headerText = "", footerTe
   const handleHit = (target: SmartCanvasHitTarget, clickCount = 1) => {
     if (target.kind === "text") {
       const block = findBlock(engine.getDocument().content, target.blockId);
+      const targetOffset = block ? nearestGraphemeOffset(block.text, target.position.offset) : target.position.offset;
       if (block && clickCount >= 2) {
         const range = clickCount >= 3
           ? { start: 0, end: block.text.length }
-          : wordRangeAt(block.text, target.position.offset);
+          : wordRangeAt(block.text, targetOffset);
         const next: Selection = {
           anchor: { blockId: block.id, offset: range.start },
           focus: { blockId: block.id, offset: range.end },
         };
         syncSelection(next);
       } else {
-        syncSelection(collapsedAt(target.position));
+        syncSelection(collapsedAt({ blockId: target.blockId, offset: targetOffset }));
       }
       inputRef.current?.focus({ preventScroll: true });
       onStatus?.(clickCount >= 3 ? "Parágrafo selecionado." : clickCount >= 2 ? "Palavra selecionada." : "SmartCanvas: cursor no bloco " + target.blockId + ", posição " + target.position.offset + ".");
     } else if (target.kind === "table-cell") {
       const cell = collectTableCells(engine.getDocument().content).find(item => item.tableId === target.blockId && item.cellId === target.cellId);
       if (!cell) { onStatus?.("Não foi possível localizar a célula selecionada."); return; }
-      const boundedOffset = Math.max(0, Math.min(cell.text.length, target.offset));
+      const boundedOffset = nearestGraphemeOffset(cell.text, target.offset);
       const range = clickCount >= 3 ? { start: 0, end: cell.text.length } : clickCount >= 2 ? wordRangeAt(cell.text, boundedOffset) : { start: boundedOffset, end: boundedOffset };
       setActiveCell({ ...cell, anchorOffset: range.start, offset: range.end });
       inputRef.current?.focus({ preventScroll: true });
