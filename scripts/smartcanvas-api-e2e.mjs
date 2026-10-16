@@ -109,7 +109,7 @@ try {
   await page.getByRole("button", { name: "Arquivo", exact: true }).click();
   await page.getByRole("button", { name: "Exportar", exact: true }).click();
   const downloadPromise = page.waitForEvent("download", { timeout: 30000 });
-  await page.getByRole("button", { name: /Word \\(\\.docx\\)/ }).click();
+  await page.getByRole("button", { name: /Word \(\.docx\)/ }).click();
   const exportErrorPromise = page.getByRole("alert").waitFor({ state: "visible", timeout: 30000 })
     .then(async () => {
       const message = await page.getByRole("alert").innerText();
