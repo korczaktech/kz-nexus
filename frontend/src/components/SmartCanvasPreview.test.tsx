@@ -244,12 +244,12 @@ describe("SmartCanvasPreview input integration", () => {
       input.dispatchEvent(new KeyboardEvent("keydown", { key: "Delete", bubbles: true, cancelable: true }));
     });
 
+    expect(onStatus).toHaveBeenLastCalledWith("Bloco removido.");
     const result = engine.getDocument();
     expect(result.content.some(block => block.id === objectParagraph.id)).toBe(false);
     expect(result.content.some(block => block.id === "adjacent-text")).toBe(true);
     expect(getPlainText(result.content.find(block => block.id === "adjacent-text") as Extract<NexusDocument["content"][number], { type: "paragraph" }>)).toBe("Keep me");
     expect(onDocumentChange).toHaveBeenCalled();
-    expect(onStatus).toHaveBeenLastCalledWith("Bloco removido.");
   });
 
   it("pastes sanitized rich HTML and preserves inline formatting in the engine model", async () => {
