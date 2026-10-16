@@ -1,0 +1,39 @@
+name: SmartCanvas validation
+
+on:
+  push:
+    branches: [main, master]
+    paths:
+      - "frontend/**"
+      - "packages/engine/**"
+      - "docs/SMARTCANVAS-ARCHITECTURE.md"
+      - ".github/workflows/smartcanvas-validation.yml"
+  pull_request:
+    paths:
+      - "frontend/**"
+      - "packages/engine/**"
+      - "docs/SMARTCANVAS-ARCHITECTURE.md"
+      - ".github/workflows/smartcanvas-validation.yml"
+  workflow_dispatch:
+
+jobs:
+  frontend:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Install dependencies
+        run: npm install --no-audit --no-fund
+      - name: Run frontend and SmartCanvas tests
+        run: npm test
+      - name: Type-check and build frontend
+        run: npm run build
+      - name: Run engine tests
+        run: npx vitest run ../packages/engine/src
