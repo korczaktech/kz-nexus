@@ -89,7 +89,7 @@ describe("SmartCanvas hit testing", () => {
       }],
     } as unknown as LayoutResult;
     expect(hitTestLayout(tableLayout, 0, 20, 20)).toMatchObject({
-      kind: "text", blockId: "table-1", lineIndex: 0,
+      kind: "table-cell", blockId: "table-1", cellId: "cell-1", lineIndex: 0,
     });
     expect(hitTestLayout(tableLayout, 0, 80, 45)).toMatchObject({
       kind: "table-cell", blockId: "table-1", cellId: "cell-1", lineIndex: -1,
