@@ -140,6 +140,58 @@ describe("row/column operations", () => {
     expect(updatedCell.children[0].children[1].marks).toEqual([]);
   });
 
+  it("applies explicit insertion marks to newly typed text in an empty cell", () => {
+    const { document, tableId } = tableDoc();
+    const table = document.content[1] as Table;
+    const row = table.children[0];
+    const cell = row.children[0];
+    const result = setCellText({
+      tableId,
+      rowId: row.id,
+      cellId: cell.id,
+      text: "bold text",
+      insertionMarks: [{ type: "bold" }],
+    })(document, ctx());
+    if (!result.ok) throw result.error;
+    const updatedCell = (result.value.document.content[1] as Table).children[0].children[0];
+    expect(getPlainText(updatedCell.children[0])).toBe("bold text");
+    expect(updatedCell.children[0].children).toHaveLength(1);
+    expect(updatedCell.children[0].children[0].marks).toEqual([{ type: "bold" }]);
+  });
+
+  it("uses explicit insertion marks only for changed text and preserves unchanged suffix marks", () => {
+    const { document, tableId } = tableDoc();
+    const table = document.content[1] as Table;
+    const row = table.children[0];
+    const cell = row.children[0];
+    const paragraph = {
+      ...cell.children[0],
+      children: [
+        { ...cell.children[0].children[0], text: "old ", marks: [] },
+        { type: "text" as const, id: "italic-suffix-test", text: "suffix", marks: [{ type: "italic" as const }] },
+      ],
+    };
+    const seededCell = { ...cell, children: [paragraph] };
+    const seededRow = { ...row, children: [seededCell, ...row.children.slice(1)] };
+    const seededTable = { ...table, children: [seededRow, ...table.children.slice(1)] };
+    const seededDocument = {
+      ...document,
+      content: document.content.map(block => block.id === tableId ? seededTable : block),
+    };
+    const result = setCellText({
+      tableId,
+      rowId: row.id,
+      cellId: cell.id,
+      text: "new suffix",
+      insertionMarks: [{ type: "bold" }],
+    })(seededDocument, ctx());
+    if (!result.ok) throw result.error;
+    const updatedCell = (result.value.document.content[1] as Table).children[0].children[0];
+    expect(updatedCell.children[0].children.map(run => run.text)).toEqual(["new ", "suffix"]);
+    expect(updatedCell.children[0].children[0].marks).toEqual([{ type: "bold" }]);
+    expect(updatedCell.children[0].children[1].marks).toEqual([{ type: "italic" }]);
+  });
+
   it("preserves suffix formatting when deleting text and keeps paragraph attributes", () => {
     const { document, tableId } = tableDoc();
     const table = document.content[1] as Table;
