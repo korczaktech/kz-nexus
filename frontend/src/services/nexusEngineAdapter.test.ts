@@ -160,7 +160,7 @@ describe("Nexus editor adapter", () => {
   });
 
   it("sanitizes active HTML and unsafe URLs before creating engine blocks", () => {
-    const document = nexusDocumentFromHtml('<p onclick="alert(1)">Safe <a href="javascript:alert(2)">link</a></p><script>alert(3)</script><iframe src="https://evil.example"></iframe><img src="https://evil.example/pixel.png" onerror="alert(4)" alt="remote image">', "Sanitization test");
+    const document = nexusDocumentFromHtml('<p onclick="alert(1)">Safe <a href="javascript:alert(2)">link</a></p><script>alert(3)</script><iframe src="about:blank"></iframe><img src="https://evil.example/pixel.png" onerror="alert(4)" alt="remote image">', "Sanitization test");
     const html = htmlFromNexusDocument(document);
     expect(html).toContain("Safe");
     expect(html).toContain("link");
