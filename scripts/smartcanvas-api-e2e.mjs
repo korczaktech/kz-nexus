@@ -70,7 +70,7 @@ try {
   await page.getByRole("button", { name: "Editar documento", exact: true }).click();
   const input = page.locator('textarea[aria-label="Entrada de texto do SmartCanvas"]');
   await input.waitFor();
-  await input.focus({ force: true });
+  await input.evaluate(element => element.focus());
   await page.keyboard.type(initialSentinel);
   await page.waitForFunction(
     ({ selector, value }) => document.querySelector(selector)?.value?.includes(value) ?? false,
@@ -81,6 +81,7 @@ try {
   await page.evaluate(() => {
     Object.defineProperty(document, "visibilityState", { configurable: true, get: () => "hidden" });
     document.dispatchEvent(new Event("visibilitychange"));
+    delete document.visibilityState;
   });
   await page.locator('button[aria-label="Sair"]').click({ force: true });
   await page.getByRole("button", { name: "Editar documento", exact: true }).waitFor();
@@ -121,7 +122,7 @@ try {
   await pdfWindow.close();
 
   // The eight-second editor autosave must persist the native payload through the real API.
-  await input.focus({ force: true });
+  await input.evaluate(element => element.focus());
   await page.keyboard.type(" " + autosaveSentinel);
   await page.waitForTimeout(9000);
   persisted = await apiDocument(created.id, token);
@@ -142,7 +143,7 @@ try {
     }),
   });
   if (!externalSave.ok) throw new Error("External version setup returned " + externalSave.status + ": " + await externalSave.text());
-  await input.focus({ force: true });
+  await input.evaluate(element => element.focus());
   await page.keyboard.type(" " + conflictSentinel);
   await page.waitForTimeout(9000);
   await page.getByText(/Conflito: o documento foi alterado em outra sessão/).waitFor({ timeout: 15000 });
