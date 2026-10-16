@@ -21,6 +21,7 @@ type CanvasPageProps = {
   selection?: Selection;
   showCaret?: boolean;
   activeCellId?: string;
+  activeBlockId?: string;
   activeCellSelection?: { cellId: string; text: string; anchorOffset: number; offset: number };
 };
 
@@ -218,7 +219,7 @@ function pageText(page: LayoutPage): string {
   return parts.join(" ").replace(/\s+/g, " ").trim();
 }
 
-export function CanvasPage({ page, pageCount, document, headerText, footerText, headerAlign, footerAlign, showPageNumbers, layout, onHitTest, selection, showCaret = false, activeCellId, activeCellSelection }: CanvasPageProps) {
+export function CanvasPage({ page, pageCount, document, headerText, footerText, headerAlign, footerAlign, showPageNumbers, layout, onHitTest, selection, showCaret = false, activeCellId, activeBlockId, activeCellSelection }: CanvasPageProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const overlayRef = useRef<HTMLCanvasElement>(null);
   const cssWidth = page.width * PT_TO_CSS_PX;
@@ -383,6 +384,26 @@ export function CanvasPage({ page, pageCount, document, headerText, footerText, 
         }
       }
     }
+    if (activeBlockId) {
+      const visit = (block: LayoutBlock): boolean => {
+        if (block.blockId === activeBlockId) {
+          context.strokeStyle = "#2563eb";
+          context.lineWidth = 2;
+          context.setLineDash([5, 3]);
+          context.strokeRect(
+            block.rect.x * PT_TO_CSS_PX + 1,
+            block.rect.y * PT_TO_CSS_PX + 1,
+            Math.max(0, block.rect.width * PT_TO_CSS_PX - 2),
+            Math.max(0, block.rect.height * PT_TO_CSS_PX - 2),
+          );
+          context.setLineDash([]);
+          return true;
+        }
+        for (const child of block.children ?? []) if (visit(child)) return true;
+        return false;
+      };
+      for (const block of page.blocks) if (visit(block)) break;
+    }
     if (!selection) return;
 
     const measureText = (text: string, run?: LayoutTextRun) => {
@@ -402,7 +423,7 @@ export function CanvasPage({ page, pageCount, document, headerText, footerText, 
       context.lineTo(geometry.caret.x * PT_TO_CSS_PX, (geometry.caret.y + geometry.caret.height) * PT_TO_CSS_PX);
       context.stroke();
     }
-  }, [layout, page.index, selection, showCaret, activeCellId, activeCellSelection, cssWidth, cssHeight]);
+  }, [layout, page.index, selection, showCaret, activeCellId, activeBlockId, activeCellSelection, cssWidth, cssHeight]);
 
   const handlePointerDown = (event: ReactPointerEvent<HTMLCanvasElement>) => {
     if (!onHitTest) return;
@@ -439,7 +460,7 @@ export function CanvasPage({ page, pageCount, document, headerText, footerText, 
   </div>;
 }
 
-export function CanvasDocumentRenderer({ layout, document, headerText = "", footerText = "", headerAlign = "left", footerAlign = "left", showPageNumbers = false, onHitTest, selection, showCaret = false, activeCellId, activeCellSelection }: {
+export function CanvasDocumentRenderer({ layout, document, headerText = "", footerText = "", headerAlign = "left", footerAlign = "left", showPageNumbers = false, onHitTest, selection, showCaret = false, activeCellId, activeBlockId, activeCellSelection }: {
   layout: LayoutResult;
   document: NexusDocument;
   headerText?: string;
@@ -451,6 +472,7 @@ export function CanvasDocumentRenderer({ layout, document, headerText = "", foot
   selection?: Selection;
   showCaret?: boolean;
   activeCellId?: string;
+  activeBlockId?: string;
   activeCellSelection?: { cellId: string; text: string; anchorOffset: number; offset: number };
 }) {
   return <div className="kortex-canvas-pages" data-renderer="canvas-2d" style={{
@@ -469,6 +491,7 @@ export function CanvasDocumentRenderer({ layout, document, headerText = "", foot
       selection={selection}
       showCaret={showCaret}
       activeCellId={activeCellId}
+      activeBlockId={activeBlockId}
       activeCellSelection={activeCellSelection}
       pageCount={layout.pageCount}
       document={document}
