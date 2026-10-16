@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { nextCodePointOffset, nextWordOffset, previousCodePointOffset, previousWordOffset, wordRangeAt } from "./smartCanvasTextOffsets";
+import { nearestGraphemeOffset, nextCodePointOffset, nextWordOffset, previousCodePointOffset, previousWordOffset, wordRangeAt } from "./smartCanvasTextOffsets";
 
 describe("SmartCanvas Unicode caret offsets", () => {
   it("moves across a supplementary character as one grapheme", () => {
@@ -65,5 +65,14 @@ describe("SmartCanvas word navigation", () => {
     const text = "one 👩‍💻 two";
     expect(nextWordOffset(text, 0)).toBe(4);
     expect(previousWordOffset(text, text.length)).toBe(10);
+  });
+});
+
+
+describe("SmartCanvas pointer offset normalization", () => {
+  it("snaps pointer offsets away from the middle of grapheme clusters", () => {
+    expect(nearestGraphemeOffset("A😀B", 2)).toBe(1);
+    expect(nearestGraphemeOffset("A😀B", 3)).toBe(3);
+    expect(nearestGraphemeOffset("Ae\u0301B", 2)).toBe(1);
   });
 });
