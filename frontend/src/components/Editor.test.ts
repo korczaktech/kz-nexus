@@ -1,7 +1,7 @@
-import {createDocument} from '../../../packages/engine/src/index';
+import {createDocument,createEditor} from '../../../packages/engine/src/index';
 import {htmlFromNexusDocument} from '../services/nexusEngineAdapter';
 import {describe,expect,it} from 'vitest';
-import {resolveEditorInitialHtml,toRtf} from './Editor';
+import {resolveEditorExportHtml,resolveEditorInitialHtml,toRtf} from './Editor';
 import {markdownToHtml} from './markdown';
 
 describe('Fase 8 - editor',()=>{
@@ -15,6 +15,18 @@ describe('Fase 8 - editor',()=>{
     expect(resolved).toBe(nativeHtml);
     expect(resolved).toContain('CONTENT_FROM_MODEL');
     expect(resolved).not.toContain('STALE_HTML');
+  });
+
+  it('exports the canonical SmartCanvas document instead of stale legacy DOM HTML',()=>{
+    const model=createDocument({title:'Canonical export'});
+    const paragraph=model.content[0];
+    if(!paragraph||paragraph.type!=='paragraph')throw new Error('Expected default paragraph');
+    paragraph.children[0]!.text='LATEST_CANONICAL_TEXT';
+    const engine=createEditor({document:model});
+    const exported=resolveEditorExportHtml(engine,'<p>STALE_LEGACY_DOM</p>');
+    expect(exported).toContain('LATEST_CANONICAL_TEXT');
+    expect(exported).not.toContain('STALE_LEGACY_DOM');
+    engine.dispose();
   });
 
   it('falls back to legacy content only when there is no valid native model',()=>{
