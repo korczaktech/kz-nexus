@@ -69,15 +69,15 @@ A soma RSS inclui páginas compartilhadas e pode contá-las mais de uma vez; par
 
 ## Repetição de baseline e confirmação do editor React — 2026-10-16
 
-Nova execução de três rodadas pelo workflow [SmartCanvas Memory Baseline](https://github.com/korczaktech/kz-nexus/actions/runs/38845028945), em Linux x64, Node 22.23.3, Chromium 156.0.8078.4 e viewport 1400×860. Os valores abaixo são medianas recalculadas dos seis relatórios JSON do artefato `smartcanvas-memory-baseline`; o fixture do motor tem 400 parágrafos/800 nós, e o editor React tem 400 parágrafos em 29 páginas.
+Nova execução de três rodadas pelo workflow [SmartCanvas Memory Baseline](https://github.com/korczaktech/kz-nexus/actions/runs/38845815656), em Linux x64, Node 22.23.3, Chromium 156.0.8078.4 e viewport 1400×860. Os valores abaixo são medianas recalculadas dos seis relatórios JSON do artefato `smartcanvas-memory-baseline`; o fixture do motor tem 400 parágrafos/800 nós, e o editor React tem 400 parágrafos em 29 páginas.
 
 | Cenário | Heap JS do renderer | Memória privada do grupo Chromium | RSS agregado do grupo Chromium | Memória privada do processo renderer |
 |---|---:|---:|---:|---:|
-| Chromium sem página — preview do motor | 0,48 MB | 72,83 MB | 413,76 MB | 20,96 MB |
-| Preview do motor vazio | 2,93 MB | 99,95 MB | 473,55 MB | 46,63 MB |
-| Preview do motor com 400 parágrafos | 4,58 MB | 123,03 MB | 511,36 MB | 70,49 MB |
-| Preview após edição + undo/redo | 6,62 MB | 132,36 MB | 522,26 MB | 79,54 MB |
-| Chromium sem página — editor React | 0,48 MB | 71,40 MB | 406,38 MB | 21,11 MB |
-| Editor React com 400 parágrafos | 5,53 MB | 261,26 MB | 704,17 MB | 205,95 MB |
+| Chromium sem página — preview do motor | 0,48 MB | 72,75 MB | 407,41 MB | 21,40 MB |
+| Preview do motor vazio | 2,93 MB | 98,38 MB | 470,08 MB | 47,48 MB |
+| Preview do motor com 400 parágrafos | 4,69 MB | 119,50 MB | 506,09 MB | 69,16 MB |
+| Preview após edição + undo/redo | 6,73 MB | 128,61 MB | 517,20 MB | 77,90 MB |
+| Chromium sem página — editor React | 0,48 MB | 71,68 MB | 408,63 MB | 22,07 MB |
+| Editor React com 400 parágrafos | 6,23 MB | 247,74 MB | 693,25 MB | 193,22 MB |
 
-O baseline foi concluído com sucesso e o artefato contém três execuções independentes de cada cenário. As variações em relação à medição de 2026-10-15 são pequenas diante do ruído de Chromium headless; não as interprete como ganho de memória sem um teste pareado. A memória privada do renderer React segue perto de 206 MB, bem acima do preview isolado (~70 MB com 400 parágrafos). Isso confirma a necessidade de definir a métrica-alvo e otimizar somente depois da paridade funcional. O heap JS é apenas uma parte do custo; RSS agregado pode contar páginas compartilhadas mais de uma vez.
+O baseline foi concluído com sucesso e o artefato contém três execuções independentes de cada cenário. As variações em relação às medições anteriores são relevantes o suficiente para reforçar o ruído de Chromium headless; não as interprete como ganho de memória sem um teste pareado. A memória privada do renderer React ficou em ~193 MB, bem acima do preview isolado (~69 MB com 400 parágrafos). Isso confirma a necessidade de definir a métrica-alvo e otimizar somente depois da paridade funcional. O heap JS é apenas uma parte do custo; RSS agregado pode contar páginas compartilhadas mais de uma vez.
