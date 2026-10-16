@@ -155,7 +155,7 @@ export function SmartCanvasPreview({ document, engine, headerText = "", footerTe
         const index = cells.findIndex(cell => cell.cellId === activeCell.cellId);
         const nextIndex = event.shiftKey ? (index - 1 + cells.length) % cells.length : (index + 1) % cells.length;
         const next = cells[nextIndex];
-        if (next) setActiveCell({ ...next, offset: next.text.length });
+        if (next) setActiveCell({ ...next, anchorOffset: next.text.length, offset: next.text.length });
         return;
       }
       if (event.key === "ArrowLeft" || event.key === "ArrowRight" || event.key === "Home" || event.key === "End") {
