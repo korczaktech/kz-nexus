@@ -242,7 +242,7 @@ describe("Editor", () => {
       mergeBlockWithPrevious({ blockId: secondId }),
       mergeBlockWithPrevious({ blockId: thirdId }),
       insertText({ blockId: firstId, offset: 2, text: "XYZ" }),
-    ], { group: "typing" });
+    ], { group: "structural" });
 
     expect(replaced.ok).toBe(true);
     expect(editor.getDocument().content).toHaveLength(1);
