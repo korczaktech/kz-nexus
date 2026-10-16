@@ -1,7 +1,7 @@
 import { useMemo, useRef, useState } from "react";
 import { collapsedAt, deleteBlock, deleteText, insertText, getLineXAtOffset, getOffsetAtLineX, getPlainText, layoutDocument, mergeBlockWithPrevious, replaceRange, setCellText, splitBlock, toggleMark as toggleMarkCommand, type Editor as NexusEngineSession, type Mark, type NexusDocument, type Selection, type SmartCanvasHitTarget } from "../../../packages/engine/src/index";
 import { CanvasDocumentRenderer } from "./CanvasDocumentRenderer";
-import { nearestGraphemeOffset, nextCodePointOffset, nextWordOffset, previousCodePointOffset, previousWordOffset, wordRangeAt } from "./smartCanvasTextOffsets";
+import { lineEndOffset, lineStartOffset, nearestGraphemeOffset, nextCodePointOffset, nextWordOffset, previousCodePointOffset, previousWordOffset, verticalLineOffset, wordRangeAt } from "./smartCanvasTextOffsets";
 
 type TextBlock = { id: string; text: string };
 
@@ -218,6 +218,7 @@ export function SmartCanvasPreview({ document, engine, headerText = "", footerTe
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const composing = useRef(false);
   const preferredVerticalX = useRef<number | null>(null);
+  const preferredCellColumn = useRef<number | null>(null);
   const layout = useMemo(() => {
     try { return layoutDocument(document); }
     catch { return null; }
@@ -323,6 +324,7 @@ export function SmartCanvasPreview({ document, engine, headerText = "", footerTe
   };
   const handleInput = (value: string) => {
     preferredVerticalX.current = null;
+    preferredCellColumn.current = null;
     if (value && activeCell) {
       const start = Math.min(activeCell.anchorOffset, activeCell.offset);
       const end = Math.max(activeCell.anchorOffset, activeCell.offset);
@@ -332,7 +334,10 @@ export function SmartCanvasPreview({ document, engine, headerText = "", footerTe
     if (inputRef.current) inputRef.current.value = "";
   };
   const handleKeyDown = (event: React.KeyboardEvent<HTMLTextAreaElement>) => {
-    if (event.key !== "ArrowUp" && event.key !== "ArrowDown") preferredVerticalX.current = null;
+    if (event.key !== "ArrowUp" && event.key !== "ArrowDown") {
+      preferredVerticalX.current = null;
+      preferredCellColumn.current = null;
+    }
     if (readOnly) { event.preventDefault(); return; }
     if (activeCell) {
       if ((event.ctrlKey || event.metaKey) && ["b", "i", "u"].includes(event.key.toLowerCase())) {
@@ -392,14 +397,26 @@ export function SmartCanvasPreview({ document, engine, headerText = "", footerTe
         if (next) setActiveCell({ ...next, anchorOffset: next.text.length, offset: next.text.length });
         return;
       }
+      if (event.key === "ArrowUp" || event.key === "ArrowDown") {
+        event.preventDefault();
+        const lineStart = lineStartOffset(activeCell.text, activeCell.offset);
+        if (preferredCellColumn.current === null) preferredCellColumn.current = activeCell.offset - lineStart;
+        const offset = verticalLineOffset(activeCell.text, activeCell.offset, event.key === "ArrowUp" ? -1 : 1, preferredCellColumn.current);
+        setActiveCell({ ...activeCell, anchorOffset: event.shiftKey ? activeCell.anchorOffset : offset, offset });
+        return;
+      }
       if (event.key === "ArrowLeft" || event.key === "ArrowRight" || event.key === "Home" || event.key === "End") {
         event.preventDefault();
         const hasRange = activeCell.anchorOffset !== activeCell.offset;
         const orderedStart = Math.min(activeCell.anchorOffset, activeCell.offset);
         const orderedEnd = Math.max(activeCell.anchorOffset, activeCell.offset);
-        const offset = event.key === "Home" ? 0 : event.key === "End" ? activeCell.text.length :
-          event.key === "ArrowLeft" ? (hasRange && !event.shiftKey ? orderedStart : event.ctrlKey || event.metaKey ? previousWordOffset(activeCell.text, activeCell.offset) : previousCodePointOffset(activeCell.text, activeCell.offset)) :
-          (hasRange && !event.shiftKey ? orderedEnd : event.ctrlKey || event.metaKey ? nextWordOffset(activeCell.text, activeCell.offset) : nextCodePointOffset(activeCell.text, activeCell.offset));
+        const offset = event.key === "Home"
+          ? (event.ctrlKey || event.metaKey ? 0 : lineStartOffset(activeCell.text, activeCell.offset))
+          : event.key === "End"
+            ? (event.ctrlKey || event.metaKey ? activeCell.text.length : lineEndOffset(activeCell.text, activeCell.offset))
+            : event.key === "ArrowLeft"
+              ? (hasRange && !event.shiftKey ? orderedStart : event.ctrlKey || event.metaKey ? previousWordOffset(activeCell.text, activeCell.offset) : previousCodePointOffset(activeCell.text, activeCell.offset))
+              : (hasRange && !event.shiftKey ? orderedEnd : event.ctrlKey || event.metaKey ? nextWordOffset(activeCell.text, activeCell.offset) : nextCodePointOffset(activeCell.text, activeCell.offset));
         setActiveCell({ ...activeCell, anchorOffset: event.shiftKey ? activeCell.anchorOffset : offset, offset });
         return;
       }
