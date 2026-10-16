@@ -1,4 +1,4 @@
-import type { createEditor } from "../../../packages/engine/src/index";
+import type { Block, createEditor } from "../../../packages/engine/src/index";
 import { getEngineLogicalContext } from "../services/nexusEngineAdapter";
 import { isCompositionInput } from "./editorComposition";
 
@@ -11,13 +11,13 @@ export type SmartCanvasSelectionContext = NonNullable<ReturnType<typeof getEngin
  * table rows/cells. Search and structural selection must not silently skip a
  * table merely because it is a container rather than a text block.
  */
-export function collectSmartCanvasTextBlocks(content: readonly unknown[]): Array<{ type: "paragraph" | "heading"; id: string; children: Array<{ text: string }> }> {
-  const blocks: Array<{ type: "paragraph" | "heading"; id: string; children: Array<{ text: string }> }> = [];
+export function collectSmartCanvasTextBlocks(content: readonly unknown[]): Array<Extract<Block, { type: "paragraph" | "heading" }>> {
+  const blocks: Array<Extract<Block, { type: "paragraph" | "heading" }>> = [];
   const visit = (node: unknown): void => {
     if (!node || typeof node !== "object") return;
     const value = node as { type?: string; id?: string; children?: unknown[] };
     if ((value.type === "paragraph" || value.type === "heading") && typeof value.id === "string" && Array.isArray(value.children)) {
-      blocks.push(value as { type: "paragraph" | "heading"; id: string; children: Array<{ text: string }> });
+      blocks.push(value as Extract<Block, { type: "paragraph" | "heading" }));
       return;
     }
     for (const child of value.children ?? []) visit(child);
