@@ -15,7 +15,7 @@ type CanvasPageProps = {
   footerText: string;
   showPageNumbers: boolean;
   layout: LayoutResult;
-  onHitTest?: (target: SmartCanvasHitTarget) => void;
+  onHitTest?: (target: SmartCanvasHitTarget, clickCount?: number) => void;
   selection?: Selection;
   showCaret?: boolean;
   activeCellId?: string;
@@ -372,7 +372,7 @@ export function CanvasPage({ page, pageCount, document, headerText, footerText, 
       return context.measureText(text).width * 72 / 96;
     } : undefined;
     const target = hitTestLayout(layout, page.index, x, y, { measureText });
-    if (target) onHitTest(target);
+    if (target) onHitTest(target, event.nativeEvent.detail || 1);
   };
 
   return <div style={{ position: "relative", flex: "0 0 auto", width: cssWidth, height: cssHeight }}>
@@ -401,7 +401,7 @@ export function CanvasDocumentRenderer({ layout, document, headerText = "", foot
   headerText?: string;
   footerText?: string;
   showPageNumbers?: boolean;
-  onHitTest?: (target: SmartCanvasHitTarget) => void;
+  onHitTest?: (target: SmartCanvasHitTarget, clickCount?: number) => void;
   selection?: Selection;
   showCaret?: boolean;
   activeCellId?: string;
