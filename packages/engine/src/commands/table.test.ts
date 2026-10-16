@@ -48,6 +48,25 @@ describe("row/column operations", () => {
     expect((result.value.document.content[1] as Table).children).toHaveLength(3);
   });
 
+  it("inserts a row immediately after the requested row", () => {
+    const { document, tableId } = tableDoc();
+    const original = document.content[1] as Table;
+    const result = addTableRow({ tableId, afterRowId: original.children[0].id })(document, ctx());
+    if (!result.ok) throw result.error;
+    const rows = (result.value.document.content[1] as Table).children;
+    expect(rows[0].id).toBe(original.children[0].id);
+    expect(rows[2].id).toBe(original.children[1].id);
+    expect(rows[1].id).not.toBe(original.children[0].id);
+    expect(rows[1].id).not.toBe(original.children[1].id);
+  });
+
+  it("rejects an unknown insertion row instead of silently inserting at the beginning", () => {
+    const { document, tableId } = tableDoc();
+    const result = addTableRow({ tableId, afterRowId: "missing-row" })(document, ctx());
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.error.code).toBe("NODE_NOT_FOUND");
+  });
+
   it("removes a row but refuses to remove the last one", () => {
     const { document, tableId } = tableDoc();
     const table = document.content[1] as Table;
