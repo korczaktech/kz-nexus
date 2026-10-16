@@ -51,6 +51,43 @@ describe("SmartCanvas layout hit testing", () => {
     expect(target).toMatchObject({ kind: "text", position: { blockId: "paragraph-1", offset: 1 } });
   });
 
+  it("maps hit-test offsets across paragraph boundaries inside a table cell", () => {
+    const tableLayout = {
+      ...layout,
+      pages: [{
+        ...layout.pages[0],
+        blocks: [{
+          blockId: "table-multiline",
+          type: "table",
+          pageIndex: 0,
+          rect: { x: 0, y: 0, width: 200, height: 100 },
+          lines: [],
+          table: {
+            rows: [{
+              rowId: "row-multiline",
+              rect: { x: 0, y: 0, width: 200, height: 60 },
+              cells: [{
+                cellId: "cell-multiline",
+                rect: { x: 10, y: 10, width: 100, height: 50 },
+                lines: [
+                  { ...line, text: "first", x: 15, y: 15, startOffset: 0, endOffset: 5 },
+                  { ...line, text: "second", x: 15, y: 35, startOffset: 0, endOffset: 6 },
+                ],
+              }],
+            }],
+          },
+        }],
+      }],
+    } as unknown as LayoutResult;
+    expect(hitTestLayout(tableLayout, 0, 15, 35)).toMatchObject({
+      kind: "table-cell",
+      blockId: "table-multiline",
+      cellId: "cell-multiline",
+      offset: 6,
+      lineIndex: 1,
+    });
+  });
+
   it("returns no target for invalid coordinates or a missing page", () => {
     expect(hitTestLayout(layout, 4, 20, 20)).toBeUndefined();
     expect(hitTestLayout(layout, 0, Number.NaN, 20)).toBeUndefined();
