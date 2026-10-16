@@ -18,6 +18,14 @@ describe("native layout engine", () => {
     expect(result.pages[0].blocks[0].lines[0].text).toBe("Hello");
   });
 
+  it("assigns header and footer geometry to the engine page layout", () => {
+    const result = layoutDocument(documentWith([paragraph("furniture", "Page content")]), { metrics });
+    expect(result.pages[0]!.furniture.header).toEqual({ x: 10, y: 8, width: 140, height: 14 });
+    expect(result.pages[0]!.furniture.footer).toEqual({ x: 10, y: 178, width: 140, height: 14 });
+    expect(result.pages[0]!.furniture.header.width).toBe(result.pages[0]!.content.width);
+    expect(result.pages[0]!.furniture.footer.width).toBe(result.pages[0]!.content.width);
+  });
+
   it("marks semantic objects as independently selectable layout blocks", () => {
     const object: Block = {
       type: "paragraph",
