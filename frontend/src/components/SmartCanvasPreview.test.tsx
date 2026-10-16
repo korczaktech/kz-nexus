@@ -111,6 +111,43 @@ describe("SmartCanvasPreview input integration", () => {
     });
   });
 
+  it("applies formatting and paragraph alignment through SmartCanvas controls", async () => {
+    const document = createDocument({ title: "SmartCanvas formatting controls" });
+    engine = createEditor({ document });
+    const onDocumentChange = vi.fn();
+    host = window.document.createElement("div");
+    window.document.body.append(host);
+    root = createRoot(host);
+    await act(async () => {
+      root?.render(createElement(SmartCanvasPreview, {
+        document: engine!.getDocument(),
+        engine: engine!,
+        onDocumentChange,
+      }));
+    });
+
+    const bold = host.querySelector('[aria-label="Negrito SmartCanvas"]') as HTMLButtonElement | null;
+    const center = host.querySelector('[aria-label="Centralizar SmartCanvas"]') as HTMLButtonElement | null;
+    const input = host.querySelector('textarea[aria-label="Entrada de texto do SmartCanvas"]') as HTMLTextAreaElement | null;
+    if (!bold || !center || !input) throw new Error("SmartCanvas formatting controls were not mounted");
+    await act(async () => { bold.click(); });
+    const setter = Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, "value")?.set;
+    if (!setter) throw new Error("Textarea value setter was not available");
+    await act(async () => {
+      setter.call(input, "Bold text");
+      input.dispatchEvent(new Event("input", { bubbles: true }));
+    });
+    const paragraph = engine.getDocument().content[0];
+    if (!paragraph || paragraph.type !== "paragraph") throw new Error("Expected formatted paragraph");
+    expect(paragraph.children.some(run => run.text === "Bold text" && run.marks.some(mark => mark.type === "bold"))).toBe(true);
+
+    await act(async () => { center.click(); });
+    const centered = engine.getDocument().content[0];
+    if (!centered || centered.type !== "paragraph") throw new Error("Expected centered paragraph");
+    expect(centered.align).toBe("center");
+    expect(onDocumentChange).toHaveBeenCalled();
+  });
+
   it("routes text input, undo, and redo through the canonical engine session", async () => {
     const document = createDocument({ title: "SmartCanvas input integration" });
     engine = createEditor({ document });
