@@ -76,10 +76,9 @@ try {
   await input.waitFor();
   await input.evaluate(element => element.focus());
   await page.keyboard.type(initialSentinel);
-  await page.waitForFunction(
-    ({ selector, value }) => document.querySelector(selector)?.value?.includes(value) ?? false,
-    { selector: 'textarea[aria-label="Entrada de texto do SmartCanvas"]', value: initialSentinel },
-  );
+  // SmartCanvas deliberately clears its hidden keyboard-capture textarea after
+  // each input event; assert the rendered editor projection, not that transient buffer.
+  await waitForEditorProjection(page, initialSentinel);
 
   // Force the same hidden-tab checkpoint used by the editor to preserve a recoverable draft.
   await page.evaluate(() => {
