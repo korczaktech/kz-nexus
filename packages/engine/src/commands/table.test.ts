@@ -98,7 +98,7 @@ describe("row/column operations", () => {
     const table = document.content[1] as Table;
     const row = table.children[0];
     const cell = row.children[0];
-    const result = setCellText({ tableId, rowId: row.id, cellId: cell.id, text: "first line\\nsecond line" })(document, ctx());
+    const result = setCellText({ tableId, rowId: row.id, cellId: cell.id, text: "first line\nsecond line" })(document, ctx());
     if (!result.ok) throw result.error;
     const updatedCell = (result.value.document.content[1] as Table).children[0].children[0];
     expect(updatedCell.children).toHaveLength(2);
