@@ -1015,13 +1015,13 @@ export function SmartCanvasPreview({ document, engine, headerText = "", footerTe
     </div> : null}
     {activeBlockId && findDocumentNode(document.content, activeBlockId)?.editorObject ? <div role="group" aria-label="Propriedades do objeto selecionado" style={{ display: "flex", alignItems: "end", gap: 8, flexWrap: "wrap", marginBottom: 10, padding: 10, border: "1px solid #bfdbfe", borderRadius: 8, background: "#eff6ff" }}>
       <label style={{ display: "grid", gap: 4, fontSize: 12 }}>Rótulo do objeto
-        <input aria-label="Rótulo do objeto" maxLength={200} value={objectLabelDraft} disabled={readOnly} onChange={event => setObjectLabelDraft(event.currentTarget.value)} style={{ minWidth: 150, padding: "6px 8px", border: "1px solid #cbd5e1", borderRadius: 6 }} />
+        <input aria-label="Rótulo do objeto" maxLength={200} value={objectLabelDraft} disabled={readOnly} onChange={event => setObjectLabelDraft(event.currentTarget.value)} onInput={event => setObjectLabelDraft(event.currentTarget.value)} style={{ minWidth: 150, padding: "6px 8px", border: "1px solid #cbd5e1", borderRadius: 6 }} />
       </label>
       <label style={{ display: "grid", gap: 4, fontSize: 12 }}>Largura (pt)
-        <input aria-label="Largura do objeto em pontos" type="number" min={1} max={2000} value={objectWidthDraft} disabled={readOnly} onChange={event => setObjectWidthDraft(event.currentTarget.value)} style={{ width: 100, padding: "6px 8px", border: "1px solid #cbd5e1", borderRadius: 6 }} />
+        <input aria-label="Largura do objeto em pontos" type="text" inputMode="numeric" min={1} max={2000} value={objectWidthDraft} disabled={readOnly} onChange={event => setObjectWidthDraft(event.currentTarget.value)} onInput={event => setObjectWidthDraft(event.currentTarget.value)} style={{ width: 100, padding: "6px 8px", border: "1px solid #cbd5e1", borderRadius: 6 }} />
       </label>
       <label style={{ display: "grid", gap: 4, fontSize: 12 }}>Altura (pt)
-        <input aria-label="Altura do objeto em pontos" type="number" min={1} max={2000} value={objectHeightDraft} disabled={readOnly} onChange={event => setObjectHeightDraft(event.currentTarget.value)} style={{ width: 100, padding: "6px 8px", border: "1px solid #cbd5e1", borderRadius: 6 }} />
+        <input aria-label="Altura do objeto em pontos" type="text" inputMode="numeric" min={1} max={2000} value={objectHeightDraft} disabled={readOnly} onChange={event => setObjectHeightDraft(event.currentTarget.value)} onInput={event => setObjectHeightDraft(event.currentTarget.value)} style={{ width: 100, padding: "6px 8px", border: "1px solid #cbd5e1", borderRadius: 6 }} />
       </label>
       <label style={{ display: "grid", gap: 4, fontSize: 12 }}>Preenchimento
         <input aria-label="Preenchimento do objeto" type="color" value={objectFillDraft} disabled={readOnly} onChange={event => setObjectFillDraft(event.currentTarget.value)} />
