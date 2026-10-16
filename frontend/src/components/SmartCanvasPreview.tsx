@@ -549,45 +549,6 @@ export function SmartCanvasPreview({ document, engine, headerText = "", footerTe
       }
       return;
     }
-    if (event.key === "ArrowUp" || event.key === "ArrowDown") {
-      const current = engine.getSelection();
-      if (!current || !layout) return;
-      const blocks = collectTextBlocks(engine.getDocument().content);
-      const focusIndex = blocks.findIndex(item => item.id === current.focus.blockId);
-      const layoutBlock = findLayoutBlock(layout.pages.flatMap(page => page.blocks), current.focus.blockId);
-      if (focusIndex < 0 || !layoutBlock?.lines.length) return;
-      const lines = layoutBlock.lines;
-      let lineIndex = lines.findIndex(line => current.focus.offset >= line.startOffset && current.focus.offset <= line.endOffset);
-      if (lineIndex < 0) lineIndex = lines.findIndex(line => current.focus.offset < line.endOffset);
-      if (lineIndex < 0) lineIndex = lines.length - 1;
-      const direction = event.key === "ArrowUp" ? -1 : 1;
-      const targetLineIndex = lineIndex + direction;
-      let targetBlock = blocks[focusIndex];
-      let targetOffset: number;
-      if (targetLineIndex >= 0 && targetLineIndex < lines.length) {
-        const sourceLine = lines[lineIndex];
-        const targetLine = lines[targetLineIndex];
-        const measure = createLayoutTextMeasurer();
-        const sourceCaretX = getLineXAtOffset(sourceLine, current.focus.offset, measure);
-        const targetLocalX = Math.max(0, sourceCaretX - sourceLine.x);
-        targetOffset = getOffsetAtLineX(targetLine, targetLine.x + targetLocalX, measure);
-      } else {
-        const adjacentIndex = focusIndex + direction;
-        if (adjacentIndex < 0 || adjacentIndex >= blocks.length) return;
-        targetBlock = blocks[adjacentIndex];
-        const adjacentLayout = findLayoutBlock(layout.pages.flatMap(page => page.blocks), targetBlock.id);
-        const targetLines = adjacentLayout?.lines ?? [];
-        if (!targetLines.length) targetOffset = direction < 0 ? targetBlock.text.length : 0;
-        else {
-          const edgeLine = direction < 0 ? targetLines[targetLines.length - 1] : targetLines[0];
-          targetOffset = direction < 0 ? edgeLine.endOffset : edgeLine.startOffset;
-        }
-      }
-      event.preventDefault();
-      const focus = { blockId: targetBlock.id, offset: Math.max(0, Math.min(targetBlock.text.length, targetOffset)) };
-      syncSelection(event.shiftKey ? { anchor: current.anchor, focus } : collapsedAt(focus));
-      return;
-    }
     if (["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown", "Home", "End"].includes(event.key)) {
       const current = engine.getSelection();
       if (!current) return;
