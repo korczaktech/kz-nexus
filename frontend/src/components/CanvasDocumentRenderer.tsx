@@ -70,7 +70,10 @@ function drawLine(ctx: CanvasRenderingContext2D, line: LayoutLine): void {
       ctx.fillRect(x, top + 1, width, Math.max(1, line.height * PT_TO_CSS_PX - 2));
     }
     ctx.fillStyle = markColor(run.marks);
-    ctx.fillText(run.text, x, baseline);
+    const isSuperscript = run.marks.some(mark => mark.type === "superscript");
+    const isSubscript = run.marks.some(mark => mark.type === "subscript");
+    const runBaseline = baseline + (isSubscript ? run.fontSize * PT_TO_CSS_PX * 0.22 : isSuperscript ? -run.fontSize * PT_TO_CSS_PX * 0.28 : 0);
+    ctx.fillText(run.text, x, runBaseline);
     const underline = run.marks.some(mark => mark.type === "underline" || mark.type === "link");
     const strike = run.marks.some(mark => mark.type === "strike");
     if (underline || strike || comment) {
@@ -78,7 +81,7 @@ function drawLine(ctx: CanvasRenderingContext2D, line: LayoutLine): void {
       ctx.lineWidth = comment ? 1 : Math.max(0.6, run.fontSize * PT_TO_CSS_PX / 16);
       ctx.setLineDash(comment ? [1.5, 1.5] : []);
       ctx.beginPath();
-      const y = strike ? baseline - run.fontSize * PT_TO_CSS_PX * 0.32 : baseline + 1.5;
+      const y = strike ? runBaseline - run.fontSize * PT_TO_CSS_PX * 0.32 : runBaseline + 1.5;
       ctx.moveTo(x, y);
       ctx.lineTo(x + width, y);
       ctx.stroke();
