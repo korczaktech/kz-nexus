@@ -271,8 +271,10 @@ describe("SmartCanvasPreview input integration", () => {
     await act(async () => {
       widthSetter.call(widthInput, "180");
       widthInput.dispatchEvent(new Event("input", { bubbles: true }));
+      widthInput.dispatchEvent(new Event("change", { bubbles: true }));
       widthSetter.call(labelInput, "Updated shape");
       labelInput.dispatchEvent(new Event("input", { bubbles: true }));
+      labelInput.dispatchEvent(new Event("change", { bubbles: true }));
     });
     const applyButton = [...host.querySelectorAll('[aria-label="Propriedades do objeto selecionado"] button')][0] as HTMLButtonElement | undefined;
     if (!applyButton) throw new Error("Object apply button was not mounted");
@@ -472,6 +474,10 @@ describe("SmartCanvasPreview input integration", () => {
     const input = host.querySelector('textarea[aria-label="Entrada de texto do SmartCanvas"]') as HTMLTextAreaElement | null;
     if (!input) throw new Error("SmartCanvas input surface was not mounted");
     const file = new File(["small-image-fixture"], "pasted.png", { type: "image/png" });
+    const readerSpy = vi.spyOn(FileReader.prototype, "readAsDataURL").mockImplementation(function (this: FileReader) {
+      Object.defineProperty(this, "result", { configurable: true, value: "data:image/png;base64,c21hbGwtaW1hZ2UtZml4dHVyZQ==" });
+      this.dispatchEvent(new ProgressEvent("load"));
+    });
     const paste = new Event("paste", { bubbles: true, cancelable: true });
     Object.defineProperty(paste, "clipboardData", {
       value: {
@@ -482,8 +488,10 @@ describe("SmartCanvasPreview input integration", () => {
 
     await act(async () => {
       input.dispatchEvent(paste);
-      await new Promise<void>(resolve => window.setTimeout(resolve, 0));
+      await Promise.resolve();
+      await Promise.resolve();
     });
+    readerSpy.mockRestore();
 
     const result = engine.getDocument();
     const image = result.content.find(block => block.type === "image");
