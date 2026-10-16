@@ -424,7 +424,7 @@ describe("SmartCanvasPreview input integration", () => {
     if (!input) throw new Error("SmartCanvas input surface was not mounted");
     const paste = new Event("paste", { bubbles: true, cancelable: true });
     Object.defineProperty(paste, "clipboardData", {
-      value: { getData: (type: string) => type === "text/html" ? "<p><strong>Bold</strong></p><p><em>italic</em></p>" : "Bold\\nitalic" },
+      value: { getData: (type: string) => type === "text/html" ? "<p><strong>Bold</strong></p><p><em>italic</em></p>" : "Bold\nitalic" },
     });
     await act(async () => { input.dispatchEvent(paste); });
 
