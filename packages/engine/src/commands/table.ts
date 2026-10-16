@@ -122,9 +122,9 @@ function rebuildCellParagraphs(cell: TableCell, text: string, generateId: () => 
   while (suffix < oldText.length - prefix && suffix < text.length - prefix &&
     oldText[oldText.length - suffix - 1] === text[text.length - suffix - 1]) suffix += 1;
 
-  const inheritedIndex = prefix < oldText.length && oldText[prefix] !== "\n"
-    ? prefix
-    : prefix > 0 && oldText[prefix - 1] !== "\n" ? prefix - 1 : -1;
+  const inheritedIndex = prefix > 0 && oldText[prefix - 1] !== "\n"
+    ? prefix - 1
+    : prefix < oldText.length && oldText[prefix] !== "\n" ? prefix : -1;
   const inheritedMarks = inheritedIndex >= 0 ? oldMarks[inheritedIndex] ?? [] : [];
   const marksAt = (newOffset: number): Mark[] => {
     if (newOffset < prefix) return oldMarks[newOffset] ?? [];
