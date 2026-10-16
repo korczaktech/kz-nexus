@@ -108,7 +108,14 @@ function sameMarks(a: Mark[], b: Mark[]): boolean {
  * range. The cell controller submits the full text after each edit, so a
  * common-prefix/suffix diff identifies the inserted/replaced range.
  */
-function rebuildCellParagraphs(cell: TableCell, text: string, generateId: () => string, insertionMarks?: Mark[]): Paragraph[] {
+type CellInsertionRun = { text: string; marks: Mark[] };
+
+function rebuildCellParagraphs(
+  cell: TableCell,
+  text: string,
+  generateId: () => string,
+  options: { insertionMarks?: Mark[]; insertionRuns?: CellInsertionRun[]; insertionRange?: { start: number; end: number } } = {},
+): Paragraph[] {
   const oldText = cell.children.map(paragraph => paragraph.children.map(run => run.text).join("")).join("\n");
   const oldMarks: Mark[][] = [];
   for (let paragraphIndex = 0; paragraphIndex < cell.children.length; paragraphIndex += 1) {
@@ -125,17 +132,32 @@ function rebuildCellParagraphs(cell: TableCell, text: string, generateId: () => 
   while (suffix < oldText.length - prefix && suffix < text.length - prefix &&
     oldText[oldText.length - suffix - 1] === text[text.length - suffix - 1]) suffix += 1;
 
-  const inheritedIndex = prefix > 0 && oldText[prefix - 1] !== "\n"
-    ? prefix - 1
-    : prefix < oldText.length && oldText[prefix] !== "\n" ? prefix : -1;
-  const inheritedMarks = insertionMarks ? insertionMarks.map(mark => ({ ...mark })) : inheritedIndex >= 0 ? oldMarks[inheritedIndex] ?? [] : [];
+  const changedStart = options.insertionRange?.start ?? prefix;
+  const changedEnd = options.insertionRange?.end ?? text.length - suffix;
+  const inheritedIndex = changedStart > 0 && oldText[changedStart - 1] !== "\n"
+    ? changedStart - 1
+    : changedStart < oldText.length && oldText[changedStart] !== "\n" ? changedStart : -1;
+  const inheritedMarks = options.insertionMarks
+    ? options.insertionMarks.map(mark => ({ ...mark }))
+    : inheritedIndex >= 0 ? oldMarks[inheritedIndex] ?? [] : [];
+  const marksForInsertedOffset = (offset: number): Mark[] => {
+    if (options.insertionRuns) {
+      let consumed = 0;
+      for (const run of options.insertionRuns) {
+        if (offset < consumed + run.text.length) return run.marks;
+        consumed += run.text.length;
+      }
+      return [];
+    }
+    return inheritedMarks;
+  };
   const marksAt = (newOffset: number): Mark[] => {
-    if (newOffset < prefix) return oldMarks[newOffset] ?? [];
-    if (newOffset >= text.length - suffix) {
+    if (newOffset < changedStart) return oldMarks[newOffset] ?? [];
+    if (newOffset >= changedEnd) {
       const oldOffset = oldText.length - (text.length - newOffset);
       return oldMarks[oldOffset] ?? [];
     }
-    return inheritedMarks;
+    return marksForInsertedOffset(newOffset - changedStart);
   };
 
   let globalOffset = 0;
@@ -163,7 +185,7 @@ function rebuildCellParagraphs(cell: TableCell, text: string, generateId: () => 
     return { ...previous, type: "paragraph" as const, id: previous?.id ?? generateId(), children: runs };
   });
 }
-export function setCellText(params: { tableId: string; rowId: string; cellId: string; text: string; insertionMarks?: Mark[] }): Command {
+export function setCellText(params: { tableId: string; rowId: string; cellId: string; text: string; insertionMarks?: Mark[]; insertionRuns?: CellInsertionRun[]; insertionRange?: { start: number; end: number } }): Command {
   return (doc, ctx) =>
     withTable(doc, params.tableId, (table) => ({
       ...table,
@@ -174,7 +196,7 @@ export function setCellText(params: { tableId: string; rowId: string; cellId: st
               ...row,
               children: row.children.map((cell) => {
                 if (cell.id !== params.cellId) return cell;
-                return { ...cell, children: rebuildCellParagraphs(cell, params.text, ctx.generateId, params.insertionMarks) };
+                return { ...cell, children: rebuildCellParagraphs(cell, params.text, ctx.generateId, { insertionMarks: params.insertionMarks, insertionRuns: params.insertionRuns, insertionRange: params.insertionRange }) };
               }),
             },
       ),
