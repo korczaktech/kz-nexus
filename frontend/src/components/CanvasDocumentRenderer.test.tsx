@@ -144,7 +144,7 @@ function makeRenderFixture(): NexusDocument {
       kind: "image",
       mimeType: "image/png",
       data: "Y2VsbC1pbWFnZQ==",
-      byteLength: 13,
+      byteLength: 10,
       name: "cell-fixture.png",
     },
   );
