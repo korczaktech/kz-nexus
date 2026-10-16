@@ -211,6 +211,14 @@ describe("SmartCanvasPreview input integration", () => {
       anchor: { blockId: first.id, offset: 0 },
       focus: { blockId: paragraph.id, offset: "Inside cell".length },
     });
+    let copied = "";
+    const copy = new Event("copy", { bubbles: true, cancelable: true });
+    Object.defineProperty(copy, "clipboardData", {
+      value: { setData: (type: string, value: string) => { if (type === "text/plain") copied = value; } },
+    });
+    await act(async () => { input.dispatchEvent(copy); });
+    expect(copied).toBe("Before\\nInside cell");
+    expect(copy.defaultPrevented).toBe(true);
   });
 
   it("moves the table-cell caret horizontally between adjacent cells at boundaries", async () => {
