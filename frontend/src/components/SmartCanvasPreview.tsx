@@ -330,6 +330,7 @@ export function SmartCanvasPreview({ document, engine, headerText = "", footerTe
   const [spacingAfterDraft, setSpacingAfterDraft] = useState("8");
   const [headingLevelDraft, setHeadingLevelDraft] = useState("paragraph");
   const inputRef = useRef<HTMLTextAreaElement>(null);
+  const imageFileInputRef = useRef<HTMLInputElement>(null);
   const composing = useRef(false);
   const preferredVerticalX = useRef<number | null>(null);
   const preferredCellColumn = useRef<number | null>(null);
@@ -731,6 +732,56 @@ export function SmartCanvasPreview({ document, engine, headerText = "", footerTe
       onDocumentChange(result.value.document);
       onStatus?.("Alinhamento atualizado pelo SmartCanvas.");
     }
+  };
+  const insertSmartCanvasImageFile = (file: File) => {
+    if (readOnly) return;
+    if (activeCell) {
+      onStatus?.("A inserção de imagem dentro de células não é suportada pelo modelo atual; a célula não foi alterada.");
+      return;
+    }
+    const current = engine.getSelection();
+    const selectedBlock = current
+      ? engine.getDocument().content.find(block =>
+          block.id === current.focus.blockId && (block.type === "paragraph" || block.type === "heading")
+        )
+      : undefined;
+    if (!selectedBlock) {
+      onStatus?.("Selecione um parágrafo ou título de nível superior antes de inserir uma imagem.");
+      return;
+    }
+    void readClipboardImage(file).then(({ mimeType, data }) => {
+      if (!engine.getDocument().content.some(block => block.id === selectedBlock.id)) {
+        onStatus?.("A posição de inserção mudou; selecione novamente o local da imagem.");
+        return;
+      }
+      const result = engine.exec([insertImageResource({
+        afterBlockId: selectedBlock.id,
+        mimeType,
+        data,
+        alt: file.name.slice(0, 2000),
+        name: file.name.slice(0, 255),
+      })], { group: "structural" });
+      if (!result.ok) {
+        onStatus?.("Não foi possível inserir a imagem: " + result.error.message);
+        return;
+      }
+      const inserted = [...result.value.document.content].reverse().find(block =>
+        block.type === "image" && result.value.document.resources.some(resource => resource.id === block.resourceId && resource.data === data)
+      );
+      setSelection(null);
+      engine.setSelection(undefined);
+      setActiveCell(null);
+      setActiveBlockId(inserted?.id ?? null);
+      if (inserted?.type === "image") {
+        setImageAltDraft(inserted.alt);
+        setImageWidthDraft(inserted.width == null ? "" : String(inserted.width));
+        setImageHeightDraft(inserted.height == null ? "" : String(inserted.height));
+      }
+      onDocumentChange(result.value.document);
+      onStatus?.("Imagem inserida pelo SmartCanvas.");
+    }).catch(error => {
+      onStatus?.(error instanceof Error ? error.message : "Não foi possível ler o arquivo de imagem.");
+    });
   };
   const applySelectedImageProperties = () => {
     if (readOnly || !activeBlockId) return;
@@ -1389,6 +1440,12 @@ export function SmartCanvasPreview({ document, engine, headerText = "", footerTe
         <input aria-label="URL do link SmartCanvas" type="url" value={linkDraft} disabled={readOnly} onChange={event => setLinkDraft(event.currentTarget.value)} placeholder="https://…" style={{ width: 150, padding: "5px 6px", border: "1px solid #cbd5e1", borderRadius: 6 }} />
         <button type="button" disabled={readOnly} onMouseDown={event => event.preventDefault()} onClick={applySmartCanvasLink} aria-label="Aplicar link SmartCanvas" style={{ padding: "6px 8px", border: "1px solid #cbd5e1", borderRadius: 6, background: "#fff" }}>Aplicar</button>
       </label>
+      <button type="button" disabled={readOnly} onMouseDown={event => event.preventDefault()} onClick={() => imageFileInputRef.current?.click()} aria-label="Inserir imagem de arquivo SmartCanvas">Inserir imagem</button>
+      <input ref={imageFileInputRef} type="file" accept="image/png,image/jpeg,image/gif,image/webp" aria-label="Arquivo de imagem SmartCanvas" disabled={readOnly} style={{ display: "none" }} onChange={event => {
+        const file = event.currentTarget.files?.[0];
+        event.currentTarget.value = "";
+        if (file) insertSmartCanvasImageFile(file);
+      }} />
       <button type="button" disabled={readOnly} onMouseDown={event => event.preventDefault()} onClick={insertSmartCanvasTable} aria-label="Inserir tabela SmartCanvas" title="Inserir tabela 3×3" style={{ padding: "6px 9px", border: "1px solid #cbd5e1", borderRadius: 6, background: "#fff" }}>▦ Tabela</button>
       <span aria-hidden="true" style={{ width: 1, height: 24, background: "#cbd5e1", margin: "0 3px" }} />
       <button type="button" disabled={readOnly} onMouseDown={event => event.preventDefault()} onClick={() => applySmartCanvasAlignment("start")} aria-label="Alinhar à esquerda SmartCanvas" title="Alinhar à esquerda" style={{ padding: "6px 9px", border: "1px solid #cbd5e1", borderRadius: 6, background: "#fff" }}>⇤</button>
