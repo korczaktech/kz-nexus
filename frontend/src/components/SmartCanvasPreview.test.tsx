@@ -159,8 +159,8 @@ describe("SmartCanvasPreview input integration", () => {
     first.children[0]!.text = "Alpha";
     document.content.push({
       type: "paragraph",
-      id: "second-paragraph",
-      children: [{ type: "text", id: "second-run", text: "Beta", marks: [] }],
+      id: "secondparagraph",
+      children: [{ type: "text", id: "secondrun", text: "Beta", marks: [] }],
     });
     engine = createEditor({ document });
     const onDocumentChange = vi.fn();
