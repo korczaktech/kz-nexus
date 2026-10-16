@@ -134,6 +134,45 @@ describe("SmartCanvasPreview input integration", () => {
     if (!afterComposition || afterComposition.type !== "paragraph") throw new Error("Expected paragraph after composition");
     expect(getPlainText(afterComposition)).toBe("Olá SmartCanvas 😀日本語");
   });
+  it("pastes sanitized rich HTML and preserves inline formatting in the engine model", async () => {
+    const document = createDocument({ title: "SmartCanvas rich paste" });
+    engine = createEditor({ document });
+    const onDocumentChange = vi.fn();
+    const onStatus = vi.fn();
+    host = window.document.createElement("div");
+    window.document.body.append(host);
+    root = createRoot(host);
+
+    await act(async () => {
+      root?.render(createElement(SmartCanvasPreview, {
+        document: engine!.getDocument(),
+        engine: engine!,
+        onDocumentChange,
+        onStatus,
+      }));
+    });
+    const hit = host.querySelector('[data-testid="smartcanvas-text-hit"]') as HTMLButtonElement | null;
+    await act(async () => { hit?.click(); });
+    const input = host.querySelector('textarea[aria-label="Entrada de texto do SmartCanvas"]') as HTMLTextAreaElement | null;
+    if (!input) throw new Error("SmartCanvas input surface was not mounted");
+
+    const html = '<p><strong>Rich</strong> <em>paste</em><a href="javascript:alert(1)">safe text</a></p><script>window.__pasteAttack = true</script>';
+    const paste = new Event("paste", { bubbles: true, cancelable: true });
+    Object.defineProperty(paste, "clipboardData", {
+      value: { getData: (type: string) => type === "text/html" ? html : "Rich paste safe text" },
+    });
+    await act(async () => { input.dispatchEvent(paste); });
+
+    const paragraph = engine.getDocument().content[0];
+    if (!paragraph || paragraph.type !== "paragraph") throw new Error("Expected canonical paragraph after paste");
+    expect(getPlainText(paragraph)).toContain("Rich paste safe text");
+    expect(paragraph.children.some(run => run.text.includes("Rich") && run.marks.some(mark => mark.type === "bold"))).toBe(true);
+    expect(paragraph.children.some(run => run.text.includes("paste") && run.marks.some(mark => mark.type === "italic"))).toBe(true);
+    expect(paragraph.children.some(run => run.marks.some(mark => mark.type === "link" && mark.value.startsWith("javascript:")))).toBe(false);
+    expect(onDocumentChange).toHaveBeenCalled();
+    expect(onStatus).toHaveBeenCalledWith("Conteúdo formatado colado com sanitização.");
+  });
+
   it("selects an image and applies validated properties through the engine", async () => {
     const document = createDocument({ title: "SmartCanvas image integration" });
     engine = createEditor({ document });
