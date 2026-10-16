@@ -87,8 +87,9 @@ export function wordRangeAt(text: string, offset: number): { start: number; end:
   let probe = bounded === text.length && bounded > 0 ? previousCodePointOffset(text, bounded) : bounded;
   if (probe < text.length && /\\s/u.test(text.slice(probe, nextCodePointOffset(text, probe)))) {
     const next = nextCodePointOffset(text, probe);
-    if (next < text.length && !/\\s/u.test(text.slice(next, nextCodePointOffset(text, next)))) probe = next;
-    else if (probe > 0) probe = previousCodePointOffset(text, probe);
+    const previous = probe > 0 ? previousCodePointOffset(text, probe) : probe;
+    if (probe > 0 && !/\\s/u.test(text.slice(previous, probe))) probe = previous;
+    else if (next < text.length && !/\\s/u.test(text.slice(next, nextCodePointOffset(text, next)))) probe = next;
   }
   let start = probe;
   let end = probe;
