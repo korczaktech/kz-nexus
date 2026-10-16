@@ -12,6 +12,8 @@ on:
       - "frontend/src/components/SmartCanvasPreview.tsx"
       - "frontend/src/services/nexusDocumentPersistence.ts"
       - "frontend/src/components/EditorSmartCanvasSave.integration.test.tsx"
+      - "frontend/src/components/editorDocxRoundtrip.test.ts"
+      - "frontend/src/services/cloudStorage.ts"
       - "scripts/smartcanvas-api-e2e.mjs"
       - "frontend/package.json"
 
