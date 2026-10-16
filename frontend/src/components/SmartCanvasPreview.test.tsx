@@ -287,6 +287,14 @@ describe("SmartCanvasPreview input integration", () => {
     expect(image.width).toBe(128);
     expect(image.height).toBe(64);
     expect(onDocumentChange).toHaveBeenCalled();
+
+    const input = host.querySelector('textarea[aria-label="Entrada de texto do SmartCanvas"]') as HTMLTextAreaElement | null;
+    if (!input) throw new Error("SmartCanvas input surface was not mounted");
+    await act(async () => {
+      input.dispatchEvent(new KeyboardEvent("keydown", { key: "Backspace", bubbles: true, cancelable: true }));
+    });
+    expect(engine.getDocument().content.some(block => block.type === "image")).toBe(false);
+    expect(engine.getDocument().resources).toHaveLength(0);
   });
 
   it("defers intermediate IME input and commits the composed text once", async () => {
