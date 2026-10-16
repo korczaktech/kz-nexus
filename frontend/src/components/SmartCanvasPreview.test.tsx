@@ -178,8 +178,7 @@ describe("SmartCanvasPreview input integration", () => {
       headerAlign.dispatchEvent(new Event("change", { bubbles: true }));
       selectSetter.call(footerAlign, "right");
       footerAlign.dispatchEvent(new Event("change", { bubbles: true }));
-      pageNumbers.checked = true;
-      pageNumbers.dispatchEvent(new Event("change", { bubbles: true }));
+      pageNumbers.click();
     });
     expect(onHeaderTextChange).toHaveBeenCalledWith("Quarterly report");
     expect(onFooterTextChange).toHaveBeenCalledWith("Confidential");
