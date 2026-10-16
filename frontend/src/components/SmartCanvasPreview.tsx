@@ -1,5 +1,5 @@
 import { useMemo, useRef, useState } from "react";
-import { collapsedAt, deleteText, getPlainText, layoutDocument, mergeBlockWithPrevious, replaceRange, setCellText, splitBlock, type Editor as NexusEngineSession, type NexusDocument, type Selection, type SmartCanvasHitTarget } from "../../../packages/engine/src/index";
+import { collapsedAt, deleteText, getLineXAtOffset, getOffsetAtLineX, getPlainText, layoutDocument, mergeBlockWithPrevious, replaceRange, setCellText, splitBlock, type Editor as NexusEngineSession, type NexusDocument, type Selection, type SmartCanvasHitTarget } from "../../../packages/engine/src/index";
 import { CanvasDocumentRenderer } from "./CanvasDocumentRenderer";
 
 type TextBlock = { id: string; text: string };
@@ -239,9 +239,16 @@ export function SmartCanvasPreview({ document, engine, headerText = "", footerTe
       if (targetLineIndex >= 0 && targetLineIndex < lines.length) {
         const sourceLine = lines[lineIndex];
         const targetLine = lines[targetLineIndex];
-        const sourceLength = Math.max(1, sourceLine.endOffset - sourceLine.startOffset);
-        const relative = Math.max(0, Math.min(1, (current.focus.offset - sourceLine.startOffset) / sourceLength));
-        targetOffset = Math.round(targetLine.startOffset + relative * (targetLine.endOffset - targetLine.startOffset));
+        const measure = (text: string, run?: import("../../../packages/engine/src/layout/layout").LayoutTextRun) => {
+          const canvas = document.createElement("canvas");
+          const context = canvas.getContext("2d");
+          if (!context) return text.length * (run?.fontSize ?? 11) * 0.55;
+          context.font = `${run?.fontSize ?? 11}px ${run?.fontFamily ?? "Arial"}`;
+          return context.measureText(text).width;
+        };
+        const sourceCaretX = getLineXAtOffset(sourceLine, current.focus.offset, measure);
+        const targetLocalX = Math.max(0, sourceCaretX - sourceLine.x);
+        targetOffset = getOffsetAtLineX(targetLine, targetLine.x + targetLocalX, measure);
       } else {
         const adjacentIndex = focusIndex + direction;
         if (adjacentIndex < 0 || adjacentIndex >= blocks.length) return;
