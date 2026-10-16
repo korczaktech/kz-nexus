@@ -203,8 +203,10 @@ describe("SmartCanvasPreview input integration", () => {
       }],
     };
     document.content.push(table);
-    const paragraph = table.children[0]!.children[0]!.children[0]!; 
     engine = createEditor({ document });
+    const normalizedTable = engine.getDocument().content.find(block => block.type === "table");
+    if (!normalizedTable || normalizedTable.type !== "table") throw new Error("Expected normalized table");
+    const paragraph = normalizedTable.children[0]!.children[0]!.children[0]!;
     host = window.document.createElement("div");
     window.document.body.append(host);
     root = createRoot(host);
