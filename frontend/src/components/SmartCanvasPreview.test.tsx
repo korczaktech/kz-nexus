@@ -248,6 +248,7 @@ describe("SmartCanvasPreview input integration", () => {
     });
     engine = createEditor({ document });
     const onDocumentChange = vi.fn();
+    const onStatus = vi.fn();
     host = window.document.createElement("div");
     window.document.body.append(host);
     root = createRoot(host);
@@ -257,6 +258,7 @@ describe("SmartCanvasPreview input integration", () => {
         document: engine!.getDocument(),
         engine: engine!,
         onDocumentChange,
+        onStatus,
       }));
     });
     const objectHit = host.querySelector('[data-testid="smartcanvas-object-hit"]') as HTMLButtonElement | null;
@@ -282,7 +284,7 @@ describe("SmartCanvasPreview input integration", () => {
 
     const updated = engine.getDocument().content[0];
     if (!updated || updated.type !== "paragraph") throw new Error("Expected edited object paragraph");
-    expect(updated.editorObject?.width).toBe(180);
+    expect(updated.editorObject?.width, JSON.stringify(onStatus.mock.calls)).toBe(180);
     expect(updated.editorObject?.label).toBe("Updated shape");
 
     const moveDown = [...host.querySelectorAll('[aria-label="Propriedades do objeto selecionado"] button')].find(button => button.textContent === "Mover para baixo") as HTMLButtonElement | undefined;
@@ -436,7 +438,7 @@ describe("SmartCanvasPreview input integration", () => {
     await act(async () => { apply.click(); });
 
     const image = engine.getDocument().content.find(item => item.type === "image");
-    expect(image?.type).toBe("image");
+    expect(image?.type, JSON.stringify(onStatus.mock.calls)).toBe("image");
     if (!image || image.type !== "image") throw new Error("Expected canonical image block");
     expect(image.alt).toBe("Accessible logo");
     expect(image.width).toBe(128);
