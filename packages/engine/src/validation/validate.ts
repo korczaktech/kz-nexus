@@ -241,6 +241,13 @@ function checkTable(
       cell.children.forEach((paragraph, pIndex) =>
         checkParagraphLike(paragraph, `${cellPath}.children[${pIndex}]`, seen, issues, limits, counter, depth + 3),
       );
+      if (cell.images !== undefined && !Array.isArray(cell.images)) {
+        issues.push({ code: "INVALID_DOCUMENT", message: `Table cell images must be an array at ${cellPath}.images`, path: `${cellPath}.images` });
+      } else {
+        (cell.images ?? []).forEach((image, imageIndex) =>
+          checkImage(image, `${cellPath}.images[${imageIndex}]`, seen, issues, resourceIds, counter, depth + 3),
+        );
+      }
     });
   });
 }
