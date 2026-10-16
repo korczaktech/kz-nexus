@@ -242,9 +242,13 @@ export function SmartCanvasPreview({ document, engine, headerText = "", footerTe
         const measure = (text: string, run?: import("../../../packages/engine/src/layout/layout").LayoutTextRun) => {
           const canvas = window.document.createElement("canvas");
           const context = canvas.getContext("2d");
+          const size = (run?.fontSize ?? 11) * (96 / 72);
           if (!context) return text.length * (run?.fontSize ?? 11) * 0.55;
-          context.font = `${run?.fontSize ?? 11}px ${run?.fontFamily ?? "Arial"}`;
-          return context.measureText(text).width;
+          const bold = run?.marks.some(mark => mark.type === "bold") ? "700 " : "400 ";
+          const italic = run?.marks.some(mark => mark.type === "italic") ? "italic " : "";
+          context.font = `${italic}${bold}${size}px ${run?.fontFamily ?? "Arial"}`;
+          // Layout coordinates are points; Canvas text metrics are CSS pixels.
+          return context.measureText(text).width * (72 / 96);
         };
         const sourceCaretX = getLineXAtOffset(sourceLine, current.focus.offset, measure);
         const targetLocalX = Math.max(0, sourceCaretX - sourceLine.x);
