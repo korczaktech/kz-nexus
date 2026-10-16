@@ -380,9 +380,16 @@ export function layoutDocument(document: NexusDocument, options: LayoutOptions =
           const measuredParagraphs = cell.children.map(paragraph => blockTextLayout(
             paragraph, content.x + cellIndex * colWidth + 4, 0, Math.max(1, colWidth - 8), options
           ));
-          const imageHeights = (cell.images ?? []).map(image => Math.max(12, (image.height ?? 96) * 0.75));
-          const cellHeight = 8 + measuredParagraphs.reduce((sum, item) => sum + item.height, 0) + imageHeights.reduce((sum, value) => sum + value + 4, 0);
-          return { cellId: cell.id, x: content.x + cellIndex * colWidth, width: colWidth, height: cellHeight, paragraphs: measuredParagraphs, sourceImages: cell.images ?? [], imageHeights };
+          const cellWidth = colWidth;
+          const availableImageWidth = Math.max(12, cellWidth - 8);
+          const imageSizes = (cell.images ?? []).map(image => {
+            const naturalWidth = Math.max(1, (image.width ?? 96) * 0.75);
+            const naturalHeight = Math.max(1, (image.height ?? 96) * 0.75);
+            const scale = Math.min(1, availableImageWidth / naturalWidth, content.height / naturalHeight);
+            return { width: naturalWidth * scale, height: naturalHeight * scale };
+          });
+          const cellHeight = 8 + measuredParagraphs.reduce((sum, item) => sum + item.height, 0) + imageSizes.reduce((sum, value) => sum + value.height + 4, 0);
+          return { cellId: cell.id, x: content.x + cellIndex * colWidth, width: colWidth, height: cellHeight, paragraphs: measuredParagraphs, sourceImages: cell.images ?? [], imageSizes };
         });
         return { rowId: row.id, height: Math.max(24, ...cells.map(cell => cell.height)), cells };
       });
@@ -420,10 +427,20 @@ export function layoutDocument(document: NexusDocument, options: LayoutOptions =
               })));
               localY += paragraph.height;
             }
-            return { cell, lines };
+            const images = cell.sourceImages.map((image, index) => {
+              const size = cell.imageSizes[index] ?? { width: Math.max(12, cell.width - 8), height: 72 };
+              const rect = { x: cell.x + 4, y: localY, width: size.width, height: size.height };
+              localY += size.height + 4;
+              return { resourceId: image.resourceId, alt: image.alt, rect };
+            });
+            return { cell, lines, images };
           });
           const allLines = cellLines.flatMap(item => item.lines);
           const allLineBottoms = allLines.map(line => line.y + line.height);
+          const allImageBounds = cellLines.flatMap(item => item.images.map(image => ({
+            top: image.rect.y,
+            bottom: image.rect.y + image.rect.height
+          })));
           let offset = 0;
           while (offset < row.height - 0.001) {
             const available = content.y + content.height - cursorY;
@@ -442,15 +459,31 @@ export function layoutDocument(document: NexusDocument, options: LayoutOptions =
             if (boundary > offset + 0.001) {
               nextOffset = Math.min(row.height, boundary);
               // Keep the final bottom padding with the last line fragment.
-              if (row.height - nextOffset <= 8) nextOffset = row.height;
+              if (row.height - nextOffset <= 8 && !allImageBounds.some(image => image.top < nextOffset - 0.001 && image.bottom > nextOffset + 0.001)) nextOffset = row.height;
+            }
+            // Images are indivisible layout objects: if a page boundary would
+            // cut one, end the fragment before it and place it on the next page.
+            const crossingImage = allImageBounds.find(image =>
+              image.top < nextOffset - 0.001 && image.bottom > nextOffset + 0.001
+            );
+            if (crossingImage && crossingImage.top > offset + 0.001) {
+              nextOffset = crossingImage.top;
             }
             const chunkHeight = Math.max(0.001, nextOffset - offset);
             const rowY = cursorY;
-            const cells = cellLines.map(({ cell, lines }) => ({
+            const cells = cellLines.map(({ cell, lines, images }) => ({
               cellId: cell.cellId,
               rect: { x: cell.x, y: rowY, width: cell.width, height: chunkHeight },
               lines: lines.filter(line => line.y < nextOffset && line.y + line.height > offset)
-                .map(line => ({ ...line, y: rowY + line.y - offset }))
+                .map(line => ({ ...line, y: rowY + line.y - offset })),
+              images: images.filter(image =>
+                image.rect.y >= offset - 0.001 &&
+                image.rect.y + image.rect.height <= nextOffset + 0.001
+              ).map(image => ({
+                resourceId: image.resourceId,
+                alt: image.alt,
+                rect: { ...image.rect, y: rowY + image.rect.y - offset }
+              }))
             }));
             if (cells.some(cell => cell.lines.some(line => line.height > content.height))) {
               diagnostics.push({ code: "OVERSIZED_BLOCK", message: "Uma linha de texto dentro de uma célula é maior que a área útil da página.", blockId: block.id });
@@ -486,11 +519,9 @@ export function layoutDocument(document: NexusDocument, options: LayoutOptions =
             cellY += paragraph.height;
           }
           const images = cell.sourceImages.map((image, index) => {
-            const imageHeight = cell.imageHeights[index] ?? 72;
-            const availableWidth = Math.max(12, cell.width - 8);
-            const imageWidth = Math.min(availableWidth, Math.max(12, (image.width ?? availableWidth / 0.75) * 0.75));
-            const rect = { x: cell.x + 4, y: cellY, width: imageWidth, height: imageHeight };
-            cellY += imageHeight + 4;
+            const size = cell.imageSizes[index] ?? { width: Math.max(12, cell.width - 8), height: 72 };
+            const rect = { x: cell.x + 4, y: cellY, width: size.width, height: size.height };
+            cellY += size.height + 4;
             return { resourceId: image.resourceId, alt: image.alt, rect };
           });
           return { cellId: cell.cellId, rect: { x: cell.x, y: rowY, width: cell.width, height: row.height }, lines, images };
