@@ -321,6 +321,11 @@ export function SmartCanvasPreview({ document, engine, headerText = "", footerTe
   const [objectHeightDraft, setObjectHeightDraft] = useState("");
   const [objectFillDraft, setObjectFillDraft] = useState("#ffffff");
   const [objectStrokeDraft, setObjectStrokeDraft] = useState("#111827");
+  const [fontSizeDraft, setFontSizeDraft] = useState("12");
+  const [fontFamilyDraft, setFontFamilyDraft] = useState("Arial");
+  const [textColorDraft, setTextColorDraft] = useState("#111827");
+  const [highlightDraft, setHighlightDraft] = useState("#fff59d");
+  const [linkDraft, setLinkDraft] = useState("");
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const composing = useRef(false);
   const preferredVerticalX = useRef<number | null>(null);
@@ -537,6 +542,20 @@ export function SmartCanvasPreview({ document, engine, headerText = "", footerTe
     onDocumentChange(result.value.document);
     onStatus?.("Tabela 3×3 inserida pelo motor. Use Tab para navegar e criar novas linhas.");
     inputRef.current?.focus({ preventScroll: true });
+  };
+  const applySmartCanvasLink = () => {
+    const raw = linkDraft.trim();
+    let parsed: URL;
+    try { parsed = new URL(raw); }
+    catch {
+      onStatus?.("Informe um link absoluto válido (https://, http:// ou mailto:).");
+      return;
+    }
+    if (!["https:", "http:", "mailto:"].includes(parsed.protocol)) {
+      onStatus?.("Por segurança, o SmartCanvas só permite links HTTP, HTTPS ou mailto.");
+      return;
+    }
+    applySmartCanvasMark({ type: "link", value: parsed.href });
   };
   const applySmartCanvasAlignment = (align: "start" | "center" | "end" | "justify") => {
     if (readOnly) return;
@@ -1163,6 +1182,35 @@ export function SmartCanvasPreview({ document, engine, headerText = "", footerTe
       <button type="button" disabled={readOnly} onMouseDown={event => event.preventDefault()} onClick={() => applySmartCanvasMark({ type: "subscript" })} aria-label="Subscrito SmartCanvas" title="Subscrito" style={{ padding: "6px 9px", border: "1px solid #cbd5e1", borderRadius: 6, background: "#fff" }}>x₂</button>
       <button type="button" disabled={readOnly} onMouseDown={event => event.preventDefault()} onClick={() => convertSmartCanvasList(false)} aria-label="Lista com marcadores SmartCanvas" title="Lista com marcadores" style={{ padding: "6px 9px", border: "1px solid #cbd5e1", borderRadius: 6, background: "#fff" }}>• Lista</button>
       <button type="button" disabled={readOnly} onMouseDown={event => event.preventDefault()} onClick={() => convertSmartCanvasList(true)} aria-label="Lista numerada SmartCanvas" title="Lista numerada" style={{ padding: "6px 9px", border: "1px solid #cbd5e1", borderRadius: 6, background: "#fff" }}>1. Lista</button>
+      <label style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 12 }} title="Tamanho da fonte">
+        <span>Fonte</span>
+        <select aria-label="Tamanho de fonte SmartCanvas" value={fontSizeDraft} disabled={readOnly} onChange={event => setFontSizeDraft(event.currentTarget.value)} style={{ padding: "5px 6px", border: "1px solid #cbd5e1", borderRadius: 6, background: "#fff" }}>
+          {["8", "9", "10", "11", "12", "14", "16", "18", "24", "36", "48"].map(size => <option key={size} value={size}>{size}</option>)}
+        </select>
+        <button type="button" disabled={readOnly} onMouseDown={event => event.preventDefault()} onClick={() => applySmartCanvasMark({ type: "fontSize", value: Number(fontSizeDraft) })} aria-label="Aplicar tamanho de fonte SmartCanvas" style={{ padding: "6px 8px", border: "1px solid #cbd5e1", borderRadius: 6, background: "#fff" }}>Aplicar</button>
+      </label>
+      <label style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 12 }} title="Família tipográfica">
+        <span>Tipo</span>
+        <select aria-label="Família de fonte SmartCanvas" value={fontFamilyDraft} disabled={readOnly} onChange={event => setFontFamilyDraft(event.currentTarget.value)} style={{ padding: "5px 6px", border: "1px solid #cbd5e1", borderRadius: 6, background: "#fff" }}>
+          {["Arial", "Georgia", "Times New Roman", "Courier New", "Verdana"].map(family => <option key={family} value={family}>{family}</option>)}
+        </select>
+        <button type="button" disabled={readOnly} onMouseDown={event => event.preventDefault()} onClick={() => applySmartCanvasMark({ type: "fontFamily", value: fontFamilyDraft })} aria-label="Aplicar família de fonte SmartCanvas" style={{ padding: "6px 8px", border: "1px solid #cbd5e1", borderRadius: 6, background: "#fff" }}>Aplicar</button>
+      </label>
+      <label style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 12 }} title="Cor do texto">
+        <span>Cor</span>
+        <input aria-label="Cor do texto SmartCanvas" type="color" value={textColorDraft} disabled={readOnly} onChange={event => setTextColorDraft(event.currentTarget.value)} />
+        <button type="button" disabled={readOnly} onMouseDown={event => event.preventDefault()} onClick={() => applySmartCanvasMark({ type: "color", value: textColorDraft })} aria-label="Aplicar cor do texto SmartCanvas" style={{ padding: "6px 8px", border: "1px solid #cbd5e1", borderRadius: 6, background: "#fff" }}>Aplicar</button>
+      </label>
+      <label style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 12 }} title="Realce do texto">
+        <span>Realce</span>
+        <input aria-label="Cor de realce SmartCanvas" type="color" value={highlightDraft} disabled={readOnly} onChange={event => setHighlightDraft(event.currentTarget.value)} />
+        <button type="button" disabled={readOnly} onMouseDown={event => event.preventDefault()} onClick={() => applySmartCanvasMark({ type: "highlight", value: highlightDraft })} aria-label="Aplicar realce SmartCanvas" style={{ padding: "6px 8px", border: "1px solid #cbd5e1", borderRadius: 6, background: "#fff" }}>Aplicar</button>
+      </label>
+      <label style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 12 }} title="Inserir hiperligação">
+        <span>Link</span>
+        <input aria-label="URL do link SmartCanvas" type="url" value={linkDraft} disabled={readOnly} onChange={event => setLinkDraft(event.currentTarget.value)} placeholder="https://…" style={{ width: 150, padding: "5px 6px", border: "1px solid #cbd5e1", borderRadius: 6 }} />
+        <button type="button" disabled={readOnly} onMouseDown={event => event.preventDefault()} onClick={applySmartCanvasLink} aria-label="Aplicar link SmartCanvas" style={{ padding: "6px 8px", border: "1px solid #cbd5e1", borderRadius: 6, background: "#fff" }}>Aplicar</button>
+      </label>
       <button type="button" disabled={readOnly} onMouseDown={event => event.preventDefault()} onClick={insertSmartCanvasTable} aria-label="Inserir tabela SmartCanvas" title="Inserir tabela 3×3" style={{ padding: "6px 9px", border: "1px solid #cbd5e1", borderRadius: 6, background: "#fff" }}>▦ Tabela</button>
       <span aria-hidden="true" style={{ width: 1, height: 24, background: "#cbd5e1", margin: "0 3px" }} />
       <button type="button" disabled={readOnly} onMouseDown={event => event.preventDefault()} onClick={() => applySmartCanvasAlignment("start")} aria-label="Alinhar à esquerda SmartCanvas" title="Alinhar à esquerda" style={{ padding: "6px 9px", border: "1px solid #cbd5e1", borderRadius: 6, background: "#fff" }}>⇤</button>
