@@ -48,7 +48,7 @@ describe("insertImageResource", () => {
     const firstImage = editor.getDocument().content.find(block => block.type === "image");
     if (!firstImage || firstImage.type !== "image") throw new Error("Expected first image");
     const secondInserted = editor.exec([insertImage({
-      afterBlockId: firstImage.id,
+      afterBlockId: paragraph.id,
       resourceId: firstImage.resourceId,
       alt: "Second image",
     })]);
