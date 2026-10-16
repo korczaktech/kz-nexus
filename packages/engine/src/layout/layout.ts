@@ -542,7 +542,7 @@ export function layoutDocument(document: NexusDocument, options: LayoutOptions =
           }
           const isLastFragment = lineOffset + count >= measured.lines.length;
           const bottomInset = isLastFragment ? safeNumber(paragraph.padding, 0) + safeNumber(paragraph.borderWidth, 0) : 0;
-          const fragmentHeight = Math.max(topInset + lineHeightSum + bottomInset, block.editorObject && firstFragment && isLastFragment ? objectHeight : 0);
+          const fragmentHeight = topInset + lineHeightSum + bottomInset;
           const firstLineY = measured.lines[lineOffset].y;
           const lines = measured.lines.slice(lineOffset, lineOffset + count).map(line => ({
             ...line, y: cursorY + topInset + (line.y - firstLineY)
@@ -828,7 +828,7 @@ export function layoutDocument(document: NexusDocument, options: LayoutOptions =
         }
         const isLastFragment = lineOffset + count >= measured.lines.length;
         const bottomInset = isLastFragment ? safeNumber(block.padding, 0) + safeNumber(block.borderWidth, 0) : 0;
-        const fragmentHeight = topInset + lineHeightSum + bottomInset;
+        const fragmentHeight = Math.max(topInset + lineHeightSum + bottomInset, block.editorObject && firstFragment && isLastFragment ? objectHeight : 0);
         const fragmentLines = measured.lines.slice(lineOffset, lineOffset + count).map(line => ({ ...line, y: cursorY + topInset + (line.y - firstLineY) }));
         addBlock(block, { x: content.x, y: cursorY, width: content.width, height: fragmentHeight }, fragmentLines, { continued: !firstFragment });
         cursorY += fragmentHeight;
