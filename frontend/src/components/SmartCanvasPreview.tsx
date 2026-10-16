@@ -410,6 +410,32 @@ export function SmartCanvasPreview({ document, engine, headerText = "", footerTe
     setSelection(initial);
   }, [engine]);
 
+  // Keep SmartCanvas interaction state synchronized when history actions are
+  // triggered by the outer editor toolbar (not only by this component's keys).
+  useEffect(() => {
+    const unsubscribeSelection = engine.on("selectionChanged", ({ selection: next }) => {
+      setSelection(next ?? null);
+    });
+    const unsubscribeDocument = engine.on("documentChanged", ({ document: nextDocument }) => {
+      setActiveCell(current => {
+        if (!current) return null;
+        const restored = collectTableCells(nextDocument.content).find(cell =>
+          cell.tableId === current.tableId && cell.rowId === current.rowId && cell.cellId === current.cellId
+        );
+        if (!restored) return null;
+        return {
+          ...restored,
+          anchorOffset: Math.min(current.anchorOffset, restored.text.length),
+          offset: Math.min(current.offset, restored.text.length),
+        };
+      });
+    });
+    return () => {
+      unsubscribeSelection();
+      unsubscribeDocument();
+    };
+  }, [engine]);
+
   const syncSelection = (next: Selection | undefined) => {
     if (!next) return;
     setSelection(next);
