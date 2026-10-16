@@ -1,5 +1,5 @@
 import { useMemo, useRef, useState } from "react";
-import { collapsedAt, deleteText, getLineXAtOffset, getOffsetAtLineX, getPlainText, layoutDocument, mergeBlockWithPrevious, replaceRange, setCellText, splitBlock, type Editor as NexusEngineSession, type NexusDocument, type Selection, type SmartCanvasHitTarget } from "../../../packages/engine/src/index";
+import { collapsedAt, deleteText, getLineXAtOffset, getOffsetAtLineX, getPlainText, layoutDocument, mergeBlockWithPrevious, replaceRange, setCellText, splitBlock, toggleMark as toggleMarkCommand, type Editor as NexusEngineSession, type NexusDocument, type Selection, type SmartCanvasHitTarget } from "../../../packages/engine/src/index";
 import { CanvasDocumentRenderer } from "./CanvasDocumentRenderer";
 import { nextCodePointOffset, nextWordOffset, previousCodePointOffset, previousWordOffset, wordRangeAt } from "./smartCanvasTextOffsets";
 
@@ -203,6 +203,11 @@ export function SmartCanvasPreview({ document, engine, headerText = "", footerTe
   const handleKeyDown = (event: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (readOnly) { event.preventDefault(); return; }
     if (activeCell) {
+      if ((event.ctrlKey || event.metaKey) && ["b", "i", "u"].includes(event.key.toLowerCase())) {
+        event.preventDefault();
+        onStatus?.("A formatação por atalho dentro de células será habilitada junto ao controlador de marcas de tabela.");
+        return;
+      }
       if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "a") {
         event.preventDefault();
         setActiveCell({ ...activeCell, anchorOffset: 0, offset: activeCell.text.length });
@@ -263,12 +268,40 @@ export function SmartCanvasPreview({ document, engine, headerText = "", footerTe
         : null;
       if (mark) {
         event.preventDefault();
+        const current = engine.getSelection();
+        if (current && current.anchor.blockId !== current.focus.blockId) {
+          const blocks = collectTextBlocks(engine.getDocument().content);
+          const anchorIndex = blocks.findIndex(item => item.id === current.anchor.blockId);
+          const focusIndex = blocks.findIndex(item => item.id === current.focus.blockId);
+          if (anchorIndex < 0 || focusIndex < 0) {
+            onStatus?.("A seleção não corresponde a blocos de texto formatáveis.");
+            return;
+          }
+          const firstIndex = Math.min(anchorIndex, focusIndex);
+          const lastIndex = Math.max(anchorIndex, focusIndex);
+          const start = anchorIndex < focusIndex ? current.anchor.offset : current.focus.offset;
+          const end = anchorIndex < focusIndex ? current.focus.offset : current.anchor.offset;
+          const commands = blocks.slice(firstIndex, lastIndex + 1).flatMap((block, index) => {
+            const from = index === 0 ? start : 0;
+            const to = index === lastIndex - firstIndex ? end : block.text.length;
+            return to > from ? [toggleMarkCommand({ blockId: block.id, start: from, end: to, mark })] : [];
+          });
+          if (!commands.length) { onStatus?.("Selecione texto para aplicar a formatação."); return; }
+          const result = engine.exec(commands, { group: "formatting" });
+          if (!result.ok) onStatus?.(result.error.message);
+          else {
+            setSelection(engine.getSelection() ?? null);
+            onDocumentChange(result.value.document);
+            onStatus?.("Formatação aplicada à seleção de vários blocos.");
+          }
+          return;
+        }
         const result = engine.toggleStoredMark(mark);
         if (!result.ok) onStatus?.(result.error.message);
         else {
           setSelection(engine.getSelection() ?? null);
           onDocumentChange(engine.getDocument());
-          onStatus?.(engine.getSelection() && engine.getSelection()!.anchor.offset !== engine.getSelection()!.focus.offset
+          onStatus?.(current && current.anchor.offset !== current.focus.offset
             ? "Formatação aplicada à seleção."
             : "Formatação de digitação atualizada.");
         }
