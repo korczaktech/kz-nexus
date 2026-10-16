@@ -421,10 +421,9 @@ export function SmartCanvasPreview({ document, engine, headerText = "", footerTe
       selectionRef.current = next ?? null;
       setSelection(next ?? null);
       if (!changed) return;
-      if (!next) {
-        setActiveCell(null);
-        return;
-      }
+      // Cell editing has its own caret state and deliberately clears the
+      // document-level selection. Do not let that clear the active cell.
+      if (!next) return;
       setActiveCell(() => {
         const cells = collectTableCells(engine.getDocument().content);
         const owner = cells.find(cell => {
