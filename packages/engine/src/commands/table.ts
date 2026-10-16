@@ -174,7 +174,7 @@ export function setCellText(params: { tableId: string; rowId: string; cellId: st
               ...row,
               children: row.children.map((cell) => {
                 if (cell.id !== params.cellId) return cell;
-                return { ...cell, children: rebuildCellParagraphs(cell, params.text, ctx.generateId) };
+                return { ...cell, children: rebuildCellParagraphs(cell, params.text, ctx.generateId, params.insertionMarks) };
               }),
             },
       ),
