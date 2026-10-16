@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { addTableColumn, addTableRow, collapsedAt, convertBlockToBlockquote, convertBlockToList, deleteBlock, deleteText, insertImportedBlocksAtSelection, insertImageResource, insertPageBreak, insertTable as insertTableCommand, insertText, insertThematicBreak, moveBlock, removeImage, updateEditorObject, updateImage, getLineXAtOffset, getOffsetAtLineX, getPlainText, layoutDocument, mergeBlockWithPrevious, replaceRange, removeTableColumn, removeTableRow, setAlign, setCellText, setHeadingLevel, setIndent, setParagraphStyle, splitBlock, toggleMark as toggleMarkCommand, type Editor as NexusEngineSession, type Mark, type NexusDocument, type Selection, type SmartCanvasHitTarget } from "../../../packages/engine/src/index";
+import { addTableColumn, addTableRow, collapsedAt, convertBlockToBlockquote, convertBlockToList, deleteBlock, deleteText, insertImportedBlocksAtSelection, insertImageResource, insertPageBreak, insertTable as insertTableCommand, insertTableCellImageResource, insertText, insertThematicBreak, moveBlock, removeImage, updateEditorObject, updateImage, getLineXAtOffset, getOffsetAtLineX, getPlainText, layoutDocument, mergeBlockWithPrevious, replaceRange, removeTableColumn, removeTableRow, setAlign, setCellText, setHeadingLevel, setIndent, setParagraphStyle, splitBlock, toggleMark as toggleMarkCommand, type Editor as NexusEngineSession, type Mark, type NexusDocument, type Selection, type SmartCanvasHitTarget } from "../../../packages/engine/src/index";
 import { CanvasDocumentRenderer } from "./CanvasDocumentRenderer";
 import { nexusDocumentFromHtml } from "../services/nexusEngineAdapter";
 import { lineEndOffset, lineStartOffset, nearestGraphemeOffset, nextCodePointOffset, nextWordOffset, previousCodePointOffset, previousWordOffset, verticalLineOffset, wordRangeAt } from "./smartCanvasTextOffsets";
@@ -740,32 +740,28 @@ export function SmartCanvasPreview({ document, engine, headerText = "", footerTe
   };
   const insertSmartCanvasImageFile = (file: File) => {
     if (readOnly) return;
-    if (activeCell) {
-      onStatus?.("A inserção de imagem dentro de células não é suportada pelo modelo atual; a célula não foi alterada.");
-      return;
-    }
+    const targetCell = activeCell ? { tableId: activeCell.tableId, rowId: activeCell.rowId, cellId: activeCell.cellId } : null;
     const current = engine.getSelection();
-    const selectedBlock = current
+    const selectedBlock = !targetCell && current
       ? engine.getDocument().content.find(block =>
           block.id === current.focus.blockId && (block.type === "paragraph" || block.type === "heading")
         )
       : undefined;
-    if (!selectedBlock) {
-      onStatus?.("Selecione um parágrafo ou título de nível superior antes de inserir uma imagem.");
+    if (!targetCell && !selectedBlock) {
+      onStatus?.("Selecione uma célula, parágrafo ou título antes de inserir uma imagem.");
       return;
     }
     void readClipboardImage(file).then(({ mimeType, data }) => {
-      if (!engine.getDocument().content.some(block => block.id === selectedBlock.id)) {
+      const commands = targetCell
+        ? [insertTableCellImageResource({ ...targetCell, mimeType, data, alt: file.name.slice(0, 2000), name: file.name.slice(0, 255), width: 120, height: 96 })]
+        : selectedBlock && engine.getDocument().content.some(block => block.id === selectedBlock.id)
+          ? [insertImageResource({ afterBlockId: selectedBlock.id, mimeType, data, alt: file.name.slice(0, 2000), name: file.name.slice(0, 255) })]
+          : null;
+      if (!commands) {
         onStatus?.("A posição de inserção mudou; selecione novamente o local da imagem.");
         return;
       }
-      const result = engine.exec([insertImageResource({
-        afterBlockId: selectedBlock.id,
-        mimeType,
-        data,
-        alt: file.name.slice(0, 2000),
-        name: file.name.slice(0, 255),
-      })], { group: "structural" });
+      const result = engine.exec(commands, { group: "structural" });
       if (!result.ok) {
         onStatus?.("Não foi possível inserir a imagem: " + result.error.message);
         return;
@@ -773,17 +769,19 @@ export function SmartCanvasPreview({ document, engine, headerText = "", footerTe
       const inserted = [...result.value.document.content].reverse().find(block =>
         block.type === "image" && result.value.document.resources.some(resource => resource.id === block.resourceId && resource.data === data)
       );
-      setSelection(null);
-      engine.setSelection(undefined);
-      setActiveCell(null);
-      setActiveBlockId(inserted?.id ?? null);
-      if (inserted?.type === "image") {
-        setImageAltDraft(inserted.alt);
-        setImageWidthDraft(inserted.width == null ? "" : String(inserted.width));
-        setImageHeightDraft(inserted.height == null ? "" : String(inserted.height));
+      if (!targetCell) {
+        setSelection(null);
+        engine.setSelection(undefined);
+        setActiveCell(null);
+        setActiveBlockId(inserted?.id ?? null);
+        if (inserted?.type === "image") {
+          setImageAltDraft(inserted.alt);
+          setImageWidthDraft(inserted.width == null ? "" : String(inserted.width));
+          setImageHeightDraft(inserted.height == null ? "" : String(inserted.height));
+        }
       }
       onDocumentChange(result.value.document);
-      onStatus?.("Imagem inserida pelo SmartCanvas.");
+      onStatus?.(targetCell ? "Imagem inserida na célula da tabela pelo SmartCanvas." : "Imagem inserida pelo SmartCanvas.");
     }).catch(error => {
       onStatus?.(error instanceof Error ? error.message : "Não foi possível ler o arquivo de imagem.");
     });
