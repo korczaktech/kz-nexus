@@ -411,7 +411,10 @@ export function SmartCanvasPreview({ document, engine, headerText = "", footerTe
         }
         const nextIndex = event.shiftKey ? Math.max(0, index - 1) : Math.min(cells.length - 1, index + 1);
         const next = cells[nextIndex];
-        if (next) setActiveCell({ ...next, anchorOffset: next.text.length, offset: next.text.length });
+        if (next) {
+          const offset = event.shiftKey ? next.text.length : 0;
+          setActiveCell({ ...next, anchorOffset: offset, offset });
+        }
         return;
       }
       if (event.key === "ArrowUp" || event.key === "ArrowDown") {
