@@ -782,6 +782,61 @@ describe("SmartCanvasPreview input integration", () => {
     expect(onStatus).toHaveBeenLastCalledWith("Imagem inserida pelo SmartCanvas.");
   });
 
+  it("pastes an image resource into the selected table cell", async () => {
+    const document = createDocument({ title: "SmartCanvas cell image paste" });
+    const first = document.content[0];
+    if (!first || first.type !== "paragraph") throw new Error("Expected initial paragraph");
+    engine = createEditor({ document });
+    expect(engine.exec([insertTable({ afterBlockId: first.id, rows: 1, columns: 1 })]).ok).toBe(true);
+    const onDocumentChange = vi.fn();
+    const onStatus = vi.fn();
+    host = window.document.createElement("div");
+    window.document.body.append(host);
+    root = createRoot(host);
+
+    await act(async () => {
+      root?.render(createElement(SmartCanvasPreview, {
+        document: engine!.getDocument(),
+        engine: engine!,
+        onDocumentChange,
+        onStatus,
+      }));
+    });
+    const cellHit = host.querySelector('[data-testid="smartcanvas-cell-hit"]') as HTMLButtonElement | null;
+    await act(async () => { cellHit?.click(); });
+    const input = host.querySelector('textarea[aria-label="Entrada de texto do SmartCanvas"]') as HTMLTextAreaElement | null;
+    if (!input) throw new Error("SmartCanvas input surface was not mounted");
+    const file = new File(["small-image-fixture"], "cell-image.png", { type: "image/png" });
+    const readerSpy = vi.spyOn(FileReader.prototype, "readAsDataURL").mockImplementation(function (this: FileReader) {
+      Object.defineProperty(this, "result", { configurable: true, value: "data:image/png;base64,c21hbGwtaW1hZ2UtZml4dHVyZQ==" });
+      this.onload?.call(this, new ProgressEvent("load") as ProgressEvent<FileReader>);
+    });
+    const paste = new Event("paste", { bubbles: true, cancelable: true });
+    Object.defineProperty(paste, "clipboardData", {
+      value: {
+        items: [{ kind: "file", getAsFile: () => file }],
+        files: [file],
+        getData: () => "",
+      },
+    });
+
+    await act(async () => {
+      input.dispatchEvent(paste);
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+    readerSpy.mockRestore();
+
+    const table = engine.getDocument().content.find(block => block.type === "table");
+    if (!table || table.type !== "table") throw new Error("Expected destination table");
+    const cell = table.children[0]?.children[0];
+    expect(cell?.images).toHaveLength(1);
+    expect(cell?.images?.[0]?.alt).toBe("cell-image.png");
+    expect(engine.getDocument().resources.some(resource => resource.kind === "image" && resource.name === "cell-image.png")).toBe(true);
+    expect(onDocumentChange).toHaveBeenCalled();
+    expect(onStatus).toHaveBeenLastCalledWith("Imagem inserida na célula da tabela pelo SmartCanvas.");
+  });
+
   it("defers intermediate IME input and commits the composed text once", async () => {
     const document = createDocument({ title: "SmartCanvas IME integration" });
     engine = createEditor({ document });
