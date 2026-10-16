@@ -39,7 +39,7 @@ function collectTableCells(nodes: readonly unknown[]): EditableCell[] {
             return block.type === "paragraph" || block.type === "heading"
               ? getPlainText(child as Extract<NexusDocument["content"][number], { type: "paragraph" | "heading" }>)
               : "";
-          }).join("\\n");
+          }).join("\n");
           cells.push({ tableId: node.id, rowId: row.id, cellId: cell.id, text });
         }
       }
