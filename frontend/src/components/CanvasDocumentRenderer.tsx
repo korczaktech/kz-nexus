@@ -1,6 +1,6 @@
 import { useEffect, useRef } from "react";
 import type { CSSProperties, PointerEvent as ReactPointerEvent } from "react";
-import { getLineXAtOffset, getSelectionGeometry, hitTestLayout, type LayoutBlock, type LayoutLine, type LayoutPage, type LayoutResult, type Mark, type NexusDocument, type Selection, type SmartCanvasHitTarget, type LayoutTextRun } from "../../../packages/engine/src/index";
+import { getLineXAtOffset, getSelectionGeometry, hitTestLayout, type Block, type LayoutBlock, type LayoutLine, type LayoutPage, type LayoutResult, type Mark, type NexusDocument, type Selection, type SmartCanvasHitTarget, type LayoutTextRun } from "../../../packages/engine/src/index";
 
 const PT_TO_CSS_PX = 96 / 72;
 const PAGE_GAP = 24;
@@ -92,8 +92,22 @@ function drawLine(ctx: CanvasRenderingContext2D, line: LayoutLine): void {
   }
 }
 
-function findTopLevelBlock(document: NexusDocument, id: string) {
-  return document.content.find(block => block.id === id);
+function findTopLevelBlock(document: NexusDocument, id: string): Block | undefined {
+  const visit = (nodes: readonly unknown[]): Block | undefined => {
+    for (const value of nodes) {
+      if (!value || typeof value !== "object") continue;
+      const node = value as { id?: unknown; type?: unknown; children?: unknown };
+      if (node.id === id && ["paragraph", "heading", "blockquote", "thematicBreak", "bulletList", "orderedList", "table", "image"].includes(String(node.type))) {
+        return value as Block;
+      }
+      if (Array.isArray(node.children)) {
+        const nested = visit(node.children);
+        if (nested) return nested;
+      }
+    }
+    return undefined;
+  };
+  return visit(document.content);
 }
 
 function drawBlock(ctx: CanvasRenderingContext2D, block: LayoutBlock, document: NexusDocument, imageCache: Map<string, HTMLImageElement>): void {
