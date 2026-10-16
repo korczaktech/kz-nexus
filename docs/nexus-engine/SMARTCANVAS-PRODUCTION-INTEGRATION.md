@@ -102,3 +102,15 @@ Este mapa foi produzido por inspeção do código e não comprova comportamento 
 - O adaptador registra em memória a quantidade de eventos `beforeinput` e quantos coincidem com um estado/evento de composição IME. Ele não chama `preventDefault()`, não altera texto e não declara uma operação bem-sucedida; a decisão continua no handler, que converte operações conhecidas em comandos do motor Nexus.
 - Testes verificam o encaminhamento do evento, a preservação do evento de composição e os contadores. A mudança é uma extração explícita de fronteira/instrumentação, não uma nova implementação de digitação ou IME.
 - Próxima validação necessária: testes e build frontend no CI; depois disso, a próxima fatia deve cobrir casos de input que ainda caem no fallback, especialmente seleção cruzando blocos e composição real em navegador.
+
+## Atualização após a regressão automatizada — 2026-10-16
+
+A implementação e os testes avançaram desde o mapa inicial:
+
+- O SmartCanvas envia edições canônicas ao callback do editor e agora força a marcação de dirty + reagendamento do autosave mesmo quando a projeção HTML permanece igual.
+- O controlador de preview cobre entrada de texto, undo/redo, IME testado em ambiente de componente, edição de células, marca pendente em célula vazia, adição de linha por Tab, propriedades/exclusão de imagens, exclusão de objetos semânticos, colagem HTML sanitizada em seleção simples e substituição entre blocos com undo.
+- Os testes de round-trip verificam conteúdo rico no formato nativo .nsx e HTML; o CI executa testes, typecheck e builds do motor, preview e frontend. A baseline Chromium do motor e do editor React também foi executada três vezes e registrada em `docs/nexus-engine/PERFORMANCE.md`.
+
+**O que continua sem equivalência de produção:** o SmartCanvas ainda aparece como superfície experimental junto ao editor legado; não é a superfície principal substituta. A colagem rica em células/seleções complexas, edição completa de objetos, integração real com API para autosave/conflitos/versões, exportação DOCX/PDF a partir do SmartCanvas e validação manual de IME em todos os navegadores suportados continuam pendentes. O baseline de memória mede o editor React legado e o preview do motor em Chromium headless; não prova ganho de memória nem substitui medição em Chromebook físico.
+
+Portanto, os testes automatizados do incremento estão verdes, mas não há autorização técnica para ativar o SmartCanvas por padrão nem remover o fallback legado. A migração deve continuar por capacidades, com testes de paridade antes de cada troca.
