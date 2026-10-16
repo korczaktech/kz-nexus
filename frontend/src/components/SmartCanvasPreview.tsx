@@ -86,7 +86,7 @@ export function SmartCanvasPreview({ document, engine, headerText = "", footerTe
   onDocumentChange: (document: NexusDocument) => void;
   onStatus?: (message: string) => void;
 }) {
-  const [selection, setSelection] = useState<Selection | null>(engine.getSelection() ?? null);\n  const [activeCell, setActiveCell] = useState<(EditableCell & { offset: number }) | null>(null);
+  const [selection, setSelection] = useState<Selection | null>(engine.getSelection() ?? null);\n  const [activeCell, setActiveCell] = useState<(EditableCell & { anchorOffset: number; offset: number }) | null>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const composing = useRef(false);
   const layout = useMemo(() => {
@@ -107,7 +107,7 @@ export function SmartCanvasPreview({ document, engine, headerText = "", footerTe
     } else if (target.kind === "table-cell") {
       const cell = collectTableCells(engine.getDocument().content).find(item => item.tableId === target.blockId && item.cellId === target.cellId);
       if (!cell) { onStatus?.("Não foi possível localizar a célula selecionada."); return; }
-      setActiveCell({ ...cell, offset: Math.max(0, Math.min(cell.text.length, target.offset)) });
+      setActiveCell({ ...cell, anchorOffset: Math.max(0, Math.min(cell.text.length, target.offset)), offset: Math.max(0, Math.min(cell.text.length, target.offset)) });
       inputRef.current?.focus({ preventScroll: true });
       onStatus?.("Editando célula da tabela. Use Tab para avançar entre células.");
     } else {
@@ -125,7 +125,7 @@ export function SmartCanvasPreview({ document, engine, headerText = "", footerTe
     if (!activeCell || readOnly) return;
     const result = engine.exec([setCellText({ tableId: activeCell.tableId, rowId: activeCell.rowId, cellId: activeCell.cellId, text: nextText })], { group: "typing" });
     if (!result.ok) { onStatus?.(result.error.message); return; }
-    setActiveCell({ ...activeCell, text: nextText, offset: nextOffset });
+    setActiveCell({ ...activeCell, text: nextText, anchorOffset: nextOffset, offset: nextOffset });
     onDocumentChange(result.value.document);
   };
   const handleInput = (value: string) => {
@@ -138,6 +138,11 @@ export function SmartCanvasPreview({ document, engine, headerText = "", footerTe
   const handleKeyDown = (event: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (readOnly) { event.preventDefault(); return; }
     if (activeCell) {
+      if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "a") {
+        event.preventDefault();
+        setActiveCell({ ...activeCell, anchorOffset: 0, offset: activeCell.text.length });
+        return;
+      }
       if (event.key === "Escape" || event.key === "Enter") {
         event.preventDefault();
         setActiveCell(null);
@@ -155,15 +160,23 @@ export function SmartCanvasPreview({ document, engine, headerText = "", footerTe
       }
       if (event.key === "ArrowLeft" || event.key === "ArrowRight" || event.key === "Home" || event.key === "End") {
         event.preventDefault();
+        const hasRange = activeCell.anchorOffset !== activeCell.offset;
+        const orderedStart = Math.min(activeCell.anchorOffset, activeCell.offset);
+        const orderedEnd = Math.max(activeCell.anchorOffset, activeCell.offset);
         const offset = event.key === "Home" ? 0 : event.key === "End" ? activeCell.text.length :
-          event.key === "ArrowLeft" ? Math.max(0, activeCell.offset - 1) : Math.min(activeCell.text.length, activeCell.offset + 1);
-        setActiveCell({ ...activeCell, offset });
+          event.key === "ArrowLeft" ? (hasRange && !event.shiftKey ? orderedStart : Math.max(0, activeCell.offset - 1)) :
+          (hasRange && !event.shiftKey ? orderedEnd : Math.min(activeCell.text.length, activeCell.offset + 1));
+        setActiveCell({ ...activeCell, anchorOffset: event.shiftKey ? activeCell.anchorOffset : offset, offset });
         return;
       }
       if (event.key === "Backspace" || event.key === "Delete") {
         event.preventDefault();
-        const start = event.key === "Backspace" ? Math.max(0, activeCell.offset - 1) : activeCell.offset;
-        const end = event.key === "Delete" ? Math.min(activeCell.text.length, activeCell.offset + 1) : activeCell.offset;
+        let start = Math.min(activeCell.anchorOffset, activeCell.offset);
+        let end = Math.max(activeCell.anchorOffset, activeCell.offset);
+        if (start === end) {
+          if (event.key === "Backspace") start = Math.max(0, start - 1);
+          else end = Math.min(activeCell.text.length, end + 1);
+        }
         if (start !== end) commitCellText(activeCell.text.slice(0, start) + activeCell.text.slice(end), start);
         return;
       }
@@ -334,7 +347,7 @@ export function SmartCanvasPreview({ document, engine, headerText = "", footerTe
       <div><strong>SmartCanvas — prévia experimental</strong><div style={{ fontSize: 12, opacity: .75 }}>Edição inicial por seleção lógica: digitação, seleção e navegação entre blocos. O editor legado permanece disponível.</div></div>
       <span style={{ fontSize: 12 }}>{layout ? layout.pageCount + " página(s)" : "Layout indisponível"}</span>
     </div>
-    <textarea ref={inputRef} disabled={readOnly} aria-label="Entrada de texto do SmartCanvas" autoCapitalize="off" autoComplete="off" spellCheck={false} defaultValue="" onChange={event => { if (!composing.current) handleInput(event.currentTarget.value); }} onKeyDown={handleKeyDown} onCopy={event => { const current = engine.getSelection(); if (!current || (current.anchor.blockId === current.focus.blockId && current.anchor.offset === current.focus.offset)) return; event.clipboardData.setData("text/plain", getSelectedText(engine.getDocument().content, current)); event.preventDefault(); }} onCut={event => { if (readOnly) { event.preventDefault(); return; } const current = engine.getSelection(); if (!current || (current.anchor.blockId === current.focus.blockId && current.anchor.offset === current.focus.offset)) return; event.clipboardData.setData("text/plain", getSelectedText(engine.getDocument().content, current)); event.preventDefault(); if (current.anchor.blockId !== current.focus.blockId) { onStatus?.("O recorte entre blocos ainda não está disponível; o texto foi copiado sem removê-lo."); return; } const block = findBlock(engine.getDocument().content, current.focus.blockId); if (!block) return; const start = Math.min(current.anchor.offset, current.focus.offset), end = Math.max(current.anchor.offset, current.focus.offset); const result = engine.exec([deleteText({ blockId: block.id, start, end })], { group: "typing" }); if (result.ok) { setSelection(result.value.selection ?? null); onDocumentChange(result.value.document); } }} onPaste={event => { event.preventDefault(); handleInput(event.clipboardData.getData("text/plain")); }} onCompositionStart={() => { composing.current = true; }} onCompositionEnd={event => { composing.current = false; handleInput(event.currentTarget.value); }} style={{ position: "absolute", width: 1, height: 1, opacity: 0, padding: 0, border: 0, overflow: "hidden", left: 0, bottom: 0, resize: "none" }} />
+    <textarea ref={inputRef} disabled={readOnly} aria-label="Entrada de texto do SmartCanvas" autoCapitalize="off" autoComplete="off" spellCheck={false} defaultValue="" onChange={event => { if (!composing.current) handleInput(event.currentTarget.value); }} onKeyDown={handleKeyDown} onCopy={event => { if (activeCell) { const start = Math.min(activeCell.anchorOffset, activeCell.offset), end = Math.max(activeCell.anchorOffset, activeCell.offset); if (start === end) return; event.clipboardData.setData("text/plain", activeCell.text.slice(start, end)); event.preventDefault(); return; } const current = engine.getSelection(); if (!current || (current.anchor.blockId === current.focus.blockId && current.anchor.offset === current.focus.offset)) return; event.clipboardData.setData("text/plain", getSelectedText(engine.getDocument().content, current)); event.preventDefault(); }} onCut={event => { if (readOnly) { event.preventDefault(); return; } if (activeCell) { const start = Math.min(activeCell.anchorOffset, activeCell.offset), end = Math.max(activeCell.anchorOffset, activeCell.offset); if (start === end) return; event.clipboardData.setData("text/plain", activeCell.text.slice(start, end)); event.preventDefault(); commitCellText(activeCell.text.slice(0, start) + activeCell.text.slice(end), start); return; } const current = engine.getSelection(); if (!current || (current.anchor.blockId === current.focus.blockId && current.anchor.offset === current.focus.offset)) return; event.clipboardData.setData("text/plain", getSelectedText(engine.getDocument().content, current)); event.preventDefault(); if (current.anchor.blockId !== current.focus.blockId) { onStatus?.("O recorte entre blocos ainda não está disponível; o texto foi copiado sem removê-lo."); return; } const block = findBlock(engine.getDocument().content, current.focus.blockId); if (!block) return; const start = Math.min(current.anchor.offset, current.focus.offset), end = Math.max(current.anchor.offset, current.focus.offset); const result = engine.exec([deleteText({ blockId: block.id, start, end })], { group: "typing" }); if (result.ok) { setSelection(result.value.selection ?? null); onDocumentChange(result.value.document); } }} onPaste={event => { event.preventDefault(); handleInput(event.clipboardData.getData("text/plain")); }} onCompositionStart={() => { composing.current = true; }} onCompositionEnd={event => { composing.current = false; handleInput(event.currentTarget.value); }} style={{ position: "absolute", width: 1, height: 1, opacity: 0, padding: 0, border: 0, overflow: "hidden", left: 0, bottom: 0, resize: "none" }} />
     {layout ? <div style={{ maxHeight: 560, overflow: "auto", background: "#e5e7eb", borderRadius: 8 }}>
       <CanvasDocumentRenderer layout={layout} document={document} headerText={headerText} footerText={footerText} showPageNumbers={showPageNumbers} selection={selection || undefined} showCaret={!!selection} onHitTest={handleHit} />
     </div> : <p role="status">Aguardando documento/layout do motor.</p>}
