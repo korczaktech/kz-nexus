@@ -243,8 +243,8 @@ describe("SmartCanvasPreview input integration", () => {
     };
     document.content.push({
       type: "paragraph",
-      id: "object-neighbor",
-      children: [{ type: "text", id: "object-neighbor-run", text: "Neighbor", marks: [] }],
+      id: "object_neighbor0001",
+      children: [{ type: "text", id: "object_neighbor_run1", text: "Neighbor", marks: [] }],
     });
     engine = createEditor({ document });
     const onDocumentChange = vi.fn();
@@ -438,7 +438,7 @@ describe("SmartCanvasPreview input integration", () => {
     await act(async () => { apply.click(); });
 
     const image = engine.getDocument().content.find(item => item.type === "image");
-    expect(image?.type, JSON.stringify(onStatus.mock.calls)).toBe("image");
+    expect(image?.type).toBe("image");
     if (!image || image.type !== "image") throw new Error("Expected canonical image block");
     expect(image.alt).toBe("Accessible logo");
     expect(image.width).toBe(128);
@@ -497,7 +497,7 @@ describe("SmartCanvasPreview input integration", () => {
 
     const result = engine.getDocument();
     const image = result.content.find(block => block.type === "image");
-    expect(image?.type).toBe("image");
+    expect(image?.type, JSON.stringify(onStatus.mock.calls)).toBe("image");
     expect(result.resources.some(resource => resource.kind === "image" && resource.name === "pasted.png")).toBe(true);
     expect(onDocumentChange).toHaveBeenCalled();
     expect(onStatus).toHaveBeenLastCalledWith("Imagem colada e incorporada ao documento pelo SmartCanvas.");
