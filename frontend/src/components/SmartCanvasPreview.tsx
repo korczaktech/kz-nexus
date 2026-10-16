@@ -934,7 +934,7 @@ export function SmartCanvasPreview({ document, engine, headerText = "", footerTe
             onDocumentChange(result.value.document);
             onStatus?.("Conteúdo formatado colado com sanitização.");
             return;
-          } catch (error) {
+          } catch {
             onStatus?.("A colagem formatada não pôde ser interpretada; foi usado texto simples.");
           }
         }
