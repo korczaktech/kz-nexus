@@ -143,8 +143,8 @@ function makeRenderFixture(): NexusDocument {
       id: "renderer-cell-image-resource",
       kind: "image",
       mimeType: "image/png",
-      data: "iVBORw0KGgo=",
-      byteLength: 8,
+      data: "Y2VsbC1pbWFnZQ==",
+      byteLength: 13,
       name: "cell-fixture.png",
     },
   );
@@ -171,13 +171,17 @@ describe("CanvasDocumentRenderer visual regression contract", () => {
 
   it("draws text, table cells, semantic objects, header, footer, and page numbers", async () => {
     const document = makeRenderFixture();
+    const imageSources: string[] = [];
     imageSpy = vi.spyOn(window, "Image").mockImplementation(() => {
       const image = window.document.createElement("img");
       Object.defineProperty(image, "complete", { configurable: true, value: true });
       Object.defineProperty(image, "naturalWidth", { configurable: true, value: 1 });
       Object.defineProperty(image, "src", {
         configurable: true,
-        set: () => image.onload?.call(image, new Event("load") as unknown as Event),
+        set: (value: string) => {
+          imageSources.push(value);
+          image.onload?.call(image, new Event("load") as unknown as Event);
+        },
       });
       return image;
     });
@@ -210,6 +214,7 @@ describe("CanvasDocumentRenderer visual regression contract", () => {
     expect(textCalls).toContain("2.");
     expect(textCalls).toContain("Table cell text");
     expect(textCalls.filter(value => value === "__drawImage__").length).toBeGreaterThanOrEqual(2);
+    expect(imageSources).toContain("data:image/png;base64,Y2VsbC1pbWFnZQ==");
     expect(textCalls).toContain("Image alternative text");
     expect(layout.pageCount).toBeGreaterThan(1);
     expect(textCalls).toContain("Document header");
