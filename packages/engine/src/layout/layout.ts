@@ -61,6 +61,8 @@ export interface LayoutPage {
   width: number;
   height: number;
   content: LayoutRect;
+  /** Engine-owned page furniture geometry, independent from the renderer. */
+  furniture: { header: LayoutRect; footer: LayoutRect };
   blocks: LayoutBlock[];
 }
 export interface LayoutResult {
@@ -277,7 +279,17 @@ export function layoutDocument(document: NexusDocument, options: LayoutOptions =
   const content = { x: pageConfig.margins.left, y: pageConfig.margins.top, width: width - pageConfig.margins.left - pageConfig.margins.right, height: height - pageConfig.margins.top - pageConfig.margins.bottom };
   const pages: LayoutPage[] = [];
   const makePage = (): LayoutPage => {
-    const page: LayoutPage = { index: pages.length, width, height, content: { ...content }, blocks: [] };
+    const page: LayoutPage = {
+      index: pages.length,
+      width,
+      height,
+      content: { ...content },
+      furniture: {
+        header: { x: content.x, y: 8, width: content.width, height: 14 },
+        footer: { x: content.x, y: Math.max(8, height - 22), width: content.width, height: 14 },
+      },
+      blocks: [],
+    };
     pages.push(page); return page;
   };
   let page = makePage(), cursorY = content.y;
