@@ -45,7 +45,11 @@ export function addResource(
 }
 
 function isResourceReferenced(doc: NexusDocument, resourceId: string): boolean {
-  return doc.content.some((block) => block.type === "image" && block.resourceId === resourceId);
+  return doc.content.some(block => {
+    if (block.type === "image") return block.resourceId === resourceId;
+    if (block.type !== "table") return false;
+    return block.children.some(row => row.children.some(cell => (cell.images ?? []).some(image => image.resourceId === resourceId)));
+  });
 }
 
 export function removeResource(doc: NexusDocument, resourceId: string, options: { force?: boolean } = {}): Result<NexusDocument> {
