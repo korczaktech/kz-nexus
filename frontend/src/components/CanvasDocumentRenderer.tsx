@@ -19,6 +19,7 @@ type CanvasPageProps = {
   selection?: Selection;
   showCaret?: boolean;
   activeCellId?: string;
+  activeCellSelection?: { cellId: string; text: string; anchorOffset: number; offset: number };
 };
 
 function markedFont(marks: Mark[], fontSize: number, fontFamily: string): string {
@@ -181,7 +182,7 @@ function pageText(page: LayoutPage): string {
   return parts.join(" ").replace(/\s+/g, " ").trim();
 }
 
-export function CanvasPage({ page, pageCount, document, headerText, footerText, showPageNumbers, layout, onHitTest, selection, showCaret = false, activeCellId }: CanvasPageProps) {
+export function CanvasPage({ page, pageCount, document, headerText, footerText, showPageNumbers, layout, onHitTest, selection, showCaret = false, activeCellId, activeCellSelection }: CanvasPageProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const overlayRef = useRef<HTMLCanvasElement>(null);
   const cssWidth = page.width * PT_TO_CSS_PX;
@@ -292,6 +293,44 @@ export function CanvasPage({ page, pageCount, document, headerText, footerText, 
               Math.max(0, cell.rect.width * PT_TO_CSS_PX - 2),
               Math.max(0, cell.rect.height * PT_TO_CSS_PX - 2),
             );
+            if (!activeCellSelection || activeCellSelection.cellId !== cell.cellId) continue;
+            const measure = (value: string, run?: LayoutTextRun) => {
+              if (run) context.font = markedFont(run.marks, run.fontSize, run.fontFamily);
+              return context.measureText(value).width * 72 / 96;
+            };
+            const start = Math.min(activeCellSelection.anchorOffset, activeCellSelection.offset);
+            const end = Math.max(activeCellSelection.anchorOffset, activeCellSelection.offset);
+            let baseOffset = 0;
+            let previousLocalEnd = -1;
+            let previousGlobalEnd = 0;
+            let caretDrawn = false;
+            for (const line of cell.lines) {
+              if (previousLocalEnd >= 0 && line.startOffset < previousLocalEnd) {
+                baseOffset = previousGlobalEnd + 1;
+              }
+              const globalStart = baseOffset + line.startOffset;
+              const globalEnd = baseOffset + line.endOffset;
+              const selectedStart = Math.max(start, globalStart);
+              const selectedEnd = Math.min(end, globalEnd);
+              if (selectedEnd > selectedStart) {
+                const left = getLineXAtOffset(line, selectedStart - baseOffset, measure);
+                const right = getLineXAtOffset(line, selectedEnd - baseOffset, measure);
+                context.fillStyle = "rgba(59, 130, 246, 0.28)";
+                context.fillRect(left * PT_TO_CSS_PX, line.y * PT_TO_CSS_PX, Math.max(1, (right - left) * PT_TO_CSS_PX), line.height * PT_TO_CSS_PX);
+              }
+              if (!caretDrawn && start === end && start >= globalStart && start <= globalEnd) {
+                const x = getLineXAtOffset(line, start - baseOffset, measure);
+                context.strokeStyle = "#2563eb";
+                context.lineWidth = 1.25;
+                context.beginPath();
+                context.moveTo(x * PT_TO_CSS_PX, line.y * PT_TO_CSS_PX);
+                context.lineTo(x * PT_TO_CSS_PX, (line.y + line.height) * PT_TO_CSS_PX);
+                context.stroke();
+                caretDrawn = true;
+              }
+              previousLocalEnd = line.endOffset;
+              previousGlobalEnd = globalEnd;
+            }
           }
         }
       }
@@ -352,7 +391,7 @@ export function CanvasPage({ page, pageCount, document, headerText, footerText, 
   </div>;
 }
 
-export function CanvasDocumentRenderer({ layout, document, headerText = "", footerText = "", showPageNumbers = false, onHitTest, selection, showCaret = false, activeCellId }: {
+export function CanvasDocumentRenderer({ layout, document, headerText = "", footerText = "", showPageNumbers = false, onHitTest, selection, showCaret = false, activeCellId, activeCellSelection }: {
   layout: LayoutResult;
   document: NexusDocument;
   headerText?: string;
@@ -362,6 +401,7 @@ export function CanvasDocumentRenderer({ layout, document, headerText = "", foot
   selection?: Selection;
   showCaret?: boolean;
   activeCellId?: string;
+  activeCellSelection?: { cellId: string; text: string; anchorOffset: number; offset: number };
 }) {
   return <div className="kortex-canvas-pages" data-renderer="canvas-2d" style={{
     display: "flex",
@@ -379,6 +419,7 @@ export function CanvasDocumentRenderer({ layout, document, headerText = "", foot
       selection={selection}
       showCaret={showCaret}
       activeCellId={activeCellId}
+      activeCellSelection={activeCellSelection}
       pageCount={layout.pageCount}
       document={document}
       headerText={headerText}
