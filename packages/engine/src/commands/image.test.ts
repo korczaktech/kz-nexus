@@ -43,6 +43,7 @@ describe("insertImageResource", () => {
       mimeType: "image/png",
       data: "aGVsbG8=",
       alt: "First image",
+      name: "shared.png",
     })]);
     expect(inserted.ok).toBe(true);
     const firstImage = editor.getDocument().content.find(block => block.type === "image");
