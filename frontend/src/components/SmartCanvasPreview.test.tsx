@@ -387,6 +387,49 @@ describe("SmartCanvasPreview input integration", () => {
     expect(engine.getDocument().resources).toHaveLength(0);
   });
 
+  it("pastes an image resource into the canonical document", async () => {
+    const document = createDocument({ title: "SmartCanvas image paste" });
+    const first = document.content[0];
+    if (!first || first.type !== "paragraph") throw new Error("Expected initial paragraph");
+    engine = createEditor({ document });
+    const onDocumentChange = vi.fn();
+    const onStatus = vi.fn();
+    host = window.document.createElement("div");
+    window.document.body.append(host);
+    root = createRoot(host);
+
+    await act(async () => {
+      root?.render(createElement(SmartCanvasPreview, {
+        document: engine!.getDocument(),
+        engine: engine!,
+        onDocumentChange,
+        onStatus,
+      }));
+    });
+    const input = host.querySelector('textarea[aria-label="Entrada de texto do SmartCanvas"]') as HTMLTextAreaElement | null;
+    if (!input) throw new Error("SmartCanvas input surface was not mounted");
+    const file = new File(["small-image-fixture"], "pasted.png", { type: "image/png" });
+    const paste = new Event("paste", { bubbles: true, cancelable: true });
+    Object.defineProperty(paste, "clipboardData", {
+      value: {
+        items: [{ kind: "file", getAsFile: () => file }],
+        getData: () => "",
+      },
+    });
+
+    await act(async () => {
+      input.dispatchEvent(paste);
+      await new Promise<void>(resolve => window.setTimeout(resolve, 0));
+    });
+
+    const result = engine.getDocument();
+    const image = result.content.find(block => block.type === "image");
+    expect(image?.type).toBe("image");
+    expect(result.resources.some(resource => resource.kind === "image" && resource.name === "pasted.png")).toBe(true);
+    expect(onDocumentChange).toHaveBeenCalled();
+    expect(onStatus).toHaveBeenLastCalledWith("Imagem colada e incorporada ao documento pelo SmartCanvas.");
+  });
+
   it("defers intermediate IME input and commits the composed text once", async () => {
     const document = createDocument({ title: "SmartCanvas IME integration" });
     engine = createEditor({ document });
