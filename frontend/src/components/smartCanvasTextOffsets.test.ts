@@ -64,6 +64,6 @@ describe("SmartCanvas word navigation", () => {
   it("keeps grapheme sequences intact while moving by word", () => {
     const text = "one 👩‍💻 two";
     expect(nextWordOffset(text, 0)).toBe(4);
-    expect(previousWordOffset(text, text.length)).toBe(8);
+    expect(previousWordOffset(text, text.length)).toBe(10);
   });
 });
