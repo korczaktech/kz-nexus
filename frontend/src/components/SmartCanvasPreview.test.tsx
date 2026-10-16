@@ -163,8 +163,28 @@ describe("SmartCanvasPreview input integration", () => {
     if (!table || table.type !== "table") throw new Error("Expected canonical table");
     expect(table.children).toHaveLength(3);
     expect(table.children.every(row => row.children.length === 3)).toBe(true);
+
+    const addRow = host.querySelector('[aria-label="Adicionar linha SmartCanvas"]') as HTMLButtonElement | null;
+    const addColumn = host.querySelector('[aria-label="Adicionar coluna SmartCanvas"]') as HTMLButtonElement | null;
+    const removeRow = host.querySelector('[aria-label="Remover linha SmartCanvas"]') as HTMLButtonElement | null;
+    const removeColumn = host.querySelector('[aria-label="Remover coluna SmartCanvas"]') as HTMLButtonElement | null;
+    if (!addRow || !addColumn || !removeRow || !removeColumn) throw new Error("SmartCanvas table structure controls were not mounted");
+    await act(async () => { addRow.click(); });
+    expect((engine.getDocument().content.find(block => block.type === "table") as Extract<NexusDocument["content"][number], { type: "table" }>).children).toHaveLength(4);
+    await act(async () => { addColumn.click(); });
+    const withColumn = engine.getDocument().content.find(block => block.type === "table");
+    if (!withColumn || withColumn.type !== "table") throw new Error("Expected table after adding a column");
+    expect(withColumn.children.every(row => row.children.length === 4)).toBe(true);
+    await act(async () => { removeRow.click(); });
+    const withoutRow = engine.getDocument().content.find(block => block.type === "table");
+    if (!withoutRow || withoutRow.type !== "table") throw new Error("Expected table after removing a row");
+    expect(withoutRow.children).toHaveLength(3);
+    await act(async () => { removeColumn.click(); });
+    const finalTable = engine.getDocument().content.find(block => block.type === "table");
+    if (!finalTable || finalTable.type !== "table") throw new Error("Expected table after removing a column");
+    expect(finalTable.children.every(row => row.children.length === 3)).toBe(true);
     expect(onDocumentChange).toHaveBeenCalled();
-    expect(onStatus).toHaveBeenLastCalledWith("Tabela 3×3 inserida pelo motor. Use Tab para navegar e criar novas linhas.");
+    expect(onStatus).toHaveBeenLastCalledWith("Coluna removida da tabela.");
   });
 
   it("applies formatting and paragraph alignment through SmartCanvas controls", async () => {
