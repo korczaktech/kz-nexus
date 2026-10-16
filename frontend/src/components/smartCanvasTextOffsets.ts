@@ -105,3 +105,13 @@ export function wordRangeAt(text: string, offset: number): { start: number; end:
   }
   return { start, end };
 }
+
+
+/** Snaps a UTF-16 offset to the nearest grapheme boundary. */
+export function nearestGraphemeOffset(text: string, offset: number): number {
+  const bounded = Math.max(0, Math.min(text.length, offset));
+  const previous = previousCodePointOffset(text, bounded);
+  if (nextCodePointOffset(text, previous) === bounded) return bounded;
+  const next = nextCodePointOffset(text, bounded);
+  return bounded - previous <= next - bounded ? previous : next;
+}
