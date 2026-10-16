@@ -86,7 +86,8 @@ export function SmartCanvasPreview({ document, engine, headerText = "", footerTe
   onDocumentChange: (document: NexusDocument) => void;
   onStatus?: (message: string) => void;
 }) {
-  const [selection, setSelection] = useState<Selection | null>(engine.getSelection() ?? null);\n  const [activeCell, setActiveCell] = useState<(EditableCell & { anchorOffset: number; offset: number }) | null>(null);
+  const [selection, setSelection] = useState<Selection | null>(engine.getSelection() ?? null);
+  const [activeCell, setActiveCell] = useState<(EditableCell & { anchorOffset: number; offset: number }) | null>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const composing = useRef(false);
   const layout = useMemo(() => {
