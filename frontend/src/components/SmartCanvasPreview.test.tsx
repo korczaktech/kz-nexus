@@ -179,6 +179,40 @@ describe("SmartCanvasPreview input integration", () => {
   });
 
 
+
+  it("selects text inside table cells when Ctrl+A is used from the document surface", async () => {
+    const document = createDocument({ title: "SmartCanvas select all nested text" });
+    const first = document.content[0];
+    if (!first || first.type !== "paragraph") throw new Error("Expected initial paragraph");
+    first.children[0]!.text = "Before";
+    engine = createEditor({ document });
+    expect(engine.exec([insertTable({ afterBlockId: first.id, rows: 1, columns: 1 })]).ok).toBe(true);
+    const table = engine.getDocument().content.find(block => block.type === "table");
+    if (!table || table.type !== "table") throw new Error("Expected table");
+    const cell = table.children[0]!.children[0]!;
+    const paragraph = cell.children[0]!;
+    paragraph.children[0]!.text = "Inside cell";
+    host = window.document.createElement("div");
+    window.document.body.append(host);
+    root = createRoot(host);
+    await act(async () => {
+      root?.render(createElement(SmartCanvasPreview, {
+        document: engine!.getDocument(),
+        engine: engine!,
+        onDocumentChange: vi.fn(),
+      }));
+    });
+    const input = host.querySelector('textarea[aria-label="Entrada de texto do SmartCanvas"]') as HTMLTextAreaElement | null;
+    if (!input) throw new Error("SmartCanvas input surface was not mounted");
+    await act(async () => {
+      input.dispatchEvent(new KeyboardEvent("keydown", { key: "a", ctrlKey: true, bubbles: true, cancelable: true }));
+    });
+    expect(engine.getSelection()).toEqual({
+      anchor: { blockId: first.id, offset: 0 },
+      focus: { blockId: paragraph.id, offset: "Inside cell".length },
+    });
+  });
+
   it("moves the table-cell caret horizontally between adjacent cells at boundaries", async () => {
     const document = createDocument({ title: "SmartCanvas table cell navigation" });
     const first = document.content[0];
