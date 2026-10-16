@@ -361,12 +361,13 @@ export function SmartCanvasPreview({ document, engine, headerText = "", footerTe
           }
           return;
         }
+        const documentBefore = engine.getDocument();
         const result = engine.toggleStoredMark(mark);
         if (!result.ok) onStatus?.(result.error.message);
         else {
           setSelection(engine.getSelection() ?? null);
-          onDocumentChange(engine.getDocument());
-          onStatus?.(current && current.anchor.offset !== current.focus.offset
+          if (engine.getDocument() !== documentBefore) onDocumentChange(engine.getDocument());
+          onStatus?.(current && (current.anchor.blockId !== current.focus.blockId || current.anchor.offset !== current.focus.offset)
             ? "Formatação aplicada à seleção."
             : "Formatação de digitação atualizada.");
         }
