@@ -67,7 +67,7 @@ function lineDistance(line: LayoutLine, x: number, y: number): number {
 function visitBlock(block: LayoutBlock, pageIndex: number, x: number, y: number, options: HitTestOptions, candidates: Candidate[], order: { value: number }): void {
   candidates.push({
     target: { kind: "block", pageIndex, blockId: block.blockId },
-    distance: distanceToRect(x, y, block.rect) + 0.001,
+    distance: distanceToRect(x, y, block.rect) + (block.object ? 0 : 0.001),
     order: order.value++,
   });
   for (let lineIndex = 0; lineIndex < block.lines.length; lineIndex += 1) {
