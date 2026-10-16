@@ -29,6 +29,17 @@ describe("native layout engine", () => {
     expect(result.pages[0].blocks[0]).toMatchObject({ blockId: "shape", object: true });
   });
 
+  it("reserves the configured height for a semantic object", () => {
+    const object: Block = {
+      type: "paragraph",
+      id: "shape",
+      children: [{ type: "text", id: "shape-run", text: "Label", marks: [] }],
+      editorObject: { kind: "shape", shape: "ellipse", width: 40, height: 40 },
+    };
+    const result = layoutDocument(documentWith([object]), { metrics });
+    expect(result.pages[0].blocks[0].rect.height).toBeGreaterThanOrEqual(40);
+  });
+
   it("wraps text into measurable lines and splits long paragraphs at page boundaries", () => {
     const text = Array.from({ length: 180 }, (_, index) => "word" + index).join(" ");
     const result = layoutDocument(documentWith([paragraph("long", text)]), { metrics, fontSize: 12 });
