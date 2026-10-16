@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { hitTestLayout } from "./hitTesting";
+import { getLineXAtOffset, getOffsetAtLineX, hitTestLayout } from "./hitTesting";
 import type { LayoutResult } from "./layout";
 
 const textLine = {
@@ -35,6 +35,31 @@ describe("SmartCanvas hit testing", () => {
   it("uses host text metrics to choose a caret offset", () => {
     expect(hitTestLayout(baseLayout, 0, 24, 25, { measureText: text => text.length * 10 }))
       .toMatchObject({ kind: "text", position: { blockId: "paragraph-1", offset: 1 } });
+  });
+
+  it("maps logical offsets to x coordinates and back using host font metrics", () => {
+    const line = {
+      text: "abcd",
+      x: 10,
+      y: 20,
+      width: 40,
+      height: 12,
+      startOffset: 0,
+      endOffset: 4,
+      runs: [
+        { text: "ab", startOffset: 0, endOffset: 2, fontSize: 12, fontFamily: "Arial", marks: [], width: 20 },
+        { text: "cd", startOffset: 2, endOffset: 4, fontSize: 12, fontFamily: "Arial", marks: [], width: 20 },
+      ],
+    };
+    const measure = (text: string) => text.length * 10;
+    expect(getLineXAtOffset(line, 3, measure)).toBe(40);
+    expect(getOffsetAtLineX(line, 39, measure)).toBe(3);
+  });
+
+  it("clamps caret mapping to the logical line range", () => {
+    expect(getOffsetAtLineX(textLine, -100, text => text.length * 10)).toBe(0);
+    expect(getOffsetAtLineX(textLine, 1000, text => text.length * 10)).toBe(5);
+    expect(getLineXAtOffset(textLine, 100, text => text.length * 10)).toBe(60);
   });
 
   it("rejects invalid coordinates and missing pages", () => {
