@@ -925,7 +925,7 @@ export function SmartCanvasPreview({ document, engine, headerText = "", footerTe
               for (const run of block.children) {
                 if (run.text) insertionRuns.push({ text: run.text, marks: run.marks.map(mark => ({ ...mark })) });
               }
-              if (index < paragraphBlocks.length - 1) insertionRuns.push({ text: "\\n", marks: [] });
+              if (index < paragraphBlocks.length - 1) insertionRuns.push({ text: "\n", marks: [] });
             });
             const pastedText = insertionRuns.map(run => run.text).join("");
             if (pastedText) {
