@@ -223,4 +223,33 @@ describe("Editor", () => {
     expect(editor.getDocument()).toEqual(beforeCut);
   });
 
+  it("replaces a selection spanning multiple paragraphs in one undo step", () => {
+    const editor = newEditor();
+    const firstId = editor.getDocument().content[0].id;
+    expect(editor.exec([insertText({ blockId: firstId, offset: 0, text: "alpha" })], { group: "typing" }).ok).toBe(true);
+    expect(editor.exec([splitBlock({ blockId: firstId, offset: 5 })], { group: "typing" }).ok).toBe(true);
+    const secondId = editor.getDocument().content[1].id;
+    expect(editor.exec([insertText({ blockId: secondId, offset: 0, text: "bravo" })], { group: "typing" }).ok).toBe(true);
+    expect(editor.exec([splitBlock({ blockId: secondId, offset: 5 })], { group: "typing" }).ok).toBe(true);
+    const thirdId = editor.getDocument().content[2].id;
+    expect(editor.exec([insertText({ blockId: thirdId, offset: 0, text: "charlie" })], { group: "typing" }).ok).toBe(true);
+
+    const beforeReplace = editor.getDocument();
+    const replaced = editor.exec([
+      deleteText({ blockId: firstId, start: 2, end: 5 }),
+      deleteText({ blockId: secondId, start: 0, end: 5 }),
+      deleteText({ blockId: thirdId, start: 0, end: 4 }),
+      mergeBlockWithPrevious({ blockId: secondId }),
+      mergeBlockWithPrevious({ blockId: thirdId }),
+      insertText({ blockId: firstId, offset: 2, text: "XYZ" }),
+    ], { group: "typing" });
+
+    expect(replaced.ok).toBe(true);
+    expect(editor.getDocument().content).toHaveLength(1);
+    expect(getPlainText(editor.getDocument().content[0] as Paragraph)).toBe("alXYZie");
+    expect(editor.undo()).toBe(true);
+    expect(editor.getDocument()).toEqual(beforeReplace);
+  });
+
+
 });
