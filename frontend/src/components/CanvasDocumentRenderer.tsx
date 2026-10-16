@@ -163,9 +163,7 @@ function drawBlock(ctx: CanvasRenderingContext2D, block: LayoutBlock, document: 
       ctx.rect(objectX + 4, objectY + 4, Math.max(0, objectWidth - 8), Math.max(0, objectHeight - 8));
       ctx.clip();
       ctx.translate(6, 5);
-      if (!((model?.type === "paragraph" || model?.type === "heading") && model.editorObject)) {
-    for (const line of block.lines) drawLine(ctx, line);
-  }
+      for (const line of block.lines) drawLine(ctx, line);
       ctx.restore();
     }
   }
@@ -210,7 +208,9 @@ function drawBlock(ctx: CanvasRenderingContext2D, block: LayoutBlock, document: 
       }
     }
   }
-  for (const line of block.lines) drawLine(ctx, line);
+  if (!((model?.type === "paragraph" || model?.type === "heading") && model.editorObject)) {
+    for (const line of block.lines) drawLine(ctx, line);
+  }
 
   if (block.type === "image") {
     const model = findTopLevelBlock(document, block.blockId);
