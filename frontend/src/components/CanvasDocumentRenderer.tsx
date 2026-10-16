@@ -303,6 +303,13 @@ export function CanvasPage({ page, pageCount, document, headerText, footerText, 
           const model = findTopLevelBlock(document, block.blockId);
           if (model?.type === "image") pageImageIds.add(model.resourceId);
         }
+        // Cell images are layout children of table cells, not top-level blocks.
+        // Include them in the page-scoped cache or they can only ever render as placeholders.
+        for (const row of block.table?.rows ?? []) {
+          for (const cell of row.cells) {
+            for (const embedded of cell.images ?? []) pageImageIds.add(embedded.resourceId);
+          }
+        }
         if (block.children?.length) collectImageIds(block.children);
       }
     };
