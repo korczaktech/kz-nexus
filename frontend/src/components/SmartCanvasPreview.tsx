@@ -598,9 +598,12 @@ export function SmartCanvasPreview({ document, engine, headerText = "", footerTe
         const visualLines: Array<{ pageIndex: number; blockId: string; line: import("../../../packages/engine/src/layout/layout").LayoutLine }> = [];
         layout.pages.forEach(page => collectLayoutLines(page.blocks, null, visualLines, page.index));
         if (visualLines.length) {
+          const movingUp = event.key === "ArrowUp";
           let lineIndex = visualLines.findIndex(item =>
             item.blockId === current.focus.blockId &&
-            current.focus.offset >= item.line.startOffset && current.focus.offset <= item.line.endOffset
+            (movingUp
+              ? current.focus.offset > item.line.startOffset && current.focus.offset <= item.line.endOffset
+              : current.focus.offset >= item.line.startOffset && current.focus.offset < item.line.endOffset)
           );
           if (lineIndex < 0) lineIndex = visualLines.findIndex(item => item.blockId === current.focus.blockId && item.line.endOffset >= current.focus.offset);
           if (lineIndex < 0) lineIndex = visualLines.findIndex(item => item.blockId === current.focus.blockId);
