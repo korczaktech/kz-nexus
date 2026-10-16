@@ -84,7 +84,6 @@ export function addTableColumn(params: { tableId: string; afterColumnIndex?: num
         return { ...row, children: cells };
       }),
     }));
-  };
 }
 
 export function removeTableColumn(params: { tableId: string; columnIndex: number }): Command {
