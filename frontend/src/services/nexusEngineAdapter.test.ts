@@ -5,6 +5,24 @@ import { getEngineDomContext, htmlFromNexusDocument, nexusDocumentFromHtml, rest
 import type { Paragraph } from "../../../packages/engine/src/model/types";
 
 describe("Nexus editor adapter", () => {
+  it("round-trips embedded images inside table cells", () => {
+    const source = '<table><tbody><tr><td><p>Caption</p><img src="data:image/png;base64,aGVsbG8=" alt="Cell image" width="120" height="96"></td></tr></tbody></table>';
+    const document = nexusDocumentFromHtml(source, "Table image roundtrip");
+    const table = document.content.find(block => block.type === "table");
+    expect(table?.type).toBe("table");
+    if (!table || table.type !== "table") throw new Error("Expected imported table");
+    expect(table.children[0].children[0].images).toHaveLength(1);
+    expect(document.resources).toHaveLength(1);
+    const exported = htmlFromNexusDocument(document);
+    expect(exported).toContain('alt="Cell image"');
+    const roundtrip = nexusDocumentFromHtml(exported, "Table image roundtrip");
+    const roundtripTable = roundtrip.content.find(block => block.type === "table");
+    expect(roundtripTable?.type).toBe("table");
+    if (!roundtripTable || roundtripTable.type !== "table") throw new Error("Expected round-tripped table");
+    expect(roundtripTable.children[0].children[0].images).toHaveLength(1);
+    expect(roundtrip.resources[0]?.data).toBe("aGVsbG8=");
+  });
+
   it("does not map header or footer selections to body paragraphs", () => {
     const engine = createEditor({ document: nexusDocumentFromHtml("<p>Body paragraph</p>", "Layout selection test") });
     const root = document.createElement("div");
