@@ -1307,7 +1307,7 @@ export function SmartCanvasPreview({ document, engine, headerText = "", footerTe
       }
     }
     if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "a") {
-      const blocks = collectTextBlocks(engine.getDocument().content);
+      const blocks = collectSmartCanvasTextBlocks(engine.getDocument().content).map(block => ({ id: block.id, text: getPlainText(block) }));
       if (blocks.length) {
         event.preventDefault();
         syncSelection({
