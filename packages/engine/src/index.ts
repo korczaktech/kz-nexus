@@ -35,7 +35,7 @@ export type { Result } from "./utils/result";
 // Native layout and pagination
 export { layoutDocument } from "./layout/layout";
 export type { LayoutOptions, LayoutRect, LayoutTextRun, LayoutLine, LayoutBlock, LayoutPage, LayoutResult, TextMetrics } from "./layout/layout";
-export { hitTestLayout } from "./layout/hitTesting";
+export { hitTestLayout, getOffsetAtLineX, getLineXAtOffset } from "./layout/hitTesting";
 export type { HitTestMeasureText, HitTestOptions, SmartCanvasHitTarget } from "./layout/hitTesting";
 export { getSelectionGeometry } from "./layout/selectionGeometry";
 export type { SelectionGeometry } from "./layout/selectionGeometry";
