@@ -542,7 +542,7 @@ export function layoutDocument(document: NexusDocument, options: LayoutOptions =
           }
           const isLastFragment = lineOffset + count >= measured.lines.length;
           const bottomInset = isLastFragment ? safeNumber(paragraph.padding, 0) + safeNumber(paragraph.borderWidth, 0) : 0;
-          const fragmentHeight = topInset + lineHeightSum + bottomInset;
+          const fragmentHeight = Math.max(topInset + lineHeightSum + bottomInset, block.editorObject && firstFragment && isLastFragment ? objectHeight : 0);
           const firstLineY = measured.lines[lineOffset].y;
           const lines = measured.lines.slice(lineOffset, lineOffset + count).map(line => ({
             ...line, y: cursorY + topInset + (line.y - firstLineY)
@@ -769,7 +769,9 @@ export function layoutDocument(document: NexusDocument, options: LayoutOptions =
       const spacingAfter = safeNumber(block.spacingAfter, block.type === "heading" ? 5 : 6);
       let measured = blockTextLayout(block, content.x, 0, content.width, options);
       const lineHeight = measured.lines[0]?.height || safeNumber(options.fontSize, DEFAULT_FONT) * 1.2;
-      const totalHeight = measured.height;
+      const objectHeight = block.editorObject?.height ?? 0;
+      const totalHeight = Math.max(measured.height, objectHeight);
+      if (block.editorObject && objectHeight > content.height) diagnostics.push({ code: "OVERSIZED_BLOCK", message: "Objeto maior que a área útil da página; mantido íntegro para evitar perda de conteúdo.", blockId: block.id });
       if (measured.lines.some(line => line.height > content.height)) diagnostics.push({ code: "OVERSIZED_BLOCK", message: "Linha de texto maior que a área útil da página; mantida íntegra para evitar perda de conteúdo.", blockId: block.id });
       const remaining = content.y + content.height - cursorY;
       let headingKeepHeight = 0;
@@ -802,6 +804,10 @@ export function layoutDocument(document: NexusDocument, options: LayoutOptions =
       while (lineOffset < measured.lines.length) {
         const topInset = firstFragment ? safeNumber(block.padding, 0) + safeNumber(block.borderWidth, 0) : 0;
         let available = content.y + content.height - cursorY - topInset;
+        if (block.editorObject && objectHeight > available && cursorY > content.y) {
+          nextPage();
+          available = content.y + content.height - cursorY - topInset;
+        }
         if (available < measured.lines[lineOffset].height && cursorY > content.y) {
           nextPage();
           available = content.y + content.height - cursorY - topInset;
