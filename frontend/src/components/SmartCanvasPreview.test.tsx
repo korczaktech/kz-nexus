@@ -522,7 +522,7 @@ describe("SmartCanvasPreview input integration", () => {
     const alt = host.querySelector('input[aria-label="Texto alternativo da imagem"]') as HTMLInputElement | null;
     const width = host.querySelector('input[aria-label="Largura da imagem em pixels"]') as HTMLInputElement | null;
     const height = host.querySelector('input[aria-label="Altura da imagem em pixels"]') as HTMLInputElement | null;
-    const apply = [...host.querySelectorAll("button")].find(button => button.textContent === "Aplicar");
+    const apply = [...host.querySelectorAll('[aria-label="Propriedades da imagem selecionada"] button')].find(button => button.textContent === "Aplicar");
     expect(alt).not.toBeNull();
     expect(width).not.toBeNull();
     expect(height).not.toBeNull();
