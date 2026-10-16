@@ -1,7 +1,7 @@
 import { useMemo, useRef, useState } from "react";
 import { collapsedAt, deleteText, getLineXAtOffset, getOffsetAtLineX, getPlainText, layoutDocument, mergeBlockWithPrevious, replaceRange, setCellText, splitBlock, type Editor as NexusEngineSession, type NexusDocument, type Selection, type SmartCanvasHitTarget } from "../../../packages/engine/src/index";
 import { CanvasDocumentRenderer } from "./CanvasDocumentRenderer";
-import { nextCodePointOffset, previousCodePointOffset } from "./smartCanvasTextOffsets";
+import { nextCodePointOffset, nextWordOffset, previousCodePointOffset, previousWordOffset, wordRangeAt } from "./smartCanvasTextOffsets";
 
 type TextBlock = { id: string; text: string };
 
@@ -233,10 +233,69 @@ export function SmartCanvasPreview({ document, engine, headerText = "", footerTe
         let start = Math.min(activeCell.anchorOffset, activeCell.offset);
         let end = Math.max(activeCell.anchorOffset, activeCell.offset);
         if (start === end) {
-          if (event.key === "Backspace") start = previousCodePointOffset(activeCell.text, start);
-          else end = nextCodePointOffset(activeCell.text, end);
+          if (event.key === "Backspace") start = event.ctrlKey || event.metaKey ? previousWordOffset(activeCell.text, start) : previousCodePointOffset(activeCell.text, start);
+          else end = event.ctrlKey || event.metaKey ? nextWordOffset(activeCell.text, end) : nextCodePointOffset(activeCell.text, end);
         }
         if (start !== end) commitCellText(activeCell.text.slice(0, start) + activeCell.text.slice(end), start);
+        return;
+      }
+    }
+    // Formatting shortcuts are routed to the engine, including stored marks for future typing.
+    if ((event.ctrlKey || event.metaKey) && !event.altKey) {
+      const key = event.key.toLowerCase();
+      const mark = key === "b" ? { type: "bold" as const }
+        : key === "i" ? { type: "italic" as const }
+        : key === "u" ? { type: "underline" as const }
+        : key === "x" && event.shiftKey ? { type: "strike" as const }
+        : null;
+      if (mark) {
+        event.preventDefault();
+        const result = engine.toggleStoredMark(mark);
+        if (!result.ok) onStatus?.(result.error.message);
+        else {
+          setSelection(engine.getSelection() ?? null);
+          onDocumentChange(engine.getDocument());
+          onStatus?.(engine.getSelection() && engine.getSelection()!.anchor.offset !== engine.getSelection()!.focus.offset
+            ? "Formatação aplicada à seleção."
+            : "Formatação de digitação atualizada.");
+        }
+        return;
+      }
+    }
+    if ((event.ctrlKey || event.metaKey) && (event.key === "ArrowLeft" || event.key === "ArrowRight")) {
+      const current = engine.getSelection();
+      if (current && current.anchor.blockId === current.focus.blockId) {
+        const block = findBlock(engine.getDocument().content, current.focus.blockId);
+        if (block) {
+          event.preventDefault();
+          const focusOffset = event.key === "ArrowLeft"
+            ? previousWordOffset(block.text, current.focus.offset)
+            : nextWordOffset(block.text, current.focus.offset);
+          const focus = { blockId: block.id, offset: focusOffset };
+          syncSelection(event.shiftKey ? { anchor: current.anchor, focus } : collapsedAt(focus));
+          return;
+        }
+      }
+    }
+    if (event.key === "F2") {
+      const current = engine.getSelection();
+      if (current && current.anchor.blockId === current.focus.blockId) {
+        const block = findBlock(engine.getDocument().content, current.focus.blockId);
+        if (block) {
+          event.preventDefault();
+          const range = wordRangeAt(block.text, current.focus.offset);
+          syncSelection({ anchor: { blockId: block.id, offset: range.start }, focus: { blockId: block.id, offset: range.end } });
+          return;
+        }
+      }
+    }
+    if ((event.ctrlKey || event.metaKey) && (event.key === "Home" || event.key === "End")) {
+      const blocks = collectTextBlocks(engine.getDocument().content);
+      if (blocks.length) {
+        event.preventDefault();
+        const block = event.key === "Home" ? blocks[0] : blocks[blocks.length - 1];
+        const focus = { blockId: block.id, offset: event.key === "Home" ? 0 : block.text.length };
+        syncSelection(event.shiftKey && engine.getSelection() ? { anchor: engine.getSelection()!.anchor, focus } : collapsedAt(focus));
         return;
       }
     }
@@ -409,8 +468,8 @@ export function SmartCanvasPreview({ document, engine, headerText = "", footerTe
         return;
       }
       if (start === end) {
-        if (event.key === "Backspace") start = previousCodePointOffset(block.text, start);
-        else end = nextCodePointOffset(block.text, end);
+        if (event.key === "Backspace") start = event.ctrlKey || event.metaKey ? previousWordOffset(block.text, start) : previousCodePointOffset(block.text, start);
+        else end = event.ctrlKey || event.metaKey ? nextWordOffset(block.text, end) : nextCodePointOffset(block.text, end);
       }
       if (start === end) return;
       const result = engine.exec([deleteText({ blockId: block.id, start, end })], { group: "typing" });
