@@ -12,7 +12,12 @@ function collectTextBlocks(nodes: readonly unknown[]): TextBlock[] {
     if (typeof node.id === "string" && (node.type === "paragraph" || node.type === "heading")) {
       blocks.push({ id: node.id, text: getPlainText(value as Extract<NexusDocument["content"][number], { type: "paragraph" | "heading" }>) });
     }
-    if (Array.isArray(node.children)) blocks.push(...collectTextBlocks(node.children));
+    // Table-cell paragraphs are edited through the dedicated cell controller.
+    // Treating them as top-level text blocks makes Ctrl+A, arrow navigation and
+    // cross-block deletion target nested IDs that the paragraph commands may not support.
+    if (node.type !== "table" && Array.isArray(node.children)) {
+      blocks.push(...collectTextBlocks(node.children));
+    }
   }
   return blocks;
 }
