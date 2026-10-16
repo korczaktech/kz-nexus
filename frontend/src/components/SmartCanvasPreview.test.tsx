@@ -561,6 +561,15 @@ describe("SmartCanvasPreview input integration", () => {
     const afterComposition = engine.getDocument().content[0];
     if (!afterComposition || afterComposition.type !== "paragraph") throw new Error("Expected paragraph after composition");
     expect(getPlainText(afterComposition)).toBe("Olá SmartCanvas 😀日本語");
+    await act(async () => {
+      const setter = Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, "value")?.set;
+      if (!setter) throw new Error("Textarea value setter was not available");
+      setter.call(input, "日本語");
+      input.dispatchEvent(new Event("input", { bubbles: true }));
+    });
+    const afterLateCompositionInput = engine.getDocument().content[0];
+    if (!afterLateCompositionInput || afterLateCompositionInput.type !== "paragraph") throw new Error("Expected paragraph after late composition input");
+    expect(getPlainText(afterLateCompositionInput)).toBe("Olá SmartCanvas 😀日本語");
   });
   it("replaces a cross-block selection with rich content as one undoable structural edit", async () => {
     const document = createDocument({ title: "SmartCanvas cross-block edit" });
