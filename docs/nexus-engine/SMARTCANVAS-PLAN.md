@@ -126,3 +126,10 @@ A flag é um mecanismo de teste, não uma declaração de que a nova seleção l
 - [ ] Validar o novo commit no CI antes de ampliar a fatia.
 
 A flag continua desligada por padrão. O próximo passo não deve ativar SmartCanvas globalmente: deve testar e corrigir os casos de digitação/deleção em fronteiras de blocos e páginas, além da composição IME real, preservando o histórico e o salvamento.
+
+
+## Estado consolidado das Fases 2A e 2B — 2026-10-16
+
+O aceite automatizado foi consolidado em [SMARTCANVAS-PHASE-2-ACCEPTANCE.md](SMARTCANVAS-PHASE-2-ACCEPTANCE.md). O commit de código `df745b9081e59c7ba3a30210010b0d1086f40567` passou em SmartCanvas validation, Kortex validation, integração E2E com API/MongoDB/Playwright, baseline e publicação. O E2E confirmou salvamento, payload NSX, recuperação de rascunho, DOCX, PDF, autosave e conflito de versão. Os testes de frontend e motor passaram, inclusive os estados de salvamento em andamento e falha.
+
+Esta atualização substitui os registros anteriores que apontavam a integração com API real como pendente. O editor legado permanece como fallback e SmartCanvas não é ativado por padrão. Limites conhecidos: listas/tabelas coladas em células são convertidas em texto estruturado, operações entre estruturas aninhadas não têm paridade completa e a validação manual multi-navegador de IME continua pendente. Não iniciar otimização de memória nesta etapa.
