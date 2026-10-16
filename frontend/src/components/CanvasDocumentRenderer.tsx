@@ -1,6 +1,6 @@
 import { useEffect, useRef } from "react";
 import type { CSSProperties, PointerEvent as ReactPointerEvent } from "react";
-import { getSelectionGeometry, hitTestLayout, type LayoutBlock, type LayoutLine, type LayoutPage, type LayoutResult, type Mark, type NexusDocument, type Selection, type SmartCanvasHitTarget, type LayoutTextRun } from "../../../packages/engine/src/index";
+import { getLineXAtOffset, getSelectionGeometry, hitTestLayout, type LayoutBlock, type LayoutLine, type LayoutPage, type LayoutResult, type Mark, type NexusDocument, type Selection, type SmartCanvasHitTarget, type LayoutTextRun } from "../../../packages/engine/src/index";
 
 const PT_TO_CSS_PX = 96 / 72;
 const PAGE_GAP = 24;
@@ -301,11 +301,15 @@ export function CanvasPage({ page, pageCount, document, headerText, footerText, 
             const start = Math.min(activeCellSelection.anchorOffset, activeCellSelection.offset);
             const end = Math.max(activeCellSelection.anchorOffset, activeCellSelection.offset);
             let baseOffset = 0;
-            let previousLocalEnd = -1;
+            let previousLocalStart = -1;
             let previousGlobalEnd = 0;
             let caretDrawn = false;
-            for (const line of cell.lines) {
-              if (previousLocalEnd >= 0 && line.startOffset < previousLocalEnd) {
+            for (let lineIndex = 0; lineIndex < cell.lines.length; lineIndex += 1) {
+              const line = cell.lines[lineIndex];
+              // Each paragraph in a cell has its own local offsets. Detect the
+              // reset at a paragraph boundary, including consecutive empty paragraphs.
+              if (lineIndex > 0 && (line.startOffset < previousLocalStart ||
+                (line.startOffset === 0 && previousLocalStart === 0))) {
                 baseOffset = previousGlobalEnd + 1;
               }
               const globalStart = baseOffset + line.startOffset;
@@ -328,7 +332,7 @@ export function CanvasPage({ page, pageCount, document, headerText, footerText, 
                 context.stroke();
                 caretDrawn = true;
               }
-              previousLocalEnd = line.endOffset;
+              previousLocalStart = line.startOffset;
               previousGlobalEnd = globalEnd;
             }
           }
