@@ -1,5 +1,5 @@
 import { useMemo, useRef, useState } from "react";
-import { collapsedAt, deleteText, getPlainText, layoutDocument, mergeBlockWithPrevious, replaceRange, splitBlock, type Editor as NexusEngineSession, type NexusDocument, type Selection, type SmartCanvasHitTarget } from "../../../packages/engine/src/index";
+import { collapsedAt, deleteText, getPlainText, layoutDocument, mergeBlockWithPrevious, replaceRange, setCellText, splitBlock, type Editor as NexusEngineSession, type NexusDocument, type Selection, type SmartCanvasHitTarget } from "../../../packages/engine/src/index";
 import { CanvasDocumentRenderer } from "./CanvasDocumentRenderer";
 
 type TextBlock = { id: string; text: string };
@@ -15,6 +15,38 @@ function collectTextBlocks(nodes: readonly unknown[]): TextBlock[] {
     if (Array.isArray(node.children)) blocks.push(...collectTextBlocks(node.children));
   }
   return blocks;
+}
+
+type EditableCell = { tableId: string; rowId: string; cellId: string; text: string };
+
+function collectTableCells(nodes: readonly unknown[]): EditableCell[] {
+  const cells: EditableCell[] = [];
+  for (const value of nodes) {
+    if (!value || typeof value !== "object") continue;
+    const node = value as { id?: unknown; type?: unknown; children?: unknown };
+    if (node.type === "table" && typeof node.id === "string" && Array.isArray(node.children)) {
+      for (const rowValue of node.children) {
+        if (!rowValue || typeof rowValue !== "object") continue;
+        const row = rowValue as { id?: unknown; children?: unknown };
+        if (typeof row.id !== "string" || !Array.isArray(row.children)) continue;
+        for (const cellValue of row.children) {
+          if (!cellValue || typeof cellValue !== "object") continue;
+          const cell = cellValue as { id?: unknown; children?: unknown };
+          if (typeof cell.id !== "string" || !Array.isArray(cell.children)) continue;
+          const text = (cell.children as unknown[]).map(child => {
+            if (!child || typeof child !== "object") return "";
+            const block = child as { type?: unknown; children?: unknown };
+            return block.type === "paragraph" || block.type === "heading"
+              ? getPlainText(child as Extract<NexusDocument["content"][number], { type: "paragraph" | "heading" }>)
+              : "";
+          }).join("\\n");
+          cells.push({ tableId: node.id, rowId: row.id, cellId: cell.id, text });
+        }
+      }
+    }
+    if (Array.isArray(node.children)) cells.push(...collectTableCells(node.children));
+  }
+  return cells;
 }
 
 function findBlock(nodes: readonly unknown[], id: string): TextBlock | undefined {
@@ -54,7 +86,7 @@ export function SmartCanvasPreview({ document, engine, headerText = "", footerTe
   onDocumentChange: (document: NexusDocument) => void;
   onStatus?: (message: string) => void;
 }) {
-  const [selection, setSelection] = useState<Selection | null>(engine.getSelection() ?? null);
+  const [selection, setSelection] = useState<Selection | null>(engine.getSelection() ?? null);\n  const [activeCell, setActiveCell] = useState<(EditableCell & { offset: number }) | null>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const composing = useRef(false);
   const layout = useMemo(() => {
@@ -73,7 +105,11 @@ export function SmartCanvasPreview({ document, engine, headerText = "", footerTe
       inputRef.current?.focus({ preventScroll: true });
       onStatus?.("SmartCanvas: cursor no bloco " + target.blockId + ", posição " + target.position.offset + ".");
     } else if (target.kind === "table-cell") {
-      onStatus?.("A célula foi identificada, mas a edição de texto em células ainda não está habilitada.");
+      const cell = collectTableCells(engine.getDocument().content).find(item => item.tableId === target.blockId && item.cellId === target.cellId);
+      if (!cell) { onStatus?.("Não foi possível localizar a célula selecionada."); return; }
+      setActiveCell({ ...cell, offset: Math.max(0, Math.min(cell.text.length, target.offset)) });
+      inputRef.current?.focus({ preventScroll: true });
+      onStatus?.("Editando célula da tabela. Use Tab para avançar entre células.");
     } else {
       onStatus?.("Bloco " + target.blockId + " identificado. Seleção estrutural ainda não está habilitada.");
     }
@@ -85,12 +121,53 @@ export function SmartCanvasPreview({ document, engine, headerText = "", footerTe
     syncSelection(result.value.selection);
     onDocumentChange(result.value.document);
   };
+  const commitCellText = (nextText: string, nextOffset: number) => {
+    if (!activeCell || readOnly) return;
+    const result = engine.exec([setCellText({ tableId: activeCell.tableId, rowId: activeCell.rowId, cellId: activeCell.cellId, text: nextText })], { group: "typing" });
+    if (!result.ok) { onStatus?.(result.error.message); return; }
+    setActiveCell({ ...activeCell, text: nextText, offset: nextOffset });
+    onDocumentChange(result.value.document);
+  };
   const handleInput = (value: string) => {
-    if (value) commitText(value);
+    if (value && activeCell) {
+      const nextText = activeCell.text.slice(0, activeCell.offset) + value + activeCell.text.slice(activeCell.offset);
+      commitCellText(nextText, activeCell.offset + value.length);
+    } else if (value) commitText(value);
     if (inputRef.current) inputRef.current.value = "";
   };
   const handleKeyDown = (event: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (readOnly) { event.preventDefault(); return; }
+    if (activeCell) {
+      if (event.key === "Escape" || event.key === "Enter") {
+        event.preventDefault();
+        setActiveCell(null);
+        inputRef.current?.blur();
+        return;
+      }
+      if (event.key === "Tab") {
+        event.preventDefault();
+        const cells = collectTableCells(engine.getDocument().content).filter(cell => cell.tableId === activeCell.tableId);
+        const index = cells.findIndex(cell => cell.cellId === activeCell.cellId);
+        const nextIndex = event.shiftKey ? (index - 1 + cells.length) % cells.length : (index + 1) % cells.length;
+        const next = cells[nextIndex];
+        if (next) setActiveCell({ ...next, offset: next.text.length });
+        return;
+      }
+      if (event.key === "ArrowLeft" || event.key === "ArrowRight" || event.key === "Home" || event.key === "End") {
+        event.preventDefault();
+        const offset = event.key === "Home" ? 0 : event.key === "End" ? activeCell.text.length :
+          event.key === "ArrowLeft" ? Math.max(0, activeCell.offset - 1) : Math.min(activeCell.text.length, activeCell.offset + 1);
+        setActiveCell({ ...activeCell, offset });
+        return;
+      }
+      if (event.key === "Backspace" || event.key === "Delete") {
+        event.preventDefault();
+        const start = event.key === "Backspace" ? Math.max(0, activeCell.offset - 1) : activeCell.offset;
+        const end = event.key === "Delete" ? Math.min(activeCell.text.length, activeCell.offset + 1) : activeCell.offset;
+        if (start !== end) commitCellText(activeCell.text.slice(0, start) + activeCell.text.slice(end), start);
+        return;
+      }
+    }
     if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "a") {
       const blocks = collectTextBlocks(engine.getDocument().content);
       if (blocks.length) {
