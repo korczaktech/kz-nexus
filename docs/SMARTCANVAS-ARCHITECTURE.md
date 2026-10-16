@@ -116,7 +116,7 @@ A migração é por capacidades, com a implementação nova opt-in e o caminho a
 - [ ] Imagens, tabelas, marcas, objetos, cabeçalho/rodapé e quebras têm cobertura explícita.
 
 ### Etapa 3 — edição própria
-- [ ] Digitação, IME, atalhos, clipboard, seleção e navegação passam pelo controlador de entrada.
+- [ ] Controlador inicial de entrada implementado para digitação, IME, seleção de bloco, setas esquerda/direita, Home/End, Backspace/Delete, Ctrl/Cmd+A, cópia, recorte, colagem de texto e undo/redo; ainda faltam seleção estendida, navegação entre blocos, Enter/Tab e testes de integração.
 - [ ] O conteúdo do corpo não depende de contentEditable nem de execCommand.
 - [ ] Undo/redo restaura documento e seleção sem histórico paralelo divergente.
 - [ ] Cabeçalho e rodapé também têm fluxo de edição próprio, ou um escopo de compatibilidade explicitamente isolado até sua migração.
@@ -132,6 +132,8 @@ A migração é por capacidades, com a implementação nova opt-in e o caminho a
 
 ## 5. Progresso e próxima tarefa
 
-**Implementado nesta iteração:** função pura hitTestLayout no pacote público do motor; alvos tipados para texto, bloco e célula de tabela; medição de texto injetável; callback opcional de hit-test por pointer; geometria de caret/seleção e canvas overlay independente; testes unitários dedicados; componente SmartCanvasPreview integrado ao Editor sob `?smartCanvas=1`. No modo experimental, o clique em texto atualiza a seleção lógica do motor e desenha o caret/destaque sem tornar o Canvas a fonte de verdade. A prévia é mostrada acima do editor legado para comparação e não substitui a edição principal.
+**Implementado nesta iteração:** função pura hitTestLayout; geometria de caret/seleção e overlay; testes unitários do motor; prévia opt-in sob `?smartCanvas=1`; controlador inicial ligado à sessão do motor para inserir texto, excluir caracteres/seleção no mesmo bloco, navegar com setas esquerda/direita e Home/End, selecionar o texto do bloco, copiar/recortar/colar texto, processar composição IME e desfazer/refazer. O estado do documento é propagado ao editor para manter o salvamento e os rascunhos existentes. O modo somente leitura desativa o controlador. O editor legado continua disponível como fallback.
 
-**Próxima tarefa:** criar o controlador próprio de teclado e inserção de texto sobre a seleção lógica, começando por texto simples e backspace/delete, com testes de undo/redo e IME. Em seguida, ligar navegação por teclado e clipboard. Não remover contentEditable nem alterar o caminho padrão antes de validar esses fluxos e a paridade de recursos.
+**Limitações conhecidas:** a seleção é restrita a um bloco; exclusão não atravessa blocos; Enter e Tab ainda não editam estrutura; navegação vertical e seleção estendida com Shift ainda faltam. A prévia não é fonte única da verdade e os testes/build ainda precisam ser executados.
+
+**Próxima tarefa:** adicionar testes do controlador e do fluxo de persistência; implementar seleção estendida e navegação entre blocos; em seguida, implementar Enter/quebra de parágrafo e edição de células. Não remover contentEditable nem alterar o caminho padrão antes de validar os fluxos e a paridade de recursos.
