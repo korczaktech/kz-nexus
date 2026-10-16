@@ -205,6 +205,25 @@ function drawBlock(ctx: CanvasRenderingContext2D, block: LayoutBlock, document: 
         ctx.lineWidth = 1;
         ctx.strokeRect(cellX, cellY, cellWidth, cellHeight);
         for (const line of cell.lines) drawLine(ctx, line);
+        for (const embedded of cell.images ?? []) {
+          const image = imageCache.get(embedded.resourceId);
+          const imageX = embedded.rect.x * PT_TO_CSS_PX;
+          const imageY = embedded.rect.y * PT_TO_CSS_PX;
+          const imageWidth = embedded.rect.width * PT_TO_CSS_PX;
+          const imageHeight = embedded.rect.height * PT_TO_CSS_PX;
+          if (image?.complete && image.naturalWidth > 0) {
+            ctx.drawImage(image, imageX, imageY, imageWidth, imageHeight);
+          } else {
+            ctx.fillStyle = "#f2f4f7";
+            ctx.fillRect(imageX, imageY, imageWidth, imageHeight);
+            ctx.strokeStyle = "#d0d5dd";
+            ctx.strokeRect(imageX, imageY, imageWidth, imageHeight);
+            ctx.fillStyle = "#667085";
+            ctx.font = "10pt Arial, sans-serif";
+            ctx.textBaseline = "top";
+            ctx.fillText(embedded.alt || "Imagem carregando…", imageX + 4, imageY + 4, Math.max(0, imageWidth - 8));
+          }
+        }
       }
     }
   }
