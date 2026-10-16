@@ -327,7 +327,7 @@ async function readClipboardImage(file: File): Promise<{ mimeType: string; data:
 }
 
 function getSelectedText(nodes: readonly unknown[], selection: Selection): string {
-  const blocks = collectTextBlocks(nodes);
+  const blocks = collectSmartCanvasTextBlocks(nodes).map(block => ({ id: block.id, text: getPlainText(block) }));
   const anchorIndex = blocks.findIndex(block => block.id === selection.anchor.blockId);
   const focusIndex = blocks.findIndex(block => block.id === selection.focus.blockId);
   if (anchorIndex < 0 || focusIndex < 0) return "";
