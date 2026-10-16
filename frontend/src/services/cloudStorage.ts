@@ -1,3 +1,4 @@
+import "./browserGlobals";
 import {htmlToGoogleDocsPayload} from "./googleDocsFormatting";
 import {normalizeHtmlForDocx} from "../components/editorFormats";
 import {stripLayoutMetadata} from "../components/editorLayoutMetadata";

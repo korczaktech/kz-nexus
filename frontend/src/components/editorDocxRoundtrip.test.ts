@@ -1,3 +1,4 @@
+import '../services/browserGlobals';
 import {afterEach,describe,expect,it,vi} from 'vitest';
 import {Window} from 'happy-dom';
 import {normalizeHtmlForDocx} from './editorFormats';
