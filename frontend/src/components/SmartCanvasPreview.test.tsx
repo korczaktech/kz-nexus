@@ -227,6 +227,69 @@ describe("SmartCanvasPreview input integration", () => {
     expect(getPlainText(undone.content[1] as Extract<NexusDocument["content"][number], { type: "paragraph" }>)).toBe("Beta");
   });
 
+  it("edits and reorders a selected semantic object through engine commands", async () => {
+    const document = createDocument({ title: "SmartCanvas object properties" });
+    const objectParagraph = document.content[0];
+    if (!objectParagraph || objectParagraph.type !== "paragraph") throw new Error("Expected initial paragraph");
+    objectParagraph.children[0]!.text = "Shape body";
+    objectParagraph.editorObject = {
+      kind: "shape",
+      shape: "rectangle",
+      label: "Before",
+      fill: "#ffffff",
+      stroke: "#111827",
+      width: 120,
+      height: 60,
+    };
+    document.content.push({
+      type: "paragraph",
+      id: "object-neighbor",
+      children: [{ type: "text", id: "object-neighbor-run", text: "Neighbor", marks: [] }],
+    });
+    engine = createEditor({ document });
+    const onDocumentChange = vi.fn();
+    host = window.document.createElement("div");
+    window.document.body.append(host);
+    root = createRoot(host);
+
+    await act(async () => {
+      root?.render(createElement(SmartCanvasPreview, {
+        document: engine!.getDocument(),
+        engine: engine!,
+        onDocumentChange,
+      }));
+    });
+    const objectHit = host.querySelector('[data-testid="smartcanvas-object-hit"]') as HTMLButtonElement | null;
+    if (!objectHit) throw new Error("Object hit target was not mounted");
+    await act(async () => { objectHit.click(); });
+
+    const widthInput = host.querySelector('[aria-label="Largura do objeto em pontos"]') as HTMLInputElement | null;
+    const labelInput = host.querySelector('[aria-label="Rótulo do objeto"]') as HTMLInputElement | null;
+    if (!widthInput || !labelInput) throw new Error("Object property controls were not mounted");
+    const widthSetter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value")?.set;
+    if (!widthSetter) throw new Error("Input value setter was not available");
+    await act(async () => {
+      widthSetter.call(widthInput, "180");
+      widthInput.dispatchEvent(new Event("input", { bubbles: true }));
+      widthSetter.call(labelInput, "Updated shape");
+      labelInput.dispatchEvent(new Event("input", { bubbles: true }));
+    });
+    const applyButton = [...host.querySelectorAll('[aria-label="Propriedades do objeto selecionado"] button')][0] as HTMLButtonElement | undefined;
+    if (!applyButton) throw new Error("Object apply button was not mounted");
+    await act(async () => { applyButton.click(); });
+
+    const updated = engine.getDocument().content[0];
+    if (!updated || updated.type !== "paragraph") throw new Error("Expected edited object paragraph");
+    expect(updated.editorObject?.width).toBe(180);
+    expect(updated.editorObject?.label).toBe("Updated shape");
+
+    const moveDown = [...host.querySelectorAll('[aria-label="Propriedades do objeto selecionado"] button')].find(button => button.textContent === "Mover para baixo") as HTMLButtonElement | undefined;
+    if (!moveDown) throw new Error("Object move control was not mounted");
+    await act(async () => { moveDown.click(); });
+    expect(engine.getDocument().content[1]?.id).toBe(objectParagraph.id);
+    expect(onDocumentChange).toHaveBeenCalled();
+  });
+
   it("deletes a selected semantic object through the engine without targeting adjacent text", async () => {
     const document = createDocument({ title: "SmartCanvas object deletion" });
     const objectParagraph = document.content[0];
