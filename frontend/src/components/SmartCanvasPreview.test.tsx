@@ -125,6 +125,33 @@ describe("SmartCanvasPreview input integration", () => {
   });
 
 
+  it("blocks keyboard mutation when the SmartCanvas document is read-only", async () => {
+    const document = createDocument({ title: "SmartCanvas read-only keyboard" });
+    const first = document.content[0];
+    if (!first || first.type !== "paragraph") throw new Error("Expected initial paragraph");
+    first.children[0]!.text = "Immutable";
+    engine = createEditor({ document });
+    host = window.document.createElement("div");
+    window.document.body.append(host);
+    root = createRoot(host);
+    await act(async () => {
+      root?.render(createElement(SmartCanvasPreview, {
+        document: engine!.getDocument(),
+        engine: engine!,
+        readOnly: true,
+        onDocumentChange: vi.fn(),
+      }));
+    });
+    const input = host.querySelector('textarea[aria-label="Entrada de texto do SmartCanvas"]') as HTMLTextAreaElement | null;
+    if (!input) throw new Error("SmartCanvas input surface was not mounted");
+    const keydown = new KeyboardEvent("keydown", { key: "Backspace", bubbles: true, cancelable: true });
+    await act(async () => { input.dispatchEvent(keydown); });
+    expect(keydown.defaultPrevented).toBe(true);
+    const unchanged = engine!.getDocument().content[0];
+    if (!unchanged || unchanged.type !== "paragraph") throw new Error("Expected initial paragraph after keydown");
+    expect(getPlainText(unchanged)).toBe("Immutable");
+  });
+
   it("blocks clipboard cut when the SmartCanvas document is read-only", async () => {
     const document = createDocument({ title: "SmartCanvas read-only cut" });
     const first = document.content[0];
