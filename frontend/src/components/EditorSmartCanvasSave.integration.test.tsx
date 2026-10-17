@@ -277,5 +277,12 @@ describe("Editor SmartCanvas save integration", () => {
     const inputs = Array.from(bodies.map(body => body.querySelector<HTMLTextAreaElement>('textarea[aria-label="Entrada de texto do SmartCanvas"]')));
     expect(window.document.activeElement).toBe(inputs[0]);
     expect(window.document.activeElement).not.toBe(inputs[1]);
+    const editTabs = Array.from(targetRoot.querySelectorAll<HTMLButtonElement>(".editor-ribbon-tabs button")).filter(button => button.textContent === "Editar");
+    await act(async () => { editTabs[0]!.click(); });
+    const selectAllButton = targetRoot.querySelector<HTMLButtonElement>('button[aria-label="Selecionar tudo"]');
+    expect(selectAllButton).not.toBeNull();
+    await act(async () => { selectAllButton!.click(); });
+    expect(window.document.activeElement).toBe(inputs[0]);
+    expect(targetRoot.querySelector(".save-state")?.textContent).toContain("SmartCanvas");
   });
 });
