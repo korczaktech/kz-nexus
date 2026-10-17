@@ -1,6 +1,6 @@
 # SmartCanvas — arquitetura-alvo e plano de transição
 
-**Status (2026-10-16):** preview, layout e renderer do SmartCanvas validados por CI. A edição opt-in avançou para seleção lógica independente do DOM, histórico canônico, busca/substituição, clipboard de toolbar e exportação baseada no modelo. O fechamento integral continua bloqueado por estruturas aninhadas editáveis, ferramentas avançadas ainda ligadas à projeção DOM, validação manual multi-navegador e E2E com API real.  
+**Status (2026-10-17):** preview, layout e renderer do SmartCanvas validados por CI. A edição opt-in usa seleção lógica independente da seleção DOM para comandos do corpo, histórico canônico, busca/substituição, clipboard de toolbar e exportação baseada no modelo. A integração E2E com API real passou no commit `57a743d2` para salvamento, payload NSX, recuperação de rascunho, exportação DOCX/PDF, autosave e conflito de versão. O fechamento integral continua bloqueado por estruturas aninhadas editáveis, comparação de regressão visual e validação manual multi-navegador/IME; a cabeça atual ainda precisa concluir sua própria rodada de CI.  
 **Escopo:** editor Web do Korczak Nexus (frontend/ + packages/engine/).  
 **Regra de segurança:** o editor atual continua sendo o caminho padrão até que cada capacidade seja migrada e validada.
 
@@ -19,7 +19,7 @@ O repositório já contém a maior parte dos fundamentos de um motor próprio:
 
 Entretanto, o componente Editor.tsx ainda mantém uma projeção HTML oculta para compatibilidade e fallback. O modo SmartCanvas usa sua própria superfície de entrada, seleção lógica por ID/offset, histórico do motor e comandos de busca/substituição; o adaptador de seleção do SmartCanvas já não precisa ler nem restaurar Range no DOM legado. O histórico HTML local é desativado nesse modo. Exportação DOCX/PDF, pré-visualização, estatísticas e compartilhamento agora partem do documento canônico quando a sessão do motor está disponível.
 
-A migração ainda não está concluída: algumas ferramentas avançadas (por exemplo, pintura de formato e limpeza de metadados de comentários) continuam ligadas à projeção DOM; seleção/recorte atravessando estruturas aninhadas e colagem de listas/tabelas aninhadas ainda têm limites. Cabeçalho/rodapé têm controles próprios de texto/alinhamento/números no SmartCanvas, enquanto o caminho legado permanece isolado como fallback. O DOM legado só poderá ser removido depois de fechar essas lacunas e validar os fluxos de API real.
+A migração ainda não está concluída: o corpo do SmartCanvas não monta a projeção DOM legada nem depende de `contentEditable`/`execCommand` para editar o texto. Formatação, links, comentários, capitalização, limpeza de formatação e recorte usam comandos do motor também em seleções que abrangem vários blocos. Permanecem limites em estruturas aninhadas editáveis (listas/tabelas dentro de células), seleção unificada entre células, algumas ferramentas contextuais dentro de contêineres e validação manual multi-navegador/IME. Cabeçalho/rodapé têm controles próprios no SmartCanvas; o editor legado segue disponível fora do modo opt-in.
 
 ## 2. Decisões arquiteturais
 
@@ -121,15 +121,15 @@ A migração é por capacidades, com a implementação nova opt-in e o caminho a
 - [x] Seleção/exclusão de objetos semânticos e imagens, propriedades básicas de imagem, formatação pendente em célula vazia, colagem HTML sanitizada em parágrafo/célula e colagem rica sobre seleções entre parágrafos de topo estão cobertos por testes automatizados.
 - [x] Objetos semânticos selecionados podem ser movidos entre blocos e redimensionados/editados por comandos do motor; há teste de componente para edição e reordenação.
 - [x] Imagens podem ser coladas em células como recursos canônicos; o layout mantém imagens de linhas de tabela muito altas em um único fragmento de página, com teste de paginação.
-- [ ] Colagem de listas e tabelas dentro de células atualmente preserva o conteúdo como texto estruturado (marcadores e separadores), mas ainda não cria estruturas aninhadas editáveis. Seleções que atravessam células/listas/estruturas aninhadas e validação manual de IME nos navegadores suportados continuam pendentes.
-- [ ] O conteúdo do corpo não depende de contentEditable nem de execCommand.
+- [ ] Colagem de listas e tabelas dentro de células preserva texto, marcadores, separadores, imagens incorporadas e marcas inline (por exemplo, negrito), mas ainda achata as estruturas em texto; nós aninhados editáveis continuam pendentes. A seleção entre células não usa ainda um único intervalo lógico global, e a validação manual de IME nos navegadores suportados continua pendente.
+- [x] No modo SmartCanvas, o corpo não depende de `contentEditable` nem de `execCommand`; o teste de integração confirma que não há projeção de editor nativo montada. O modo legado continua como fallback e o SmartCanvas permanece opt-in.
 - [x] No modo SmartCanvas, undo/redo usa exclusivamente o histórico do motor; a seleção lógica é sincronizada com eventos externos de histórico e o histórico HTML paralelo fica desativado.
 - [x] Cabeçalho e rodapé têm controles próprios de texto/alinhamento/números no SmartCanvas; edição rica legada permanece isolada no fallback.
 
 ### Etapa 4 — paridade
 - [x] Testes de integração cobrem entrada de texto, seleção/substituição entre blocos com undo, edição de células, imagens/objetos, colagem HTML sanitizada, persistência .nsx e exportação HTML.
-- [ ] Ainda falta uma bateria end-to-end com API real para paginação, autosave, recuperação de rascunhos, conflitos de versão e exportação DOCX/PDF a partir do modo SmartCanvas.
-- [ ] Comparação de regressão entre modo legado e SmartCanvas em documentos representativos.
+- [x] E2E com API real cobre salvamento, round-trip do payload NSX, recuperação de rascunho, exportação DOCX/PDF, autosave e conflito de versão (passou no commit `57a743d2`). Ainda falta incluir a paginação nessa bateria e repetir a validação na cabeça atual após os últimos incrementos.
+- [ ] Comparação visual de regressão entre modo legado e SmartCanvas em documentos representativos e em vários navegadores/dispositivos.
 - [ ] O modo SmartCanvas permanece opt-in até a aprovação de todos os critérios críticos.
 
 ### Etapa 5 — memória
