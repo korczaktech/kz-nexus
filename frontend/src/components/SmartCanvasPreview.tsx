@@ -407,6 +407,7 @@ export function SmartCanvasPreview({ document, engine, headerText = "", footerTe
   const imageFileInputRef = useRef<HTMLInputElement>(null);
   const composing = useRef(false);
   const lastCompositionValue = useRef<string | null>(null);
+  const dragSelectionAnchor = useRef<Selection["anchor"] | null>(null);
   const preferredVerticalX = useRef<number | null>(null);
   const preferredCellColumn = useRef<number | null>(null);
   useEffect(() => { onSelectionChange?.(selection); }, [selection, onSelectionChange]);
@@ -496,7 +497,27 @@ export function SmartCanvasPreview({ document, engine, headerText = "", footerTe
     setSelection(next);
     engine.setSelection(next);
   };
-  const handleHit = (target: SmartCanvasHitTarget, clickCount = 1) => {
+  const handleHit = (target: SmartCanvasHitTarget, clickCount = 1, phase: "start" | "move" | "end" = "start") => {
+    if (phase === "start" && target.kind === "text") {
+      dragSelectionAnchor.current = { blockId: target.position.blockId, offset: target.position.offset };
+    }
+    if ((phase === "move" || phase === "end") && dragSelectionAnchor.current && target.kind === "text") {
+      const block = findBlock(engine.getDocument().content, target.blockId);
+      const focusOffset = block ? nearestGraphemeOffset(block.text, target.position.offset) : target.position.offset;
+      setActiveBlockId(null);
+      setActiveCell(null);
+      syncSelection({
+        anchor: dragSelectionAnchor.current,
+        focus: { blockId: target.blockId, offset: focusOffset },
+      });
+      inputRef.current?.focus({ preventScroll: true });
+      if (phase === "end") dragSelectionAnchor.current = null;
+      return;
+    }
+    if (phase === "end") {
+      dragSelectionAnchor.current = null;
+      return;
+    }
     preferredVerticalX.current = null;
     preferredCellColumn.current = null;
     if (target.kind === "text") {
