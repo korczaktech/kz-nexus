@@ -87,6 +87,7 @@ try {
   assert.equal(await page.locator(".editor-pages-stack, .rich-editor").count(), 0, "production SmartCanvas must not mount the legacy editor DOM");
   const input = page.locator('textarea[aria-label="Entrada de texto do SmartCanvas"]');
   await input.waitFor();
+  await page.locator(".kortex-canvas-page").first().click({ position: { x: 120, y: 110 } });
   await input.evaluate(element => element.focus());
   await page.keyboard.type(initialSentinel);
   // SmartCanvas deliberately clears its hidden keyboard-capture textarea after
