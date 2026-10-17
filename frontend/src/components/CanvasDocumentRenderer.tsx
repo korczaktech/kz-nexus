@@ -388,7 +388,7 @@ export function CanvasPage({ page, pageCount, document, headerText, footerText, 
     }
     paint();
     return () => { cancelled = true; };
-  }, [page, pageCount, document, headerText, footerText, headerAlign, footerAlign, showPageNumbers, cssWidth, cssHeight]);
+  }, [page, pageCount, document, headerText, footerText, headerAlign, footerAlign, showPageNumbers, showFormattingMarks, cssWidth, cssHeight]);
 
   useEffect(() => {
     const overlay = overlayRef.current;
