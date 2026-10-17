@@ -254,8 +254,9 @@ describe("Editor SmartCanvas save integration", () => {
     const targetBody = bodies[0]!;
     const viewTabs = Array.from(host.querySelectorAll<HTMLButtonElement>(".editor-ribbon-tabs button")).filter(button => button.textContent === "Exibir");
     expect(viewTabs.length).toBeGreaterThanOrEqual(1);
+    const targetRoot = viewTabs[0]!.closest(".editor-workspace") as HTMLElement;
     await act(async () => { viewTabs[0]!.click(); });
-    const navigationButtons = Array.from(host.querySelectorAll<HTMLButtonElement>('button[aria-label="Painel de navegação por títulos"]'));
+    const navigationButtons = Array.from(targetRoot.querySelectorAll<HTMLButtonElement>('button[aria-label="Painel de navegação por títulos"]'));
     expect(navigationButtons).toHaveLength(1);
     await act(async () => { navigationButtons[0]!.click(); });
     const panel = targetBody.querySelector<HTMLElement>('aside[aria-label="Navegação por títulos"]');
