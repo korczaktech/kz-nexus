@@ -53,6 +53,7 @@ try {
   await page.setViewportSize({ width: 1280, height: 900 });
   page.setDefaultTimeout(15000);
   page.on("pageerror", error => console.error("[browser page error]", error.message));
+  page.on("console", message => { if (message.type() === "error") console.error("[browser console error]", message.text()); });
 
   await page.goto(baseUrl + "/?smartCanvas=1", { waitUntil: "domcontentloaded" });
   // The app intentionally opens in guest mode when no session exists. Open the
