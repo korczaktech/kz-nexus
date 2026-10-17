@@ -20,12 +20,23 @@ async function apiDocument(id, token) {
 }
 
 async function waitForEditorProjection(page, sentinel) {
-  await page.waitForFunction(
-    value => [...document.querySelectorAll(".kortex-canvas-page")]
-      .some(canvas => canvas.getAttribute("aria-label")?.includes(value) ?? false),
-    sentinel,
-    { timeout: 15000 },
-  );
+  await page.locator(".kortex-canvas-page").first().waitFor({ state: "attached", timeout: 15000 });
+  try {
+    await page.waitForFunction(
+      value => [...document.querySelectorAll(".kortex-canvas-page")]
+        .some(canvas => (canvas.getAttribute("aria-label") ?? "").includes(value)),
+      sentinel,
+      { timeout: 15000 },
+    );
+  } catch (error) {
+    const diagnostic = await page.evaluate(() => ({
+      canvasLabels: [...document.querySelectorAll(".kortex-canvas-page")].map(canvas => canvas.getAttribute("aria-label")),
+      inputValue: (document.querySelector('textarea[aria-label="Entrada de texto do SmartCanvas"]') as HTMLTextAreaElement | null)?.value ?? null,
+      status: document.querySelector(".editor-status, [role=status]")?.textContent ?? null,
+      bodyText: document.body.innerText.slice(-2500),
+    }));
+    throw new Error("SmartCanvas accessibility projection did not contain inserted text. " + JSON.stringify(diagnostic) + ". " + String(error));
+  }
 }
 
 const browser = await chromium.launch({ headless: true });
