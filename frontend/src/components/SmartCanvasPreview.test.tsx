@@ -662,19 +662,23 @@ describe("SmartCanvasPreview input integration", () => {
     const second = { type: "paragraph" as const, id: "clear-format-second", children: [{ type: "text" as const, id: "clear-format-run", text: "Italic", marks: [{ type: "italic" as const }] }] };
     document.content.push(second);
     engine = createEditor({ document });
-    expect(engine.setSelection({
-      anchor: { blockId: first.id, offset: 0 },
-      focus: { blockId: second.id, offset: 6 },
-    }).ok).toBe(true);
     host = window.document.createElement("div");
     window.document.body.append(host);
     root = createRoot(host);
+    const onStatus = vi.fn();
     await act(async () => {
       root?.render(createElement(SmartCanvasPreview, {
         document: engine!.getDocument(),
         engine: engine!,
         onDocumentChange: vi.fn(),
+        onStatus,
       }));
+    });
+    await act(async () => {
+      expect(engine!.setSelection({
+        anchor: { blockId: first.id, offset: 0 },
+        focus: { blockId: second.id, offset: 6 },
+      }).ok).toBe(true);
     });
     const clear = host.querySelector('[aria-label="Limpar formatação SmartCanvas"]') as HTMLButtonElement | null;
     if (!clear) throw new Error("SmartCanvas clear-formatting control was not mounted");
@@ -683,6 +687,7 @@ describe("SmartCanvasPreview input integration", () => {
     const updatedFirst = updated.find(block => block.id === first.id);
     const updatedSecond = updated.find(block => block.id === second.id);
     if (!updatedFirst || updatedFirst.type !== "paragraph" || !updatedSecond || updatedSecond.type !== "paragraph") throw new Error("Expected both paragraphs after clearing formatting");
+    expect(onStatus).toHaveBeenLastCalledWith("Formatação removida pelo SmartCanvas.");
     expect(updatedFirst.children.every(run => run.marks.length === 0)).toBe(true);
     expect(updatedSecond.children.every(run => run.marks.length === 0)).toBe(true);
   });
