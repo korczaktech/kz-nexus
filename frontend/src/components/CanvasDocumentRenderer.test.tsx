@@ -211,8 +211,8 @@ describe("CanvasDocumentRenderer visual regression contract", () => {
     };
     await act(async () => {
       first.dispatchEvent(pointerEvent("pointerdown", 100, 1));
-      first.dispatchEvent(pointerEvent("pointermove", pageHeight + 144, 1));
-      first.dispatchEvent(pointerEvent("pointerup", pageHeight + 144, 0));
+      first.dispatchEvent(pointerEvent("pointermove", pageHeight + 124, 1));
+      first.dispatchEvent(pointerEvent("pointerup", pageHeight + 124, 0));
     });
     expect(hits.some(hit => hit.pageIndex === 0 && hit.phase === "start")).toBe(true);
     expect(hits.some(hit => hit.pageIndex === 1 && hit.phase === "move")).toBe(true);
