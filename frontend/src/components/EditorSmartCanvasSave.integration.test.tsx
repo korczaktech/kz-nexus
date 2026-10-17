@@ -105,6 +105,7 @@ describe("Editor SmartCanvas save integration", () => {
 
     expect(host.querySelector(".editor-canvas")).toBeNull();
     expect(host.querySelector(".editor-canvas-legacy-fallback")).toBeNull();
+    expect(host.querySelector('.editor-workspace [contenteditable="true"]')).toBeNull();
     // Production SmartCanvas must not mount a hidden native editor projection.
     expect(host.querySelector(".editor-pages-stack")).toBeNull();
     expect(host.querySelector(".rich-editor")).toBeNull();
@@ -203,6 +204,7 @@ describe("Editor SmartCanvas save integration", () => {
     });
     expect(host.querySelector(".editor-canvas")).toBeNull();
     expect(host.querySelector(".editor-pages-stack")).toBeNull();
+    expect(host.querySelector('.editor-workspace [contenteditable="true"]')).toBeNull();
     const editTab = [...host.querySelectorAll<HTMLButtonElement>('nav[aria-label="Guias do editor"] button')]
       .find(button => button.textContent?.trim() === "Editar");
     if (!editTab) throw new Error("Edit ribbon tab was not mounted");
