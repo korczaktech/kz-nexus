@@ -349,7 +349,7 @@ function getSelectedText(nodes: readonly unknown[], selection: Selection): strin
   }).join("\n");
 }
 
-export function SmartCanvasPreview({ document, engine, headerText = "", footerText = "", headerAlign = "left", footerAlign = "left", showPageNumbers = false, trackChangesActive = false, spellcheckEnabled = true, zoom = 100, showFormattingMarks = false, readOnly = false, onHeaderTextChange, onFooterTextChange, onHeaderAlignChange, onFooterAlignChange, onShowPageNumbersChange, onDocumentChange, onStatus }: {
+export function SmartCanvasPreview({ document, engine, headerText = "", footerText = "", headerAlign = "left", footerAlign = "left", showPageNumbers = false, trackChangesActive = false, spellcheckEnabled = true, zoom = 100, showFormattingMarks = false, readOnly = false, onHeaderTextChange, onFooterTextChange, onHeaderAlignChange, onFooterAlignChange, onShowPageNumbersChange, onDocumentChange, onStatus, onSelectionChange }: {
   document: NexusDocument;
   engine: NexusEngineSession;
   headerText?: string;
@@ -369,6 +369,7 @@ export function SmartCanvasPreview({ document, engine, headerText = "", footerTe
   onShowPageNumbersChange?: (value: boolean) => void;
   onDocumentChange: (document: NexusDocument) => void;
   onStatus?: (message: string) => void;
+  onSelectionChange?: (selection: Selection | null) => void;
 }) {
   const [selection, setSelection] = useState<Selection | null>(engine.getSelection() ?? null);
   const selectionRef = useRef<Selection | null>(engine.getSelection() ?? null);
@@ -397,6 +398,7 @@ export function SmartCanvasPreview({ document, engine, headerText = "", footerTe
   const lastCompositionValue = useRef<string | null>(null);
   const preferredVerticalX = useRef<number | null>(null);
   const preferredCellColumn = useRef<number | null>(null);
+  useEffect(() => { onSelectionChange?.(selection); }, [selection, onSelectionChange]);
   const layout = useMemo(() => {
     try { return layoutDocument(document, { metrics: createCanvasLayoutMetrics() }); }
     catch { return null; }
