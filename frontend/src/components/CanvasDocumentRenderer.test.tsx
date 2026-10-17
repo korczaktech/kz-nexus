@@ -198,11 +198,10 @@ describe("CanvasDocumentRenderer visual regression contract", () => {
     });
     const first = canvases[0]!;
     const pointerEvent = (type: string, y: number, buttons: number) => {
-      const event = new Event(type, { bubbles: true });
-      Object.defineProperties(event, {
-        pointerId: { value: 1 }, clientX: { value: 60 }, clientY: { value: y },
-        buttons: { value: buttons }, detail: { value: 1 },
+      const event = new MouseEvent(type, {
+        bubbles: true, cancelable: true, clientX: 60, clientY: y, buttons, detail: 1,
       });
+      Object.defineProperty(event, "pointerId", { value: 1 });
       return event;
     };
     await act(async () => {
