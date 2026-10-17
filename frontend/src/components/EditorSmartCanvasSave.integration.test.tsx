@@ -202,7 +202,7 @@ describe("Editor SmartCanvas save integration", () => {
     });
     const toolsTabs = Array.from(host.querySelectorAll<HTMLButtonElement>(".editor-ribbon-tabs button")).filter(button => button.textContent === "Ferramentas");
     expect(toolsTabs).toHaveLength(2);
-    await act(async () => { toolsTabs.forEach(button => button.click()); });
+    await act(async () => { toolsTabs[0]!.click(); });
     const inputs = Array.from(host.querySelectorAll<HTMLTextAreaElement>('textarea[aria-label="Entrada de texto do SmartCanvas"]'));
     const spellcheckButtons = Array.from(host.querySelectorAll<HTMLButtonElement>('button[aria-label="Verificação ortográfica"]'));
     expect(inputs).toHaveLength(2);
@@ -251,6 +251,9 @@ describe("Editor SmartCanvas save integration", () => {
     });
     const bodies = Array.from(host.querySelectorAll<HTMLElement>(".editor-body"));
     expect(bodies).toHaveLength(2);
+    const viewTab = Array.from(bodies[1]!.querySelectorAll<HTMLButtonElement>(".editor-ribbon-tabs button")).find(button => button.textContent === "Exibir");
+    expect(viewTab).toBeTruthy();
+    await act(async () => { viewTab!.click(); });
     const navigationButtons = Array.from(bodies[1]!.querySelectorAll<HTMLButtonElement>('button[aria-label="Painel de navegação por títulos"]'));
     expect(navigationButtons).toHaveLength(1);
     await act(async () => { navigationButtons[0]!.click(); });
