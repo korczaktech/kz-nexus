@@ -522,6 +522,10 @@ export function SmartCanvasPreview({ document, engine, headerText = "", footerTe
       const cell = collectTableCells(currentDocument.content).find(item => item.tableId === target.blockId && item.cellId === target.cellId);
       dragSelectionAnchor.current = cell ? cellOffsetToPosition(currentDocument.content, cell, target.offset) ?? null : null;
     }
+    // A drag may pass over images, page-breaks, or other non-text blocks.
+    // Ignore those intermediate hits instead of cancelling the active logical
+    // range; the last valid text/cell target remains the selection focus.
+    if (phase === "move" && dragSelectionAnchor.current && target.kind !== "text" && target.kind !== "table-cell") return;
     if ((phase === "move" || phase === "end") && dragSelectionAnchor.current && (target.kind === "text" || target.kind === "table-cell")) {
       let focus: Selection["focus"] | undefined;
       if (target.kind === "text") {
