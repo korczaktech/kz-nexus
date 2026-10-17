@@ -653,6 +653,40 @@ describe("SmartCanvasPreview input integration", () => {
     expect(onDocumentChange).toHaveBeenCalled();
   });
 
+  it("clears every inline mark across a logical multi-block selection", async () => {
+    const document = createDocument({ title: "SmartCanvas clear formatting" });
+    const first = document.content[0];
+    if (!first || first.type !== "paragraph") throw new Error("Expected initial paragraph");
+    first.children[0]!.text = "Bold";
+    first.children[0]!.marks = [{ type: "bold" }];
+    const second = { type: "paragraph" as const, id: "clear-format-second", children: [{ type: "text" as const, id: "clear-format-run", text: "Italic", marks: [{ type: "italic" as const }] }] };
+    document.content.push(second);
+    engine = createEditor({ document });
+    expect(engine.setSelection({
+      anchor: { blockId: first.id, offset: 0 },
+      focus: { blockId: second.id, offset: 6 },
+    }).ok).toBe(true);
+    host = window.document.createElement("div");
+    window.document.body.append(host);
+    root = createRoot(host);
+    await act(async () => {
+      root?.render(createElement(SmartCanvasPreview, {
+        document: engine!.getDocument(),
+        engine: engine!,
+        onDocumentChange: vi.fn(),
+      }));
+    });
+    const clear = host.querySelector('[aria-label="Limpar formatação SmartCanvas"]') as HTMLButtonElement | null;
+    if (!clear) throw new Error("SmartCanvas clear-formatting control was not mounted");
+    await act(async () => { clear.click(); });
+    const updated = engine.getDocument().content;
+    const updatedFirst = updated.find(block => block.id === first.id);
+    const updatedSecond = updated.find(block => block.id === second.id);
+    if (!updatedFirst || updatedFirst.type !== "paragraph" || !updatedSecond || updatedSecond.type !== "paragraph") throw new Error("Expected both paragraphs after clearing formatting");
+    expect(updatedFirst.children.every(run => run.marks.length === 0)).toBe(true);
+    expect(updatedSecond.children.every(run => run.marks.length === 0)).toBe(true);
+  });
+
   it("routes text input, undo, and redo through the canonical engine session", async () => {
     const document = createDocument({ title: "SmartCanvas input integration" });
     engine = createEditor({ document });
