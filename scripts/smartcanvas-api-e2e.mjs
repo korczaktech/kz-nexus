@@ -31,7 +31,7 @@ async function waitForEditorProjection(page, sentinel) {
   } catch (error) {
     const diagnostic = await page.evaluate(() => ({
       canvasLabels: [...document.querySelectorAll(".kortex-canvas-page")].map(canvas => canvas.getAttribute("aria-label")),
-      inputValue: (document.querySelector('textarea[aria-label="Entrada de texto do SmartCanvas"]') as HTMLTextAreaElement | null)?.value ?? null,
+      inputValue: document.querySelector('textarea[aria-label="Entrada de texto do SmartCanvas"]')?.value ?? null,
       status: document.querySelector(".editor-status, [role=status]")?.textContent ?? null,
       bodyText: document.body.innerText.slice(-2500),
     }));
