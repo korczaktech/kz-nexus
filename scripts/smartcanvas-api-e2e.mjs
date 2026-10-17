@@ -20,8 +20,8 @@ async function apiDocument(id, token) {
 }
 
 async function waitForEditorProjection(page, sentinel) {
-  await page.locator(".kortex-canvas-page").first().waitFor({ state: "attached", timeout: 15000 });
   try {
+    await page.locator(".kortex-canvas-page").first().waitFor({ state: "attached", timeout: 15000 });
     await page.waitForFunction(
       value => [...document.querySelectorAll(".kortex-canvas-page")]
         .some(canvas => (canvas.getAttribute("aria-label") ?? "").includes(value)),
