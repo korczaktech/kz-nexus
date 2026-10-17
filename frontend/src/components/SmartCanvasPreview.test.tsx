@@ -659,7 +659,7 @@ describe("SmartCanvasPreview input integration", () => {
     if (!first || first.type !== "paragraph") throw new Error("Expected initial paragraph");
     first.children[0]!.text = "Bold";
     first.children[0]!.marks = [{ type: "bold" }];
-    const second = { type: "paragraph" as const, id: "clear-format-second", children: [{ type: "text" as const, id: "clear-format-run", text: "Italic", marks: [{ type: "italic" as const }] }] };
+    const second = { type: "paragraph" as const, id: "clearfmt_0001", children: [{ type: "text" as const, id: "clearfmt_0002", text: "Italic", marks: [{ type: "italic" as const }] }] };
     document.content.push(second);
     engine = createEditor({ document });
     host = window.document.createElement("div");
