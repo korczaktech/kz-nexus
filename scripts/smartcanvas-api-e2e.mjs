@@ -73,6 +73,7 @@ try {
   assert.ok(created.id, "document creation should return an id");
 
   await page.getByRole("button", { name: "Editar documento", exact: true }).click();
+  assert.equal(await page.locator(".editor-pages-stack, .rich-editor").count(), 0, "production SmartCanvas must not mount the legacy editor DOM");
   const input = page.locator('textarea[aria-label="Entrada de texto do SmartCanvas"]');
   await input.waitFor();
   await input.evaluate(element => element.focus());
