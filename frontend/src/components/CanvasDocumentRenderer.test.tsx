@@ -205,6 +205,7 @@ describe("CanvasDocumentRenderer visual regression contract", () => {
         footerText: "Document footer",
         footerAlign: "right",
         showPageNumbers: true,
+        showFormattingMarks: true,
       }));
     });
 
@@ -222,6 +223,7 @@ describe("CanvasDocumentRenderer visual regression contract", () => {
     expect(layout.pageCount).toBeGreaterThan(1);
     expect(textCalls).toContain("Document header");
     expect(textCalls).toContain("Document footer");
+    expect(textCalls).toContain("¶");
     expect(textCalls.some(value => value.startsWith("Página 1 de "))).toBe(true);
     expect(host.querySelectorAll("canvas.kortex-canvas-page").length).toBe(layout.pageCount);
   });
