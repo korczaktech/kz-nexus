@@ -125,6 +125,58 @@ describe("SmartCanvasPreview input integration", () => {
   });
 
 
+  it("ignores synthetic text input changes when the SmartCanvas document is read-only", async () => {
+    const document = createDocument({ title: "SmartCanvas read-only input event" });
+    const first = document.content[0];
+    if (!first || first.type !== "paragraph") throw new Error("Expected initial paragraph");
+    first.children[0]!.text = "Immutable";
+    engine = createEditor({ document });
+    host = window.document.createElement("div");
+    window.document.body.append(host);
+    root = createRoot(host);
+    await act(async () => {
+      root?.render(createElement(SmartCanvasPreview, {
+        document: engine!.getDocument(),
+        engine: engine!,
+        readOnly: true,
+        onDocumentChange: vi.fn(),
+      }));
+    });
+    const input = host.querySelector('textarea[aria-label="Entrada de texto do SmartCanvas"]') as HTMLTextAreaElement | null;
+    if (!input) throw new Error("SmartCanvas input surface was not mounted");
+    input.value = "Injected text";
+    await act(async () => { input.dispatchEvent(new Event("input", { bubbles: true })); });
+    const unchanged = engine!.getDocument().content[0];
+    if (!unchanged || unchanged.type !== "paragraph") throw new Error("Expected initial paragraph after input");
+    expect(getPlainText(unchanged)).toBe("Immutable");
+  });
+
+  it("ignores composition completion when the SmartCanvas document is read-only", async () => {
+    const document = createDocument({ title: "SmartCanvas read-only composition" });
+    const first = document.content[0];
+    if (!first || first.type !== "paragraph") throw new Error("Expected initial paragraph");
+    first.children[0]!.text = "Immutable";
+    engine = createEditor({ document });
+    host = window.document.createElement("div");
+    window.document.body.append(host);
+    root = createRoot(host);
+    await act(async () => {
+      root?.render(createElement(SmartCanvasPreview, {
+        document: engine!.getDocument(),
+        engine: engine!,
+        readOnly: true,
+        onDocumentChange: vi.fn(),
+      }));
+    });
+    const input = host.querySelector('textarea[aria-label="Entrada de texto do SmartCanvas"]') as HTMLTextAreaElement | null;
+    if (!input) throw new Error("SmartCanvas input surface was not mounted");
+    input.value = "Injected composition";
+    await act(async () => { input.dispatchEvent(new CompositionEvent("compositionend", { bubbles: true, data: "Injected composition" })); });
+    const unchanged = engine!.getDocument().content[0];
+    if (!unchanged || unchanged.type !== "paragraph") throw new Error("Expected initial paragraph after composition");
+    expect(getPlainText(unchanged)).toBe("Immutable");
+  });
+
   it("blocks keyboard mutation when the SmartCanvas document is read-only", async () => {
     const document = createDocument({ title: "SmartCanvas read-only keyboard" });
     const first = document.content[0];
