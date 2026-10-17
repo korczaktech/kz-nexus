@@ -130,6 +130,11 @@ function makeRenderFixture(): NexusDocument {
     id: "renderer-page-break",
     kind: "pageBreak",
   });
+  document.content.push({
+    type: "paragraph",
+    id: "renderer-second-page",
+    children: [{ type: "text", id: "renderer-second-page-run", text: "Text on the second page", marks: [] }],
+  });
   document.resources.push(
     {
       id: "renderer-image-resource",
