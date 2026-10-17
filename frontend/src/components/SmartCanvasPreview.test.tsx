@@ -1262,6 +1262,24 @@ describe("SmartCanvasPreview input integration", () => {
     expect(secondParagraph.children.some(run => run.text === "italic" && run.marks.some(mark => mark.type === "italic"))).toBe(true);
     expect(onDocumentChange).toHaveBeenCalled();
     expect(onStatus).toHaveBeenLastCalledWith("Conteúdo formatado colado na célula com sanitização.");
+
+    const clear = host.querySelector('[aria-label="Limpar formatação SmartCanvas"]') as HTMLButtonElement | null;
+    if (!clear) throw new Error("SmartCanvas clear-formatting control was not mounted");
+    await act(async () => {
+      input.dispatchEvent(new KeyboardEvent("keydown", { key: "Home", bubbles: true }));
+      input.dispatchEvent(new KeyboardEvent("keydown", { key: "End", shiftKey: true, bubbles: true }));
+    });
+    await act(async () => { clear.click(); });
+    const clearedTable = engine.getDocument().content.find(block => block.type === "table");
+    if (!clearedTable || clearedTable.type !== "table") throw new Error("Expected table after clearing cell formatting");
+    const clearedCell = clearedTable.children[0]?.children[0];
+    const clearedFirst = clearedCell?.children[0];
+    const clearedSecond = clearedCell?.children[1];
+    if (!clearedFirst || clearedFirst.type !== "paragraph" || !clearedSecond || clearedSecond.type !== "paragraph") {
+      throw new Error("Expected both cell paragraphs after clearing formatting");
+    }
+    expect(clearedFirst.children.some(run => run.text === "Bold" && run.marks.some(mark => mark.type === "bold"))).toBe(true);
+    expect(clearedSecond.children.every(run => run.marks.every(mark => mark.type !== "italic"))).toBe(true);
   });
 
   it("pastes lists and tables into a cell as structured text instead of dropping their content", async () => {
