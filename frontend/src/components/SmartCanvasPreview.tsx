@@ -359,7 +359,7 @@ function getSelectedText(nodes: readonly unknown[], selection: Selection): strin
   }).join("\n");
 }
 
-export function SmartCanvasPreview({ document, engine, headerText = "", footerText = "", headerAlign = "left", footerAlign = "left", showPageNumbers = false, trackChangesActive = false, spellcheckEnabled = true, zoom = 100, showFormattingMarks = false, readOnly = false, onHeaderTextChange, onFooterTextChange, onHeaderAlignChange, onFooterAlignChange, onShowPageNumbersChange, onDocumentChange, onStatus, onSelectionChange }: {
+export function SmartCanvasPreview({ document, engine, headerText = "", footerText = "", headerAlign = "left", footerAlign = "left", showPageNumbers = false, trackChangesActive = false, spellcheckEnabled = true, zoom = 100, showFormattingMarks = false, readOnly = false, onHeaderTextChange, onFooterTextChange, onHeaderAlignChange, onFooterAlignChange, onShowPageNumbersChange, onDocumentChange, onStatus, onSelectionChange, externalSelection }: {
   document: NexusDocument;
   engine: NexusEngineSession;
   headerText?: string;
@@ -380,6 +380,7 @@ export function SmartCanvasPreview({ document, engine, headerText = "", footerTe
   onDocumentChange: (document: NexusDocument) => void;
   onStatus?: (message: string) => void;
   onSelectionChange?: (selection: Selection | null) => void;
+  externalSelection?: Selection | null;
 }) {
   const [selection, setSelection] = useState<Selection | null>(engine.getSelection() ?? null);
   const selectionRef = useRef<Selection | null>(engine.getSelection() ?? null);
@@ -409,6 +410,11 @@ export function SmartCanvasPreview({ document, engine, headerText = "", footerTe
   const preferredVerticalX = useRef<number | null>(null);
   const preferredCellColumn = useRef<number | null>(null);
   useEffect(() => { onSelectionChange?.(selection); }, [selection, onSelectionChange]);
+  useEffect(() => {
+    if (externalSelection === undefined) return;
+    selectionRef.current = externalSelection;
+    setSelection(externalSelection);
+  }, [externalSelection]);
   const layout = useMemo(() => {
     try { return layoutDocument(document, { metrics: createCanvasLayoutMetrics() }); }
     catch (error) {
