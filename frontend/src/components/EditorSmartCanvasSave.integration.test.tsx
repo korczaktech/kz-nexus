@@ -203,6 +203,10 @@ describe("Editor SmartCanvas save integration", () => {
     });
     expect(host.querySelector(".editor-canvas")).toBeNull();
     expect(host.querySelector(".editor-pages-stack")).toBeNull();
+    const editTab = [...host.querySelectorAll<HTMLButtonElement>('nav[aria-label="Guias do editor"] button')]
+      .find(button => button.textContent?.trim() === "Editar");
+    if (!editTab) throw new Error("Edit ribbon tab was not mounted");
+    await act(async () => { editTab.click(); });
     const openFind = host.querySelector('button[aria-label="Localizar"]') as HTMLButtonElement | null;
     if (!openFind) throw new Error("Find command was not mounted");
     await act(async () => { openFind.click(); });
