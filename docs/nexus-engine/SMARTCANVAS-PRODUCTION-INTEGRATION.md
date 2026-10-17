@@ -179,3 +179,25 @@ Os incrementos posteriores em seleção e colagem estão sendo revalidados no CI
 3. Ainda falta comparação visual de regressão com documentos reais e validação manual de IME em navegadores/dispositivos suportados.
 4. A baseline automatizada não substitui medições físicas em Chromebook nem prova o alvo de memória de 100 MB.
 5. O SmartCanvas permanece opt-in. Não remover o fallback nem declarar a migração integral antes de validar o SHA atual e fechar os critérios restantes.
+
+
+## Revalidação da cabeça atual — 2026-10-17
+
+**Commit validado:** [92f0605a217b69b2d84142537e84e565154b25be](https://github.com/korczaktech/kz-nexus/commit/92f0605a217b69b2d84142537e84e565154b25be).
+
+- [SmartCanvas validation](https://github.com/korczaktech/kz-nexus/actions/runs/39078368058): sucesso.
+- [Kortex validation](https://github.com/korczaktech/kz-nexus/actions/runs/39078368020): sucesso.
+- [SmartCanvas Memory Baseline](https://github.com/korczaktech/kz-nexus/actions/runs/39078368026): sucesso.
+- [Deploy GitHub Pages](https://github.com/korczaktech/kz-nexus/actions/runs/39078368040): sucesso.
+
+O incremento de teste nesse SHA cobre o mapeamento de faixas lógicas entre parágrafos em células distintas, nos sentidos direto e reverso, preservando a identidade de cada parágrafo. **Ele não implementa arraste visual entre células nem altera o controlador de edição de célula.** A integração E2E com API real foi aprovada em um SHA anterior (768747e); não houve workflow de API integration associado ao SHA 92f0605, portanto essa evidência não deve ser atribuída automaticamente à cabeça atual.
+
+### Bloqueios funcionais ainda abertos
+
+1. Seleção por arraste e edição contínua entre células ainda não estão implementadas na interface; o teste acima valida somente o helper de mapeamento lógico.
+2. O modelo canônico da célula não comporta listas/tabelas aninhadas editáveis; a colagem dessas estruturas ainda é achatada em texto estruturado.
+3. A paridade das ferramentas e caminhos de edição precisa de auditoria final; SmartCanvas continua opt-in e o fallback legado não deve ser removido.
+4. Faltam regressão visual manual em documentos reais e validação manual de IME nos navegadores/dispositivos suportados.
+5. A baseline automatizada não prova o alvo de 100 MB em Chromebook físico.
+
+**Decisão de aceite:** CI verde confirma os jobs executados, não conclusão integral da Etapa 3. Manter a migração aberta até resolver os bloqueios funcionais e executar a validação manual pendente.
