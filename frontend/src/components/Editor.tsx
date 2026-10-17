@@ -574,7 +574,40 @@ export function Editor({document,versions,onSave,onClose,onConflict}:{document:D
  function insertPageNumber(){setShowPageNumbers(true);setFooterText(old=>old||'Página');setMessage('Numeração de páginas ativada para impressão; os números são gerados na impressão.')}
  function insertDateTime(){const format=window.prompt('Formato: data, hora ou data e hora','data e hora');if(format===null)return;const now=new Date();const value=format.toLowerCase().includes('hora')?format.toLowerCase().includes('data')?now.toLocaleString('pt-BR'):now.toLocaleTimeString('pt-BR'):now.toLocaleDateString('pt-BR');exec('insertText',value)}
  function insertHeaderFooter(){const kind=window.prompt('Editar: cabeçalho ou rodapé','cabeçalho');if(kind===null)return;const value=window.prompt('Texto de '+kind+':',kind.toLowerCase().includes('rod')?footerText:headerText);if(value===null)return;if(kind.toLowerCase().includes('rod'))setFooterText(value);else setHeaderText(value);setMessage('Texto de '+kind+' atualizado.')}
- function insertInternalLink(){if(readOnly)return;const engine=nexusEngineRef.current;const context=engineContext();if(!engine||!context)return;const headings=engine.getDocument().content.filter(block=>block.type==='heading');if(!headings.length){window.alert('Crie um título primeiro para poder criar um link interno.');return}const listing=headings.map((h,i)=>(i+1)+'. '+getPlainText(h)||'Título sem texto').join('\n');const picked=window.prompt('Digite o número de título de destino:\n'+listing,'1');if(picked===null)return;const heading=headings[Number(picked)-1];if(!heading){window.alert('Número de título inválido.');return}const label=window.prompt('Texto do link:',getPlainText(heading)||'Ir para título');if(label===null||!label)return;if(context.blockIndex!==context.endBlockIndex){setMessage('Selecione um intervalo dentro de um único parágrafo para inserir o link interno.');return}const start=Math.min(context.startOffset,context.endOffset),end=Math.max(context.startOffset,context.endOffset);const command=start===end?insertText({blockId:context.block.id,offset:start,text:label}):replaceRange({blockId:context.block.id,start,end,text:label});if(commitEngineCommands([command,applyMark({blockId:context.block.id,start,end:start+label.length,mark:{type:'link',value:'#'+heading.id}})])){setMessage('Link interno criado pelo motor Nexus.')}}
+ function insertInternalLink(){
+  if(readOnly)return;
+  const engine=nexusEngineRef.current,context=engineContext();
+  if(!engine||!context)return;
+  const headings=engine.getDocument().content.filter(block=>block.type==='heading');
+  if(!headings.length){window.alert('Crie um título primeiro para poder criar um link interno.');return}
+  const listing=headings.map((heading,index)=>(index+1)+'. '+(getPlainText(heading)||'Título sem texto')).join('\n');
+  const picked=window.prompt('Digite o número de título de destino:\n'+listing,'1');
+  if(picked===null)return;
+  const heading=headings[Number(picked)-1];
+  if(!heading){window.alert('Número de título inválido.');return}
+  const startOffset=Math.min(context.startOffset,context.endOffset);
+  const endOffset=Math.max(context.startOffset,context.endOffset);
+  const href='#'+heading.id;
+  if(context.blockIndex!==context.endBlockIndex){
+   const selection=engine.getSelection();
+   const ranges=selection?getSmartCanvasTextSelectionRanges(engine.getDocument().content,selection):null;
+   if(!ranges){setMessage('A seleção atual não pode ser mapeada para criar o link interno.');return}
+   const commands=ranges.filter(range=>range.end>range.start).map(range=>applyMark({
+    blockId:range.block.id,start:range.start,end:range.end,mark:{type:'link',value:href},
+   }));
+   if(!commands.length){setMessage('Selecione o texto que deve receber o link interno.');return}
+   if(commitEngineCommands(commands,'formatting'))setMessage('Link interno aplicado à seleção entre blocos.');
+   return;
+  }
+  const label=window.prompt('Texto do link:',getPlainText(heading)||'Ir para título');
+  if(label===null||!label)return;
+  const command=startOffset===endOffset
+   ?insertText({blockId:context.block.id,offset:startOffset,text:label})
+   :replaceRange({blockId:context.block.id,start:startOffset,end:endOffset,text:label});
+  if(commitEngineCommands([command,applyMark({
+   blockId:context.block.id,start:startOffset,end:startOffset+label.length,mark:{type:'link',value:href},
+  })]))setMessage('Link interno criado pelo motor Nexus.');
+ }
  function toggleTextCase(){
   let original='';
   let legacyRange:Range|null=null;
