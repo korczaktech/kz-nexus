@@ -22,6 +22,7 @@ import {lineEndOffset,lineStartOffset} from './smartCanvasTextOffsets';
 import {markdownToHtml} from './markdown';
 import {SmartCanvasPreview,createCanvasLayoutMetrics} from './SmartCanvasPreview';
 import {wordRangeAt} from './smartCanvasTextOffsets';
+import {convertTextCase} from './editorTextCase';
 
 type RibbonGlyphName='bold'|'indent-more'|'indent-increase'|'clear-format'|'zoom-out'|'zoom-in'|'pages'|'reading'|'link'|'image'|'table'|'rule'|'page-break'|'text-color'|'highlight'|'word-count'|'import-doc'|'extension-export'|'extension-image'|'exit'|'print-document'|'share-document'|'document-properties'|'password-shield'|'compare-versions'|'cut-selection'|'copy-selection'|'paste-selection'|'paste-plain'|'find-next'|'find-previous'|'replace-next'|'replace-all'|'repeat-action'|'select-word'|'select-line'|'select-paragraph'|'select-block'|'font-increase'|'font-decrease'|'superscript'|'subscript'|'format-painter'|'line-spacing'|'paragraph-spacing'|'first-line-indent'|'hanging-indent'|'paragraph-border'|'paragraph-fill'|'custom-style';
 function RibbonGlyph({name}:{name:RibbonGlyphName}){
@@ -554,12 +555,7 @@ export function Editor({document,versions,onSave,onClose,onConflict}:{document:D
   }
   const choice=window.prompt('Digite: MAIÚSCULAS, minúsculas ou Título','MAIÚSCULAS');
   if(!choice)return;
-  const normalizedChoice=choice.toLocaleLowerCase('pt-BR');
-  const result=normalizedChoice.includes('min')
-    ? original.toLocaleLowerCase('pt-BR')
-    : normalizedChoice.includes('tít')
-      ? original.toLocaleLowerCase('pt-BR').replace(/(^|[.!?]\s+|\n+)(\p{L})/gu,(_,prefix,letter)=>prefix+letter.toLocaleUpperCase('pt-BR'))
-      : original.toLocaleUpperCase('pt-BR');
+  const result=convertTextCase(original,choice);
   if(smartCanvasEnabled){
    // Reuse the engine's structural replacement path. It edits logical ranges,
    // including table/list descendants, without using DOM Range or execCommand.
