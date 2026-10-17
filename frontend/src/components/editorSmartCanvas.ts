@@ -152,7 +152,9 @@ export function restoreSmartCanvasSelection(_engine: EngineInstance, root: HTMLE
   diagnostics.restores += 1;
   // Focus the SmartCanvas input surface only. Never restore a browser Range
   // into the hidden legacy contentEditable projection.
-  const input = root.ownerDocument.querySelector<HTMLTextAreaElement>('textarea[aria-label="Entrada de texto do SmartCanvas"]');
+  // Scope focus to this editor instance. A document-wide query can focus a
+  // different SmartCanvas when multiple editors/previews are mounted.
+  const input = root.querySelector<HTMLTextAreaElement>('textarea[aria-label="Entrada de texto do SmartCanvas"]');
   input?.focus({ preventScroll: true });
 }
 
