@@ -169,6 +169,52 @@ describe("CanvasDocumentRenderer visual regression contract", () => {
     imageSpy = undefined;
   });
 
+  it("continues pointer drag hit-testing on the page under the pointer", async () => {
+    const document = makeRenderFixture();
+    const layout = layoutDocument(document);
+    expect(layout.pageCount).toBeGreaterThan(1);
+    const context = makeCanvasContext([]);
+    contextSpy = vi.spyOn(HTMLCanvasElement.prototype, "getContext").mockImplementation(() => context);
+    const hits: Array<{ pageIndex: number; phase?: string }> = [];
+    host = window.document.createElement("div");
+    window.document.body.append(host);
+    root = createRoot(host);
+    await act(async () => {
+      root?.render(createElement(CanvasDocumentRenderer, {
+        document,
+        layout,
+        onHitTest: (target, _clickCount, phase) => hits.push({ pageIndex: target.pageIndex, phase }),
+      }));
+    });
+    const canvases = Array.from(host.querySelectorAll<HTMLCanvasElement>("canvas.kortex-canvas-page"));
+    const pageHeight = layout.pages[0]!.height * 96 / 72;
+    const pageWidth = layout.pages[0]!.width * 96 / 72;
+    canvases.forEach((canvas, index) => {
+      vi.spyOn(canvas, "getBoundingClientRect").mockReturnValue({
+        x: 0, y: index * (pageHeight + 24), left: 0, right: pageWidth,
+        top: index * (pageHeight + 24), bottom: index * (pageHeight + 24) + pageHeight,
+        width: pageWidth, height: pageHeight, toJSON: () => ({}),
+      } as DOMRect);
+    });
+    const first = canvases[0]!;
+    const pointerEvent = (type: string, y: number, buttons: number) => {
+      const event = new Event(type, { bubbles: true });
+      Object.defineProperties(event, {
+        pointerId: { value: 1 }, clientX: { value: 60 }, clientY: { value: y },
+        buttons: { value: buttons }, detail: { value: 1 },
+      });
+      return event;
+    };
+    await act(async () => {
+      first.dispatchEvent(pointerEvent("pointerdown", 100, 1));
+      first.dispatchEvent(pointerEvent("pointermove", pageHeight + 100, 1));
+      first.dispatchEvent(pointerEvent("pointerup", pageHeight + 100, 0));
+    });
+    expect(hits.some(hit => hit.pageIndex === 0 && hit.phase === "start")).toBe(true);
+    expect(hits.some(hit => hit.pageIndex === 1 && hit.phase === "move")).toBe(true);
+    expect(hits.some(hit => hit.pageIndex === 1 && hit.phase === "end")).toBe(true);
+  });
+
   it("draws text, table cells, semantic objects, header, footer, and page numbers", async () => {
     const document = makeRenderFixture();
     const imageSources: string[] = [];
