@@ -431,6 +431,8 @@ export function Editor({document,versions,onSave,onClose,onConflict}:{document:D
    }
    return sawText;
   };
+  const context=engine&&selection?readSmartCanvasSelection(engine):null;
+  const align=context?.block.align??'start';
   const next:Record<string,boolean>={
    bold:active('bold'),
    italic:active('italic'),
@@ -438,6 +440,12 @@ export function Editor({document,versions,onSave,onClose,onConflict}:{document:D
    strikeThrough:active('strike'),
    superscript:active('superscript'),
    subscript:active('subscript'),
+   insertUnorderedList:context?.list?.type==='bulletList',
+   insertOrderedList:context?.list?.type==='orderedList',
+   justifyLeft:!!context&&align==='start',
+   justifyCenter:!!context&&align==='center',
+   justifyRight:!!context&&align==='end',
+   justifyFull:!!context&&align==='justify',
   };
   setCommandStates(previous=>{
    if(Object.entries(next).every(([key,value])=>previous[key]===value))return previous;
