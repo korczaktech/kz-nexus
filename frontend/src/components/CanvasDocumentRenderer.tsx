@@ -16,6 +16,7 @@ type CanvasPageProps = {
   headerAlign: "left" | "center" | "right";
   footerAlign: "left" | "center" | "right";
   showPageNumbers: boolean;
+  showFormattingMarks: boolean;
   layout: LayoutResult;
   onHitTest?: (target: SmartCanvasHitTarget, clickCount?: number) => void;
   selection?: Selection;
@@ -110,7 +111,21 @@ function findTopLevelBlock(document: NexusDocument, id: string): Block | undefin
   return visit(document.content);
 }
 
-function drawBlock(ctx: CanvasRenderingContext2D, block: LayoutBlock, document: NexusDocument, imageCache: Map<string, HTMLImageElement>): void {
+function drawParagraphMark(ctx: CanvasRenderingContext2D, line: LayoutLine): void {
+  const runs = line.runs?.length ? line.runs : [{ text: line.text, fontSize: 11, fontFamily: "Arial", marks: [] as Mark[], width: line.width }];
+  let textWidth = 0;
+  for (const run of runs) { ctx.font = markedFont(run.marks, run.fontSize, run.fontFamily); textWidth += ctx.measureText(run.text).width; }
+  const availableWidth = Math.max(0, line.width * PT_TO_CSS_PX);
+  let x = line.x * PT_TO_CSS_PX;
+  if (line.align === "center") x += Math.max(0, (availableWidth - textWidth) / 2);
+  else if (line.align === "end") x += Math.max(0, availableWidth - textWidth);
+  x += textWidth + 3;
+  const top = line.y * PT_TO_CSS_PX;
+  const baseline = top + Math.min(line.height * PT_TO_CSS_PX * 0.82, line.height * PT_TO_CSS_PX - 1);
+  ctx.save(); ctx.font = "10px Arial, sans-serif"; ctx.fillStyle = "#98a2b3"; ctx.textBaseline = "alphabetic"; ctx.fillText("¶", x, baseline); ctx.restore();
+}
+
+function drawBlock(ctx: CanvasRenderingContext2D, block: LayoutBlock, document: NexusDocument, imageCache: Map<string, HTMLImageElement>, showFormattingMarks = false): void {
   const x = block.rect.x * PT_TO_CSS_PX;
   const y = block.rect.y * PT_TO_CSS_PX;
   const width = block.rect.width * PT_TO_CSS_PX;
@@ -251,7 +266,8 @@ function drawBlock(ctx: CanvasRenderingContext2D, block: LayoutBlock, document: 
     }
   }
 
-  for (const child of block.children ?? []) drawBlock(ctx, child, document, imageCache);
+  if (showFormattingMarks && (model?.type === "paragraph" || model?.type === "heading") && block.lines.length) drawParagraphMark(ctx, block.lines[block.lines.length - 1]!);
+  for (const child of block.children ?? []) drawBlock(ctx, child, document, imageCache, showFormattingMarks);
 }
 
 function pageText(page: LayoutPage): string {
@@ -266,7 +282,7 @@ function pageText(page: LayoutPage): string {
   return parts.join(" ").replace(/\s+/g, " ").trim();
 }
 
-export function CanvasPage({ page, pageCount, document, headerText, footerText, headerAlign, footerAlign, showPageNumbers, layout, onHitTest, selection, showCaret = false, activeCellId, activeBlockId, activeCellSelection }: CanvasPageProps) {
+export function CanvasPage({ page, pageCount, document, headerText, footerText, headerAlign, footerAlign, showPageNumbers, showFormattingMarks, layout, onHitTest, selection, showCaret = false, activeCellId, activeBlockId, activeCellSelection }: CanvasPageProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const overlayRef = useRef<HTMLCanvasElement>(null);
   const cssWidth = page.width * PT_TO_CSS_PX;
@@ -334,7 +350,7 @@ export function CanvasPage({ page, pageCount, document, headerText, footerText, 
         context.fillText(headerText, headerX * PT_TO_CSS_PX, headerY * PT_TO_CSS_PX, header.width * PT_TO_CSS_PX);
         context.textAlign = "left";
       }
-      for (const block of page.blocks) drawBlock(context, block, document, imageCache);
+      for (const block of page.blocks) drawBlock(context, block, document, imageCache, showFormattingMarks);
       if (footerText || showPageNumbers) {
         context.font = `9pt Arial, sans-serif`;
         context.fillStyle = "#667085";
@@ -520,7 +536,7 @@ export function CanvasPage({ page, pageCount, document, headerText, footerText, 
   </div>;
 }
 
-export function CanvasDocumentRenderer({ layout, document, headerText = "", footerText = "", headerAlign = "left", footerAlign = "left", showPageNumbers = false, onHitTest, selection, showCaret = false, activeCellId, activeBlockId, activeCellSelection }: {
+export function CanvasDocumentRenderer({ layout, document, headerText = "", footerText = "", headerAlign = "left", footerAlign = "left", showPageNumbers = false, showFormattingMarks = false, onHitTest, selection, showCaret = false, activeCellId, activeBlockId, activeCellSelection }: {
   layout: LayoutResult;
   document: NexusDocument;
   headerText?: string;
@@ -528,6 +544,7 @@ export function CanvasDocumentRenderer({ layout, document, headerText = "", foot
   headerAlign?: "left" | "center" | "right";
   footerAlign?: "left" | "center" | "right";
   showPageNumbers?: boolean;
+  showFormattingMarks?: boolean;
   onHitTest?: (target: SmartCanvasHitTarget, clickCount?: number) => void;
   selection?: Selection;
   showCaret?: boolean;
@@ -560,6 +577,7 @@ export function CanvasDocumentRenderer({ layout, document, headerText = "", foot
       headerAlign={headerAlign}
       footerAlign={footerAlign}
       showPageNumbers={showPageNumbers}
+      showFormattingMarks={showFormattingMarks}
     />)}
   </div>;
 }
