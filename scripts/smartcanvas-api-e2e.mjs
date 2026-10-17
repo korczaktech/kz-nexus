@@ -101,6 +101,7 @@ try {
     document.dispatchEvent(new Event("visibilitychange"));
     delete document.visibilityState;
   });
+  page.once("dialog", dialog => dialog.accept());
   await page.locator(".editor-head .editor-actions button").filter({ hasText: "Sair" }).click({ force: true });
   await page.getByRole("button", { name: "Editar documento", exact: true }).waitFor();
   await page.getByRole("button", { name: "Editar documento", exact: true }).click();
