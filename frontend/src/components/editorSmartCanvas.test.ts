@@ -1,5 +1,6 @@
 // @vitest-environment happy-dom
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { createDocument, createEditor } from "../../../packages/engine/src/index";
 import {
   collectSmartCanvasTextBlocks,
   findSmartCanvasTextMatches,
@@ -9,6 +10,7 @@ import {
   isProductionSmartCanvasEnabled,
   resetSmartCanvasDiagnostics,
   restoreSmartCanvasSelection,
+  readSmartCanvasSelection,
 } from "./editorSmartCanvas";
 
 describe("production SmartCanvas migration gate", () => {
@@ -121,6 +123,28 @@ describe("production SmartCanvas migration gate", () => {
     })?.map(range => [range.block.id, range.start, range.end])).toEqual([
       ["first", 5, 5], ["cell-p", 0, 2],
     ]);
+  });
+
+  it("reads the logical selection without requiring a legacy DOM root", () => {
+    const document = createDocument({ title: "Logical selection without legacy DOM" });
+    const paragraph = document.content[0];
+    if (!paragraph || paragraph.type !== "paragraph") throw new Error("Expected initial paragraph");
+    paragraph.children[0]!.text = "Canonical";
+    const engine = createEditor({ document });
+    try {
+      engine.setSelection({
+        anchor: { blockId: paragraph.id, offset: 2 },
+        focus: { blockId: paragraph.id, offset: 6 },
+      });
+      const context = readSmartCanvasSelection(engine);
+      expect(context?.anchorBlockId).toBe(paragraph.id);
+      expect(context?.anchorOffset).toBe(2);
+      expect(context?.focusBlockId).toBe(paragraph.id);
+      expect(context?.focusOffset).toBe(6);
+      expect(getSmartCanvasDiagnostics().successfulReads).toBe(1);
+    } finally {
+      engine.dispose();
+    }
   });
 
   it("restores focus only inside the editor instance being restored", () => {
