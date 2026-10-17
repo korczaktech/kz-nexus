@@ -260,6 +260,11 @@ describe("Editor SmartCanvas save integration", () => {
     expect(sideBySideButton).not.toBeNull();
     await act(async () => { sideBySideButton!.click(); });
     expect(targetBody.classList.contains("kz-pages-side-by-side")).toBe(true);
+    const fitWidthButton = targetRoot.querySelector<HTMLButtonElement>('button[aria-label="Ajustar largura da página"]');
+    expect(fitWidthButton).not.toBeNull();
+    await act(async () => { fitWidthButton!.click(); });
+    const canvasViewport = Array.from(targetRoot.querySelectorAll<HTMLElement>(".kz-smartcanvas-experiment div")).find(element => element.style.maxHeight === "560px");
+    expect(canvasViewport?.style.zoom).toMatch(/%$/);
     const navigationButtons = Array.from(targetRoot.querySelectorAll<HTMLButtonElement>('button[aria-label="Painel de navegação por títulos"]'));
     expect(navigationButtons).toHaveLength(1);
     await act(async () => { navigationButtons[0]!.click(); });
