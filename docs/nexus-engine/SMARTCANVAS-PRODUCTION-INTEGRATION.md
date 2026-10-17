@@ -121,3 +121,34 @@ Portanto, os testes automatizados do incremento estão verdes, mas não há auto
 O aceite automatizado das Fases 2A e 2B está registrado em [SMARTCANVAS-PHASE-2-ACCEPTANCE.md](SMARTCANVAS-PHASE-2-ACCEPTANCE.md). O código em `df745b9081e59c7ba3a30210010b0d1086f40567` passou em SmartCanvas validation, Kortex validation, API/MongoDB/Playwright E2E, baseline e publicação. O E2E real verificou persistência HTML/NSX, recuperação de rascunho, exportação DOCX/PDF, autosave e conflito de versão; o teste de componente cobre os estados de salvamento e falha com preservação do rascunho.
 
 Esta atualização substitui os registros anteriores que indicavam o E2E real como pendente. Ainda não há paridade universal: listas/tabelas coladas em células viram texto estruturado, operações que cruzam estruturas aninhadas têm limites e o IME não foi validado manualmente em todos os navegadores. SmartCanvas segue opt-in; não remover o legado nem iniciar otimização de memória nesta fase.
+
+
+## Atualização incremental — 2026-10-17
+
+**Código consultado:** [a6882feb013c9086c38245e67f966f19706cd531](https://github.com/korczaktech/kz-nexus/commit/a6882feb013c9086c38245e67f966f19706cd531). Esta atualização registra progresso incremental; não representa aceite final da migração.
+
+- No modo `?smartCanvas=1`, o componente não monta mais a projeção de páginas `.editor-pages-stack` do editor legado. A integração de salvamento verifica que não existe `.rich-editor` legado montado; a superfície SmartCanvas continua montada e salva o documento canônico.
+- A seleção lógica do motor pode ser consultada sem exigir uma raiz DOM legada. `engineContext()` usa esse caminho no modo SmartCanvas.
+- Os caminhos de formatação inline, links, remoção de formatação e comentários deixam de exigir uma referência ao DOM legado antes de executar os comandos do motor.
+- A conversão de maiúsculas/minúsculas/título usa as faixas de seleção lógicas, incluindo texto em listas e células de tabelas; a transformação textual foi extraída e ganhou testes de locale e limites de parágrafo.
+- O SmartCanvas comunica mudanças de seleção à ribbon externa, sincronizando estados de formatação para seleções de um ou vários blocos.
+- Foram adicionados testes para colagem, recorte e teclado em modo somente leitura, seleção lógica sem raiz DOM e ausência da projeção legada no modo SmartCanvas.
+
+### Validação automatizada registrada
+
+No commit `a6882feb`, os workflows **SmartCanvas validation** e **Kortex validation** passaram. A suíte frontend registrou **207 testes em 32 arquivos** e a suíte do motor **211 testes em 27 arquivos**. A integração real com API, a baseline de memória e a publicação ainda estavam em execução na consulta deste registro; não são considerados aprovados por inferência.
+
+- [SmartCanvas validation](https://github.com/korczaktech/kz-nexus/actions/runs/39042467278)
+- [Kortex validation](https://github.com/korczaktech/kz-nexus/actions/runs/39042467237)
+- [SmartCanvas API integration](https://github.com/korczaktech/kz-nexus/actions/runs/39042467239)
+- [SmartCanvas Memory Baseline](https://github.com/korczaktech/kz-nexus/actions/runs/39042467320)
+
+### Bloqueios para aceite integral
+
+1. A célula de tabela ainda aceita apenas parágrafos no modelo canônico. Por isso, colar listas e tabelas em células converte sua estrutura em texto legível, em vez de criar listas/tabelas aninhadas editáveis.
+2. Ainda é necessária auditoria completa de paridade das ferramentas avançadas e de qualquer caminho que dependa do editor DOM fora do modo opt-in.
+3. O ciclo IME foi coberto em testes de componente, mas não validado manualmente em todos os navegadores/dispositivos suportados.
+4. Falta comparação visual manual de paginação, margens, cabeçalho/rodapé, tabelas, imagens e objetos em documentos reais.
+5. O modo SmartCanvas continua protegido por `?smartCanvas=1`; não ativar por padrão nem considerar a migração integralmente aceita até concluir os bloqueios e os testes de integração/manuais.
+
+A remoção da projeção DOM no modo opt-in é um avanço estrutural, mas não equivale à remoção de todos os caminhos legados nem à paridade universal de produto.
