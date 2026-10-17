@@ -349,7 +349,7 @@ function getSelectedText(nodes: readonly unknown[], selection: Selection): strin
   }).join("\n");
 }
 
-export function SmartCanvasPreview({ document, engine, headerText = "", footerText = "", headerAlign = "left", footerAlign = "left", showPageNumbers = false, trackChangesActive = false, spellcheckEnabled = true, zoom = 100, readOnly = false, onHeaderTextChange, onFooterTextChange, onHeaderAlignChange, onFooterAlignChange, onShowPageNumbersChange, onDocumentChange, onStatus }: {
+export function SmartCanvasPreview({ document, engine, headerText = "", footerText = "", headerAlign = "left", footerAlign = "left", showPageNumbers = false, trackChangesActive = false, spellcheckEnabled = true, zoom = 100, showFormattingMarks = false, readOnly = false, onHeaderTextChange, onFooterTextChange, onHeaderAlignChange, onFooterAlignChange, onShowPageNumbersChange, onDocumentChange, onStatus }: {
   document: NexusDocument;
   engine: NexusEngineSession;
   headerText?: string;
@@ -360,6 +360,7 @@ export function SmartCanvasPreview({ document, engine, headerText = "", footerTe
   trackChangesActive?: boolean;
   spellcheckEnabled?: boolean;
   zoom?: number;
+  showFormattingMarks?: boolean;
   readOnly?: boolean;
   onHeaderTextChange?: (value: string) => void;
   onFooterTextChange?: (value: string) => void;
@@ -1858,7 +1859,7 @@ export function SmartCanvasPreview({ document, engine, headerText = "", footerTe
       handleInput(event.clipboardData.getData("text/plain"));
     }} onCompositionStart={() => { composing.current = true; lastCompositionValue.current = null; }} onCompositionEnd={event => { const value = event.currentTarget.value; composing.current = false; lastCompositionValue.current = value || null; handleInput(value); }} style={{ position: "absolute", width: 1, height: 1, opacity: 0, padding: 0, border: 0, overflow: "hidden", left: 0, bottom: 0, resize: "none" }} />
     {layout ? <div style={{ maxHeight: 560, overflow: "auto", background: "#e5e7eb", borderRadius: 8, zoom: `${Math.max(25, Math.min(300, zoom))}%` }}>
-      <CanvasDocumentRenderer layout={layout} document={document} headerText={headerText} footerText={footerText} headerAlign={headerAlign} footerAlign={footerAlign} showPageNumbers={showPageNumbers} selection={selection || undefined} showCaret={!!selection && !activeCell} activeCellId={activeCell?.cellId} activeCellSelection={activeCell || undefined} activeBlockId={activeBlockId || undefined} onHitTest={handleHit} />
+      <CanvasDocumentRenderer layout={layout} document={document} headerText={headerText} footerText={footerText} headerAlign={headerAlign} footerAlign={footerAlign} showPageNumbers={showPageNumbers} showFormattingMarks={showFormattingMarks} selection={selection || undefined} showCaret={!!selection && !activeCell} activeCellId={activeCell?.cellId} activeCellSelection={activeCell || undefined} activeBlockId={activeBlockId || undefined} onHitTest={handleHit} />
     </div> : <p role="status">Aguardando documento/layout do motor.</p>}
   </section>;
 }
