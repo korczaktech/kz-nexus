@@ -132,14 +132,13 @@ export function isProductionSmartCanvasEnabled(search?: string): boolean {
 }
 
 /**
- * Selection boundary for the production SmartCanvas migration.
- * It currently delegates to the proven DOM-to-model adapter; this creates one
- * explicit seam for replacing DOM selection with the logical selection model
- * without duplicating or taking ownership of the Nexus document.
+ * Reads the current logical selection from the canonical Nexus engine.
+ * This path does not inspect window.getSelection(), DOM Range, or a legacy
+ * editor root; SmartCanvas selection is already represented by block IDs and
+ * UTF-16 offsets in the engine session.
  */
 export function readSmartCanvasSelection(
   engine: EngineInstance,
-  _root?: HTMLElement,
 ): SmartCanvasSelectionContext | null {
   diagnostics.reads += 1;
   const context = getEngineLogicalContext(engine);
