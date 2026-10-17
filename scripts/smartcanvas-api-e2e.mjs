@@ -21,7 +21,8 @@ async function apiDocument(id, token) {
 
 async function waitForEditorProjection(page, sentinel) {
   await page.waitForFunction(
-    value => document.querySelector(".rich-editor")?.textContent?.includes(value) ?? false,
+    value => [...document.querySelectorAll(".kortex-canvas-page")]
+      .some(canvas => canvas.getAttribute("aria-label")?.includes(value) ?? false),
     sentinel,
     { timeout: 15000 },
   );
@@ -77,7 +78,7 @@ try {
   await input.evaluate(element => element.focus());
   await page.keyboard.type(initialSentinel);
   // SmartCanvas deliberately clears its hidden keyboard-capture textarea after
-  // each input event; assert the rendered editor projection, not that transient buffer.
+  // each input event; assert the canvas accessibility projection, not that transient buffer.
   await waitForEditorProjection(page, initialSentinel);
 
   // Force the same hidden-tab checkpoint used by the editor to preserve a recoverable draft.
