@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { addTableColumn, addTableRow, collapsedAt, convertBlockToBlockquote, convertBlockToList, deleteBlock, deleteText, insertImportedBlocksAtSelection, insertImageResource, insertPageBreak, insertTable as insertTableCommand, insertTableCellImageResource, insertText, insertThematicBreak, moveBlock, removeImage, updateEditorObject, updateImage, getLineXAtOffset, getOffsetAtLineX, getPlainText, layoutDocument, mergeBlockWithPrevious, replaceRange, removeTableColumn, removeTableRow, setAlign, setCellText, setHeadingLevel, setIndent, setParagraphStyle, splitBlock, toggleMark as toggleMarkCommand, type Editor as NexusEngineSession, type Mark, type NexusDocument, type Selection, type SmartCanvasHitTarget } from "../../../packages/engine/src/index";
+import { addTableColumn, addTableRow, collapsedAt, convertBlockToBlockquote, convertBlockToList, deleteBlock, deleteText, insertImportedBlocksAtSelection, insertImageResource, insertPageBreak, insertTable as insertTableCommand, insertTableCellImageResource, insertText, insertThematicBreak, moveBlock, removeImage, removeMark, updateEditorObject, updateImage, getLineXAtOffset, getOffsetAtLineX, getPlainText, layoutDocument, mergeBlockWithPrevious, replaceRange, removeTableColumn, removeTableRow, setAlign, setCellText, setHeadingLevel, setIndent, setParagraphStyle, splitBlock, toggleMark as toggleMarkCommand, type Editor as NexusEngineSession, type Mark, type NexusDocument, type Selection, type SmartCanvasHitTarget } from "../../../packages/engine/src/index";
 import { CanvasDocumentRenderer } from "./CanvasDocumentRenderer";
 import { nexusDocumentFromHtml } from "../services/nexusEngineAdapter";
 import { lineEndOffset, lineStartOffset, nearestGraphemeOffset, nextCodePointOffset, nextWordOffset, previousCodePointOffset, previousWordOffset, verticalLineOffset, wordRangeAt } from "./smartCanvasTextOffsets";
@@ -837,6 +837,59 @@ export function SmartCanvasPreview({ document, engine, headerText = "", footerTe
       onStatus?.("Espaçamento do parágrafo atualizado pelo SmartCanvas.");
     }
   };
+  const clearSmartCanvasFormatting = () => {
+    if (readOnly) return;
+    const markTypes: Mark["type"][] = ["bold", "italic", "underline", "strike", "superscript", "subscript", "color", "highlight", "fontSize", "fontFamily", "link", "comment"];
+    if (activeCell) {
+      const start = Math.min(activeCell.anchorOffset, activeCell.offset);
+      const end = Math.max(activeCell.anchorOffset, activeCell.offset);
+      if (start === end) {
+        setActiveCellStoredMarks([]);
+        onStatus?.("Formatação pendente removida da próxima digitação na célula.");
+        return;
+      }
+      const selectedText = activeCell.text.slice(start, end);
+      const result = engine.exec([setCellText({
+        tableId: activeCell.tableId,
+        rowId: activeCell.rowId,
+        cellId: activeCell.cellId,
+        text: activeCell.text,
+        insertionRange: { start, end },
+        insertionRuns: [{ text: selectedText, marks: [] }],
+      })], { group: "formatting" });
+      if (!result.ok) onStatus?.(result.error.message);
+      else {
+        setActiveCellStoredMarks(null);
+        onDocumentChange(result.value.document);
+        onStatus?.("Formatação removida da seleção da célula.");
+      }
+      return;
+    }
+    const selection = engine.getSelection();
+    if (!selection) {
+      onStatus?.("Selecione um trecho de texto antes de limpar a formatação.");
+      return;
+    }
+    const ranges = getSmartCanvasTextSelectionRanges(engine.getDocument().content, selection);
+    if (!ranges) {
+      onStatus?.("A seleção atual não pode ser mapeada para limpar a formatação.");
+      return;
+    }
+    const commands = ranges.filter(range => range.end > range.start).flatMap(range =>
+      markTypes.map(markType => removeMark({ blockId: range.block.id, start: range.start, end: range.end, markType }))
+    );
+    if (!commands.length) {
+      onStatus?.("Selecione um trecho de texto antes de limpar a formatação.");
+      return;
+    }
+    const result = engine.exec(commands, { group: "formatting" });
+    if (!result.ok) onStatus?.(result.error.message);
+    else {
+      setSelection(result.value.selection ?? null);
+      onDocumentChange(result.value.document);
+      onStatus?.("Formatação removida pelo SmartCanvas.");
+    }
+  };
   const applySmartCanvasLink = () => {
     const raw = linkDraft.trim();
     let parsed: URL;
@@ -1591,6 +1644,7 @@ export function SmartCanvasPreview({ document, engine, headerText = "", footerTe
       <button type="button" disabled={readOnly} onMouseDown={event => event.preventDefault()} onClick={() => applySmartCanvasMark({ type: "strike" })} aria-label="Tachado SmartCanvas" title="Tachado" style={{ padding: "6px 9px", border: "1px solid #cbd5e1", borderRadius: 6, background: "#fff", textDecoration: "line-through" }}>S</button>
       <button type="button" disabled={readOnly} onMouseDown={event => event.preventDefault()} onClick={() => applySmartCanvasMark({ type: "superscript" })} aria-label="Sobrescrito SmartCanvas" title="Sobrescrito" style={{ padding: "6px 9px", border: "1px solid #cbd5e1", borderRadius: 6, background: "#fff" }}>x²</button>
       <button type="button" disabled={readOnly} onMouseDown={event => event.preventDefault()} onClick={() => applySmartCanvasMark({ type: "subscript" })} aria-label="Subscrito SmartCanvas" title="Subscrito" style={{ padding: "6px 9px", border: "1px solid #cbd5e1", borderRadius: 6, background: "#fff" }}>x₂</button>
+      <button type="button" disabled={readOnly} onMouseDown={event => event.preventDefault()} onClick={clearSmartCanvasFormatting} aria-label="Limpar formatação SmartCanvas" title="Limpar formatação" style={{ padding: "6px 8px", border: "1px solid #cbd5e1", borderRadius: 6, background: "#fff" }}>Tx</button>
       <label style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 12 }}>
         <span>Estilo</span>
         <select aria-label="Nível de título SmartCanvas" value={headingLevelDraft} disabled={readOnly} onChange={event => setHeadingLevelDraft(event.currentTarget.value)} style={{ padding: "5px 6px", border: "1px solid #cbd5e1", borderRadius: 6, background: "#fff" }}>
