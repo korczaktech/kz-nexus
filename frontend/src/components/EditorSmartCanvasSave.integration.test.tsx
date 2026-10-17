@@ -200,6 +200,9 @@ describe("Editor SmartCanvas save integration", () => {
         createElement(Editor, { document: makeDocument("second", "Second"), versions: [], onSave: vi.fn(async () => "saved" as const), onClose: vi.fn(), onConflict: vi.fn(async () => makeDocument("second", "Second")) }),
       ));
     });
+    const toolsTabs = Array.from(host.querySelectorAll<HTMLButtonElement>(".editor-ribbon-tabs button")).filter(button => button.textContent === "Ferramentas");
+    expect(toolsTabs).toHaveLength(2);
+    await act(async () => { toolsTabs.forEach(button => button.click()); });
     const inputs = Array.from(host.querySelectorAll<HTMLTextAreaElement>('textarea[aria-label="Entrada de texto do SmartCanvas"]'));
     const spellcheckButtons = Array.from(host.querySelectorAll<HTMLButtonElement>('button[aria-label="Verificação ortográfica"]'));
     expect(inputs).toHaveLength(2);
