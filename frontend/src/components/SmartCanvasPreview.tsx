@@ -401,7 +401,11 @@ export function SmartCanvasPreview({ document, engine, headerText = "", footerTe
   useEffect(() => { onSelectionChange?.(selection); }, [selection, onSelectionChange]);
   const layout = useMemo(() => {
     try { return layoutDocument(document, { metrics: createCanvasLayoutMetrics() }); }
-    catch { return null; }
+    catch (error) {
+      // Keep the preview resilient, but do not silently hide a broken canonical document/layout.
+      console.error("[SmartCanvas] layoutDocument failed", error);
+      return null;
+    }
   }, [document]);
 
   // Give the engine a valid insertion point as soon as SmartCanvas mounts.
