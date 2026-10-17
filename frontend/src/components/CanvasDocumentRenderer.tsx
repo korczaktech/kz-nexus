@@ -18,7 +18,7 @@ type CanvasPageProps = {
   showPageNumbers: boolean;
   showFormattingMarks: boolean;
   layout: LayoutResult;
-  onHitTest?: (target: SmartCanvasHitTarget, clickCount?: number) => void;
+  onHitTest?: (target: SmartCanvasHitTarget, clickCount?: number, phase?: "start" | "move" | "end") => void;
   selection?: Selection;
   showCaret?: boolean;
   activeCellId?: string;
@@ -502,10 +502,9 @@ export function CanvasPage({ page, pageCount, document, headerText, footerText, 
     }
   }, [layout, page.index, selection, showCaret, activeCellId, activeBlockId, activeCellSelection, cssWidth, cssHeight]);
 
-  const handlePointerDown = (event: ReactPointerEvent<HTMLCanvasElement>) => {
-    if (!onHitTest) return;
+  const hitTargetAtPointer = (event: ReactPointerEvent<HTMLCanvasElement>): SmartCanvasHitTarget | undefined => {
     const bounds = event.currentTarget.getBoundingClientRect();
-    if (bounds.width <= 0 || bounds.height <= 0) return;
+    if (bounds.width <= 0 || bounds.height <= 0) return undefined;
     const x = ((event.clientX - bounds.left) / bounds.width) * page.width;
     const y = ((event.clientY - bounds.top) / bounds.height) * page.height;
     const context = canvasRef.current?.getContext("2d");
@@ -513,14 +512,33 @@ export function CanvasPage({ page, pageCount, document, headerText, footerText, 
       if (run) context.font = markedFont(run.marks, run.fontSize, run.fontFamily);
       return context.measureText(text).width * 72 / 96;
     } : undefined;
-    const target = hitTestLayout(layout, page.index, x, y, { measureText });
-    if (target) onHitTest(target, event.nativeEvent.detail || 1);
+    return hitTestLayout(layout, page.index, x, y, { measureText });
+  };
+  const handlePointerDown = (event: ReactPointerEvent<HTMLCanvasElement>) => {
+    if (!onHitTest) return;
+    const target = hitTargetAtPointer(event);
+    if (!target) return;
+    event.currentTarget.setPointerCapture?.(event.pointerId);
+    onHitTest(target, event.nativeEvent.detail || 1, "start");
+  };
+  const handlePointerMove = (event: ReactPointerEvent<HTMLCanvasElement>) => {
+    if (!onHitTest || (event.buttons & 1) === 0) return;
+    const target = hitTargetAtPointer(event);
+    if (target) onHitTest(target, 1, "move");
+  };
+  const handlePointerUp = (event: ReactPointerEvent<HTMLCanvasElement>) => {
+    if (!onHitTest) return;
+    const target = hitTargetAtPointer(event);
+    if (target) onHitTest(target, 1, "end");
+    if (event.currentTarget.hasPointerCapture?.(event.pointerId)) event.currentTarget.releasePointerCapture?.(event.pointerId);
   };
 
   return <div style={{ position: "relative", flex: "0 0 auto", width: cssWidth, height: cssHeight }}>
     <canvas
       ref={canvasRef}
       onPointerDown={onHitTest ? handlePointerDown : undefined}
+      onPointerMove={onHitTest ? handlePointerMove : undefined}
+      onPointerUp={onHitTest ? handlePointerUp : undefined}
       tabIndex={onHitTest ? 0 : undefined}
       className="kortex-canvas-page"
       role="img"
@@ -546,7 +564,7 @@ export function CanvasDocumentRenderer({ layout, document, headerText = "", foot
   footerAlign?: "left" | "center" | "right";
   showPageNumbers?: boolean;
   showFormattingMarks?: boolean;
-  onHitTest?: (target: SmartCanvasHitTarget, clickCount?: number) => void;
+  onHitTest?: (target: SmartCanvasHitTarget, clickCount?: number, phase?: "start" | "move" | "end") => void;
   selection?: Selection;
   showCaret?: boolean;
   activeCellId?: string;
