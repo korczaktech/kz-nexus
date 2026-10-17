@@ -16,7 +16,7 @@ import {createEditor, createIdGenerator, systemClock, type Mark, type Block, typ
 import {deserializeNexusHtml,nexusDocumentFromHtml,serializeNexusHtml,syncNexusEngine,toggleEngineMarkForDomSelection,applyEngineMarksForDomSelection,removeEngineMarksForDomSelection,removeEngineLinkForDomSelection,restoreEngineDomSelection,getEngineDomContext,getEngineTextBlocks,htmlFromNexusDocument} from '../services/nexusEngineAdapter';
 import {decodeNexusDocument,encodeNexusDocument} from '../services/nexusDocumentPersistence';
 import {characterDeletionRange,normalizeTextRange,wordDeletionRange} from './editorSelection';
-import {collectSmartCanvasTextBlocks,dispatchSmartCanvasBeforeInput,findSmartCanvasTextMatches,getSmartCanvasTextSelectionRanges,isProductionSmartCanvasEnabled,readSmartCanvasSelection,restoreSmartCanvasSelection} from './editorSmartCanvas';
+import {collectSmartCanvasTextBlocks,findSmartCanvasTextMatches,getSmartCanvasTextSelectionRanges,isProductionSmartCanvasEnabled,readSmartCanvasSelection,restoreSmartCanvasSelection} from './editorSmartCanvas';
 import {isCompositionInput} from './editorComposition';
 import {lineEndOffset,lineStartOffset} from './smartCanvasTextOffsets';
 import {markdownToHtml} from './markdown';
