@@ -65,7 +65,7 @@ vi.mock("./CanvasDocumentRenderer", () => ({
         onClick: () => {
           const target: SmartCanvasHitTarget = {
             kind: "text",
-            pageIndex: 0,
+            pageIndex: index === 0 ? 0 : 1,
             blockId: item.id,
             position: { blockId: item.id, offset: item.type === "paragraph" || item.type === "heading" ? (index === 0 ? 1 : 3) : 0 },
             lineIndex: 0,
