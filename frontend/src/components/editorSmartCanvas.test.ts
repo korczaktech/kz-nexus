@@ -125,6 +125,44 @@ describe("production SmartCanvas migration gate", () => {
     ]);
   });
 
+  it("maps a logical range across separate table cells without merging their container identities", () => {
+    const content = [
+      { type: "table", id: "table", children: [
+        { type: "tableRow", id: "row-1", children: [
+          { type: "tableCell", id: "cell-a", children: [
+            { type: "paragraph", id: "cell-a-p", children: [{ text: "Alpha" }] },
+          ] },
+          { type: "tableCell", id: "cell-b", children: [
+            { type: "paragraph", id: "cell-b-p", children: [{ text: "Bravo" }] },
+          ] },
+        ] },
+        { type: "tableRow", id: "row-2", children: [
+          { type: "tableCell", id: "cell-c", children: [
+            { type: "paragraph", id: "cell-c-p", children: [{ text: "Charlie" }] },
+          ] },
+        ] },
+      ] },
+    ];
+    const ranges = getSmartCanvasTextSelectionRanges(content, {
+      anchor: { blockId: "cell-a-p", offset: 2 },
+      focus: { blockId: "cell-c-p", offset: 3 },
+    });
+    expect(ranges?.map(range => [range.block.id, range.start, range.end])).toEqual([
+      ["cell-a-p", 2, 5],
+      ["cell-b-p", 0, 5],
+      ["cell-c-p", 0, 3],
+    ]);
+    const reverse = getSmartCanvasTextSelectionRanges(content, {
+      anchor: { blockId: "cell-c-p", offset: 3 },
+      focus: { blockId: "cell-a-p", offset: 2 },
+    });
+    expect(reverse?.map(range => [range.block.id, range.start, range.end])).toEqual([
+      ["cell-a-p", 2, 5],
+      ["cell-b-p", 0, 5],
+      ["cell-c-p", 0, 3],
+    ]);
+  });
+
   it("reads the logical selection without requiring a legacy DOM root", () => {
     const document = createDocument({ title: "Logical selection without legacy DOM" });
     const paragraph = document.content[0];
