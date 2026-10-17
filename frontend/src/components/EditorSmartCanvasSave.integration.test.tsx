@@ -256,6 +256,10 @@ describe("Editor SmartCanvas save integration", () => {
     expect(viewTabs.length).toBeGreaterThanOrEqual(1);
     const targetRoot = viewTabs[0]!.closest(".editor-workspace") as HTMLElement;
     await act(async () => { viewTabs[0]!.click(); });
+    const sideBySideButton = targetRoot.querySelector<HTMLButtonElement>('button[aria-label="Exibir páginas lado a lado"]');
+    expect(sideBySideButton).not.toBeNull();
+    await act(async () => { sideBySideButton!.click(); });
+    expect(targetBody.classList.contains("kz-pages-side-by-side")).toBe(true);
     const navigationButtons = Array.from(targetRoot.querySelectorAll<HTMLButtonElement>('button[aria-label="Painel de navegação por títulos"]'));
     expect(navigationButtons).toHaveLength(1);
     await act(async () => { navigationButtons[0]!.click(); });
