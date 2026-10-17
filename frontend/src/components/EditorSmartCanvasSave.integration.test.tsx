@@ -209,4 +209,56 @@ describe("Editor SmartCanvas save integration", () => {
     expect(inputs[0]!.getAttribute("spellcheck")).toBe("false");
     expect(inputs[1]!.getAttribute("spellcheck")).toBe("true");
   });
+
+  it("keeps title navigation visible and focuses the matching SmartCanvas instance", async () => {
+    previousUrl = window.location.pathname + window.location.search + window.location.hash;
+    window.history.replaceState({}, "", "/?smartCanvas=1");
+    const makeHeadingDocument = (id: string): DocumentItem => {
+      const model = createDocument({ title: id });
+      const paragraph = model.content[0];
+      if (!paragraph || paragraph.type !== "paragraph") throw new Error("Expected initial paragraph");
+      model.content[0] = { type: "heading", id: paragraph.id, level: 1, children: [{ ...paragraph.children[0]!, text: id + " heading" }] };
+      const encoded = encodeNexusDocument(model);
+      if (!encoded.ok) throw new Error("Could not encode test document");
+      return {
+        id,
+        owner_id: "owner",
+        name: id,
+        document_type: "document",
+        folder_id: null,
+        current_version_id: null,
+        status: "active",
+        favorite: false,
+        created_at: "2026-10-16T00:00:00.000Z",
+        updated_at: "2026-10-16T00:00:00.000Z",
+        content: htmlFromNexusDocument(model),
+        native_content: encoded.value,
+      };
+    };
+    const firstDocument = makeHeadingDocument("first");
+    const secondDocument = makeHeadingDocument("second");
+    host = window.document.createElement("div");
+    window.document.body.append(host);
+    root = createRoot(host);
+    await act(async () => {
+      root?.render(createElement("div", null,
+        createElement(Editor, { document: firstDocument, versions: [], onSave: vi.fn(async () => "saved" as const), onClose: vi.fn(), onConflict: vi.fn(async () => firstDocument) }),
+        createElement(Editor, { document: secondDocument, versions: [], onSave: vi.fn(async () => "saved" as const), onClose: vi.fn(), onConflict: vi.fn(async () => secondDocument) }),
+      ));
+    });
+    const bodies = Array.from(host.querySelectorAll<HTMLElement>(".editor-body"));
+    expect(bodies).toHaveLength(2);
+    const navigationButtons = Array.from(bodies[1]!.querySelectorAll<HTMLButtonElement>('button[aria-label="Painel de navegação por títulos"]'));
+    expect(navigationButtons).toHaveLength(1);
+    await act(async () => { navigationButtons[0]!.click(); });
+    const panel = bodies[1]!.querySelector<HTMLElement>('aside[aria-label="Navegação por títulos"]');
+    expect(panel).not.toBeNull();
+    expect(panel?.textContent).toContain("second heading");
+    const headingButton = Array.from(panel!.querySelectorAll("button")).find(button => button.textContent === "second heading");
+    expect(headingButton).toBeTruthy();
+    await act(async () => { headingButton!.click(); });
+    const inputs = Array.from(bodies.map(body => body.querySelector<HTMLTextAreaElement>('textarea[aria-label="Entrada de texto do SmartCanvas"]')));
+    expect(window.document.activeElement).toBe(inputs[1]);
+    expect(window.document.activeElement).not.toBe(inputs[0]);
+  });
 });
