@@ -1223,7 +1223,7 @@ describe("SmartCanvasPreview input integration", () => {
     await act(async () => { cellHit?.click(); });
     const input = host.querySelector('textarea[aria-label="Entrada de texto do SmartCanvas"]') as HTMLTextAreaElement | null;
     if (!input) throw new Error("SmartCanvas input surface was not mounted");
-    const html = '<ul><li>Alpha item</li><li>Beta item</li></ul><table><tbody><tr><td>Left cell</td><td>Right cell</td></tr></tbody></table>';
+    const html = '<ul><li><strong>Alpha</strong> item</li><li>Beta item</li></ul><table><tbody><tr><td>Left cell</td><td>Right cell</td></tr></tbody></table>';
     const paste = new Event("paste", { bubbles: true, cancelable: true });
     Object.defineProperty(paste, "clipboardData", {
       value: { getData: (type: string) => type === "text/html" ? html : "Alpha item\nBeta item\nLeft cell\tRight cell" },
@@ -1239,6 +1239,7 @@ describe("SmartCanvasPreview input integration", () => {
     expect(pastedText).toContain("Left cell");
     expect(pastedText).toContain("Right cell");
     expect(pastedText).toContain("• Alpha item");
+    expect(cell?.children.some(paragraph => paragraph.children.some(run => run.text.includes("Alpha") && run.marks.some(mark => mark.type === "bold")))).toBe(true);
     expect(pastedText).toContain("• Beta item");
     expect(onDocumentChange).toHaveBeenCalled();
     expect(onStatus).toHaveBeenLastCalledWith("Listas e tabelas coladas na célula foram convertidas em texto estruturado.");
