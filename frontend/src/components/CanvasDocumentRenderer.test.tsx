@@ -199,7 +199,7 @@ describe("CanvasDocumentRenderer visual regression contract", () => {
     const first = canvases[0]!;
     const pointerEvent = (type: string, y: number, buttons: number) => {
       const event = new MouseEvent(type, {
-        bubbles: true, cancelable: true, clientX: 60, clientY: y, buttons, detail: 1,
+        bubbles: true, cancelable: true, clientX: 120, clientY: y, buttons, detail: 1,
       });
       Object.defineProperty(event, "pointerId", { value: 1 });
       return event;
