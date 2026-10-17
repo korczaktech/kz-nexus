@@ -201,3 +201,34 @@ O incremento de teste nesse SHA cobre o mapeamento de faixas lógicas entre par�
 5. A baseline automatizada não prova o alvo de 100 MB em Chromebook físico.
 
 **Decisão de aceite:** CI verde confirma os jobs executados, não conclusão integral da Etapa 3. Manter a migração aberta até resolver os bloqueios funcionais e executar a validação manual pendente.
+
+## Etapa 3 — auditoria de fechamento (2026-10-17)
+
+### O que foi implementado nesta rodada
+
+- O renderer de páginas resolve o alvo do ponteiro a partir das caixas geométricas de todas as páginas do mesmo renderer. Como o Pointer Capture mantém os eventos no canvas inicial, o hit-testing agora usa as coordenadas globais do ponteiro para localizar a página sob ele; durante um arraste, a página mais próxima é usada quando o ponteiro está no intervalo entre páginas.
+- A seleção lógica do SmartCanvas aceita alvos de texto e de célula de tabela no início, movimento e fim do arraste. Para células, o deslocamento combinado da célula é mapeado para o ID e offset do parágrafo canônico.
+- Foram acrescentados testes de contrato para arraste entre blocos de texto, entre células e entre páginas. O resultado do CI precisa ser consultado no commit final; um teste que existe, mas falha, não é aceite.
+
+### Limites estruturais ainda não encerrados
+
+**Estruturas aninhadas em células:** o modelo canônico atual declara `TableCell.children: Paragraph[]`. Listas, tabelas e blockquotes são nós `Block` independentes e não podem ser representados fielmente dentro de uma célula com esse tipo. O caminho atual de colagem usa `flattenPastedCellContent()` e converte esses nós para linhas de texto; mudar apenas o tipo TypeScript não seria seguro. A migração precisa ser vertical e coordenada: modelo/schema e validação, normalização e IDs, comandos de célula, layout geométrico e hit-testing, renderização, seleção/edição, exportadores HTML/Markdown/texto, importação/colagem, serialização NSX e fixtures de compatibilidade. Até todos esses caminhos aceitarem os mesmos nós recursivos, a colagem deve continuar sem afirmar que preserva a estrutura original.
+
+**Paridade funcional:** SmartCanvas não deve ser declarado substituto completo enquanto comandos avançados de interface, cabeçalho/rodapé, clipboard rico, edição por IME, navegação de teclado, undo/redo e recursos de importação/exportação não tiverem cobertura de equivalência contra o motor e o caminho legado. A presença de uma ferramenta na barra não prova que ela opera exclusivamente sobre o modelo canônico.
+
+### Ativação segura
+
+- O gate de produção continua desativado por padrão; a ativação requer `?smartCanvas=1`.
+- Não remover o editor legado, não mudar o padrão global e não ampliar a ativação para todos os usuários apenas porque os testes unitários passam.
+- Para ativação geral, exigir simultaneamente CI verde no commit final, matriz de regressão automatizada e checklist manual concluído no navegador/dispositivo-alvo.
+- Se houver falha de seleção, composição, salvamento, exportação ou recuperação de rascunho, desativar a flag e usar o caminho legado; não converter silenciosamente documento canônico para HTML divergente.
+
+### Testes automatizados e validação humana
+
+Automatizável neste repositório: testes de hit-testing e seleção lógica entre páginas/contêineres, testes de comandos e histórico, round-trip NSX/HTML/DOCX, salvamento e recuperação de rascunho via integração existente, conflitos e builds.
+
+Necessita de confirmação humana no navegador/dispositivo real: composição IME do sistema operacional, teclado físico e navegação por leitor de tela, diferenças de renderização/fonte, comparação visual de documentos extensos, arraste físico nas margens e no intervalo entre páginas, impressão e abertura de DOCX/PDF em aplicações externas. Não marcar esses itens como concluídos com base em Happy DOM ou CI headless.
+
+### Critério de encerramento
+
+A Etapa 3 só poderá ser fechada quando: (1) o teste de arraste entre páginas passar no CI; (2) a estrutura aninhada for preservada de ponta a ponta sem achatamento; (3) a auditoria de paridade identificar e fechar ou justificar explicitamente cada comando; (4) os workflows estiverem verdes no mesmo SHA de `main`; e (5) a validação humana pendente estiver registada. Até lá, o estado é **em andamento**, e o editor legado permanece como fallback.
