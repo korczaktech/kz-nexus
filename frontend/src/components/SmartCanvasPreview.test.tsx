@@ -18,7 +18,7 @@ vi.mock("./CanvasDocumentRenderer", () => ({
     layout?: { pages: unknown[] } | null;
     selection?: Selection | null;
     activeCellId?: string;
-    onHitTest?: (target: SmartCanvasHitTarget, clickCount?: number) => void;
+    onHitTest?: (target: SmartCanvasHitTarget, clickCount?: number, phase?: "start" | "move" | "end") => void;
   }) => {
     const block = document.content[0];
     return createElement("div", null,
@@ -58,6 +58,22 @@ vi.mock("./CanvasDocumentRenderer", () => ({
           lineIndex: 0,
         }, 1),
       }, "Select additional text")),
+      ...document.content.filter(item => item.type === "paragraph" || item.type === "heading").map((item, index, blocks) => createElement("button", {
+        key: `drag-${item.id}`,
+        type: "button",
+        "data-testid": index === 0 ? "smartcanvas-drag-start" : "smartcanvas-drag-end",
+        onClick: () => {
+          const target: SmartCanvasHitTarget = {
+            kind: "text",
+            pageIndex: 0,
+            blockId: item.id,
+            position: { blockId: item.id, offset: item.type === "paragraph" || item.type === "heading" ? (index === 0 ? 1 : 3) : 0 },
+            lineIndex: 0,
+          };
+          onHitTest?.(target, 1, index === 0 ? "start" : "move");
+          if (index > 0) onHitTest?.(target, 1, "end");
+        },
+      }, "Drag selection target")),
       ...document.content.filter(item => item.type === "image").map(item => createElement("button", {
         key: item.id,
         type: "button",
@@ -1434,6 +1450,35 @@ describe("SmartCanvasPreview input integration", () => {
     if (!tableAfterTab || tableAfterTab.type !== "table") throw new Error("Expected table after Tab");
     expect(tableAfterTab.children).toHaveLength(2);
     expect(onDocumentChange).toHaveBeenCalled();
+  });
+
+  it("extends drag selection across text blocks using the logical engine selection", async () => {
+    const document = createDocument({ title: "SmartCanvas drag selection" });
+    const first = document.content[0];
+    if (!first || first.type !== "paragraph") throw new Error("Expected initial paragraph");
+    first.children[0]!.text = "First paragraph";
+    const second = { type: "paragraph" as const, id: "drag_second_para", children: [{ type: "text" as const, id: "drag_second_run", text: "Second paragraph", marks: [] }] };
+    document.content.push(second);
+    engine = createEditor({ document });
+    host = window.document.createElement("div");
+    window.document.body.append(host);
+    root = createRoot(host);
+    await act(async () => {
+      root?.render(createElement(SmartCanvasPreview, {
+        document: engine!.getDocument(),
+        engine: engine!,
+        onDocumentChange: vi.fn(),
+      }));
+    });
+    const start = host.querySelector('[data-testid="smartcanvas-drag-start"]') as HTMLButtonElement | null;
+    const end = host.querySelector('[data-testid="smartcanvas-drag-end"]') as HTMLButtonElement | null;
+    if (!start || !end) throw new Error("Drag test controls were not mounted");
+    await act(async () => { start.click(); end.click(); });
+    expect(engine.getSelection()).toEqual({
+      anchor: { blockId: first.id, offset: 1 },
+      focus: { blockId: second.id, offset: 3 },
+    });
+    expect(host.querySelector('[data-testid="smartcanvas-selection"]')?.getAttribute("data-focus-block")).toBe(second.id);
   });
 
 });
