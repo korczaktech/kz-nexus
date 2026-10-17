@@ -1271,8 +1271,10 @@ describe("SmartCanvasPreview input integration", () => {
     const clear = host.querySelector('[aria-label="Limpar formatação SmartCanvas"]') as HTMLButtonElement | null;
     if (!clear) throw new Error("SmartCanvas clear-formatting control was not mounted");
     await act(async () => {
-      input.dispatchEvent(new KeyboardEvent("keydown", { key: "Home", bubbles: true }));
-      input.dispatchEvent(new KeyboardEvent("keydown", { key: "End", shiftKey: true, bubbles: true }));
+      expect(engine!.setSelection({
+        anchor: { blockId: secondParagraph.id, offset: 0 },
+        focus: { blockId: secondParagraph.id, offset: getPlainText(secondParagraph).length },
+      }).ok).toBe(true);
     });
     await act(async () => { clear.click(); });
     const clearedTable = engine.getDocument().content.find(block => block.type === "table");
