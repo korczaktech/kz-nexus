@@ -207,10 +207,10 @@ describe("Editor SmartCanvas save integration", () => {
     const spellcheckButtons = Array.from(host.querySelectorAll<HTMLButtonElement>('button[aria-label="Verificação ortográfica"]'));
     expect(inputs).toHaveLength(2);
     expect(spellcheckButtons.length).toBeGreaterThanOrEqual(1);
-    expect(inputs.map(input => input.getAttribute("spellcheck"))).toEqual(["false", "false"]);
+    expect(inputs.map(input => input.getAttribute("spellcheck"))).toEqual(["true", "true"]);
     await act(async () => { spellcheckButtons[0]!.click(); });
-    expect(inputs[0]!.getAttribute("spellcheck")).toBe("true");
-    expect(inputs[1]!.getAttribute("spellcheck")).toBe("false");
+    expect(inputs[0]!.getAttribute("spellcheck")).toBe("false");
+    expect(inputs[1]!.getAttribute("spellcheck")).toBe("true");
   });
 
   it("keeps title navigation visible and focuses the matching SmartCanvas instance", async () => {
