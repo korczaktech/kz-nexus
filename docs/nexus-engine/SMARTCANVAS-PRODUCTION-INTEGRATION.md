@@ -152,3 +152,30 @@ No commit `a6882feb`, os workflows **SmartCanvas validation** e **Kortex validat
 5. O modo SmartCanvas continua protegido por `?smartCanvas=1`; não ativar por padrão nem considerar a migração integralmente aceita até concluir os bloqueios e os testes de integração/manuais.
 
 A remoção da projeção DOM no modo opt-in é um avanço estrutural, mas não equivale à remoção de todos os caminhos legados nem à paridade universal de produto.
+
+
+## Continuação da migração — 2026-10-17
+
+Desde o registro anterior, foram feitos novos incrementos diretamente em `main`:
+
+- O recorte pela ribbon agora gera comandos de exclusão por faixa lógica, inclusive em parágrafos de listas e células, preservando os contêineres.
+- A ribbon externa sincroniza estado de marcas, listas e alinhamento com a seleção lógica do SmartCanvas.
+- A capitalização substitui cada faixa de texto em seu próprio bloco, preservando limites de parágrafo, lista e célula.
+- Aplicar/remover links, limpar formatação e anotar comentários agora percorre faixas lógicas de seleções que atravessam vários blocos.
+- A inserção de imagem pela ribbon é encaminhada ao seletor do próprio SmartCanvas, para respeitar o contexto de edição da célula.
+- A colagem de listas/tabelas em células continua sem criar nós aninhados, mas agora preserva marcas inline (por exemplo, negrito) ao converter as estruturas para texto, além dos marcadores, separadores e recursos de imagem.
+- A suíte de integração passou a verificar explicitamente que não há `.editor-pages-stack`, `.rich-editor` nem elementos `contentEditable=true` no modo SmartCanvas.
+
+### E2E com API real
+
+O workflow [SmartCanvas API integration](https://github.com/korczaktech/kz-nexus/actions/runs/39068979491) passou no commit `57a743d2`. O teste real confirmou salvamento pela API, round-trip do payload nativo NSX, recuperação de rascunho, exportação DOCX/PDF, autosave e conflito de versão. A baseline de memória e os workflows SmartCanvas/Kortex também passaram nesse commit.
+
+Os incrementos posteriores em seleção e colagem estão sendo revalidados no CI. Portanto, o resultado do commit `57a743d2` é evidência para aqueles fluxos naquele SHA, não uma declaração de que a cabeça atual já está integralmente aceita.
+
+### Limitações que continuam abertas
+
+1. Listas e tabelas coladas em células ainda são achatadas em texto estruturado; o modelo canônico de célula precisa ser ampliado antes de tornar essas estruturas aninhadas editáveis.
+2. A seleção global não atravessa células como se fossem um único intervalo lógico; cada célula mantém seu controlador de edição.
+3. Ainda falta comparação visual de regressão com documentos reais e validação manual de IME em navegadores/dispositivos suportados.
+4. A baseline automatizada não substitui medições físicas em Chromebook nem prova o alvo de memória de 100 MB.
+5. O SmartCanvas permanece opt-in. Não remover o fallback nem declarar a migração integral antes de validar o SHA atual e fechar os critérios restantes.
