@@ -104,15 +104,9 @@ describe("Editor SmartCanvas save integration", () => {
     });
 
     expect(host.querySelector(".editor-canvas")?.classList.contains("editor-canvas-legacy-fallback")).toBe(true);
-    const legacyBody = host.querySelector(".editor-canvas-legacy-fallback .rich-editor") as HTMLDivElement | null;
-    expect(legacyBody).not.toBeNull();
-    expect(legacyBody?.contentEditable).toBe("false");
-    // SmartCanvas must not accept edits from the hidden legacy projection.
-    if (!legacyBody) throw new Error("Legacy projection was not mounted");
-    legacyBody.innerHTML = "<p>Legacy-only mutation</p>";
-    await act(async () => {
-      legacyBody.dispatchEvent(new Event("input", { bubbles: true }));
-    });
+    // Production SmartCanvas must not mount a hidden native editor projection.
+    expect(host.querySelector(".editor-canvas-legacy-fallback .editor-pages-stack")).toBeNull();
+    expect(host.querySelector(".editor-canvas-legacy-fallback .rich-editor")).toBeNull();
     const hit = host.querySelector('[data-testid="editor-smartcanvas-hit"]') as HTMLButtonElement | null;
     expect(hit).not.toBeNull();
     await act(async () => { hit?.click(); });
