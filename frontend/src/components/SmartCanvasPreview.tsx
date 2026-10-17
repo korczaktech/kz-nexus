@@ -125,6 +125,23 @@ function collectCellParagraphs(nodes: readonly unknown[], tableId: string, rowId
   return [];
 }
 
+function cellOffsetToPosition(
+  nodes: readonly unknown[],
+  cell: EditableCell,
+  offset: number,
+): Selection["anchor"] | undefined {
+  const paragraphs = collectCellParagraphs(nodes, cell.tableId, cell.rowId, cell.cellId);
+  if (!paragraphs.length) return undefined;
+  const target = paragraphs.find(paragraph =>
+    offset >= paragraph.start && offset <= paragraph.start + paragraph.text.length
+  ) ?? paragraphs[paragraphs.length - 1];
+  if (!target) return undefined;
+  return {
+    blockId: target.id,
+    offset: nearestGraphemeOffset(target.text, Math.max(0, Math.min(target.text.length, offset - target.start))),
+  };
+}
+
 function collectTableCells(nodes: readonly unknown[]): EditableCell[] {
   const cells: EditableCell[] = [];
   for (const value of nodes) {
@@ -498,19 +515,28 @@ export function SmartCanvasPreview({ document, engine, headerText = "", footerTe
     engine.setSelection(next);
   };
   const handleHit = (target: SmartCanvasHitTarget, clickCount = 1, phase: "start" | "move" | "end" = "start") => {
+    const currentDocument = engine.getDocument();
     if (phase === "start" && target.kind === "text") {
       dragSelectionAnchor.current = { blockId: target.position.blockId, offset: target.position.offset };
+    } else if (phase === "start" && target.kind === "table-cell") {
+      const cell = collectTableCells(currentDocument.content).find(item => item.tableId === target.blockId && item.cellId === target.cellId);
+      dragSelectionAnchor.current = cell ? cellOffsetToPosition(currentDocument.content, cell, target.offset) ?? null : null;
     }
-    if ((phase === "move" || phase === "end") && dragSelectionAnchor.current && target.kind === "text") {
-      const block = findBlock(engine.getDocument().content, target.blockId);
-      const focusOffset = block ? nearestGraphemeOffset(block.text, target.position.offset) : target.position.offset;
-      setActiveBlockId(null);
-      setActiveCell(null);
-      syncSelection({
-        anchor: dragSelectionAnchor.current,
-        focus: { blockId: target.blockId, offset: focusOffset },
-      });
-      inputRef.current?.focus({ preventScroll: true });
+    if ((phase === "move" || phase === "end") && dragSelectionAnchor.current && (target.kind === "text" || target.kind === "table-cell")) {
+      let focus: Selection["focus"] | undefined;
+      if (target.kind === "text") {
+        const block = findBlock(currentDocument.content, target.blockId);
+        focus = { blockId: target.blockId, offset: block ? nearestGraphemeOffset(block.text, target.position.offset) : target.position.offset };
+      } else {
+        const cell = collectTableCells(currentDocument.content).find(item => item.tableId === target.blockId && item.cellId === target.cellId);
+        focus = cell ? cellOffsetToPosition(currentDocument.content, cell, target.offset) : undefined;
+      }
+      if (focus) {
+        setActiveBlockId(null);
+        setActiveCell(null);
+        syncSelection({ anchor: dragSelectionAnchor.current, focus });
+        inputRef.current?.focus({ preventScroll: true });
+      }
       if (phase === "end") dragSelectionAnchor.current = null;
       return;
     }
