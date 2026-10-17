@@ -90,6 +90,41 @@ vi.mock("./CanvasDocumentRenderer", () => ({
 }));
 
 describe("SmartCanvasPreview input integration", () => {
+  it("blocks clipboard paste when the SmartCanvas document is read-only", async () => {
+    const document = createDocument({ title: "SmartCanvas read-only clipboard" });
+    const first = document.content[0];
+    if (!first || first.type !== "paragraph") throw new Error("Expected initial paragraph");
+    first.children[0]!.text = "Immutable";
+    engine = createEditor({ document });
+    host = window.document.createElement("div");
+    window.document.body.append(host);
+    root = createRoot(host);
+    await act(async () => {
+      root?.render(createElement(SmartCanvasPreview, {
+        document: engine!.getDocument(),
+        engine: engine!,
+        readOnly: true,
+        onDocumentChange: vi.fn(),
+      }));
+    });
+    const input = host.querySelector('textarea[aria-label="Entrada de texto do SmartCanvas"]') as HTMLTextAreaElement | null;
+    if (!input) throw new Error("SmartCanvas input surface was not mounted");
+    const paste = new Event("paste", { bubbles: true, cancelable: true });
+    Object.defineProperty(paste, "clipboardData", {
+      value: {
+        items: [],
+        files: [],
+        getData: (type: string) => type === "text/plain" ? "Injected text" : "",
+      },
+    });
+    await act(async () => { input.dispatchEvent(paste); });
+    expect(paste.defaultPrevented).toBe(true);
+    const unchanged = engine!.getDocument().content[0];
+    if (!unchanged || unchanged.type !== "paragraph") throw new Error("Expected initial paragraph after paste");
+    expect(getPlainText(unchanged)).toBe("Immutable");
+  });
+
+
   let host: HTMLDivElement | undefined;
   let root: ReturnType<typeof createRoot> | undefined;
   let engine: ReturnType<typeof createEditor> | undefined;
