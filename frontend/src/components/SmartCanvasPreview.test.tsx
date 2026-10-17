@@ -195,6 +195,36 @@ describe("SmartCanvasPreview input integration", () => {
     engine = undefined;
   });
 
+  it("notifies the outer ribbon when the canonical selection changes", async () => {
+    const document = createDocument({ title: "SmartCanvas ribbon selection sync" });
+    const first = document.content[0];
+    if (!first || first.type !== "paragraph") throw new Error("Expected initial paragraph");
+    first.children[0]!.text = "Toolbar";
+    engine = createEditor({ document });
+    const onSelectionChange = vi.fn();
+    host = window.document.createElement("div");
+    window.document.body.append(host);
+    root = createRoot(host);
+    await act(async () => {
+      root?.render(createElement(SmartCanvasPreview, {
+        document: engine!.getDocument(),
+        engine: engine!,
+        onDocumentChange: vi.fn(),
+        onSelectionChange,
+      }));
+    });
+    await act(async () => {
+      engine!.setSelection({
+        anchor: { blockId: first.id, offset: 1 },
+        focus: { blockId: first.id, offset: 4 },
+      });
+    });
+    expect(onSelectionChange).toHaveBeenLastCalledWith({
+      anchor: { blockId: first.id, offset: 1 },
+      focus: { blockId: first.id, offset: 4 },
+    });
+  });
+
   it("projects engine-owned pagination and explicit page breaks into SmartCanvas", async () => {
     const document = createDocument({ title: "SmartCanvas pagination ownership" });
     document.content.push(
