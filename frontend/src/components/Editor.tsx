@@ -413,14 +413,32 @@ export function Editor({document,versions,onSave,onClose,onConflict}:{document:D
  function syncEngineDocumentSettings(){const engine=nexusEngineRef.current;if(!engine)return;const config=engine.getDocument().pageConfig;const rawWidthMm=config.width*25.4/72,rawHeightMm=config.height*25.4/72;const widthMm=config.orientation==='landscape'?rawHeightMm:rawWidthMm,heightMm=config.orientation==='landscape'?rawWidthMm:rawHeightMm;const matched=(Object.keys(PAGE_MM) as PageSize[]).find(key=>Math.abs(PAGE_MM[key][0]-widthMm)<2&&Math.abs(PAGE_MM[key][1]-heightMm)<2);const nextPageSize=matched??pageSize;const nextMargin=Math.max(0,Math.min(100,Math.round(config.margins.top*25.4/72)));setPageSize(nextPageSize);setOrientation(config.orientation);setMargin(nextMargin);enginePageConfigSignature.current=JSON.stringify({pageSize:nextPageSize,orientation:config.orientation,margin:nextMargin});const title=engine.getDocument().metadata.title;if(typeof title==='string'&&title.trim()&&title!==name)setName(title)}
  function syncSmartCanvasRibbonSelection(selection:Selection|null){
   const engine=nexusEngineRef.current;
-  const next:Record<string,boolean>=selection&&engine?{
-   bold:engine.isMarkActiveAtSelection('bold'),
-   italic:engine.isMarkActiveAtSelection('italic'),
-   underline:engine.isMarkActiveAtSelection('underline'),
-   strikeThrough:engine.isMarkActiveAtSelection('strike'),
-   superscript:engine.isMarkActiveAtSelection('superscript'),
-   subscript:engine.isMarkActiveAtSelection('subscript'),
-  }:{bold:false,italic:false,underline:false,strikeThrough:false,superscript:false,subscript:false};
+  const active=(type:Mark['type'])=>{
+   if(!engine||!selection)return false;
+   if(selection.anchor.blockId===selection.focus.blockId)return engine.isMarkActiveAtSelection(type);
+   const ranges=getSmartCanvasTextSelectionRanges(engine.getDocument().content,selection);
+   if(!ranges)return false;
+   let sawText=false;
+   for(const range of ranges){
+    let offset=0;
+    for(const run of range.block.children){
+     const runStart=offset,runEnd=offset+run.text.length;
+     offset=runEnd;
+     if(runEnd<=range.start||runStart>=range.end)continue;
+     sawText=true;
+     if(!run.marks.some(mark=>mark.type===type))return false;
+    }
+   }
+   return sawText;
+  };
+  const next:Record<string,boolean>={
+   bold:active('bold'),
+   italic:active('italic'),
+   underline:active('underline'),
+   strikeThrough:active('strike'),
+   superscript:active('superscript'),
+   subscript:active('subscript'),
+  };
   setCommandStates(previous=>{
    if(Object.entries(next).every(([key,value])=>previous[key]===value))return previous;
    return {...previous,...next};
