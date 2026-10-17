@@ -503,16 +503,35 @@ export function CanvasPage({ page, pageCount, document, headerText, footerText, 
   }, [layout, page.index, selection, showCaret, activeCellId, activeBlockId, activeCellSelection, cssWidth, cssHeight]);
 
   const hitTargetAtPointer = (event: ReactPointerEvent<HTMLCanvasElement>): SmartCanvasHitTarget | undefined => {
-    const bounds = event.currentTarget.getBoundingClientRect();
-    if (bounds.width <= 0 || bounds.height <= 0) return undefined;
-    const x = ((event.clientX - bounds.left) / bounds.width) * page.width;
-    const y = ((event.clientY - bounds.top) / bounds.height) * page.height;
-    const context = canvasRef.current?.getContext("2d");
+    // Pointer capture keeps events on the original canvas. Resolve the physical
+    // page from the pointer coordinates instead of assuming the original page,
+    // so a drag can continue across page boundaries and through the page gap.
+    const pagesRoot = event.currentTarget.closest(".kortex-canvas-pages");
+    const canvases = pagesRoot
+      ? Array.from(pagesRoot.querySelectorAll<HTMLCanvasElement>("canvas.kortex-canvas-page"))
+      : [event.currentTarget];
+    let selected: { canvas: HTMLCanvasElement; index: number; bounds: DOMRect; distance: number } | undefined;
+    for (const candidate of canvases) {
+      const candidateIndex = Number(candidate.dataset.pageIndex);
+      const bounds = candidate.getBoundingClientRect();
+      if (!Number.isInteger(candidateIndex) || bounds.width <= 0 || bounds.height <= 0) continue;
+      const dx = event.clientX < bounds.left ? bounds.left - event.clientX : event.clientX > bounds.right ? event.clientX - bounds.right : 0;
+      const dy = event.clientY < bounds.top ? bounds.top - event.clientY : event.clientY > bounds.bottom ? event.clientY - bounds.bottom : 0;
+      const distance = dx * dx + dy * dy;
+      if (!selected || distance < selected.distance) selected = { canvas: candidate, index: candidateIndex, bounds, distance };
+      if (distance === 0) break;
+    }
+    if (!selected) return undefined;
+    const targetPage = layout.pages.find(item => item.index === selected!.index);
+    if (!targetPage) return undefined;
+    const x = Math.max(0, Math.min(targetPage.width, ((event.clientX - selected.bounds.left) / selected.bounds.width) * targetPage.width));
+    const y = Math.max(0, Math.min(targetPage.height, ((event.clientY - selected.bounds.top) / selected.bounds.height) * targetPage.height));
+    const context = selected.canvas.getContext("2d");
     const measureText = context ? (text: string, run?: LayoutTextRun) => {
       if (run) context.font = markedFont(run.marks, run.fontSize, run.fontFamily);
       return context.measureText(text).width * 72 / 96;
     } : undefined;
-    return hitTestLayout(layout, page.index, x, y, { measureText });
+    return hitTestLayout(layout, selected.index, x, y, { measureText });
   };
   const handlePointerDown = (event: ReactPointerEvent<HTMLCanvasElement>) => {
     if (!onHitTest) return;
