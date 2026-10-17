@@ -598,9 +598,17 @@ export function Editor({document,versions,onSave,onClose,onConflict}:{document:D
   if(!choice)return;
   const result=convertTextCase(original,choice);
   if(smartCanvasEnabled){
-   // Reuse the engine's structural replacement path. It edits logical ranges,
-   // including table/list descendants, without using DOM Range or execCommand.
-   exec('insertText',result);
+   const engine=nexusEngineRef.current,selection=engine?.getSelection();
+   const ranges=engine&&selection?getSmartCanvasTextSelectionRanges(engine.getDocument().content,selection):null;
+   if(!ranges){setMessage('A seleção atual não pode ser convertida pelo SmartCanvas.');return}
+   const commands=ranges.filter(range=>range.end>range.start).map(range=>replaceRange({
+    blockId:range.block.id,
+    start:range.start,
+    end:range.end,
+    text:convertTextCase(getPlainText(range.block).slice(range.start,range.end),choice),
+   }));
+   if(!commands.length){setMessage('Selecione um trecho de texto primeiro.');return}
+   if(!commitEngineCommands(commands,'structural'))return;
   }else{
    const range=legacyRange;
    if(!range)return;
