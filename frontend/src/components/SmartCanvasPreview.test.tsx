@@ -74,6 +74,25 @@ vi.mock("./CanvasDocumentRenderer", () => ({
           if (index > 0) onHitTest?.(target, 1, "end");
         },
       }, "Drag selection target")),
+      ...document.content.filter(item => item.type === "table").flatMap(table =>
+        table.children.flatMap(row => row.children.map((cell, index) => createElement("button", {
+          key: `drag-cell-${cell.id}`,
+          type: "button",
+          "data-testid": index === 0 ? "smartcanvas-cell-drag-start" : "smartcanvas-cell-drag-end",
+          onClick: () => {
+            const target: SmartCanvasHitTarget = {
+              kind: "table-cell",
+              pageIndex: 0,
+              blockId: table.id,
+              cellId: cell.id,
+              offset: index === 0 ? 1 : 3,
+              lineIndex: 0,
+            };
+            onHitTest?.(target, 1, index === 0 ? "start" : "move");
+            if (index > 0) onHitTest?.(target, 1, "end");
+          },
+        }, "Drag table cell selection"))),
+      ),
       ...document.content.filter(item => item.type === "image").map(item => createElement("button", {
         key: item.id,
         type: "button",
@@ -1479,6 +1498,46 @@ describe("SmartCanvasPreview input integration", () => {
       focus: { blockId: second.id, offset: 3 },
     });
     expect(host.querySelector('[data-testid="smartcanvas-selection"]')?.getAttribute("data-focus-block")).toBe(second.id);
+  });
+
+  it("maps drag selection from one table cell to another into canonical paragraph positions", async () => {
+    const document = createDocument({ title: "SmartCanvas cross-cell drag selection" });
+    const table = {
+      type: "table" as const,
+      id: "table_drag_cells",
+      children: [{
+        type: "tableRow" as const,
+        id: "row_drag_cells",
+        children: [
+          { type: "tableCell" as const, id: "cell_drag_first", children: [{ type: "paragraph" as const, id: "para_drag_first", children: [{ type: "text" as const, id: "run_drag_first", text: "First cell", marks: [] }] }] },
+          { type: "tableCell" as const, id: "cell_drag_second", children: [{ type: "paragraph" as const, id: "para_drag_second", children: [{ type: "text" as const, id: "run_drag_second", text: "Second cell", marks: [] }] }] },
+        ],
+      }],
+    };
+    document.content.push(table);
+    engine = createEditor({ document });
+    const normalized = engine.getDocument().content.find(block => block.type === "table");
+    if (!normalized || normalized.type !== "table") throw new Error("Expected normalized table");
+    const firstParagraph = normalized.children[0]!.children[0]!.children[0]!;
+    const secondParagraph = normalized.children[0]!.children[1]!.children[0]!;
+    host = window.document.createElement("div");
+    window.document.body.append(host);
+    root = createRoot(host);
+    await act(async () => {
+      root?.render(createElement(SmartCanvasPreview, {
+        document: engine!.getDocument(),
+        engine: engine!,
+        onDocumentChange: vi.fn(),
+      }));
+    });
+    const start = host.querySelector('[data-testid="smartcanvas-cell-drag-start"]') as HTMLButtonElement | null;
+    const end = host.querySelector('[data-testid="smartcanvas-cell-drag-end"]') as HTMLButtonElement | null;
+    if (!start || !end) throw new Error("Table-cell drag controls were not mounted");
+    await act(async () => { start.click(); end.click(); });
+    expect(engine.getSelection()).toEqual({
+      anchor: { blockId: firstParagraph.id, offset: 1 },
+      focus: { blockId: secondParagraph.id, offset: 3 },
+    });
   });
 
 });
