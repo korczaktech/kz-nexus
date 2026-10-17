@@ -7,6 +7,7 @@ import {
   getSmartCanvasDiagnostics,
   isProductionSmartCanvasEnabled,
   resetSmartCanvasDiagnostics,
+  restoreSmartCanvasSelection,
 } from "./editorSmartCanvas";
 
 describe("production SmartCanvas migration gate", () => {
@@ -119,6 +120,28 @@ describe("production SmartCanvas migration gate", () => {
     })?.map(range => [range.block.id, range.start, range.end])).toEqual([
       ["first", 5, 5], ["cell-p", 0, 2],
     ]);
+  });
+
+  it("restores focus only inside the editor instance being restored", () => {
+    const firstRoot = document.createElement("section");
+    const secondRoot = document.createElement("section");
+    const firstInput = document.createElement("textarea");
+    const secondInput = document.createElement("textarea");
+    firstInput.setAttribute("aria-label", "Entrada de texto do SmartCanvas");
+    secondInput.setAttribute("aria-label", "Entrada de texto do SmartCanvas");
+    firstRoot.append(firstInput);
+    secondRoot.append(secondInput);
+    document.body.append(firstRoot, secondRoot);
+
+    try {
+      restoreSmartCanvasSelection({} as never, firstRoot);
+      expect(document.activeElement).toBe(firstInput);
+      expect(secondInput).not.toBe(document.activeElement);
+      expect(getSmartCanvasDiagnostics().restores).toBe(1);
+    } finally {
+      firstRoot.remove();
+      secondRoot.remove();
+    }
   });
 
   it("keeps diagnostic counters isolated and returns a snapshot", () => {
