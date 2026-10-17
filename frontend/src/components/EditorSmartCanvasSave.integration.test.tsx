@@ -202,7 +202,7 @@ describe("Editor SmartCanvas save integration", () => {
     });
     const toolsTabs = Array.from(host.querySelectorAll<HTMLButtonElement>(".editor-ribbon-tabs button")).filter(button => button.textContent === "Ferramentas");
     expect(toolsTabs).toHaveLength(2);
-    for (const tab of toolsTabs) await act(async () => { tab.click(); });
+    await act(async () => { toolsTabs[0]!.click(); });
     const inputs = Array.from(host.querySelectorAll<HTMLTextAreaElement>('textarea[aria-label="Entrada de texto do SmartCanvas"]'));
     const spellcheckButtons = Array.from(host.querySelectorAll<HTMLButtonElement>('button[aria-label="Verificação ortográfica"]'));
     expect(inputs).toHaveLength(2);
