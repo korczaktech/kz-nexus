@@ -86,6 +86,7 @@ try {
 
   await page.getByRole("button", { name: "Editar documento", exact: true }).click();
   assert.equal(await page.locator(".editor-pages-stack, .rich-editor").count(), 0, "production SmartCanvas must not mount the legacy editor DOM");
+  assert.equal(await page.locator('.editor-workspace [contenteditable="true"]').count(), 0, "production SmartCanvas body must not use contentEditable");
   const input = page.locator('textarea[aria-label="Entrada de texto do SmartCanvas"]');
   await input.waitFor();
   await page.locator(".kortex-canvas-page").first().click({ position: { x: 120, y: 110 } });
