@@ -165,4 +165,48 @@ describe("Editor SmartCanvas save integration", () => {
     expect(recoverDraft(localStorage, document.id)).not.toBeNull();
     expect(recoverNativeDraft(localStorage, document.id)).not.toBeNull();
   });
+
+  it("keeps SmartCanvas spellcheck scoped to the editor instance whose toolbar was used", async () => {
+    previousUrl = window.location.pathname + window.location.search + window.location.hash;
+    window.history.replaceState({}, "", "/?smartCanvas=1");
+    const makeDocument = (id: string, text: string): DocumentItem => {
+      const model = createDocument({ title: id });
+      const paragraph = model.content[0];
+      if (!paragraph || paragraph.type !== "paragraph") throw new Error("Expected initial paragraph");
+      paragraph.children[0]!.text = text;
+      const encoded = encodeNexusDocument(model);
+      if (!encoded.ok) throw new Error("Could not encode test document");
+      return {
+        id,
+        owner_id: "owner",
+        name: id,
+        document_type: "document",
+        folder_id: null,
+        current_version_id: null,
+        status: "active",
+        favorite: false,
+        created_at: "2026-10-16T00:00:00.000Z",
+        updated_at: "2026-10-16T00:00:00.000Z",
+        content: htmlFromNexusDocument(model),
+        native_content: encoded.value,
+      };
+    };
+    host = window.document.createElement("div");
+    window.document.body.append(host);
+    root = createRoot(host);
+    await act(async () => {
+      root?.render(createElement("div", null,
+        createElement(Editor, { document: makeDocument("first", "First"), versions: [], onSave: vi.fn(async () => "saved" as const), onClose: vi.fn(), onConflict: vi.fn(async () => makeDocument("first", "First")) }),
+        createElement(Editor, { document: makeDocument("second", "Second"), versions: [], onSave: vi.fn(async () => "saved" as const), onClose: vi.fn(), onConflict: vi.fn(async () => makeDocument("second", "Second")) }),
+      ));
+    });
+    const inputs = Array.from(host.querySelectorAll<HTMLTextAreaElement>('textarea[aria-label="Entrada de texto do SmartCanvas"]'));
+    const spellcheckButtons = Array.from(host.querySelectorAll<HTMLButtonElement>('button[aria-label="Verificação ortográfica"]'));
+    expect(inputs).toHaveLength(2);
+    expect(spellcheckButtons).toHaveLength(2);
+    expect(inputs.map(input => input.getAttribute("spellcheck"))).toEqual(["false", "false"]);
+    await act(async () => { spellcheckButtons[1]!.click(); });
+    expect(inputs[0]!.getAttribute("spellcheck")).toBe("false");
+    expect(inputs[1]!.getAttribute("spellcheck")).toBe("true");
+  });
 });
