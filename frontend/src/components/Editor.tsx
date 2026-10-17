@@ -18,6 +18,7 @@ import {decodeNexusDocument,encodeNexusDocument} from '../services/nexusDocument
 import {characterDeletionRange,normalizeTextRange,wordDeletionRange} from './editorSelection';
 import {collectSmartCanvasTextBlocks,dispatchSmartCanvasBeforeInput,findSmartCanvasTextMatches,getSmartCanvasTextSelectionRanges,isProductionSmartCanvasEnabled,readSmartCanvasSelection,restoreSmartCanvasSelection} from './editorSmartCanvas';
 import {isCompositionInput} from './editorComposition';
+import {lineEndOffset,lineStartOffset} from './smartCanvasTextOffsets';
 import {markdownToHtml} from './markdown';
 import {SmartCanvasPreview,createCanvasLayoutMetrics} from './SmartCanvasPreview';
 import {wordRangeAt} from './smartCanvasTextOffsets';
