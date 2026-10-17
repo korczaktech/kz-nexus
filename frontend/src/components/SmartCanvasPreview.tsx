@@ -27,18 +27,25 @@ function collectTextBlocks(nodes: readonly unknown[]): TextBlock[] {
 
 type PastedCellImage = { resourceId: string; alt: string; width?: number; height?: number };
 
-function flattenPastedCellContent(nodes: readonly unknown[], images: PastedCellImage[]): string[] {
-  const flattenNode = (value: unknown): string[] => {
+type PastedCellTextRun = { text: string; marks: Mark[] };
+type PastedCellTextLine = PastedCellTextRun[];
+
+function flattenPastedCellContent(nodes: readonly unknown[], images: PastedCellImage[]): PastedCellTextLine[] {
+  const plainRun = (text: string): PastedCellTextRun => ({ text, marks: [] });
+  const joinLines = (lines: PastedCellTextLine[], separator: string): PastedCellTextLine =>
+    lines.flatMap((line, index) => index === 0 ? line : [plainRun(separator), ...line]);
+  const flattenNode = (value: unknown): PastedCellTextLine[] => {
     if (!value || typeof value !== "object") return [];
     const node = value as { type?: string; id?: string; alt?: string; resourceId?: string; width?: number; height?: number; start?: number; children?: unknown[]; images?: unknown[] };
     if (node.type === "paragraph" || node.type === "heading") {
-      return [getPlainText(value as Extract<NexusDocument["content"][number], { type: "paragraph" | "heading" }>)];
+      const block = value as Extract<NexusDocument["content"][number], { type: "paragraph" | "heading" }>;
+      return [block.children.map(run => ({ text: run.text, marks: run.marks.map(mark => ({ ...mark })) }))];
     }
     if (node.type === "image" && typeof node.resourceId === "string") {
       images.push({ resourceId: node.resourceId, alt: node.alt ?? "", width: node.width, height: node.height });
       return [];
     }
-    if (node.type === "thematicBreak") return [""];
+    if (node.type === "thematicBreak") return [[plainRun("")]];
     if (node.type === "blockquote") return (node.children ?? []).flatMap(flattenNode);
     if (node.type === "bulletList" || node.type === "orderedList") {
       return (node.children ?? []).flatMap((item, index) => {
@@ -46,15 +53,17 @@ function flattenPastedCellContent(nodes: readonly unknown[], images: PastedCellI
         const itemNode = item as { children?: unknown[] };
         const lines = (itemNode.children ?? []).flatMap(flattenNode);
         const marker = node.type === "orderedList" ? String((node.start ?? 1) + index) + ". " : "• ";
-        return lines.length ? lines.map((line, lineIndex) => lineIndex === 0 ? marker + line : "  " + line) : [marker.trimEnd()];
+        return lines.length
+          ? lines.map((line, lineIndex) => lineIndex === 0 ? [plainRun(marker), ...line] : [plainRun("  "), ...line])
+          : [[plainRun(marker.trimEnd())]];
       });
     }
     if (node.type === "table") {
       return (node.children ?? []).map(rowValue => {
-        if (!rowValue || typeof rowValue !== "object") return "";
+        if (!rowValue || typeof rowValue !== "object") return [plainRun("")];
         const row = rowValue as { children?: unknown[] };
-        return (row.children ?? []).map(cellValue => {
-          if (!cellValue || typeof cellValue !== "object") return "";
+        const cells = (row.children ?? []).map(cellValue => {
+          if (!cellValue || typeof cellValue !== "object") return [plainRun("")];
           const cell = cellValue as { children?: unknown[]; images?: unknown[] };
           for (const image of cell.images ?? []) {
             if (!image || typeof image !== "object") continue;
@@ -66,8 +75,9 @@ function flattenPastedCellContent(nodes: readonly unknown[], images: PastedCellI
               height: typeof item.height === "number" ? item.height : undefined,
             });
           }
-          return (cell.children ?? []).flatMap(flattenNode).join("\n");
-        }).join(" | ");
+          return joinLines((cell.children ?? []).flatMap(flattenNode), "\n");
+        });
+        return cells.flatMap((cell, index) => index === 0 ? cell : [plainRun(" | "), ...cell]);
       });
     }
     if (node.type === "listItem") return (node.children ?? []).flatMap(flattenNode);
@@ -1738,7 +1748,12 @@ export function SmartCanvasPreview({ document, engine, headerText = "", footerTe
           // text and import embedded images as first-class cell image resources.
           const pastedImages: PastedCellImage[] = [];
           const pastedLines = flattenPastedCellContent(imported.content, pastedImages);
-          const pastedText = pastedLines.join("\n");
+          const insertionRuns: PastedCellTextRun[] = [];
+          pastedLines.forEach((line, index) => {
+            if (index > 0) insertionRuns.push({ text: "\n", marks: [] });
+            insertionRuns.push(...line);
+          });
+          const pastedText = insertionRuns.map(run => run.text).join("");
           const start = Math.min(activeCell.anchorOffset, activeCell.offset);
           const end = Math.max(activeCell.anchorOffset, activeCell.offset);
           const nextText = activeCell.text.slice(0, start) + pastedText + activeCell.text.slice(end);
@@ -1750,7 +1765,7 @@ export function SmartCanvasPreview({ document, engine, headerText = "", footerTe
               cellId: activeCell.cellId,
               text: nextText,
               insertionRange: { start, end: start + pastedText.length },
-              insertionRuns: [{ text: pastedText, marks: [] }],
+              insertionRuns,
             }));
           }
           for (const image of pastedImages) {
