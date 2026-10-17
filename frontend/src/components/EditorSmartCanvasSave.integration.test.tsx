@@ -160,6 +160,80 @@ describe("Editor SmartCanvas save integration", () => {
     expect(recoverNativeDraft(localStorage, document.id)).not.toBeNull();
   });
 
+  it("finds and replaces canonical text with the legacy page DOM unmounted", async () => {
+    previousUrl = window.location.pathname + window.location.search + window.location.hash;
+    window.history.replaceState({}, "", "/?smartCanvas=1");
+    const model = createDocument({ title: "SmartCanvas find replace without legacy DOM" });
+    const paragraph = model.content[0];
+    if (!paragraph || paragraph.type !== "paragraph") throw new Error("Expected initial paragraph");
+    paragraph.children[0]!.text = "alpha alpha";
+    const encoded = encodeNexusDocument(model);
+    if (!encoded.ok) throw new Error("Could not encode test document");
+    const document: DocumentItem = {
+      id: "smartcanvas-find-replace",
+      owner_id: "owner",
+      name: "SmartCanvas find replace",
+      document_type: "document",
+      folder_id: null,
+      current_version_id: null,
+      status: "active",
+      favorite: false,
+      created_at: "2026-10-16T00:00:00.000Z",
+      updated_at: "2026-10-16T00:00:00.000Z",
+      content: htmlFromNexusDocument(model),
+      native_content: encoded.value,
+    };
+    let savedPayload: Parameters<Parameters<typeof Editor>[0]["onSave"]>[0] | undefined;
+    const onSave = vi.fn(async (payload: Parameters<Parameters<typeof Editor>[0]["onSave"]>[0]) => {
+      savedPayload = payload;
+      return "saved" as const;
+    });
+    host = window.document.createElement("div");
+    window.document.body.append(host);
+    root = createRoot(host);
+    await act(async () => {
+      root?.render(createElement(Editor, {
+        document,
+        versions: [],
+        onSave,
+        onClose: vi.fn(),
+        onConflict: vi.fn(async () => document),
+      }));
+    });
+    expect(host.querySelector(".editor-canvas-legacy-fallback .editor-pages-stack")).toBeNull();
+    const openFind = host.querySelector('button[aria-label="Localizar"]') as HTMLButtonElement | null;
+    if (!openFind) throw new Error("Find command was not mounted");
+    await act(async () => { openFind.click(); });
+    const fields = [...host.querySelectorAll<HTMLInputElement>(".editor-findbar input")];
+    if (fields.length !== 2) throw new Error("Find/replace fields were not mounted");
+    const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value")?.set;
+    if (!setter) throw new Error("Input value setter was not available");
+    await act(async () => {
+      setter.call(fields[0], "alpha");
+      fields[0].dispatchEvent(new Event("input", { bubbles: true }));
+      setter.call(fields[1], "beta");
+      fields[1].dispatchEvent(new Event("input", { bubbles: true }));
+    });
+    const replace = [...host.querySelectorAll<HTMLButtonElement>(".editor-findbar button")]
+      .find(button => button.textContent?.includes("Substituir tudo"));
+    if (!replace) throw new Error("Replace-all command was not mounted");
+    await act(async () => { replace.click(); });
+    const saveButton = host.querySelector("button.editor-save") as HTMLButtonElement | null;
+    if (!saveButton) throw new Error("Save button was not mounted");
+    await act(async () => {
+      saveButton.click();
+      await Promise.resolve();
+    });
+    expect(onSave).toHaveBeenCalledTimes(1);
+    expect(savedPayload?.content).toContain("beta beta");
+    const restored = decodeNexusDocument(savedPayload!.native_content);
+    expect(restored.ok).toBe(true);
+    if (!restored.ok) return;
+    const restoredParagraph = restored.value.content[0];
+    if (!restoredParagraph || restoredParagraph.type !== "paragraph") throw new Error("Expected saved paragraph");
+    expect(getPlainText(restoredParagraph)).toBe("beta beta");
+  });
+
   it("keeps SmartCanvas spellcheck scoped to the editor instance whose toolbar was used", async () => {
     previousUrl = window.location.pathname + window.location.search + window.location.hash;
     window.history.replaceState({}, "", "/?smartCanvas=1");
