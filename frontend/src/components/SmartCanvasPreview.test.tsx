@@ -225,6 +225,37 @@ describe("SmartCanvasPreview input integration", () => {
     });
   });
 
+  it("syncs externally updated logical selection into the canvas selection state", async () => {
+    const document = createDocument({ title: "SmartCanvas external selection" });
+    const paragraph = document.content[0];
+    if (!paragraph || paragraph.type !== "paragraph") throw new Error("Expected initial paragraph");
+    paragraph.children[0]!.text = "External selection";
+    engine = createEditor({ document });
+    expect(engine.setSelection({
+      anchor: { blockId: paragraph.id, offset: 0 },
+      focus: { blockId: paragraph.id, offset: 4 },
+    }).ok).toBe(true);
+    const onSelectionChange = vi.fn();
+    host = window.document.createElement("div");
+    window.document.body.append(host);
+    root = createRoot(host);
+    const renderPreview = () => createElement(SmartCanvasPreview, {
+      document: engine!.getDocument(),
+      engine: engine!,
+      onDocumentChange: vi.fn(),
+      externalSelection: engine!.getSelection() ?? null,
+      onSelectionChange,
+    });
+    await act(async () => { root?.render(renderPreview()); });
+    const updated = {
+      anchor: { blockId: paragraph.id, offset: 5 },
+      focus: { blockId: paragraph.id, offset: 14 },
+    };
+    expect(engine.setSelection(updated).ok).toBe(true);
+    await act(async () => { root?.render(renderPreview()); });
+    expect(onSelectionChange).toHaveBeenLastCalledWith(updated);
+  });
+
   it("projects engine-owned pagination and explicit page breaks into SmartCanvas", async () => {
     const document = createDocument({ title: "SmartCanvas pagination ownership" });
     document.content.push(
