@@ -1,6 +1,6 @@
 # SmartCanvas — arquitetura-alvo e plano de transição
 
-**Status (2026-10-17):** preview, layout e renderer do SmartCanvas validados por CI. A edição opt-in usa seleção lógica independente da seleção DOM para comandos do corpo, histórico canônico, busca/substituição, clipboard de toolbar e exportação baseada no modelo. A integração E2E com API real passou no commit `57a743d2` para salvamento, payload NSX, recuperação de rascunho, exportação DOCX/PDF, autosave e conflito de versão. O fechamento integral continua bloqueado por estruturas aninhadas editáveis, comparação de regressão visual e validação manual multi-navegador/IME; a cabeça atual ainda precisa concluir sua própria rodada de CI.  
+**Status (2026-10-17):** preview, layout e renderer do SmartCanvas validados por CI. A edição opt-in usa seleção lógica independente da seleção DOM para comandos do corpo, histórico canônico, busca/substituição, clipboard de toolbar e exportação baseada no modelo. A integração E2E com API real passou novamente na cabeça `768747ea` para salvamento, payload NSX, recuperação de rascunho, exportação DOCX/PDF, autosave e conflito de versão. SmartCanvas validation, Kortex validation, baseline de memória e publicação GitHub Pages também passaram nesse commit. O fechamento integral continua bloqueado por estruturas aninhadas editáveis, seleção unificada entre células, comparação de regressão visual e validação manual multi-navegador/IME.  
 **Escopo:** editor Web do Korczak Nexus (frontend/ + packages/engine/).  
 **Regra de segurança:** o editor atual continua sendo o caminho padrão até que cada capacidade seja migrada e validada.
 
@@ -128,7 +128,7 @@ A migração é por capacidades, com a implementação nova opt-in e o caminho a
 
 ### Etapa 4 — paridade
 - [x] Testes de integração cobrem entrada de texto, seleção/substituição entre blocos com undo, edição de células, imagens/objetos, colagem HTML sanitizada, persistência .nsx e exportação HTML.
-- [x] E2E com API real cobre salvamento, round-trip do payload NSX, recuperação de rascunho, exportação DOCX/PDF, autosave e conflito de versão (passou no commit `57a743d2`). Ainda falta incluir a paginação nessa bateria e repetir a validação na cabeça atual após os últimos incrementos.
+- [x] E2E com API real cobre salvamento, round-trip do payload NSX, recuperação de rascunho, exportação DOCX/PDF, autosave e conflito de versão (passou na cabeça `768747ea`). Ainda falta incluir a paginação nessa bateria e acrescentar comparação visual automatizada.
 - [ ] Comparação visual de regressão entre modo legado e SmartCanvas em documentos representativos e em vários navegadores/dispositivos.
 - [ ] O modo SmartCanvas permanece opt-in até a aprovação de todos os critérios críticos.
 
