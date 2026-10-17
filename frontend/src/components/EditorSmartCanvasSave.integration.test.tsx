@@ -103,10 +103,11 @@ describe("Editor SmartCanvas save integration", () => {
       }));
     });
 
-    expect(host.querySelector(".editor-canvas")?.classList.contains("editor-canvas-legacy-fallback")).toBe(true);
+    expect(host.querySelector(".editor-canvas")).toBeNull();
+    expect(host.querySelector(".editor-canvas-legacy-fallback")).toBeNull();
     // Production SmartCanvas must not mount a hidden native editor projection.
-    expect(host.querySelector(".editor-canvas-legacy-fallback .editor-pages-stack")).toBeNull();
-    expect(host.querySelector(".editor-canvas-legacy-fallback .rich-editor")).toBeNull();
+    expect(host.querySelector(".editor-pages-stack")).toBeNull();
+    expect(host.querySelector(".rich-editor")).toBeNull();
     const hit = host.querySelector('[data-testid="editor-smartcanvas-hit"]') as HTMLButtonElement | null;
     expect(hit).not.toBeNull();
     await act(async () => { hit?.click(); });
@@ -200,7 +201,8 @@ describe("Editor SmartCanvas save integration", () => {
         onConflict: vi.fn(async () => document),
       }));
     });
-    expect(host.querySelector(".editor-canvas-legacy-fallback .editor-pages-stack")).toBeNull();
+    expect(host.querySelector(".editor-canvas")).toBeNull();
+    expect(host.querySelector(".editor-pages-stack")).toBeNull();
     const openFind = host.querySelector('button[aria-label="Localizar"]') as HTMLButtonElement | null;
     if (!openFind) throw new Error("Find command was not mounted");
     await act(async () => { openFind.click(); });
