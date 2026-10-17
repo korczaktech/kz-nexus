@@ -220,6 +220,7 @@ function drawBlock(ctx: CanvasRenderingContext2D, block: LayoutBlock, document: 
         ctx.lineWidth = 1;
         ctx.strokeRect(cellX, cellY, cellWidth, cellHeight);
         for (const line of cell.lines) drawLine(ctx, line);
+        if (showFormattingMarks && cell.lines.length) drawParagraphMark(ctx, cell.lines[cell.lines.length - 1]!);
         for (const embedded of cell.images ?? []) {
           const image = imageCache.get(embedded.resourceId);
           const imageX = embedded.rect.x * PT_TO_CSS_PX;
