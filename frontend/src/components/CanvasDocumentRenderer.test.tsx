@@ -213,6 +213,9 @@ describe("CanvasDocumentRenderer visual regression contract", () => {
       first.dispatchEvent(pointerEvent("pointerdown", 100, 1));
       first.dispatchEvent(pointerEvent("pointermove", pageHeight + 12, 1));
       first.dispatchEvent(pointerEvent("pointermove", pageHeight + 124, 1));
+      // Simulate the hit-test losing the page target at pointer-up; the drag must
+      // still emit its final phase using the last valid target.
+      canvases.forEach(canvas => { canvas.dataset.pageIndex = "invalid"; });
       first.dispatchEvent(pointerEvent("pointerup", pageHeight + 124, 0));
     });
     expect(hits.some(hit => hit.pageIndex === 0 && hit.phase === "start")).toBe(true);
