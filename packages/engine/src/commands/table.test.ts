@@ -325,9 +325,10 @@ describe("row/column operations", () => {
 
   it("preserves nested lists and tables in cells through validation, export, and table commands", () => {
     const document = base();
+    const context = ctx();
     const initial = document.content[0];
     if (!initial || initial.type !== "paragraph") throw new Error("Expected initial paragraph");
-    const inserted = insertTable({ afterBlockId: initial.id, rows: 1, columns: 1 })(document, ctx());
+    const inserted = insertTable({ afterBlockId: initial.id, rows: 1, columns: 1 })(document, context);
     if (!inserted.ok) throw inserted.error;
     const outer = inserted.value.document.content.find(block => block.type === "table");
     if (!outer || outer.type !== "table") throw new Error("Expected outer table");
@@ -350,7 +351,7 @@ describe("row/column operations", () => {
       rowId: outer.children[0]!.id,
       cellId: outer.children[0]!.children[0]!.id,
       blocks,
-    })(inserted.value.document, ctx());
+    })(inserted.value.document, context);
     if (!replaced.ok) throw replaced.error;
     const updatedOuter = replaced.value.document.content.find(block => block.type === "table");
     if (!updatedOuter || updatedOuter.type !== "table") throw new Error("Expected updated outer table");
@@ -365,7 +366,7 @@ describe("row/column operations", () => {
 
     const nestedTable = cell.children.find(block => block.type === "table");
     if (!nestedTable || nestedTable.type !== "table") throw new Error("Expected nested table");
-    const addRow = addTableRow({ tableId: nestedTable.id })(replaced.value.document, ctx());
+    const addRow = addTableRow({ tableId: nestedTable.id })(replaced.value.document, context);
     if (!addRow.ok) throw addRow.error;
     const updatedNested = (addRow.value.document.content.find(block => block.type === "table") as Table)
       .children[0]!.children[0]!.children.find(block => block.type === "table");
