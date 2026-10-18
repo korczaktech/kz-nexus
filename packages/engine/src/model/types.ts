@@ -124,7 +124,8 @@ export interface OrderedList {
 export interface TableCell {
   type: "tableCell";
   id: string;
-  children: Paragraph[];
+  /** Canonical block tree for the cell. Nested lists, tables, quotes and headings remain structural. */
+  children: Block[];
   /** Image resources anchored inside the cell, rendered after its paragraphs. */
   images?: ImageBlock[];
 }
