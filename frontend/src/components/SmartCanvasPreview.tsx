@@ -15,10 +15,22 @@ function collectTextBlocks(nodes: readonly unknown[]): TextBlock[] {
     if (typeof node.id === "string" && (node.type === "paragraph" || node.type === "heading")) {
       blocks.push({ id: node.id, text: getPlainText(value as Extract<NexusDocument["content"][number], { type: "paragraph" | "heading" }>) });
     }
-    // Table-cell paragraphs are edited through the dedicated cell controller.
-    // Treating them as top-level text blocks makes Ctrl+A, arrow navigation and
-    // cross-block deletion target nested IDs that the paragraph commands may not support.
-    if (node.type !== "table" && Array.isArray(node.children)) {
+    if (node.type === "table" && Array.isArray(node.children)) {
+      for (const rowValue of node.children) {
+        if (!rowValue || typeof rowValue !== "object") continue;
+        const row = rowValue as { children?: unknown[] };
+        for (const cellValue of row.children ?? []) {
+          if (!cellValue || typeof cellValue !== "object") continue;
+          const cell = cellValue as { children?: unknown[] };
+          for (const child of cell.children ?? []) {
+            if (!child || typeof child !== "object") continue;
+            const nested = child as { type?: unknown };
+            // Direct cell paragraphs stay with the cell controller; nested containers use canonical text commands.
+            if (nested.type !== "paragraph" && nested.type !== "heading") blocks.push(...collectTextBlocks([child]));
+          }
+        }
+      }
+    } else if (Array.isArray(node.children)) {
       blocks.push(...collectTextBlocks(node.children));
     }
   }
@@ -244,7 +256,23 @@ function findTextNode(nodes: readonly unknown[], id: string): { text: string; ru
       }));
       return { text: normalizedRuns.map(run => run.text).join(""), runs: normalizedRuns };
     }
-    if (node.type !== "table" && Array.isArray(node.children)) {
+    if (node.type === "table" && Array.isArray(node.children)) {
+      for (const rowValue of node.children) {
+        if (!rowValue || typeof rowValue !== "object") continue;
+        const row = rowValue as { children?: unknown[] };
+        for (const cellValue of row.children ?? []) {
+          if (!cellValue || typeof cellValue !== "object") continue;
+          const cell = cellValue as { children?: unknown[] };
+          for (const child of cell.children ?? []) {
+            if (!child || typeof child !== "object") continue;
+            const nestedBlock = child as { type?: unknown };
+            if (nestedBlock.type === "paragraph" || nestedBlock.type === "heading") continue;
+            const nested = findTextNode([child], id);
+            if (nested) return nested;
+          }
+        }
+      }
+    } else if (Array.isArray(node.children)) {
       const nested = findTextNode(node.children, id);
       if (nested) return nested;
     }
