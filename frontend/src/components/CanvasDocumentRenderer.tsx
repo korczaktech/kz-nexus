@@ -290,6 +290,7 @@ function pageText(page: LayoutPage): string {
 export function CanvasPage({ page, pageCount, document, headerText, footerText, headerAlign, footerAlign, showPageNumbers, showFormattingMarks, layout, onHitTest, selection, showCaret = false, activeCellId, activeBlockId, activeCellSelection }: CanvasPageProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const overlayRef = useRef<HTMLCanvasElement>(null);
+  const lastHitTargetRef = useRef<SmartCanvasHitTarget | null>(null);
   const cssWidth = page.width * PT_TO_CSS_PX;
   const cssHeight = page.height * PT_TO_CSS_PX;
   const style: CSSProperties = {
@@ -542,18 +543,23 @@ export function CanvasPage({ page, pageCount, document, headerText, footerText, 
     if (!onHitTest) return;
     const target = hitTargetAtPointer(event);
     if (!target) return;
+    lastHitTargetRef.current = target;
     event.currentTarget.setPointerCapture?.(event.pointerId);
     onHitTest(target, event.nativeEvent.detail || 1, "start");
   };
   const handlePointerMove = (event: ReactPointerEvent<HTMLCanvasElement>) => {
     if (!onHitTest || (event.buttons & 1) === 0) return;
     const target = hitTargetAtPointer(event);
-    if (target) onHitTest(target, 1, "move");
+    if (target) {
+      lastHitTargetRef.current = target;
+      onHitTest(target, 1, "move");
+    }
   };
   const handlePointerUp = (event: ReactPointerEvent<HTMLCanvasElement>) => {
     if (!onHitTest) return;
-    const target = hitTargetAtPointer(event);
+    const target = hitTargetAtPointer(event) ?? lastHitTargetRef.current;
     if (target) onHitTest(target, 1, "end");
+    lastHitTargetRef.current = null;
     if (event.currentTarget.hasPointerCapture?.(event.pointerId)) event.currentTarget.releasePointerCapture?.(event.pointerId);
   };
 
