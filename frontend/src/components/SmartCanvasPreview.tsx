@@ -40,7 +40,7 @@ function findListItemContext(nodes: readonly unknown[], blockId: string): { list
   return undefined;
 }
 
-function collectTextBlocks(nodes: readonly unknown[]): TextBlock[] {
+function collectTextBlocks(nodes: readonly unknown[], insideContainer = false): TextBlock[] {
   const blocks: TextBlock[] = [];
   for (const value of nodes) {
     if (!value || typeof value !== "object") continue;
@@ -65,12 +65,12 @@ function collectTextBlocks(nodes: readonly unknown[]): TextBlock[] {
             if (!child || typeof child !== "object") continue;
             const nested = child as { type?: unknown };
             // Simple cells use the cell controller. Complex cells route every text block through canonical text commands.
-            if (hasNestedStructure || (nested.type !== "paragraph" && nested.type !== "heading")) blocks.push(...collectTextBlocks([child]));
+            if (hasNestedStructure || insideContainer || (nested.type !== "paragraph" && nested.type !== "heading")) blocks.push(...collectTextBlocks([child], true));
           }
         }
       }
     } else if (Array.isArray(node.children)) {
-      blocks.push(...collectTextBlocks(node.children));
+      blocks.push(...collectTextBlocks(node.children, true));
     }
   }
   return blocks;
