@@ -12,8 +12,28 @@ export function isParagraphLike(block: Block): block is ParagraphLike {
   return block.type === "paragraph" || block.type === "heading";
 }
 
-export function getPlainText(node: { children: TextRun[] }): string {
-  return node.children.map((run) => run.text).join("");
+export function getPlainText(node: Block | { children: TextRun[] }): string {
+  if ("type" in node) {
+    switch (node.type) {
+      case "paragraph":
+      case "heading":
+        return node.children.map(run => run.text).join("");
+      case "blockquote":
+        return node.children.map(child => getPlainText(child)).join("\n");
+      case "bulletList":
+      case "orderedList":
+        return node.children.map((item, index) => item.children.map(child =>
+          child.type === "paragraph" ? getPlainText(child) : getPlainText(child)
+        ).join("\n")).join("\n");
+      case "table":
+        return node.children.map(row => row.children.map(cell => cell.children.map(child => getPlainText(child)).join("\n")).join("\t")).join("\n");
+      case "image":
+        return node.alt;
+      case "thematicBreak":
+        return "";
+    }
+  }
+  return node.children.map(run => run.text).join("");
 }
 
 /** Updates one paragraph/heading by ID, copying only the containers on its path. */
