@@ -101,6 +101,7 @@ function visitBlock(block: LayoutBlock, pageIndex: number, x: number, y: number,
         previousLocalStart = line.startOffset;
         previousGlobalEnd = globalEnd;
       }
+      for (const child of cell.children ?? []) visitBlock(child, pageIndex, x, y, options, candidates, order);
       candidates.push({
         target: { kind: "table-cell", pageIndex, blockId: block.blockId, cellId: cell.cellId, offset: 0, lineIndex: -1 },
         distance: distanceToRect(x, y, cell.rect),
