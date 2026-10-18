@@ -239,8 +239,8 @@ function checkTable(
         issues.push({ code: "INVALID_DOCUMENT", message: `Table cell must contain a paragraph at ${cellPath}`, path: cellPath });
         return;
       }
-      cell.children.forEach((paragraph, pIndex) =>
-        checkParagraphLike(paragraph, `${cellPath}.children[${pIndex}]`, seen, issues, limits, counter, depth + 3),
+      cell.children.forEach((child, childIndex) =>
+        checkBlock(child, `${cellPath}.children[${childIndex}]`, seen, issues, limits, resourceIds, counter, depth + 3),
       );
       if (cell.images !== undefined && !Array.isArray(cell.images)) {
         issues.push({ code: "INVALID_DOCUMENT", message: `Table cell images must be an array at ${cellPath}.images`, path: `${cellPath}.images` });
