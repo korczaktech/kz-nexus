@@ -12,7 +12,7 @@ import { insertImage } from "../commands/image";
 import { writeNsx } from "./writer";
 import { readNsx } from "./reader";
 import { getPlainText } from "../model/tree";
-import type { NexusDocument, Paragraph, Table } from "../model/types";
+import type { Block, NexusDocument, Paragraph, Table } from "../model/types";
 import { CURRENT_NSX_FORMAT_VERSION, NSX_FORMAT_ID } from "./envelope";
 import { DEFAULT_LIMITS } from "../schema/schema";
 
@@ -33,6 +33,49 @@ describe(".nsx round-trip", () => {
     const doc = createDocument(createIdGenerator("n", 1), createFixedClock(0).now);
     const { document } = roundTrip(doc);
     expect(getPlainText(document.content[0] as Paragraph)).toBe("");
+  });
+
+
+  it("preserves nested lists and tables inside cells in NSX round-trips", () => {
+    const commandCtx = ctx();
+    const doc = createDocument(createIdGenerator("n", 1), createFixedClock(0).now);
+    const initial = doc.content[0]!;
+    const inserted = insertTable({ afterBlockId: initial.id, rows: 1, columns: 1 })(doc, commandCtx);
+    if (!inserted.ok) throw inserted.error;
+    const table = inserted.value.document.content.find(block => block.type === "table");
+    if (!table || table.type !== "table") throw new Error("Expected table");
+    const nested: Block[] = [
+      { type: "bulletList", id: "nested-list", children: [{
+        type: "listItem", id: "nested-item", children: [{
+          type: "paragraph", id: "nested-list-paragraph", children: [{ type: "text", id: "nested-list-run", text: "List inside cell", marks: [] }],
+        }],
+      }] },
+      { type: "table", id: "nested-table", children: [{
+        type: "tableRow", id: "nested-row", children: [{
+          type: "tableCell", id: "nested-cell", children: [{
+            type: "paragraph", id: "nested-table-paragraph", children: [{ type: "text", id: "nested-table-run", text: "Table inside cell", marks: [] }],
+          }],
+        }],
+      }] },
+    ];
+    const updatedTable: Table = {
+      ...table,
+      children: table.children.map(row => ({
+        ...row,
+        children: row.children.map(cell => cell.id === table.children[0]!.children[0]!.id ? { ...cell, children: nested } : cell),
+      })),
+    };
+    const nestedDocument = {
+      ...inserted.value.document,
+      content: inserted.value.document.content.map(block => block.id === table.id ? updatedTable : block),
+    };
+    const { document } = roundTrip(nestedDocument);
+    const restoredTable = document.content.find(block => block.type === "table");
+    if (!restoredTable || restoredTable.type !== "table") throw new Error("Expected restored table");
+    const restoredCell = restoredTable.children[0]!.children[0]!;
+    expect(restoredCell.children.map(block => block.type)).toEqual(["bulletList", "table"]);
+    expect(getPlainText(restoredCell.children[0]!)).toContain("List inside cell");
+    expect(getPlainText(restoredCell.children[1]!)).toContain("Table inside cell");
   });
 
   it("preserves author metadata", () => {
