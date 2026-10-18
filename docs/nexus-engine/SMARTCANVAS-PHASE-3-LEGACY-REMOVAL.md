@@ -32,6 +32,7 @@ A Etapa 3 só pode remover definitivamente o caminho legado depois que a impleme
 
 ### 4. Paridade visual e impressão
 - [x] Testes automatizados do layout do motor, paginação, quebras, tabelas, imagens, cabeçalho/rodapé e exportação PDF/DOCX.
+- [x] E2E contra API real agora roda os fluxos de edição, teclado, salvamento, recuperação, autosave, conflito e exportação em Chromium, Firefox e WebKit.
 - [ ] Comparar o mesmo conjunto de documentos no legado e SmartCanvas em Chromium, Firefox e WebKit, incluindo margens, fontes, imagens, tabelas longas, objetos, numeração, cabeçalho/rodapé e páginas divididas.
 - [ ] Abrir DOCX exportado em Word e LibreOffice e comparar PDF exportado com a prévia, registrando as diferenças aceitas.
 
@@ -49,9 +50,10 @@ A Etapa 3 só pode remover definitivamente o caminho legado depois que a impleme
 
 ## Última rodada registrada
 
-Code commit: [`7a098a855c5c7c56b88fa8d249fff5b863edaf00`](https://github.com/korczaktech/kz-nexus/commit/7a098a855c5c7c56b88fa8d249fff5b863edaf00)
+Code commit: [`0919be29b833e4ee5de4966b374d620c9aba0907`](https://github.com/korczaktech/kz-nexus/commit/0919be29b833e4ee5de4966b374d620c9aba0907)
 
 - Incrementado o E2E de navegador real para testar Backspace no fim do texto e reinserção do caractere, validando a projeção do modelo canônico.
+- A integração real com API/MongoDB/Playwright passou em Chromium, Firefox e WebKit no commit indicado.
 - Corrigido o caminho de copy/cut e formatação: uma seleção lógica que atravessa blocos agora tem prioridade sobre o estado de célula ativa, e o coletor inclui parágrafos em tabelas aninhadas.
 - O teste inicialmente expôs IDs de fixture fora do formato canônico; os IDs foram corrigidos e a suíte completa passou.
 - No commit de código indicado, SmartCanvas validation, Kortex validation, integração API real, baseline de memória e deploy terminaram com sucesso.
