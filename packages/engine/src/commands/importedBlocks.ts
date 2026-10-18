@@ -55,7 +55,12 @@ function cloneBlock(block: Block, generateId: () => string, resourceIds: Map<str
         children: row.children.map(cell => ({
           ...cell,
           id: generateId(),
-          children: cell.children.map(child => cloneParagraph(child, generateId)),
+          children: cell.children.map(child => cloneBlock(child, generateId, resourceIds)),
+          images: cell.images?.map(image => {
+            const resourceId = resourceIds.get(image.resourceId);
+            if (!resourceId) throw engineError("INVALID_DOCUMENT", `Imported cell image references missing resource "${image.resourceId}"`);
+            return { ...image, id: generateId(), resourceId };
+          }),
         })),
       })) };
     case "image": {
@@ -227,7 +232,7 @@ export function insertImportedBlocksAtNestedSelection(params: {
           return visit(child) as typeof child;
         }).flat() })) } as Block;
       }
-      if (block.type === "table") return { ...block, children: block.children.map(row => ({ ...row, children: row.children.map(cell => ({ ...cell, children: insertAtParagraphs([...cell.children]) })) })) };
+      if (block.type === "table") return { ...block, children: block.children.map(row => ({ ...row, children: row.children.map(cell => ({ ...cell, children: cell.children.flatMap(child => child.type === "paragraph" ? insertAtParagraphs([child]) : [visit(child)]) })) })) };
       return block;
     };
     let content: Block[];
