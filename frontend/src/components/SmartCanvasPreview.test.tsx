@@ -1667,40 +1667,40 @@ describe("SmartCanvasPreview input integration", () => {
     const document = createDocument({ title: "SmartCanvas nested cross-container cut" });
     document.content.push({
       type: "table",
-      id: "outer_nested_cut_table",
+      id: "outercut_0001",
       children: [{
         type: "tableRow",
-        id: "outer_nested_cut_row",
+        id: "outerrow_0001",
         children: [{
           type: "tableCell",
-          id: "outer_nested_cut_cell",
+          id: "outercell_0001",
           children: [
             {
               type: "bulletList",
-              id: "nested_cut_list",
+              id: "nestedlist_0001",
               children: [{
                 type: "listItem",
-                id: "nested_cut_list_item",
+                id: "listitem_0001",
                 children: [{
                   type: "paragraph",
-                  id: "nested_cut_list_paragraph",
-                  children: [{ type: "text", id: "nested_cut_list_run", text: "List start", marks: [] }],
+                  id: "listpara_0001",
+                  children: [{ type: "text", id: "listrun_0001", text: "List start", marks: [] }],
                 }],
               }],
             },
             {
               type: "table",
-              id: "nested_cut_table",
+              id: "nesttable_0001",
               children: [{
                 type: "tableRow",
-                id: "nested_cut_row",
+                id: "nestrow_0001",
                 children: [{
                   type: "tableCell",
-                  id: "nested_cut_cell",
+                  id: "nestcell_0001",
                   children: [{
                     type: "paragraph",
-                    id: "nested_cut_table_paragraph",
-                    children: [{ type: "text", id: "nested_cut_table_run", text: "Table end", marks: [] }],
+                    id: "tablepara_0001",
+                    children: [{ type: "text", id: "tablerun_0001", text: "Table end", marks: [] }],
                   }],
                 }],
               }],
