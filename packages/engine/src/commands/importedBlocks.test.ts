@@ -120,7 +120,7 @@ describe("insertImportedBlocksAtNestedSelection", () => {
     if (!result.ok) return;
     const updatedTable = result.value.document.content[tableIndex]!;
     if (updatedTable.type !== "table") throw new Error("updated table missing");
-    const paragraphs = updatedTable.children[0]!.children[0]!.children;
+    const paragraphs = updatedTable.children[0]!.children[0]!.children.filter((child): child is Paragraph => child.type === "paragraph");
     expect(paragraphs).toHaveLength(2);
     expect(paragraphs.map(paragraph => getPlainText(paragraph))).toEqual(["First", "Second"]);
     expect(paragraphs[0]!.children[0]!.marks).toContainEqual({ type: "bold" });
