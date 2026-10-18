@@ -176,9 +176,13 @@ try {
   const interruptedRoutePromise = new Promise(resolve => {
     resolveInterruptedRoute = resolve;
   });
-  await page.route("**/api/v1/documents/*/save", async route => {
-    if (!interruptedSave && route.request().method() === "POST" && new URL(route.request().url()).pathname.endsWith("/save")) {
+  const saveRoutePattern = "**/save";
+  await page.route(saveRoutePattern, async route => {
+    const request = route.request();
+    const isSave = request.method() === "POST" && new URL(request.url()).pathname.endsWith("/save");
+    if (!interruptedSave && isSave) {
       interruptedSave = true;
+      console.log("[reconnect E2E] intercepting save request in " + browserName);
       try {
         await route.abort("internetdisconnected");
       } finally {
@@ -193,9 +197,15 @@ try {
   await input.evaluate(element => element.focus());
   await page.keyboard.type(" " + reconnectSentinel);
   await page.locator("button.editor-save").click({ force: true });
-  await interruptedRoutePromise;
+  await Promise.race([
+    interruptedRoutePromise,
+    new Promise((_, reject) => setTimeout(() => reject(new Error(
+      "Timed out waiting for the browser to intercept the deliberate save interruption in " + browserName
+      + "; save button disabled=" + String(page.locator("button.editor-save").isDisabled())
+    )), 20000)),
+  ]);
   assert.equal(interruptedSave, true, "the network interruption must hit the actual save request");
-  await page.unroute("**/api/v1/documents/*/save");
+  await page.unroute(saveRoutePattern);
   const recoveredSavePromise = page.waitForResponse(response =>
     response.request().method() === "POST" && new URL(response.url()).pathname.endsWith("/save"),
   );
