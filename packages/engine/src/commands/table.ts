@@ -146,14 +146,15 @@ function rebuildCellParagraphs(
   generateId: () => string,
   options: { insertionMarks?: Mark[]; insertionRuns?: CellInsertionRun[]; insertionRange?: { start: number; end: number } } = {},
 ): Paragraph[] {
-  const oldText = cell.children.map(paragraph => paragraph.children.map(run => run.text).join("")).join("\n");
+  const paragraphs = cell.children.filter((child): child is Paragraph => child.type === "paragraph");
+  const oldText = paragraphs.map(paragraph => paragraph.children.map(run => run.text).join("")).join("\n");
   const oldMarks: Mark[][] = [];
-  for (let paragraphIndex = 0; paragraphIndex < cell.children.length; paragraphIndex += 1) {
-    const paragraph = cell.children[paragraphIndex]!;
+  for (let paragraphIndex = 0; paragraphIndex < paragraphs.length; paragraphIndex += 1) {
+    const paragraph = paragraphs[paragraphIndex]!;
     for (const run of paragraph.children) {
       for (let offset = 0; offset < run.text.length; offset += 1) oldMarks.push(run.marks);
     }
-    if (paragraphIndex < cell.children.length - 1) oldMarks.push([]);
+    if (paragraphIndex < paragraphs.length - 1) oldMarks.push([]);
   }
 
   let prefix = 0;
@@ -192,7 +193,7 @@ function rebuildCellParagraphs(
 
   let globalOffset = 0;
   return text.split("\n").map((line, paragraphIndex) => {
-    const previous = cell.children[paragraphIndex];
+    const previous = paragraphs[paragraphIndex];
     const runs: TextRun[] = [];
     for (let index = 0; index < line.length; index += 1) {
       const marks = marksAt(globalOffset + index);
@@ -238,7 +239,18 @@ export function setCellText(params: { tableId: string; rowId: string; cellId: st
               ...row,
               children: row.children.map((cell) => {
                 if (cell.id !== params.cellId) return cell;
-                return { ...cell, children: rebuildCellParagraphs(cell, params.text, ctx.generateId, { insertionMarks: params.insertionMarks, insertionRuns: params.insertionRuns, insertionRange: params.insertionRange }) };
+                const rebuilt = rebuildCellParagraphs(cell, params.text, ctx.generateId, { insertionMarks: params.insertionMarks, insertionRuns: params.insertionRuns, insertionRange: params.insertionRange });
+                const firstParagraphIndex = cell.children.findIndex(child => child.type === "paragraph");
+                if (firstParagraphIndex < 0) return { ...cell, children: [...cell.children, ...rebuilt] };
+                const children: Block[] = [];
+                cell.children.forEach((child, index) => {
+                  if (child.type !== "paragraph") {
+                    children.push(child);
+                    return;
+                  }
+                  if (index === firstParagraphIndex) children.push(...rebuilt);
+                });
+                return { ...cell, children };
               }),
             },
       ),
