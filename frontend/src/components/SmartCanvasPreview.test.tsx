@@ -1066,7 +1066,7 @@ describe("SmartCanvasPreview input integration", () => {
     window.document.body.append(host);
     root = createRoot(host);
     await act(async () => {
-      root?.render(createElement(SmartCanvasPreview, { document: engine!.getDocument(), engine: engine! }));
+      root?.render(createElement(SmartCanvasPreview, { document: engine!.getDocument(), engine: engine!, onDocumentChange: vi.fn() }));
     });
     const input = host.querySelector('textarea[aria-label="Entrada de texto do SmartCanvas"]') as HTMLTextAreaElement | null;
     if (!input) throw new Error("SmartCanvas input surface was not mounted");
