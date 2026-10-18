@@ -1155,6 +1155,18 @@ export function SmartCanvasPreview({ document, engine, headerText = "", footerTe
       };
     });
   };
+
+  const runHistoryAction = (direction: "undo" | "redo") => {
+    if (readOnly) return;
+    const changed = direction === "undo" ? engine.undo() : engine.redo();
+    if (!changed) return;
+    const restoredDocument = engine.getDocument();
+    setSelection(engine.getSelection() ?? null);
+    refreshActiveCell(restoredDocument);
+    setActiveCellStoredMarks(null);
+    onDocumentChange(restoredDocument);
+    onStatus?.(direction === "undo" ? "Ação desfeita." : "Ação refeita.");
+  };
   const commitCellText = (nextText: string, nextOffset: number) => {
     if (!activeCell || readOnly) return;
     const result = engine.exec([setCellText({ tableId: activeCell.tableId, rowId: activeCell.rowId, cellId: activeCell.cellId, text: nextText, ...(activeCellStoredMarks !== null ? { insertionMarks: activeCellStoredMarks } : {}) })], { group: "typing" });
@@ -1689,6 +1701,8 @@ export function SmartCanvasPreview({ document, engine, headerText = "", footerTe
       <button type="button" disabled={readOnly} onMouseDown={event => event.preventDefault()} onClick={() => mutateActiveTable("remove-column")} aria-label="Remover coluna SmartCanvas">Remover coluna</button>
     </div> : null}
     <div role="toolbar" aria-label="Formatação SmartCanvas" style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap", marginBottom: 10 }}>
+      <button type="button" disabled={readOnly} onMouseDown={event => event.preventDefault()} onClick={() => runHistoryAction("undo")} aria-label="Desfazer SmartCanvas" title="Desfazer (Ctrl+Z)">↶</button>
+      <button type="button" disabled={readOnly} onMouseDown={event => event.preventDefault()} onClick={() => runHistoryAction("redo")} aria-label="Refazer SmartCanvas" title="Refazer (Ctrl+Y)">↷</button>
       <button type="button" disabled={readOnly} onMouseDown={event => event.preventDefault()} onClick={() => applySmartCanvasMark({ type: "bold" })} aria-label="Negrito SmartCanvas" title="Negrito (Ctrl+B)" style={{ padding: "6px 9px", border: "1px solid #cbd5e1", borderRadius: 6, background: "#fff", fontWeight: 700 }}>B</button>
       <button type="button" disabled={readOnly} onMouseDown={event => event.preventDefault()} onClick={() => applySmartCanvasMark({ type: "italic" })} aria-label="Itálico SmartCanvas" title="Itálico (Ctrl+I)" style={{ padding: "6px 9px", border: "1px solid #cbd5e1", borderRadius: 6, background: "#fff", fontStyle: "italic" }}>I</button>
       <button type="button" disabled={readOnly} onMouseDown={event => event.preventDefault()} onClick={() => applySmartCanvasMark({ type: "underline" })} aria-label="Sublinhado SmartCanvas" title="Sublinhado (Ctrl+U)" style={{ padding: "6px 9px", border: "1px solid #cbd5e1", borderRadius: 6, background: "#fff", textDecoration: "underline" }}>U</button>
