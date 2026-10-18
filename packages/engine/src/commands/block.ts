@@ -277,7 +277,7 @@ export function deleteBlock(params: { blockId: string }): Command {
 export function convertBlockToBlockquote(params: { blockId: string }): Command {
   return (doc, ctx) => {
     const source = findParagraphLike(doc.content, params.blockId);
-    if (!source) return err(engineError("NODE_NOT_FOUND", \`Text block "\${params.blockId}" not found\`, { path: params.blockId }));
+    if (!source) return err(engineError("NODE_NOT_FOUND", `Text block "${params.blockId}" not found`, { path: params.blockId }));
     const paragraph: Paragraph = source.type === "paragraph" ? source : {
       type: "paragraph",
       id: source.id,
