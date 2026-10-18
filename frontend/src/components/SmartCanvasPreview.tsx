@@ -862,9 +862,11 @@ export function SmartCanvasPreview({ document, engine, headerText = "", footerTe
   };
   const convertSmartCanvasBlockquote = () => {
     if (readOnly) return;
-    const block = getSelectedTopLevelTextBlock();
+    const current = engine.getSelection();
+    const node = current ? findDocumentNode(engine.getDocument().content, current.focus.blockId) : undefined;
+    const block = node && (node.type === "paragraph" || node.type === "heading") ? node as Extract<Block, { type: "paragraph" | "heading" }> : undefined;
     if (!block) {
-      onStatus?.("Selecione um parágrafo de nível superior para transformá-lo em citação.");
+      onStatus?.("Selecione um parágrafo ou título editável para transformá-lo em citação.");
       return;
     }
     const result = engine.exec([convertBlockToBlockquote({ blockId: block.id })], { group: "structural" });
@@ -899,13 +901,10 @@ export function SmartCanvasPreview({ document, engine, headerText = "", footerTe
   const convertSmartCanvasList = (ordered: boolean) => {
     if (readOnly) return;
     const current = engine.getSelection();
-    const block = current
-      ? engine.getDocument().content.find(item =>
-          item.id === current.focus.blockId && (item.type === "paragraph" || item.type === "heading")
-        )
-      : undefined;
+    const node = current ? findDocumentNode(engine.getDocument().content, current.focus.blockId) : undefined;
+    const block = node && (node.type === "paragraph" || node.type === "heading") ? node as Extract<Block, { type: "paragraph" | "heading" }> : undefined;
     if (!block) {
-      onStatus?.("Para criar uma lista, posicione o cursor em um parágrafo de nível superior.");
+      onStatus?.("Para criar uma lista, posicione o cursor em um parágrafo ou título editável.");
       return;
     }
     const result = engine.exec([convertBlockToList({ blockId: block.id, ordered })], { group: "structural" });
