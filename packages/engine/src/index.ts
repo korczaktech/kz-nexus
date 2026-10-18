@@ -64,7 +64,7 @@ export {
   insertPageBreak,
 } from "./commands/block";
 export { insertList, convertBlockToList, convertBlocksToList, convertListType, insertListItem, splitListItem, mergeListItemWithPrevious, removeListItem } from "./commands/list";
-export { insertTable, addTableRow, removeTableRow, addTableColumn, removeTableColumn, setCellText, insertTableCellImageResource } from "./commands/table";
+export { insertTable, addTableRow, removeTableRow, addTableColumn, removeTableColumn, setCellText, insertTableCellImageResource, replaceTableCellContent } from "./commands/table";
 export { insertImage, insertImageResource, updateImage, removeImage } from "./commands/image";
 export { insertImportedBlocksAtSelection, insertImportedBlocksAtNestedSelection } from "./commands/importedBlocks";
 export { setPageConfig, setMetadata } from "./commands/document";
