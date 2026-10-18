@@ -1854,9 +1854,39 @@ export function SmartCanvasPreview({ document, engine, headerText = "", footerTe
               return;
             }
           }
-          // Table cells currently store paragraphs plus anchored images, not
-          // nested list/table nodes. Preserve rich structures as readable cell
-          // text and import embedded images as first-class cell image resources.
+          const start = Math.min(activeCell.anchorOffset, activeCell.offset);
+          const end = Math.max(activeCell.anchorOffset, activeCell.offset);
+          const hasStructuralBlocks = imported.content.some(block => block.type !== "paragraph" && block.type !== "heading");
+          if (hasStructuralBlocks) {
+            const replacesWholeCell = start === 0 && end === activeCell.text.length;
+            const appendsAtEnd = start === end && end === activeCell.text.length;
+            if (!replacesWholeCell && !appendsAtEnd) {
+              onStatus?.("Para preservar listas, tabelas e outros blocos, selecione todo o conteúdo da célula para substituí-lo ou posicione o cursor no final para anexar.");
+              event.preventDefault();
+              return;
+            }
+            const append = !replacesWholeCell && appendsAtEnd && activeCell.text.length > 0;
+            const result = engine.exec([replaceTableCellContent({
+              tableId: activeCell.tableId,
+              rowId: activeCell.rowId,
+              cellId: activeCell.cellId,
+              blocks: imported.content,
+              resources: imported.resources,
+              append,
+            })], { group: "structural" });
+            if (!result.ok) {
+              onStatus?.("A colagem estrutural na célula falhou: " + result.error.message);
+              event.preventDefault();
+              return;
+            }
+            setActiveCell(null);
+            setActiveCellStoredMarks(null);
+            onDocumentChange(result.value.document);
+            onStatus?.("Estruturas aninhadas coladas na célula sem achatamento.");
+            event.preventDefault();
+            return;
+          }
+          // Simple inline-only content keeps its marks and uses the normal text-edit path.
           const pastedImages: PastedCellImage[] = [];
           const pastedLines = flattenPastedCellContent(imported.content, pastedImages);
           const insertionRuns: PastedCellTextRun[] = [];
