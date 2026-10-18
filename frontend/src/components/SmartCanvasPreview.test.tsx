@@ -1663,6 +1663,7 @@ describe("SmartCanvasPreview input integration", () => {
   });
 
   it("cuts a logical selection across nested list and table containers without flattening them", async () => {
+    const onStatus = vi.fn();
     const document = createDocument({ title: "SmartCanvas nested cross-container cut" });
     document.content.push({
       type: "table",
@@ -1736,6 +1737,7 @@ describe("SmartCanvasPreview input integration", () => {
         document: engine!.getDocument(),
         engine: engine!,
         onDocumentChange: vi.fn(),
+        onStatus,
       }));
     });
     // Move out of any default cell focus first, then establish the logical
@@ -1767,7 +1769,7 @@ describe("SmartCanvasPreview input integration", () => {
     if (afterList?.type !== "bulletList" || afterNestedTable?.type !== "table") {
       throw new Error("Nested containers must survive a cross-container cut");
     }
-    expect(getPlainText(afterList)).toBe("");
+    expect(getPlainText(afterList), JSON.stringify({ selection: engine.getSelection(), clipboard, status: onStatus.mock.calls, activeCell: host.querySelector('[data-testid="smartcanvas-active-cell"]')?.getAttribute("data-active-cell-id") })).toBe("");
     expect(getPlainText(afterNestedTable)).toBe("");
     expect(clipboard["text/plain"]).toContain("List start");
     expect(clipboard["text/plain"]).toContain("Table end");
