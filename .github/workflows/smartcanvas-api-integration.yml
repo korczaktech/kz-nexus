@@ -74,7 +74,7 @@ jobs:
         run: |
           npm install --no-audit --no-fund
           npm install --no-save playwright --no-audit --no-fund
-          npx playwright install --with-deps chromium
+          npx playwright install --with-deps chromium firefox webkit
       - name: Build frontend against the local API
         working-directory: frontend
         run: VITE_API_BASE_URL=http://127.0.0.1:8000 npm run build
@@ -103,8 +103,12 @@ jobs:
           done
           cat /tmp/smartcanvas-frontend.log
           exit 1
-      - name: Run SmartCanvas browser E2E against real API
-        run: node scripts/smartcanvas-api-e2e.mjs
+      - name: Run SmartCanvas browser E2E against real API in Chromium, Firefox and WebKit
+        run: |
+          for browser in chromium firefox webkit; do
+            echo "Running SmartCanvas API E2E in $browser"
+            SMARTCANVAS_E2E_BROWSER="$browser" node scripts/smartcanvas-api-e2e.mjs
+          done
         env:
           SMARTCANVAS_E2E_BASE_URL: http://localhost:5173
           SMARTCANVAS_E2E_API_URL: http://127.0.0.1:8000
