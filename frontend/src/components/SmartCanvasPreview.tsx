@@ -420,13 +420,49 @@ function sliceSelectedRuns(runs: TextRun[], start: number, end: number): TextRun
   return result;
 }
 
+function pruneBlockToSelection(block: Block, ranges: Map<string, { start: number; end: number }>): Block | null {
+  if (block.type === "paragraph" || block.type === "heading") {
+    const range = ranges.get(block.id);
+    if (!range || range.end <= range.start) return null;
+    return { ...block, children: sliceSelectedRuns(block.children, range.start, range.end) };
+  }
+  if (block.type === "blockquote") {
+    const children = block.children.map(child => pruneBlockToSelection(child, ranges))
+      .filter((child): child is Extract<Block, { type: "paragraph" }> => child?.type === "paragraph");
+    return children.length ? { ...block, children } : null;
+  }
+  if (block.type === "bulletList" || block.type === "orderedList") {
+    const children = block.children.map(item => ({
+      ...item,
+      children: item.children.map(child => pruneBlockToSelection(child as Block, ranges))
+        .filter((child): child is Extract<Block, { type: "paragraph" | "bulletList" | "orderedList" }> =>
+          child?.type === "paragraph" || child?.type === "bulletList" || child?.type === "orderedList"
+        ),
+    })).filter(item => item.children.length > 0);
+    return children.length ? { ...block, children } : null;
+  }
+  if (block.type === "table") {
+    let containsSelection = false;
+    const children = block.children.map(row => ({
+      ...row,
+      children: row.children.map(cell => {
+        const cellChildren = cell.children.map(child => pruneBlockToSelection(child, ranges))
+          .filter((child): child is Block => child !== null);
+        if (cellChildren.length) containsSelection = true;
+        return { ...cell, children: cellChildren };
+      }),
+    }));
+    return containsSelection ? { ...block, children } : null;
+  }
+  return null;
+}
+
 function getSelectedHtml(document: NexusDocument, selection: Selection): string | null {
-  const ranges = getSmartCanvasTextSelectionRanges(document.content, selection);
-  if (!ranges) return null;
-  const content: Block[] = ranges.filter(range => range.end > range.start).map(range => ({
-    ...range.block,
-    children: sliceSelectedRuns(range.block.children, range.start, range.end),
-  }));
+  const selectedRanges = getSmartCanvasTextSelectionRanges(document.content, selection);
+  if (!selectedRanges) return null;
+  const ranges = new Map(selectedRanges.filter(range => range.end > range.start).map(range => [range.block.id, { start: range.start, end: range.end }]));
+  if (!ranges.size) return null;
+  const content = document.content.map(block => pruneBlockToSelection(block, ranges)).filter((block): block is Block => block !== null);
   return content.length ? exportHtml({ ...document, content }) : null;
 }
 
