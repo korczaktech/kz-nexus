@@ -222,6 +222,27 @@ export function mergeListItemWithPrevious(params: { listId: string; itemId: stri
 }
 
 /** Removes an item from a list. Removing the last remaining item removes the whole list. */
+/** Outdents the first item of a list into its surrounding block container. */
+export function outdentListItem(params: { listId: string; itemId: string }): Command {
+  return (doc) => {
+    const list = findList(doc.content, params.listId);
+    if (!list) return err(engineError("NODE_NOT_FOUND", `List "${params.listId}" not found`, { path: params.listId }));
+    const itemIndex = list.children.findIndex(item => item.id === params.itemId);
+    if (itemIndex < 0) return err(engineError("NODE_NOT_FOUND", `List item "${params.itemId}" not found`, { path: params.itemId }));
+    if (itemIndex > 0) return err(engineError("UNSUPPORTED_OPERATION", "Only the first list item can be outdented; merge later items with the previous item", { path: params.itemId }));
+    const item = list.children[0]!;
+    const replacement: Block[] = [...item.children as Block[]];
+    if (list.children.length > 1) replacement.push({ ...list, children: list.children.slice(1) } as Block);
+    const replaced = replaceBlockById(doc.content, list.id, replacement);
+    if (!replaced.found) return err(engineError("NODE_NOT_FOUND", `List "${params.listId}" not found in the document tree`, { path: params.listId }));
+    const firstText = item.children.find(child => child.type === "paragraph");
+    return ok({
+      document: { ...doc, content: replaced.blocks },
+      selection: firstText ? { blockId: firstText.id, offset: 0 } : undefined,
+    });
+  };
+}
+
 export function removeListItem(params: { listId: string; itemId: string }): Command {
   return (doc) => {
     const existing = findList(doc.content, params.listId);
