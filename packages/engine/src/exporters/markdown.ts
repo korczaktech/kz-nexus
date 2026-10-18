@@ -48,7 +48,7 @@ function renderBlock(block: Block, resources: ResourceRef[], depth = 0): string 
   }
   if (block.type === "table") {
     if (!block.children.length) return "";
-    const renderCell = (cell: typeof block.children[number]["children"][number]) => cell.children.map(paragraph => paragraphText(paragraph)).join("<br>");
+    const renderCell = (cell: typeof block.children[number]["children"][number]) => cell.children.map(child => renderBlock(child, resources, depth + 1)).join("<br>");
     const rows = block.children.map(row => "| " + row.children.map(renderCell).join(" | ") + " |");
     const width = block.children[0]!.children.length;
     const divider = "| " + Array.from({ length: width }, () => "---").join(" | ") + " |";
