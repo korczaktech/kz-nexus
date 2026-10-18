@@ -258,6 +258,14 @@ describe("SmartCanvasPreview input integration", () => {
     });
     const input = host.querySelector('textarea[aria-label="Entrada de texto do SmartCanvas"]') as HTMLTextAreaElement | null;
     if (!input) throw new Error("SmartCanvas input surface was not mounted");
+    const copied: Record<string, string> = {};
+    const copy = new Event("copy", { bubbles: true, cancelable: true });
+    Object.defineProperty(copy, "clipboardData", {
+      value: { setData: (type: string, value: string) => { copied[type] = value; } },
+    });
+    await act(async () => { input.dispatchEvent(copy); });
+    expect(copied["text/plain"]).toContain("List start");
+    expect(copied["text/plain"]).toContain("Table end");
     const cut = new Event("cut", { bubbles: true, cancelable: true });
     Object.defineProperty(cut, "clipboardData", {
       value: { setData: vi.fn() },
