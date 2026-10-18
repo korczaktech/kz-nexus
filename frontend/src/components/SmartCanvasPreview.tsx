@@ -875,6 +875,8 @@ export function SmartCanvasPreview({ document, engine, headerText = "", footerTe
     const result = engine.exec([convertBlockToBlockquote({ blockId: block.id })], { group: "structural" });
     if (!result.ok) onStatus?.(result.error.message);
     else {
+      setActiveCell(null);
+      setActiveCellStoredMarks(null);
       setSelection(engine.getSelection() ?? null);
       onDocumentChange(result.value.document);
       onStatus?.("Citação em bloco criada pelo SmartCanvas.");
@@ -882,6 +884,33 @@ export function SmartCanvasPreview({ document, engine, headerText = "", footerTe
   };
   const insertSmartCanvasBreak = (kind: "page" | "rule") => {
     if (readOnly) return;
+    if (activeCell) {
+      if (kind === "page") {
+        onStatus?.("Quebras de página não são válidas dentro de uma célula; insira a quebra entre blocos do documento.");
+        return;
+      }
+      const position = cellOffsetToPosition(engine.getDocument().content, activeCell, activeCell.offset);
+      if (!position) {
+        onStatus?.("Não foi possível localizar o parágrafo da célula para inserir a linha.");
+        return;
+      }
+      const result = engine.exec([insertTableCellBlocksAfterParagraph({
+        tableId: activeCell.tableId,
+        rowId: activeCell.rowId,
+        cellId: activeCell.cellId,
+        afterBlockId: position.blockId,
+        blocks: [{ type: "thematicBreak", id: "smartcanvas_rule_temp", kind: "rule" }],
+      })], { group: "structural" });
+      if (!result.ok) {
+        onStatus?.("Não foi possível inserir a linha na célula: " + result.error.message);
+        return;
+      }
+      setActiveCell(null);
+      setActiveCellStoredMarks(null);
+      onDocumentChange(result.value.document);
+      onStatus?.("Linha horizontal inserida na célula.");
+      return;
+    }
     const current = engine.getSelection();
     const selectedTopLevel = current
       ? engine.getDocument().content.find(block =>
@@ -913,6 +942,8 @@ export function SmartCanvasPreview({ document, engine, headerText = "", footerTe
       onStatus?.("Não foi possível criar a lista: " + result.error.message);
       return;
     }
+    setActiveCell(null);
+    setActiveCellStoredMarks(null);
     setSelection(engine.getSelection() ?? null);
     onDocumentChange(result.value.document);
     onStatus?.(ordered ? "Lista numerada criada pelo SmartCanvas." : "Lista com marcadores criada pelo SmartCanvas.");
