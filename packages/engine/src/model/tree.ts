@@ -277,6 +277,14 @@ function replaceListInBlock(
   return block;
 }
 
+function emptyParagraphFromId(prefix: string): Paragraph {
+  return {
+    type: "paragraph",
+    id: prefix + "empty",
+    children: [{ type: "text", id: prefix + "emptyrun", text: "", marks: [] }],
+  };
+}
+
 /** Replaces a block by ID through the canonical tree, including table cells and nested list items. */
 export function replaceBlockById(blocks: Block[], id: string, replacement: Block[]): { blocks: Block[]; found: boolean } {
   for (let index = 0; index < blocks.length; index += 1) {
@@ -294,7 +302,7 @@ export function replaceBlockById(blocks: Block[], id: string, replacement: Block
           const nested = replaceBlockById(cell.children, id, replacement);
           if (!nested.found) continue;
           const cells = row.children.slice();
-          cells[cellIndex] = { ...cell, children: nested.blocks };
+          cells[cellIndex] = { ...cell, children: nested.blocks.length ? nested.blocks : [emptyParagraphFromId(cell.id)] };
           const rows = block.children.slice();
           rows[rowIndex] = { ...row, children: cells };
           const next = blocks.slice();
@@ -310,7 +318,11 @@ export function replaceBlockById(blocks: Block[], id: string, replacement: Block
           if (child.id === id) {
             if (replacement.some(node => node.type !== "paragraph" && node.type !== "bulletList" && node.type !== "orderedList")) continue;
             const itemChildren = item.children.slice();
-            itemChildren.splice(childIndex, 1, ...replacement as ListItemContent[]);
+            if (replacement.length === 0 && item.children.length === 1 && child.type === "paragraph") {
+              itemChildren.splice(childIndex, 1, emptyParagraphFromId(child.id) as Paragraph);
+            } else {
+              itemChildren.splice(childIndex, 1, ...replacement as ListItemContent[]);
+            }
             const items = block.children.slice();
             items[itemIndex] = { ...item, children: itemChildren };
             const next = blocks.slice();
@@ -332,9 +344,17 @@ export function replaceBlockById(blocks: Block[], id: string, replacement: Block
       }
     } else if (block.type === "blockquote") {
       const childIndex = block.children.findIndex(child => child.id === id);
-      if (childIndex >= 0 && replacement.length === 1 && replacement[0]?.type === "paragraph") {
+      if (childIndex >= 0) {
         const children = block.children.slice();
-        children.splice(childIndex, 1, replacement[0]);
+        if (replacement.length === 1 && replacement[0]?.type === "paragraph") {
+          children.splice(childIndex, 1, replacement[0]);
+        } else if (replacement.length === 0 && block.children.length > 1) {
+          children.splice(childIndex, 1);
+        } else if (replacement.length === 0) {
+          children.splice(childIndex, 1, emptyParagraphFromId(block.children[childIndex]!.id));
+        } else {
+          continue;
+        }
         const next = blocks.slice();
         next[index] = { ...block, children };
         return { blocks: next, found: true };
