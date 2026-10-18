@@ -1662,4 +1662,105 @@ describe("SmartCanvasPreview input integration", () => {
     });
   });
 
+  it("cuts a logical selection across nested list and table containers without flattening them", async () => {
+    const document = createDocument({ title: "SmartCanvas nested cross-container cut" });
+    document.content.push({
+      type: "table",
+      id: "outer_nested_cut_table",
+      children: [{
+        type: "tableRow",
+        id: "outer_nested_cut_row",
+        children: [{
+          type: "tableCell",
+          id: "outer_nested_cut_cell",
+          children: [
+            {
+              type: "bulletList",
+              id: "nested_cut_list",
+              children: [{
+                type: "listItem",
+                id: "nested_cut_list_item",
+                children: [{
+                  type: "paragraph",
+                  id: "nested_cut_list_paragraph",
+                  children: [{ type: "text", id: "nested_cut_list_run", text: "List start", marks: [] }],
+                }],
+              }],
+            },
+            {
+              type: "table",
+              id: "nested_cut_table",
+              children: [{
+                type: "tableRow",
+                id: "nested_cut_row",
+                children: [{
+                  type: "tableCell",
+                  id: "nested_cut_cell",
+                  children: [{
+                    type: "paragraph",
+                    id: "nested_cut_table_paragraph",
+                    children: [{ type: "text", id: "nested_cut_table_run", text: "Table end", marks: [] }],
+                  }],
+                }],
+              }],
+            },
+          ],
+        }],
+      }],
+    });
+    engine = createEditor({ document });
+    const current = engine.getDocument();
+    const outer = current.content.find(block => block.type === "table");
+    if (!outer || outer.type !== "table") throw new Error("Expected outer table");
+    const cell = outer.children[0]!.children[0]!;
+    const list = cell.children.find(block => block.type === "bulletList");
+    const nestedTable = cell.children.find(block => block.type === "table");
+    if (!list || list.type !== "bulletList" || !nestedTable || nestedTable.type !== "table") {
+      throw new Error("Expected nested list and nested table");
+    }
+    const listParagraph = list.children[0]!.children.find(block => block.type === "paragraph");
+    const tableParagraph = nestedTable.children[0]!.children[0]!.children[0]!;
+    if (!listParagraph || listParagraph.type !== "paragraph" || tableParagraph.type !== "paragraph") {
+      throw new Error("Expected text paragraphs in both nested containers");
+    }
+    expect(engine.setSelection({
+      anchor: { blockId: listParagraph.id, offset: 0 },
+      focus: { blockId: tableParagraph.id, offset: getPlainText(tableParagraph).length },
+    }).ok).toBe(true);
+
+    host = window.document.createElement("div");
+    window.document.body.append(host);
+    root = createRoot(host);
+    await act(async () => {
+      root?.render(createElement(SmartCanvasPreview, {
+        document: engine!.getDocument(),
+        engine: engine!,
+        onDocumentChange: vi.fn(),
+      }));
+    });
+    const input = host.querySelector('textarea[aria-label="Entrada de texto do SmartCanvas"]') as HTMLTextAreaElement | null;
+    if (!input) throw new Error("SmartCanvas input surface was not mounted");
+    const cut = new Event("cut", { bubbles: true, cancelable: true });
+    const clipboard: Record<string, string> = {};
+    Object.defineProperty(cut, "clipboardData", {
+      value: { setData: (type: string, value: string) => { clipboard[type] = value; } },
+    });
+    await act(async () => { input.dispatchEvent(cut); });
+
+    const after = engine.getDocument().content.find(block => block.type === "table");
+    if (!after || after.type !== "table") throw new Error("Outer table must remain after cut");
+    const afterCell = after.children[0]!.children[0]!;
+    const afterList = afterCell.children.find(block => block.type === "bulletList");
+    const afterNestedTable = afterCell.children.find(block => block.type === "table");
+    expect(afterList?.type).toBe("bulletList");
+    expect(afterNestedTable?.type).toBe("table");
+    if (afterList?.type !== "bulletList" || afterNestedTable?.type !== "table") {
+      throw new Error("Nested containers must survive a cross-container cut");
+    }
+    expect(getPlainText(afterList)).toBe("");
+    expect(getPlainText(afterNestedTable)).toBe("");
+    expect(clipboard["text/plain"]).toContain("List start");
+    expect(clipboard["text/plain"]).toContain("Table end");
+  });
+
 });
