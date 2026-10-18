@@ -44,7 +44,7 @@ O conjunto do frontend passou 189 testes em 31 arquivos; o motor passou 211 test
 
 A aprovação automatizada não representa paridade universal com o editor legado. O SmartCanvas permanece opt-in até os seguintes pontos serem fechados e validados:
 
-1. A colagem estrutural de listas/tabelas em células já preserva nós aninhados no modelo canônico e tem testes de componente para inserção/substituição e marcas inline. A paridade completa de navegação, edição e seleção através de todas as estruturas aninhadas ainda precisa ser validada.
+1. A colagem estrutural de listas/tabelas em células preserva nós aninhados no modelo canônico e tem testes de componente para inserção/substituição e marcas inline. O mapeamento de texto/offsets percorre parágrafos e títulos dentro de contêineres aninhados; o hit-test de célula estrutural usa seleção lógica do motor em vez do editor plano de texto da célula, evitando achatar estruturas. A paridade de operações que atravessam diferentes tipos de contêineres e a validação manual multi-navegador continuam como critérios de integração antes da ativação geral.
 2. Seleções e operações que atravessam tipos diferentes de estruturas aninhadas ainda têm limites.
 3. Algumas ferramentas avançadas de formatação/metadados continuam ligadas à projeção DOM de compatibilidade.
 4. IME foi testado em componente, mas não validado manualmente em todos os navegadores e dispositivos suportados.
