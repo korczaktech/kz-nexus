@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { addTableColumn, addTableRow, collapsedAt, convertBlockToBlockquote, convertBlockToList, deleteBlock, deleteText, insertImportedBlocksAtSelection, insertImageResource, insertPageBreak, insertTable as insertTableCommand, insertTableCellImageResource, insertTableCellBlocksAfterParagraph, insertText, insertThematicBreak, moveBlock, removeImage, removeMark, updateEditorObject, updateImage, getLineXAtOffset, getOffsetAtLineX, getPlainText, exportHtml, layoutDocument, mergeBlockWithPrevious, replaceRange, removeTableColumn, removeTableRow, replaceTableCellContent, setAlign, setCellText, setHeadingLevel, setIndent, setParagraphStyle, splitBlock, toggleMark as toggleMarkCommand, type Block, type Editor as NexusEngineSession, type Mark, type NexusDocument, type Selection, type TextRun, type SmartCanvasHitTarget } from "../../../packages/engine/src/index";
+import { addTableColumn, addTableRow, collapsedAt, convertBlockToBlockquote, convertBlockToList, deleteBlock, deleteText, insertImportedBlocksAtSelection, insertImageResource, insertPageBreak, insertTable as insertTableCommand, insertTableCellImageResource, insertTableCellBlocksAfterParagraph, insertTableIntoCell, insertText, insertThematicBreak, moveBlock, removeImage, removeMark, updateEditorObject, updateImage, getLineXAtOffset, getOffsetAtLineX, getPlainText, exportHtml, layoutDocument, mergeBlockWithPrevious, replaceRange, removeTableColumn, removeTableRow, replaceTableCellContent, setAlign, setCellText, setHeadingLevel, setIndent, setParagraphStyle, splitBlock, toggleMark as toggleMarkCommand, type Block, type Editor as NexusEngineSession, type Mark, type NexusDocument, type Selection, type TextRun, type SmartCanvasHitTarget } from "../../../packages/engine/src/index";
 import { CanvasDocumentRenderer } from "./CanvasDocumentRenderer";
 import { nexusDocumentFromHtml } from "../services/nexusEngineAdapter";
 import { lineEndOffset, lineStartOffset, nearestGraphemeOffset, nextCodePointOffset, nextWordOffset, previousCodePointOffset, previousWordOffset, verticalLineOffset, wordRangeAt } from "./smartCanvasTextOffsets";
@@ -906,6 +906,26 @@ export function SmartCanvasPreview({ document, engine, headerText = "", footerTe
   };
   const insertSmartCanvasTable = () => {
     if (readOnly) return;
+    if (activeCell) {
+      const position = cellOffsetToPosition(engine.getDocument().content, activeCell, activeCell.offset);
+      const result = engine.exec([insertTableIntoCell({
+        tableId: activeCell.tableId,
+        rowId: activeCell.rowId,
+        cellId: activeCell.cellId,
+        ...(position ? { afterBlockId: position.blockId } : {}),
+        rows: 3,
+        columns: 3,
+      })], { group: "structural" });
+      if (!result.ok) {
+        onStatus?.("Não foi possível inserir a tabela aninhada: " + result.error.message);
+        return;
+      }
+      setActiveCell(null);
+      setActiveCellStoredMarks(null);
+      onDocumentChange(result.value.document);
+      onStatus?.("Tabela 3×3 inserida dentro da célula selecionada.");
+      return;
+    }
     const current = engine.getSelection();
     const target = current
       ? engine.getDocument().content.find(block =>
