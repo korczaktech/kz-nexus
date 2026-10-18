@@ -347,13 +347,21 @@ export function setCellText(params: { tableId: string; rowId: string; cellId: st
                 const rebuilt = rebuildCellParagraphs(cell, params.text, ctx.generateId, { insertionMarks: params.insertionMarks, insertionRuns: params.insertionRuns, insertionRange: params.insertionRange });
                 const firstParagraphIndex = cell.children.findIndex(child => child.type === "paragraph");
                 if (firstParagraphIndex < 0) return { ...cell, children: [...cell.children, ...rebuilt] };
+                const originalParagraphCount = cell.children.filter(child => child.type === "paragraph").length;
                 const children: Block[] = [];
-                cell.children.forEach((child, index) => {
+                let rebuiltIndex = 0;
+                let seenParagraphs = 0;
+                cell.children.forEach(child => {
                   if (child.type !== "paragraph") {
                     children.push(child);
                     return;
                   }
-                  if (index === firstParagraphIndex) children.push(...rebuilt);
+                  if (rebuiltIndex < rebuilt.length) children.push(rebuilt[rebuiltIndex++]!);
+                  seenParagraphs += 1;
+                  if (seenParagraphs === originalParagraphCount && rebuiltIndex < rebuilt.length) {
+                    children.push(...rebuilt.slice(rebuiltIndex));
+                    rebuiltIndex = rebuilt.length;
+                  }
                 });
                 return { ...cell, children };
               }),
