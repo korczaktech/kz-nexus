@@ -1410,16 +1410,22 @@ describe("SmartCanvasPreview input integration", () => {
     const table = engine.getDocument().content.find(block => block.type === "table");
     if (!table || table.type !== "table") throw new Error("Expected destination table after paste");
     const cell = table.children[0]?.children[0];
-    const pastedText = cell?.children.map(item => getPlainText(item)).join("\n") ?? "";
-    expect(pastedText).toContain("Alpha item");
-    expect(pastedText).toContain("Beta item");
-    expect(pastedText).toContain("Left cell");
-    expect(pastedText).toContain("Right cell");
-    expect(pastedText).toContain("• Alpha item");
-    expect(cell?.children.some(paragraph => paragraph.type === "paragraph" && paragraph.children.some(run => run.text.includes("Alpha") && run.marks.some(mark => mark.type === "bold")))).toBe(true);
-    expect(pastedText).toContain("• Beta item");
+    if (!cell) throw new Error("Expected destination cell");
+    const nestedList = cell.children.find(block => block.type === "bulletList");
+    const nestedTable = cell.children.find(block => block.type === "table");
+    expect(nestedList?.type).toBe("bulletList");
+    expect(nestedTable?.type).toBe("table");
+    if (nestedList?.type !== "bulletList" || nestedTable?.type !== "table") throw new Error("Expected nested list and table to remain structural");
+    const firstListParagraph = nestedList.children[0]?.children.find(child => child.type === "paragraph");
+    expect(firstListParagraph?.type).toBe("paragraph");
+    if (firstListParagraph?.type !== "paragraph") throw new Error("Expected paragraph inside nested list");
+    expect(getPlainText(firstListParagraph)).toContain("Alpha item");
+    expect(firstListParagraph.children.some(run => run.text.includes("Alpha") && run.marks.some(mark => mark.type === "bold"))).toBe(true);
+    expect(getPlainText(nestedList)).toContain("Beta item");
+    expect(getPlainText(nestedTable)).toContain("Left cell");
+    expect(getPlainText(nestedTable)).toContain("Right cell");
     expect(onDocumentChange).toHaveBeenCalled();
-    expect(onStatus).toHaveBeenLastCalledWith("Listas e tabelas coladas na célula foram convertidas em texto estruturado.");
+    expect(onStatus).toHaveBeenLastCalledWith("Estruturas aninhadas coladas na célula sem achatamento.");
   });
 
   it("edits a table cell and creates a row when Tab leaves the final cell", async () => {
