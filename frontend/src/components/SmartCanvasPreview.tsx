@@ -7,6 +7,39 @@ import { collectSmartCanvasTextBlocks, getSmartCanvasTextSelectionRanges } from 
 
 type TextBlock = { id: string; text: string };
 
+function findListItemContext(nodes: readonly unknown[], blockId: string): { listId: string; itemId: string; itemIndex: number; childIndex: number } | undefined {
+  for (const value of nodes) {
+    if (!value || typeof value !== "object") continue;
+    const node = value as { id?: unknown; type?: unknown; children?: unknown[] };
+    if ((node.type === "bulletList" || node.type === "orderedList") && typeof node.id === "string" && Array.isArray(node.children)) {
+      for (let itemIndex = 0; itemIndex < node.children.length; itemIndex += 1) {
+        const itemValue = node.children[itemIndex];
+        if (!itemValue || typeof itemValue !== "object") continue;
+        const item = itemValue as { id?: unknown; children?: unknown[] };
+        if (typeof item.id !== "string" || !Array.isArray(item.children)) continue;
+        const childIndex = item.children.findIndex(child => !!child && typeof child === "object" &&
+          (child as { id?: unknown; type?: unknown }).id === blockId &&
+          (child as { type?: unknown }).type === "paragraph");
+        if (childIndex >= 0) return { listId: node.id, itemId: item.id, itemIndex, childIndex };
+        const nested = findListItemContext(item.children, blockId);
+        if (nested) return nested;
+      }
+    } else if (node.type === "table" && Array.isArray(node.children)) {
+      for (const rowValue of node.children) {
+        if (!rowValue || typeof rowValue !== "object") continue;
+        const row = rowValue as { children?: unknown[] };
+        for (const cellValue of row.children ?? []) {
+          if (!cellValue || typeof cellValue !== "object") continue;
+          const cell = cellValue as { children?: unknown[] };
+          const nested = findListItemContext(cell.children ?? [], blockId);
+          if (nested) return nested;
+        }
+      }
+    }
+  }
+  return undefined;
+}
+
 function collectTextBlocks(nodes: readonly unknown[]): TextBlock[] {
   const blocks: TextBlock[] = [];
   for (const value of nodes) {
@@ -1770,6 +1803,19 @@ export function SmartCanvasPreview({ document, engine, headerText = "", footerTe
       let start = Math.min(current.anchor.offset, current.focus.offset);
       let end = Math.max(current.anchor.offset, current.focus.offset);
       if (start === end && event.key === "Backspace" && start === 0) {
+        const listContext = findListItemContext(engine.getDocument().content, block.id);
+        if (listContext?.childIndex === 0 && listContext.itemIndex > 0) {
+          const listMerge = engine.exec([mergeListItemWithPrevious({
+            listId: listContext.listId,
+            itemId: listContext.itemId,
+            blockId: block.id,
+          })], { group: "typing" });
+          if (listMerge.ok) {
+            setSelection(engine.getSelection() ?? null);
+            onDocumentChange(listMerge.value.document);
+            return;
+          }
+        }
         const index = blocks.findIndex(item => item.id === block.id);
         if (index <= 0) return;
         const result = engine.exec([mergeBlockWithPrevious({ blockId: block.id })], { group: "typing" });
