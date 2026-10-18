@@ -1738,8 +1738,10 @@ describe("SmartCanvasPreview input integration", () => {
         onDocumentChange: vi.fn(),
       }));
     });
-    // The component initializes its own selection state on mount; set the
-    // cross-container logical selection after that initialization completes.
+    // Move out of any default cell focus first, then establish the logical
+    // cross-container selection after the component has initialized.
+    const textHit = host.querySelector('[data-testid="smartcanvas-text-hit"]') as HTMLButtonElement | null;
+    await act(async () => { textHit?.click(); });
     await act(async () => {
       expect(engine!.setSelection({
         anchor: { blockId: listParagraph.id, offset: 0 },
