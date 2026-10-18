@@ -318,7 +318,7 @@ export function replaceBlockById(blocks: Block[], id: string, replacement: Block
           if (child.id === id) {
             if (replacement.some(node => node.type !== "paragraph" && node.type !== "bulletList" && node.type !== "orderedList")) continue;
             const itemChildren = item.children.slice();
-            if (replacement.length === 0 && item.children.length === 1 && child.type === "paragraph") {
+            if (replacement.length === 0 && item.children.length === 1) {
               itemChildren.splice(childIndex, 1, emptyParagraphFromId(child.id) as Paragraph);
             } else {
               itemChildren.splice(childIndex, 1, ...replacement as ListItemContent[]);
