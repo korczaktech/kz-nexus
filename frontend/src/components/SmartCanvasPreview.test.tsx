@@ -852,6 +852,34 @@ describe("SmartCanvasPreview input integration", () => {
     if (!afterLateCompositionInput || afterLateCompositionInput.type !== "paragraph") throw new Error("Expected paragraph after late composition input");
     expect(getPlainText(afterLateCompositionInput)).toBe("Olá SmartCanvas 😀日本語");
   });
+
+  it("exposes undo and redo toolbar controls backed by the canonical engine", async () => {
+    const document = createDocument({ title: "SmartCanvas history toolbar" });
+    engine = createEditor({ document });
+    const paragraph = engine.getDocument().content[0];
+    if (!paragraph || paragraph.type !== "paragraph") throw new Error("Expected initial paragraph");
+    expect(engine.exec([insertText({ blockId: paragraph.id, offset: 0, text: "Toolbar" })]).ok).toBe(true);
+    const onDocumentChange = vi.fn();
+    host = window.document.createElement("div");
+    window.document.body.append(host);
+    root = createRoot(host);
+    await act(async () => {
+      root?.render(createElement(SmartCanvasPreview, {
+        document: engine!.getDocument(),
+        engine: engine!,
+        onDocumentChange,
+      }));
+    });
+    const undo = host.querySelector('[aria-label="Desfazer SmartCanvas"]') as HTMLButtonElement | null;
+    const redo = host.querySelector('[aria-label="Refazer SmartCanvas"]') as HTMLButtonElement | null;
+    if (!undo || !redo) throw new Error("Undo/redo toolbar controls were not mounted");
+    await act(async () => { undo.click(); });
+    expect(getPlainText(engine.getDocument().content[0]!)).toBe("");
+    await act(async () => { redo.click(); });
+    expect(getPlainText(engine.getDocument().content[0]!)).toBe("Toolbar");
+    expect(onDocumentChange).toHaveBeenCalled();
+  });
+
   it("replaces a cross-block selection with rich content as one undoable structural edit", async () => {
     const document = createDocument({ title: "SmartCanvas cross-block edit" });
     const first = document.content[0];
