@@ -197,6 +197,44 @@ export function insertTableCellBlocksAfterParagraph(params: {
   };
 }
 
+/** Inserts a nested table into a cell after the requested block (or at the end). */
+export function insertTableIntoCell(params: {
+  tableId: string;
+  rowId: string;
+  cellId: string;
+  afterBlockId?: string;
+  rows: number;
+  columns: number;
+}): Command {
+  return (doc, ctx) => {
+    if (params.rows < 1 || params.columns < 1) return err(engineError("INVALID_DOCUMENT", "Table must have at least 1 row and 1 column"));
+    const nestedTable: Table = {
+      type: "table",
+      id: ctx.generateId(),
+      children: Array.from({ length: params.rows }, () => makeRow(ctx.generateId, params.columns)),
+    };
+    let targetCellFound = false;
+    const result = withTable(doc, params.tableId, table => ({
+      ...table,
+      children: table.children.map(row => row.id !== params.rowId ? row : ({
+        ...row,
+        children: row.children.map(cell => {
+          if (cell.id !== params.cellId) return cell;
+          targetCellFound = true;
+          const index = params.afterBlockId ? cell.children.findIndex(child => child.id === params.afterBlockId) : cell.children.length - 1;
+          if (params.afterBlockId && index < 0) throw engineError("NODE_NOT_FOUND", "Insertion block was not found in the target cell", { path: params.afterBlockId });
+          const children = [...cell.children];
+          children.splice(index + 1, 0, nestedTable);
+          return { ...cell, children };
+        }),
+      })),
+    }));
+    if (!result.ok) return result;
+    if (!targetCellFound) return err(engineError("NODE_NOT_FOUND", "Target table cell was not found", { path: params.cellId }));
+    return result;
+  };
+}
+
 /** Adds an image resource to a table cell as a first-class part of the canonical document. */
 export function insertTableCellImageResource(params: {
   tableId: string;
