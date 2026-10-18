@@ -25,6 +25,20 @@ function collectFromItems(items: ListItem[], listId: string, topIndex: number, o
   }
 }
 
+function collectCellBlocks(blocks: Block[], topIndex: number, tableId: string, rowId: string, cellId: string, out: TextBlockInfo[]): void {
+  for (const child of blocks) {
+    if (child.type === "paragraph" || child.type === "heading") {
+      out.push({ block: child, topIndex, container: "tableCell", tableId, rowId, cellId });
+    } else if (child.type === "table") {
+      for (const row of child.children) for (const cell of row.children) collectCellBlocks(cell.children, topIndex, child.id, row.id, cell.id, out);
+    } else if (child.type === "bulletList" || child.type === "orderedList") {
+      collectFromItems(child.children, child.id, topIndex, out);
+    } else if (child.type === "blockquote") {
+      for (const paragraph of child.children) out.push({ block: paragraph, topIndex, container: "tableCell", tableId, rowId, cellId });
+    }
+  }
+}
+
 /** Lists every paragraph/heading in document order, with its structural context. */
 export function collectTextBlocks(doc: NexusDocument): TextBlockInfo[] {
   const out: TextBlockInfo[] = [];
@@ -44,7 +58,7 @@ export function collectTextBlocks(doc: NexusDocument): TextBlockInfo[] {
       case "table":
         for (const row of block.children)
           for (const cell of row.children)
-            for (const p of cell.children) out.push({ block: p, topIndex, container: "tableCell", tableId: block.id, rowId: row.id, cellId: cell.id });
+            collectCellBlocks(cell.children, topIndex, block.id, row.id, cell.id, out);
         break;
       default:
         break;
