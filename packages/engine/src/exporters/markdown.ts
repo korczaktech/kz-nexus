@@ -1,3 +1,4 @@
+import { renderBlockHtml } from "./html";
 import type { Block, NexusDocument, ResourceRef, TextRun } from "../model/types";
 
 function escapeMarkdownText(value: string): string {
@@ -48,7 +49,13 @@ function renderBlock(block: Block, resources: ResourceRef[], depth = 0): string 
   }
   if (block.type === "table") {
     if (!block.children.length) return "";
-    const renderCell = (cell: typeof block.children[number]["children"][number]) => cell.children.map(child => renderBlock(child, resources, depth + 1)).join("<br>");
+    const renderCell = (cell: typeof block.children[number]["children"][number]) => cell.children.map(child => {
+      if (child.type === "paragraph") return paragraphText(child);
+      if (child.type === "heading") return "<h" + child.level + ">" + paragraphText(child) + "</h" + child.level + ">";
+      // Markdown tables cannot represent nested block structures in a cell;
+      // embed safe HTML so nested lists/tables/quotes/images remain structural.
+      return renderBlockHtml(child, resources);
+    }).join("<br>");
     const rows = block.children.map(row => "| " + row.children.map(renderCell).join(" | ") + " |");
     const width = block.children[0]!.children.length;
     const divider = "| " + Array.from({ length: width }, () => "---").join(" | ") + " |";
