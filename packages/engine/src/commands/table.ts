@@ -3,6 +3,7 @@ import { EngineError, engineError } from "../errors/errors";
 import { err, ok } from "../utils/result";
 import type { Command } from "./types";
 import { addResource } from "../resources/resources";
+import { findTable } from "../model/tree";
 
 function makeEmptyParagraph(generateId: () => string): Paragraph {
   return { type: "paragraph", id: generateId(), children: [{ type: "text", id: generateId(), text: "", marks: [] }] };
@@ -209,8 +210,8 @@ export function insertTableCellImageResource(params: {
   height?: number;
 }): Command {
   return (doc, ctx) => {
-    const cellExists = doc.content.some(block => block.type === "table" && block.id === params.tableId
-      && block.children.some(row => row.id === params.rowId && row.children.some(cell => cell.id === params.cellId)));
+    const targetTable = findTable(doc.content, params.tableId);
+    const cellExists = targetTable?.children.some(row => row.id === params.rowId && row.children.some(cell => cell.id === params.cellId)) ?? false;
     if (!cellExists) return err(engineError("NODE_NOT_FOUND", "Target table cell was not found", { path: params.cellId }));
     const added = addResource(doc, { kind: "image", mimeType: params.mimeType, data: params.data, name: params.name }, ctx.generateId);
     if (!added.ok) return added;
