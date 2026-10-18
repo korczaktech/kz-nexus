@@ -137,13 +137,18 @@ function makeParagraph(node: Element, type: "paragraph" | "heading" = "paragraph
   return { type: "paragraph", id: nextId(), ...alignment, ...indentation, ...anchor, ...spacing, children: runs };
 }
 
-function listBlock(element: Element): Extract<Block, { type: "bulletList" | "orderedList" }> {
+function listBlock(element: Element, resources: ResourceRef[] = []): Extract<Block, { type: "bulletList" | "orderedList" }> {
   const ordered = element.tagName.toLowerCase() === "ol";
-  const children = Array.from(element.children).filter(item => item.tagName.toLowerCase() === "li").map(item => ({
-    type: "listItem" as const,
-    id: nextId(),
-    children: [makeParagraph(item) as Extract<Block, { type: "paragraph" }>],
-  }));
+  const children = Array.from(element.children).filter(item => item.tagName.toLowerCase() === "li").map(item => {
+    const parsed = blocksFromHtml(item.innerHTML, resources).filter((child): child is Extract<Block, { type: "paragraph" | "bulletList" | "orderedList" }> =>
+      child.type === "paragraph" || child.type === "bulletList" || child.type === "orderedList"
+    );
+    return {
+      type: "listItem" as const,
+      id: nextId(),
+      children: parsed.length ? parsed : [makeParagraph(item) as Extract<Block, { type: "paragraph" }>],
+    };
+  });
   return ordered
     ? { type: "orderedList", id: nextId(), start: Math.max(1, Number(element.getAttribute("start")) || 1), children }
     : { type: "bulletList", id: nextId(), children };
@@ -252,7 +257,7 @@ function blocksFromHtml(html: string, resources: ResourceRef[] = []): Block[] {
     } else if (tag === "blockquote") {
       const children = Array.from(element.children).filter(child => ["p", "div"].includes(child.tagName.toLowerCase())).map(child => makeParagraph(child) as Extract<Block, { type: "paragraph" }>);
       blocks.push({ type: "blockquote", id: nextId(), children: children.length ? children : [{ ...makeParagraph(element), type: "paragraph" }] });
-    } else if (tag === "ul" || tag === "ol") blocks.push(listBlock(element));
+    } else if (tag === "ul" || tag === "ol") blocks.push(listBlock(element, resources));
     else if (tag === "table") blocks.push(tableBlock(element, resources));
     else if (tag === "hr") blocks.push({ type: "thematicBreak", id: nextId() });
     else if (tag === "img") {
