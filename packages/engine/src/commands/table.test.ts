@@ -2,9 +2,11 @@ import { describe, expect, it } from "vitest";
 import { createIdGenerator } from "../core/ids";
 import { createFixedClock } from "../core/clock";
 import { createDocument } from "./document";
-import { addTableColumn, addTableRow, insertTable, insertTableCellImageResource, removeTableColumn, removeTableRow, setCellText } from "./table";
+import { addTableColumn, addTableRow, insertTable, insertTableCellImageResource, removeTableColumn, removeTableRow, replaceTableCellContent, setCellText } from "./table";
 import { getPlainText } from "../model/tree";
-import type { Paragraph, Table, TableCell } from "../model/types";
+import type { Block, Paragraph, Table, TableCell } from "../model/types";
+import { validateDocument } from "../validation/validate";
+import { exportHtml } from "../exporters/html";
 
 function paragraphAt(cell: TableCell, index = 0): Paragraph {
   const child = cell.children[index];
@@ -320,4 +322,56 @@ describe("row/column operations", () => {
     expect(getPlainText(paragraphAt(updatedCell, 1))).toBe("second line");
     expect(paragraphAt(updatedCell, 0).id).toBe(paragraphAt(cell, 0).id);
   });
+
+  it("preserves nested lists and tables in cells through validation, export, and table commands", () => {
+    const document = base();
+    const initial = document.content[0];
+    if (!initial || initial.type !== "paragraph") throw new Error("Expected initial paragraph");
+    const inserted = insertTable({ afterBlockId: initial.id, rows: 1, columns: 1 })(document, ctx());
+    if (!inserted.ok) throw inserted.error;
+    const outer = inserted.value.document.content.find(block => block.type === "table");
+    if (!outer || outer.type !== "table") throw new Error("Expected outer table");
+    const blocks: Block[] = [
+      { type: "bulletList", id: "pasted-list", children: [
+        { type: "listItem", id: "pasted-item", children: [
+          { type: "paragraph", id: "pasted-paragraph", children: [{ type: "text", id: "pasted-run", text: "Nested list", marks: [] }] },
+        ] },
+      ] },
+      { type: "table", id: "pasted-table", children: [
+        { type: "tableRow", id: "pasted-row", children: [
+          { type: "tableCell", id: "pasted-cell", children: [
+            { type: "paragraph", id: "pasted-cell-paragraph", children: [{ type: "text", id: "pasted-cell-run", text: "Nested table", marks: [] }] },
+          ] },
+        ] },
+      ] },
+    ];
+    const replaced = replaceTableCellContent({
+      tableId: outer.id,
+      rowId: outer.children[0]!.id,
+      cellId: outer.children[0]!.children[0]!.id,
+      blocks,
+    })(inserted.value.document, ctx());
+    if (!replaced.ok) throw replaced.error;
+    const updatedOuter = replaced.value.document.content.find(block => block.type === "table");
+    if (!updatedOuter || updatedOuter.type !== "table") throw new Error("Expected updated outer table");
+    const cell = updatedOuter.children[0]!.children[0]!;
+    expect(cell.children.map(block => block.type)).toEqual(["bulletList", "table"]);
+    expect(validateDocument(replaced.value.document).ok).toBe(true);
+    const html = exportHtml(replaced.value.document);
+    expect(html).toContain("<ul>");
+    expect(html).toContain("<table>");
+    expect(html).toContain("Nested list");
+    expect(html).toContain("Nested table");
+
+    const nestedTable = cell.children.find(block => block.type === "table");
+    if (!nestedTable || nestedTable.type !== "table") throw new Error("Expected nested table");
+    const addRow = addTableRow({ tableId: nestedTable.id })(replaced.value.document, ctx());
+    if (!addRow.ok) throw addRow.error;
+    const updatedNested = (addRow.value.document.content.find(block => block.type === "table") as Table)
+      .children[0]!.children[0]!.children.find(block => block.type === "table");
+    if (!updatedNested || updatedNested.type !== "table") throw new Error("Nested table command did not find nested table");
+    expect(updatedNested.children).toHaveLength(2);
+    expect(validateDocument(addRow.value.document).ok).toBe(true);
+  });
+
 });
