@@ -200,4 +200,32 @@ describe("insertParagraphAfter / deleteBlock", () => {
     const lastOne = deleteBlock({ blockId: deleted.value.document.content[0].id })(deleted.value.document, ctx());
     expect(lastOne.ok).toBe(false);
   });
+
+  it("converts and deletes blockquotes inside table cells without breaking the cell", () => {
+    const d = setup("start");
+    const initial = d.content[0] as Paragraph;
+    const inserted = insertTable({ afterBlockId: initial.id, rows: 1, columns: 1 })(d, ctx());
+    if (!inserted.ok) throw inserted.error;
+    const table = inserted.value.document.content.find(block => block.type === "table");
+    if (!table || table.type !== "table") throw new Error("Expected table");
+    const cell = table.children[0]!.children[0]!;
+    const paragraph = cell.children[0];
+    if (!paragraph || paragraph.type !== "paragraph") throw new Error("Expected cell paragraph");
+    const quoted = convertBlockToBlockquote({ blockId: paragraph.id })(inserted.value.document, ctx());
+    if (!quoted.ok) throw quoted.error;
+    const quotedTable = quoted.value.document.content.find(block => block.type === "table");
+    if (!quotedTable || quotedTable.type !== "table") throw new Error("Expected quoted table");
+    const quote = quotedTable.children[0]!.children[0]!.children[0];
+    expect(quote?.type).toBe("blockquote");
+    expect(validateDocument(quoted.value.document).ok).toBe(true);
+    if (!quote) throw new Error("Expected blockquote");
+    const deleted = deleteBlock({ blockId: quote.id })(quoted.value.document, ctx());
+    if (!deleted.ok) throw deleted.error;
+    const deletedTable = deleted.value.document.content.find(block => block.type === "table");
+    if (!deletedTable || deletedTable.type !== "table") throw new Error("Expected table after nested delete");
+    expect(deletedTable.children[0]!.children[0]!.children).toHaveLength(1);
+    expect(deletedTable.children[0]!.children[0]!.children[0]?.type).toBe("paragraph");
+    expect(validateDocument(deleted.value.document).ok).toBe(true);
+  });
+
 });
