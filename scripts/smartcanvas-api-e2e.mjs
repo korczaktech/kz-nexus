@@ -197,13 +197,19 @@ try {
   await input.evaluate(element => element.focus());
   await page.keyboard.type(" " + reconnectSentinel);
   await page.locator("button.editor-save").click({ force: true });
-  await Promise.race([
-    interruptedRoutePromise,
-    new Promise((_, reject) => setTimeout(() => reject(new Error(
-      "Timed out waiting for the browser to intercept the deliberate save interruption in " + browserName
-      + "; save button disabled=" + String(page.locator("button.editor-save").isDisabled())
-    )), 20000)),
-  ]);
+  let interruptionTimeout;
+  try {
+    await Promise.race([
+      interruptedRoutePromise,
+      new Promise((_, reject) => {
+        interruptionTimeout = setTimeout(() => reject(new Error(
+          "Timed out waiting for the browser to intercept the deliberate save interruption in " + browserName
+        )), 20000);
+      }),
+    ]);
+  } finally {
+    if (interruptionTimeout) clearTimeout(interruptionTimeout);
+  }
   assert.equal(interruptedSave, true, "the network interruption must hit the actual save request");
   await page.unroute(saveRoutePattern);
   const recoveredSavePromise = page.waitForResponse(response =>
