@@ -4,6 +4,7 @@ import { createFixedClock } from "../core/clock";
 import { createDocument } from "./document";
 import { convertBlockToList, convertBlocksToList, convertListType, insertList, insertListItem, splitListItem, mergeListItemWithPrevious, removeListItem } from "./list";
 import { insertText } from "./text";
+import { insertTable } from "./table";
 import { insertParagraphAfter } from "./block";
 import type { BulletList, OrderedList, Paragraph } from "../model/types";
 import { validateDocument } from "../validation/validate";
@@ -18,6 +19,25 @@ function base() {
 }
 
 describe("convertBlockToList", () => {
+
+  it("converts a paragraph inside a table cell into a nested list", () => {
+    const d = base();
+    const paragraph = d.content[0] as Paragraph;
+    const inserted = insertTable({ afterBlockId: paragraph.id, rows: 1, columns: 1 })(d, ctx());
+    if (!inserted.ok) throw inserted.error;
+    const table = inserted.value.document.content.find(block => block.type === "table");
+    if (!table || table.type !== "table") throw new Error("Expected table");
+    const cell = table.children[0]!.children[0]!;
+    const cellParagraph = cell.children[0];
+    if (!cellParagraph || cellParagraph.type !== "paragraph") throw new Error("Expected cell paragraph");
+    const converted = convertBlockToList({ blockId: cellParagraph.id, ordered: false })(inserted.value.document, ctx());
+    if (!converted.ok) throw converted.error;
+    const updatedTable = converted.value.document.content.find(block => block.type === "table");
+    if (!updatedTable || updatedTable.type !== "table") throw new Error("Expected converted table");
+    expect(updatedTable.children[0]!.children[0]!.children[0]?.type).toBe("bulletList");
+    expect(validateDocument(converted.value.document).ok).toBe(true);
+  });
+
   it("converts a paragraph into a list without losing its text or paragraph ID", () => {
     const d = base();
     const paragraph = d.content[0] as Paragraph;
