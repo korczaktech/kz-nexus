@@ -258,7 +258,7 @@ export function insertTableCellImageResource(params: {
       ...table,
       children: table.children.map(row => row.id !== params.rowId ? row : ({
         ...row,
-        children: row.children.map(cell => cell.id !== params.cellId ? cell : ({ ...cell, children: [...cell.children, image] }))
+        children: row.children.map(cell => cell.id !== params.cellId ? cell : ({ ...cell, images: [...(cell.images ?? []), image] }))
       }))
     }));
   };
