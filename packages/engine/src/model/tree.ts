@@ -258,5 +258,26 @@ function replaceListInBlock(
 }
 
 export function findTable(blocks: Block[], tableId: string): Table | undefined {
-  return blocks.find((block): block is Table => block.type === "table" && block.id === tableId);
+  const visit = (block: Block): Table | undefined => {
+    if (block.type === "table") {
+      if (block.id === tableId) return block;
+      for (const row of block.children) for (const cell of row.children) {
+        const nested = findTable(cell.children, tableId);
+        if (nested) return nested;
+      }
+    }
+    if (block.type === "bulletList" || block.type === "orderedList") {
+      for (const item of block.children) for (const child of item.children) {
+        if (child.type === "paragraph") continue;
+        const nested = visit(child);
+        if (nested) return nested;
+      }
+    }
+    return undefined;
+  };
+  for (const block of blocks) {
+    const found = visit(block);
+    if (found) return found;
+  }
+  return undefined;
 }
