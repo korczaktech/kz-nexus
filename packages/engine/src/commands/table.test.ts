@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { createIdGenerator } from "../core/ids";
 import { createFixedClock } from "../core/clock";
 import { createDocument } from "./document";
-import { addTableColumn, addTableRow, insertTable, insertTableCellImageResource, removeTableColumn, removeTableRow, replaceTableCellContent, setCellText } from "./table";
+import { addTableColumn, addTableRow, insertTable, insertTableCellImageResource, removeTableColumn, removeTableRow, replaceTableCellContent, insertTableCellBlocksAfterParagraph, setCellText } from "./table";
 import { getPlainText } from "../model/tree";
 import type { Block, Paragraph, Table, TableCell } from "../model/types";
 import { validateDocument } from "../validation/validate";
@@ -373,6 +373,37 @@ describe("row/column operations", () => {
     if (!updatedNested || updatedNested.type !== "table") throw new Error("Nested table command did not find nested table");
     expect(updatedNested.children).toHaveLength(2);
     expect(validateDocument(addRow.value.document).ok).toBe(true);
+  });
+
+
+  it("inserts nested blocks at a selected cell paragraph without replacing adjacent content", () => {
+    const { document, tableId } = tableDoc();
+    const context = ctx();
+    const table = document.content.find(block => block.type === "table") as Table;
+    const row = table.children[0]!;
+    const cell = row.children[0]!;
+    const paragraph = paragraphAt(cell, 0);
+    const inserted = insertTableCellBlocksAfterParagraph({
+      tableId,
+      rowId: row.id,
+      cellId: cell.id,
+      afterBlockId: paragraph.id,
+      blocks: [{
+        type: "bulletList",
+        id: "list-to-insert",
+        children: [{
+          type: "listItem",
+          id: "list-item-to-insert",
+          children: [{ type: "paragraph", id: "list-paragraph-to-insert", children: [{ type: "text", id: "list-run-to-insert", text: "Inserted list", marks: [] }] }],
+        }],
+      }],
+    })(document, context);
+    if (!inserted.ok) throw inserted.error;
+    const updatedTable = inserted.value.document.content.find(block => block.type === "table") as Table;
+    const updatedCell = updatedTable.children[0]!.children[0]!;
+    expect(updatedCell.children.map(block => block.type)).toEqual(["paragraph", "bulletList"]);
+    expect(getPlainText(updatedCell.children[1]!)).toContain("Inserted list");
+    expect(validateDocument(inserted.value.document).ok).toBe(true);
   });
 
 });
