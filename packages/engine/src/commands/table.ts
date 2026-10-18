@@ -329,8 +329,8 @@ function rebuildCellParagraphs(
   text: string,
   generateId: () => string,
   options: { insertionMarks?: Mark[]; insertionRuns?: CellInsertionRun[]; insertionRange?: { start: number; end: number } } = {},
-): Paragraph[] {
-  const paragraphs = cell.children.filter((child): child is Paragraph => child.type === "paragraph");
+): Array<Paragraph | Heading> {
+  const paragraphs = cell.children.filter((child): child is Paragraph | Heading => child.type === "paragraph" || child.type === "heading");
   const oldText = paragraphs.map(paragraph => paragraph.children.map(run => run.text).join("")).join("\n");
   const oldMarks: Mark[][] = [];
   for (let paragraphIndex = 0; paragraphIndex < paragraphs.length; paragraphIndex += 1) {
@@ -397,7 +397,9 @@ function rebuildCellParagraphs(
       runs.push({ type: "text", id: previous?.children[0]?.id ?? generateId(), text: "", marks: [] });
     }
     globalOffset += line.length + 1;
-    return { ...previous, type: "paragraph" as const, id: previous?.id ?? generateId(), children: runs };
+    return previous
+      ? { ...previous, id: previous.id, children: runs }
+      : { type: "paragraph" as const, id: generateId(), children: runs };
   });
 }
 export function setCellText(params: { tableId: string; rowId: string; cellId: string; text: string; insertionMarks?: Mark[]; insertionRuns?: CellInsertionRun[]; insertionRange?: { start: number; end: number } }): Command {
@@ -424,14 +426,14 @@ export function setCellText(params: { tableId: string; rowId: string; cellId: st
               children: row.children.map((cell) => {
                 if (cell.id !== params.cellId) return cell;
                 const rebuilt = rebuildCellParagraphs(cell, params.text, ctx.generateId, { insertionMarks: params.insertionMarks, insertionRuns: params.insertionRuns, insertionRange: params.insertionRange });
-                const firstParagraphIndex = cell.children.findIndex(child => child.type === "paragraph");
+                const firstParagraphIndex = cell.children.findIndex(child => child.type === "paragraph" || child.type === "heading");
                 if (firstParagraphIndex < 0) return { ...cell, children: [...cell.children, ...rebuilt] };
-                const originalParagraphCount = cell.children.filter(child => child.type === "paragraph").length;
+                const originalParagraphCount = cell.children.filter(child => child.type === "paragraph" || child.type === "heading").length;
                 const children: Block[] = [];
                 let rebuiltIndex = 0;
                 let seenParagraphs = 0;
                 cell.children.forEach(child => {
-                  if (child.type !== "paragraph") {
+                  if (child.type !== "paragraph" && child.type !== "heading") {
                     children.push(child);
                     return;
                   }
