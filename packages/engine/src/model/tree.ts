@@ -230,6 +230,11 @@ function findListInBlock(block: Block, listId: string): BulletList | OrderedList
         }
       }
     }
+  } else if (block.type === "table") {
+    for (const row of block.children) for (const cell of row.children) {
+      const found = findList(cell.children, listId);
+      if (found) return found;
+    }
   }
   return undefined;
 }
@@ -256,16 +261,14 @@ function replaceListInBlock(
   if (block.type === "bulletList" || block.type === "orderedList") {
     if (block.id === listId) {
       setFound(true);
-      const result = transform(block);
-      return result;
+      return transform(block);
     }
     const newChildren: ListItem[] = [];
     for (const item of block.children) {
       const newItemChildren: ListItemContent[] = [];
       for (const child of item.children) {
-        if (child.type === "paragraph") {
-          newItemChildren.push(child);
-        } else {
+        if (child.type === "paragraph") newItemChildren.push(child);
+        else {
           const replaced = replaceListInBlock(child, listId, transform, setFound);
           if (replaced) newItemChildren.push(replaced as BulletList | OrderedList);
         }
@@ -273,6 +276,19 @@ function replaceListInBlock(
       if (newItemChildren.length > 0) newChildren.push({ ...item, children: newItemChildren });
     }
     return { ...block, children: newChildren } as Block;
+  }
+  if (block.type === "table") {
+    return {
+      ...block,
+      children: block.children.map(row => ({
+        ...row,
+        children: row.children.map(cell => {
+          const replaced = replaceList(cell.children, listId, transform);
+          if (replaced.found) setFound(true);
+          return { ...cell, children: replaced.blocks };
+        }),
+      })),
+    };
   }
   return block;
 }
