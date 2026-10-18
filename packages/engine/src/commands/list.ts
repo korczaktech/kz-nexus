@@ -1,5 +1,5 @@
 import type { Block, BulletList, ListItem, OrderedList, Paragraph } from "../model/types";
-import { findList, replaceList } from "../model/tree";
+import { findList, replaceList, findParagraphLike, replaceBlockById } from "../model/tree";
 import { engineError } from "../errors/errors";
 import { splitRunsAt } from "./text";
 import { err, ok } from "../utils/result";
@@ -32,20 +32,31 @@ export function insertList(params: { afterBlockId: string; ordered: boolean }): 
 /** Converts a top-level paragraph or heading into a list while preserving its text runs and stable paragraph ID. */
 export function convertBlockToList(params: { blockId: string; ordered: boolean }): Command {
   return (doc, ctx) => {
-    const index = doc.content.findIndex((block) => block.id === params.blockId);
-    if (index < 0) return err(engineError("NODE_NOT_FOUND", `Top-level block "${params.blockId}" not found`, { path: params.blockId }));
-    const source = doc.content[index];
-    if (source.type !== "paragraph" && source.type !== "heading") {
-      return err(engineError("UNSUPPORTED_OPERATION", "Only a paragraph or heading can be converted into a list", { path: params.blockId }));
-    }
-    const paragraph: Paragraph = { type: "paragraph", id: source.id, align: source.align, children: source.children };
+    const source = findParagraphLike(doc.content, params.blockId);
+    if (!source) return err(engineError("NODE_NOT_FOUND", \`Text block "\${params.blockId}" not found\`, { path: params.blockId }));
+    const paragraph: Paragraph = source.type === "paragraph" ? source : {
+      type: "paragraph",
+      id: source.id,
+      ...(source.align !== undefined ? { align: source.align } : {}),
+      ...(source.indent !== undefined ? { indent: source.indent } : {}),
+      ...("firstLineIndent" in source && source.firstLineIndent !== undefined ? { firstLineIndent: source.firstLineIndent } : {}),
+      ...("hangingIndent" in source && source.hangingIndent !== undefined ? { hangingIndent: source.hangingIndent } : {}),
+      ...(source.spacingBefore !== undefined ? { spacingBefore: source.spacingBefore } : {}),
+      ...(source.spacingAfter !== undefined ? { spacingAfter: source.spacingAfter } : {}),
+      ...(source.lineSpacing !== undefined ? { lineSpacing: source.lineSpacing } : {}),
+      ...(source.backgroundColor !== undefined ? { backgroundColor: source.backgroundColor } : {}),
+      ...(source.borderColor !== undefined ? { borderColor: source.borderColor } : {}),
+      ...(source.borderWidth !== undefined ? { borderWidth: source.borderWidth } : {}),
+      ...(source.padding !== undefined ? { padding: source.padding } : {}),
+      children: source.children,
+    };
     const item: ListItem = { type: "listItem", id: ctx.generateId(), children: [paragraph] };
     const list: Block = params.ordered
       ? { type: "orderedList", id: ctx.generateId(), start: 1, children: [item] }
       : { type: "bulletList", id: ctx.generateId(), children: [item] };
-    const content = [...doc.content];
-    content[index] = list;
-    return ok({ document: { ...doc, content }, selection: { blockId: paragraph.id, offset: 0 } });
+    const replaced = replaceBlockById(doc.content, params.blockId, [list]);
+    if (!replaced.found) return err(engineError("UNSUPPORTED_OPERATION", "This text block cannot be converted into a list inside its current container", { path: params.blockId }));
+    return ok({ document: { ...doc, content: replaced.blocks }, selection: { blockId: paragraph.id, offset: 0 } });
   };
 }
 
