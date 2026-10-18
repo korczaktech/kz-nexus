@@ -96,6 +96,16 @@ try {
   // each input event; assert the canvas accessibility projection, not that transient buffer.
   await waitForEditorProjection(page, initialSentinel);
 
+  // Exercise real browser keyboard events against the canonical engine selection:
+  // Backspace at the end must delete one grapheme and typing must restore the exact text.
+  const finalCharacter = initialSentinel.slice(-1);
+  await input.evaluate(element => element.focus());
+  await page.keyboard.press("End");
+  await page.keyboard.press("Backspace");
+  await waitForEditorProjection(page, initialSentinel.slice(0, -1));
+  await page.keyboard.type(finalCharacter);
+  await waitForEditorProjection(page, initialSentinel);
+
   // Force the same hidden-tab checkpoint used by the editor to preserve a recoverable draft.
   await page.evaluate(() => {
     Object.defineProperty(document, "visibilityState", { configurable: true, get: () => "hidden" });
