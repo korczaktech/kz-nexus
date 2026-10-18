@@ -22,11 +22,17 @@ function collectTextBlocks(nodes: readonly unknown[]): TextBlock[] {
         for (const cellValue of row.children ?? []) {
           if (!cellValue || typeof cellValue !== "object") continue;
           const cell = cellValue as { children?: unknown[] };
-          for (const child of cell.children ?? []) {
+          const cellChildren = cell.children ?? [];
+          const hasNestedStructure = cellChildren.some(child => {
+            if (!child || typeof child !== "object") return false;
+            const nested = child as { type?: unknown };
+            return nested.type !== "paragraph" && nested.type !== "heading";
+          });
+          for (const child of cellChildren) {
             if (!child || typeof child !== "object") continue;
             const nested = child as { type?: unknown };
-            // Direct cell paragraphs stay with the cell controller; nested containers use canonical text commands.
-            if (nested.type !== "paragraph" && nested.type !== "heading") blocks.push(...collectTextBlocks([child]));
+            // Simple cells use the cell controller. Complex cells route every text block through canonical text commands.
+            if (hasNestedStructure || (nested.type !== "paragraph" && nested.type !== "heading")) blocks.push(...collectTextBlocks([child]));
           }
         }
       }
@@ -263,10 +269,16 @@ function findTextNode(nodes: readonly unknown[], id: string): { text: string; ru
         for (const cellValue of row.children ?? []) {
           if (!cellValue || typeof cellValue !== "object") continue;
           const cell = cellValue as { children?: unknown[] };
-          for (const child of cell.children ?? []) {
+          const cellChildren = cell.children ?? [];
+          const hasNestedStructure = cellChildren.some(child => {
+            if (!child || typeof child !== "object") return false;
+            const nested = child as { type?: unknown };
+            return nested.type !== "paragraph" && nested.type !== "heading";
+          });
+          for (const child of cellChildren) {
             if (!child || typeof child !== "object") continue;
             const nestedBlock = child as { type?: unknown };
-            if (nestedBlock.type === "paragraph" || nestedBlock.type === "heading") continue;
+            if (!hasNestedStructure && (nestedBlock.type === "paragraph" || nestedBlock.type === "heading")) continue;
             const nested = findTextNode([child], id);
             if (nested) return nested;
           }
