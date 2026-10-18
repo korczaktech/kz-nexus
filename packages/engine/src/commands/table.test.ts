@@ -4,7 +4,13 @@ import { createFixedClock } from "../core/clock";
 import { createDocument } from "./document";
 import { addTableColumn, addTableRow, insertTable, insertTableCellImageResource, removeTableColumn, removeTableRow, setCellText } from "./table";
 import { getPlainText } from "../model/tree";
-import type { Table } from "../model/types";
+import type { Paragraph, Table, TableCell } from "../model/types";
+
+function paragraphAt(cell: TableCell, index = 0): Paragraph {
+  const child = cell.children[index];
+  if (!child || child.type !== "paragraph") throw new Error("Expected paragraph in table cell");
+  return child;
+}
 
 function ctx() {
   return { generateId: createIdGenerator("id", 5) };
@@ -153,9 +159,9 @@ describe("row/column operations", () => {
     const result = setCellText({ tableId, rowId: row.id, cellId: cell.id, text: "Hello brave world" })(seededDocument, ctx());
     if (!result.ok) throw result.error;
     const updatedCell = (result.value.document.content[1] as Table).children[0].children[0];
-    expect(updatedCell.children[0].children.map(run => run.text)).toEqual(["Hello brave ", "world"]);
-    expect(updatedCell.children[0].children[0].marks).toEqual([{ type: "bold" }]);
-    expect(updatedCell.children[0].children[1].marks).toEqual([]);
+    expect(paragraphAt(updatedCell, 0).children.map(run => run.text)).toEqual(["Hello brave ", "world"]);
+    expect(paragraphAt(updatedCell, 0).children[0].marks).toEqual([{ type: "bold" }]);
+    expect(paragraphAt(updatedCell, 0).children[1].marks).toEqual([]);
   });
 
   it("applies explicit insertion marks to newly typed text in an empty cell", () => {
@@ -172,9 +178,9 @@ describe("row/column operations", () => {
     })(document, ctx());
     if (!result.ok) throw result.error;
     const updatedCell = (result.value.document.content[1] as Table).children[0].children[0];
-    expect(getPlainText(updatedCell.children[0])).toBe("bold text");
-    expect(updatedCell.children[0].children).toHaveLength(1);
-    expect(updatedCell.children[0].children[0].marks).toEqual([{ type: "bold" }]);
+    expect(getPlainText(paragraphAt(updatedCell, 0))).toBe("bold text");
+    expect(paragraphAt(updatedCell, 0).children).toHaveLength(1);
+    expect(paragraphAt(updatedCell, 0).children[0].marks).toEqual([{ type: "bold" }]);
   });
 
   it("uses explicit insertion marks only for changed text and preserves unchanged suffix marks", () => {
@@ -183,9 +189,9 @@ describe("row/column operations", () => {
     const row = table.children[0];
     const cell = row.children[0];
     const paragraph = {
-      ...cell.children[0],
+      ...paragraphAt(cell, 0),
       children: [
-        { ...cell.children[0].children[0], text: "old ", marks: [] },
+        { ...paragraphAt(cell, 0).children[0], text: "old ", marks: [] },
         { type: "text" as const, id: "italic-suffix-test", text: "suffix", marks: [{ type: "italic" as const }] },
       ],
     };
@@ -205,9 +211,9 @@ describe("row/column operations", () => {
     })(seededDocument, ctx());
     if (!result.ok) throw result.error;
     const updatedCell = (result.value.document.content[1] as Table).children[0].children[0];
-    expect(updatedCell.children[0].children.map(run => run.text).join("")).toBe("new suffix");
-    expect(updatedCell.children[0].children.filter(run => run.text.trim() !== "").map(run => run.marks)).toEqual([[{ type: "bold" }], [{ type: "italic" }]]);
-    expect(updatedCell.children[0].children.filter(run => run.text === " ").every(run => run.marks.length === 0)).toBe(true);
+    expect(paragraphAt(updatedCell, 0).children.map(run => run.text).join("")).toBe("new suffix");
+    expect(paragraphAt(updatedCell, 0).children.filter(run => run.text.trim() !== "").map(run => run.marks)).toEqual([[{ type: "bold" }], [{ type: "italic" }]]);
+    expect(paragraphAt(updatedCell, 0).children.filter(run => run.text === " ").every(run => run.marks.length === 0)).toBe(true);
   });
 
   it("rejects rich insertion runs that do not match their explicit range", () => {
@@ -266,10 +272,10 @@ describe("row/column operations", () => {
     const row = table.children[0];
     const cell = row.children[0];
     const paragraph = {
-      ...cell.children[0],
+      ...paragraphAt(cell, 0),
       align: "center" as const,
       children: [
-        { ...cell.children[0].children[0], text: "remove ", marks: [{ type: "bold" as const }] },
+        { ...paragraphAt(cell, 0).children[0], text: "remove ", marks: [{ type: "bold" as const }] },
         { type: "text" as const, id: "suffix-run-test", text: "keep", marks: [{ type: "italic" as const }] },
       ],
     };
@@ -298,7 +304,7 @@ describe("row/column operations", () => {
     if (!result.ok) throw result.error;
     const updatedCell = (result.value.document.content[1] as Table).children[0].children[0];
     expect(updatedCell.children).toHaveLength(3);
-    expect(updatedCell.children.map(paragraph => getPlainText(paragraph))).toEqual(["first", "", "third"]);
+    expect(updatedCell.children.map(child => { if (child.type !== "paragraph") throw new Error("Expected paragraph"); return getPlainText(child); })).toEqual(["first", "", "third"]);
   });
 
   it("preserves newline-separated cell text as separate paragraphs", () => {
@@ -310,8 +316,8 @@ describe("row/column operations", () => {
     if (!result.ok) throw result.error;
     const updatedCell = (result.value.document.content[1] as Table).children[0].children[0];
     expect(updatedCell.children).toHaveLength(2);
-    expect(getPlainText(updatedCell.children[0] as never)).toBe("first line");
-    expect(getPlainText(updatedCell.children[1] as never)).toBe("second line");
-    expect(updatedCell.children[0].id).toBe(cell.children[0].id);
+    expect(getPlainText(paragraphAt(updatedCell, 0))).toBe("first line");
+    expect(getPlainText(paragraphAt(updatedCell, 1))).toBe("second line");
+    expect(paragraphAt(updatedCell, 0).id).toBe(paragraphAt(cell, 0).id);
   });
 });
