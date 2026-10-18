@@ -44,7 +44,12 @@ const browserType = { chromium, firefox, webkit }[browserName];
 if (!browserType) throw new Error("Unsupported SMARTCANVAS_E2E_BROWSER: " + browserName);
 const browser = await browserType.launch({ headless: true });
 try {
-  const context = await browser.newContext({ acceptDownloads: true });
+  const context = await browser.newContext({
+    acceptDownloads: true,
+    // Service workers can bypass Playwright's route interception, especially
+    // in WebKit. Block them so the deliberate network-failure test is reliable.
+    serviceWorkers: "block",
+  });
   await context.addInitScript(() => {
     localStorage.setItem("kz_storage_selection_v1", JSON.stringify({
       provider: "local",
