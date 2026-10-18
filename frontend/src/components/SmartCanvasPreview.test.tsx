@@ -1502,7 +1502,7 @@ describe("SmartCanvasPreview input integration", () => {
     window.document.body.append(host);
     root = createRoot(host);
     await act(async () => {
-      root?.render(createElement(SmartCanvasPreview, { document: engine!.getDocument(), engine: engine! }));
+      root?.render(createElement(SmartCanvasPreview, { document: engine!.getDocument(), engine: engine!, onDocumentChange: vi.fn() }));
     });
     const cellHit = host.querySelector('[data-testid="smartcanvas-cell-hit"]') as HTMLButtonElement | null;
     await act(async () => { cellHit?.click(); });
