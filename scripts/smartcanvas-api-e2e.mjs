@@ -176,13 +176,16 @@ try {
   const interruptedRoutePromise = new Promise(resolve => {
     resolveInterruptedRoute = resolve;
   });
-  const saveRoutePattern = "**/save";
+  // Match broadly and inspect the parsed URL ourselves. WebKit can omit
+  // requests from a narrow glob when the save URL carries a query string.
+  const saveRoutePattern = "**/*";
   await page.route(saveRoutePattern, async route => {
     const request = route.request();
-    const isSave = request.method() === "POST" && new URL(request.url()).pathname.endsWith("/save");
+    const requestUrl = new URL(request.url());
+    const isSave = request.method() === "POST" && requestUrl.pathname.endsWith("/save");
     if (!interruptedSave && isSave) {
       interruptedSave = true;
-      console.log("[reconnect E2E] intercepting save request in " + browserName);
+      console.log("[reconnect E2E] intercepting save request in " + browserName + ": " + requestUrl.pathname);
       try {
         await route.abort("internetdisconnected");
       } finally {
