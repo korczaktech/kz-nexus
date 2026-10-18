@@ -16,6 +16,24 @@ function makeRow(generateId: () => string, columns: number): TableRow {
   return { type: "tableRow", id: generateId(), children: Array.from({ length: columns }, () => makeCell(generateId)) };
 }
 
+export function insertTable(params: { afterBlockId: string; rows: number; columns: number }): Command {
+  return (doc, ctx) => {
+    if (params.rows < 1 || params.columns < 1) {
+      return err(engineError("INVALID_DOCUMENT", "Table must have at least 1 row and 1 column"));
+    }
+    const index = doc.content.findIndex((block) => block.id === params.afterBlockId);
+    if (index === -1) return err(engineError("NODE_NOT_FOUND", `Top-level block "${params.afterBlockId}" not found`, { path: params.afterBlockId }));
+    const table: Table = {
+      type: "table",
+      id: ctx.generateId(),
+      children: Array.from({ length: params.rows }, () => makeRow(ctx.generateId, params.columns)),
+    };
+    const content = [...doc.content];
+    content.splice(index + 1, 0, table);
+    return ok({ document: { ...doc, content } });
+  };
+}
+
 function transformNestedTable(blocks: Block[], tableId: string, transform: (table: Table) => Table): { blocks: Block[]; found: boolean } {
   let found = false;
   const visit = (block: Block): Block => {
@@ -41,7 +59,7 @@ function transformNestedTable(blocks: Block[], tableId: string, transform: (tabl
         ...block,
         children: block.children.map(item => ({
           ...item,
-          children: item.children.map(child => child.type === "paragraph" ? child : visit(child)),
+          children: item.children.map(child => child.type === "paragraph" ? child : visit(child) as typeof child),
         })),
       };
     }
