@@ -1738,6 +1738,14 @@ describe("SmartCanvasPreview input integration", () => {
         onDocumentChange: vi.fn(),
       }));
     });
+    // The component initializes its own selection state on mount; set the
+    // cross-container logical selection after that initialization completes.
+    await act(async () => {
+      expect(engine!.setSelection({
+        anchor: { blockId: listParagraph.id, offset: 0 },
+        focus: { blockId: tableParagraph.id, offset: getPlainText(tableParagraph).length },
+      }).ok).toBe(true);
+    });
     const input = host.querySelector('textarea[aria-label="Entrada de texto do SmartCanvas"]') as HTMLTextAreaElement | null;
     if (!input) throw new Error("SmartCanvas input surface was not mounted");
     const cut = new Event("cut", { bubbles: true, cancelable: true });
