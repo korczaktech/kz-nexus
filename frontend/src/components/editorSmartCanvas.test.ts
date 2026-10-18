@@ -230,4 +230,46 @@ describe("production SmartCanvas migration gate", () => {
     expect(getSmartCanvasDiagnostics()).toMatchObject({ beforeInputEvents: 2, compositionDeferredEvents: 1 });
   });
 
+
+  it("maps selections across paragraph, quote, list and table in canonical order without flattening owners", () => {
+    const content = [
+      { type: "paragraph", id: "mix_before", children: [{ text: "Alpha" }] },
+      { type: "blockquote", id: "mix_quote", children: [
+        { type: "paragraph", id: "mix_quote_p", children: [{ text: "Bravo" }] },
+      ] },
+      { type: "bulletList", id: "mix_list", children: [
+        { type: "listItem", id: "mix_item", children: [
+          { type: "paragraph", id: "mix_list_p", children: [{ text: "Charlie" }] },
+        ] },
+      ] },
+      { type: "table", id: "mix_table", children: [
+        { type: "tableRow", id: "mix_row", children: [
+          { type: "tableCell", id: "mix_cell", children: [
+            { type: "paragraph", id: "mix_table_p", children: [{ text: "Delta" }] },
+          ] },
+        ] },
+      ] },
+      { type: "paragraph", id: "mix_after", children: [{ text: "Echo" }] },
+    ];
+    const forward = getSmartCanvasTextSelectionRanges(content, {
+      anchor: { blockId: "mix_before", offset: 2 },
+      focus: { blockId: "mix_after", offset: 3 },
+    });
+    expect(forward?.map(range => [range.block.id, range.start, range.end])).toEqual([
+      ["mix_before", 2, 5],
+      ["mix_quote_p", 0, 5],
+      ["mix_list_p", 0, 7],
+      ["mix_table_p", 0, 5],
+      ["mix_after", 0, 3],
+    ]);
+    const reverse = getSmartCanvasTextSelectionRanges(content, {
+      anchor: { blockId: "mix_after", offset: 3 },
+      focus: { blockId: "mix_before", offset: 2 },
+    });
+    expect(reverse).toEqual(forward);
+    expect((content[1] as { type: string }).type).toBe("blockquote");
+    expect((content[2] as { type: string }).type).toBe("bulletList");
+    expect((content[3] as { type: string }).type).toBe("table");
+  });
+
 });
