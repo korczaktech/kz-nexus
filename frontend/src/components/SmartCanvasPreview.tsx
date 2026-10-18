@@ -707,8 +707,31 @@ export function SmartCanvasPreview({ document, engine, headerText = "", footerTe
       onStatus?.(clickCount >= 3 ? "Parágrafo selecionado." : clickCount >= 2 ? "Palavra selecionada." : "SmartCanvas: cursor no bloco " + target.blockId + ", posição " + target.position.offset + ".");
     } else if (target.kind === "table-cell") {
       setActiveBlockId(null);
-      const cell = collectTableCells(engine.getDocument().content).find(item => item.tableId === target.blockId && item.cellId === target.cellId);
+      const documentContent = engine.getDocument().content;
+      const cell = collectTableCells(documentContent).find(item => item.tableId === target.blockId && item.cellId === target.cellId);
       if (!cell) { onStatus?.("Não foi possível localizar a célula selecionada."); return; }
+      const cellNode = findDocumentNode(documentContent, target.cellId);
+      const cellChildren = cellNode && Array.isArray(cellNode.children) ? cellNode.children as unknown[] : [];
+      const hasNestedStructure = cellChildren.some(child => {
+        if (!child || typeof child !== "object") return false;
+        const type = (child as { type?: unknown }).type;
+        return type !== "paragraph" && type !== "heading";
+      });
+      if (hasNestedStructure) {
+        // Never route a complex cell through setCellText: that command is the
+        // flat-text controller and could flatten its nested lists/tables.
+        const firstNestedTextBlock = collectTextBlocks([cellNode]).find(block => block.text.length >= 0);
+        setActiveCell(null);
+        setActiveCellStoredMarks(null);
+        if (!firstNestedTextBlock) {
+          onStatus?.("A célula contém estruturas aninhadas sem um bloco de texto editável.");
+          return;
+        }
+        syncSelection(collapsedAt({ blockId: firstNestedTextBlock.id, offset: 0 }));
+        inputRef.current?.focus({ preventScroll: true });
+        onStatus?.("Célula estrutural: edição direcionada ao primeiro bloco de texto para preservar listas e tabelas aninhadas.");
+        return;
+      }
       const boundedOffset = nearestGraphemeOffset(cell.text, target.offset);
       const range = clickCount >= 3 ? { start: 0, end: cell.text.length } : clickCount >= 2 ? wordRangeAt(cell.text, boundedOffset) : { start: boundedOffset, end: boundedOffset };
       setActiveCell({ ...cell, anchorOffset: range.start, offset: range.end });
