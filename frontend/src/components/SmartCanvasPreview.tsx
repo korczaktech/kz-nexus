@@ -729,14 +729,16 @@ export function SmartCanvasPreview({ document, engine, headerText = "", footerTe
       if (hasNestedStructure) {
         // Never route a complex cell through setCellText: that command is the
         // flat-text controller and could flatten its nested lists/tables.
-        const firstNestedTextBlock = collectTextBlocks([cellNode]).find(block => block.text.length >= 0);
+        const firstNestedTextBlock = collectTextBlocks([cellNode])[0];
+        const logicalPosition = cellOffsetToPosition(documentContent, cell, target.offset);
         setActiveCell(null);
         setActiveCellStoredMarks(null);
-        if (!firstNestedTextBlock) {
+        const position = logicalPosition ?? (firstNestedTextBlock ? { blockId: firstNestedTextBlock.id, offset: 0 } : undefined);
+        if (!position) {
           onStatus?.("A célula contém estruturas aninhadas sem um bloco de texto editável.");
           return;
         }
-        syncSelection(collapsedAt({ blockId: firstNestedTextBlock.id, offset: 0 }));
+        syncSelection(collapsedAt(position));
         inputRef.current?.focus({ preventScroll: true });
         onStatus?.("Célula estrutural: edição direcionada ao primeiro bloco de texto para preservar listas e tabelas aninhadas.");
         return;
