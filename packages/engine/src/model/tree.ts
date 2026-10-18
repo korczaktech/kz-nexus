@@ -64,12 +64,10 @@ function updateParagraphLikeInBlock(
         const row = block.children[rowIndex]!;
         for (let cellIndex = 0; cellIndex < row.children.length; cellIndex += 1) {
           const cell = row.children[cellIndex]!;
-          const paragraphIndex = cell.children.findIndex(child => child.id === id);
-          if (paragraphIndex < 0) continue;
-          const paragraphs = cell.children.slice();
-          paragraphs[paragraphIndex] = fn(paragraphs[paragraphIndex]!) as Paragraph;
+          const updated = updateParagraphLike(cell.children, id, fn);
+          if (!updated.found) continue;
           const cells = row.children.slice();
-          cells[cellIndex] = { ...cell, children: paragraphs };
+          cells[cellIndex] = { ...cell, children: updated.blocks };
           const rows = block.children.slice();
           rows[rowIndex] = { ...row, children: cells };
           return { block: { ...block, children: rows }, found: true };
@@ -125,7 +123,7 @@ function mapParagraphLikeInBlock(block: Block, fn: (node: ParagraphLike) => Para
         ...block,
         children: block.children.map((row) => ({
           ...row,
-          children: row.children.map((cell) => ({ ...cell, children: cell.children.map((p) => fn(p) as Paragraph) })),
+          children: row.children.map((cell) => ({ ...cell, children: mapParagraphLike(cell.children, fn) })),
         })),
       };
     case "thematicBreak":
@@ -169,7 +167,7 @@ function findParagraphLikeInBlock(block: Block, id: string): ParagraphLike | und
     case "table":
       for (const row of block.children) {
         for (const cell of row.children) {
-          const found = cell.children.find((p) => p.id === id);
+          const found = findParagraphLike(cell.children, id);
           if (found) return found;
         }
       }
