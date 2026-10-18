@@ -79,7 +79,7 @@ function renderBlock(block: Block, doc?: NexusDocument): HTMLElement {
         const tr = el("tr", { "data-node-id": row.id });
         for (const cell of row.children) {
           const td = el("td", { "data-node-id": cell.id });
-          for (const p of cell.children) td.append(renderTextBlock(p));
+          for (const child of cell.children) td.append(renderBlock(child, doc));
           tr.append(td);
         }
         body.append(tr);
