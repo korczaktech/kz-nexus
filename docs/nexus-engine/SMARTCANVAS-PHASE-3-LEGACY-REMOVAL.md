@@ -23,7 +23,9 @@ A Etapa 3 só pode remover definitivamente o caminho legado depois que a impleme
 - [x] A coleta recursiva de texto agora inclui parágrafos simples dentro de tabelas aninhadas, sem confundir células simples de topo com células complexas.
 - [x] Teste de componente verifica negrito e recorte de uma seleção que atravessa lista e tabela aninhadas, preservando os contêineres.
 - [x] Teste unitário mapeia a seleção nos dois sentidos entre parágrafo, citação, lista e tabela, mantendo a identidade dos contêineres.
-- [ ] Completar a matriz de comandos que atravessam contêineres mistos (lista ↔ tabela ↔ parágrafo ↔ citação), garantindo que delete/format não achatem nem removam contêineres indevidos.
+- [x] Teste de componente cobre formatação, cópia e recorte de uma seleção lógica que atravessa parágrafo, citação, lista e célula simples de tabela, mantendo os quatro contêineres.
+- [x] Corrigida a formatação de seleção lógica para usar os intervalos canônicos do motor; o coletor visual de texto não inclui células simples de tabela no mesmo caminho, o que deixava a formatação cross-container incompleta.
+- [ ] Completar a matriz de comandos em ambas as direções e com mais estruturas aninhadas (lista ↔ tabela ↔ parágrafo ↔ citação), garantindo que delete/format não achatem nem removam contêineres indevidos.
 - [ ] Definir e testar o comportamento de seleção unificada entre células; se não fizer parte do contrato de produto, documentar o limite e fornecer feedback explícito em vez de falhar silenciosamente.
 
 ### 3. Acessibilidade
@@ -52,14 +54,14 @@ A Etapa 3 só pode remover definitivamente o caminho legado depois que a impleme
 
 ## Última rodada registrada
 
-Último commit funcional validado: [`f653ab88350fcedbd9b9694f2dff19575ec80a43`](https://github.com/korczaktech/kz-nexus/commit/f653ab88350fcedbd9b9694f2dff19575ec80a43)
+Último commit funcional validado: [`54dcd90c554e9dd6b7a14ebfe0541e4f3b73bb79`](https://github.com/korczaktech/kz-nexus/commit/54dcd90c554e9dd6b7a14ebfe0541e4f3b73bb79)
 
-- A integração real com API/MongoDB/Playwright passou em **Chromium, Firefox e WebKit** no workflow [`39164295180`](https://github.com/korczaktech/kz-nexus/actions/runs/39164295180), incluindo salvamento real, roundtrip do payload nativo NSX, recuperação de rascunho, DOCX/PDF, autosave, interrupção e reconexão de rede e conflito de versão.
-- O cenário de rede passou a bloquear service workers no contexto de teste e a inspecionar URLs de salvamento após interceptar requisições amplamente; isso evita a divergência de interceptação observada no WebKit.
-- O timeout de reconexão agora é limpo ao concluir a interceptação; a espera do popup PDF tem limite explícito, e o workflow limita cada processo de navegador a 120 segundos e a etapa E2E a 8 minutos.
-- A validação Kortex do mesmo commit passou em testes do motor, typecheck/build do frontend e testes/typecheck/build do SmartCanvas preview: [workflow `39164295119`](https://github.com/korczaktech/kz-nexus/actions/runs/39164295119).
+- A integração real com API/MongoDB/Playwright passou em **Chromium, Firefox e WebKit** no workflow [`39165137727`](https://github.com/korczaktech/kz-nexus/actions/runs/39165137727), incluindo salvamento real, roundtrip do payload nativo NSX, recuperação de rascunho, DOCX/PDF, autosave, interrupção e reconexão de rede e conflito de versão.
+- A validação Kortex, a validação SmartCanvas, o baseline de memória e o deploy GitHub Pages passaram no mesmo SHA: [Kortex `39165137817`](https://github.com/korczaktech/kz-nexus/actions/runs/39165137817), [SmartCanvas `39165137741`](https://github.com/korczaktech/kz-nexus/actions/runs/39165137741), [Memory Baseline `39165137771`](https://github.com/korczaktech/kz-nexus/actions/runs/39165137771), [Pages `39165137769`](https://github.com/korczaktech/kz-nexus/actions/runs/39165137769).
+- O cenário de rede bloqueia service workers no contexto de teste e inspeciona URLs de salvamento após interceptar requisições amplamente; isso elimina a divergência de interceptação observada no WebKit.
+- O timeout de reconexão é limpo ao concluir a interceptação; a espera do popup PDF tem limite explícito, e o workflow limita cada processo de navegador a 120 segundos e a etapa E2E a 8 minutos.
+- O teste de seleção mista revelou um defeito real: a formatação usava um coletor que omite células simples de tabela, embora o mapeador de seleção canônica as inclua. A formatação foi alterada para usar os intervalos canônicos, e a suíte agora verifica formatação, cópia e recorte atravessando parágrafo, citação, lista e tabela sem achatar os contêineres.
 - As alterações anteriores de seleção lógica e cópia/recorte permanecem cobertas pelos testes de componente e motor; ver os commits [`d97fa9a`](https://github.com/korczaktech/kz-nexus/commit/d97fa9a998032fc29ffb722af27447992f0a5a7d) e [`fb469a3`](https://github.com/korczaktech/kz-nexus/commit/fb469a39edea8c9db861a6da44c4edd68c3221d7).
-- Uma execução anterior falhou no WebKit porque o contexto de teste ainda permitia service workers e a interceptação deliberada não era observada; o comportamento foi corrigido e a execução posterior passou nos três navegadores.
 - A validação física de IME, teclado e leitor de tela continua sem evidência: esses itens exigem dispositivos/sistemas reais ou resultados de teste fornecidos pela equipe. Também seguem pendentes a comparação visual real, abertura dos arquivos no Word/LibreOffice e a decisão de produto sobre ativação/remoção do legado.
 
 ## Critério de conclusão
