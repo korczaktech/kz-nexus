@@ -580,6 +580,8 @@ export function SmartCanvasPreview({ document, engine, headerText = "", footerTe
     preferredCellColumn.current = null;
     if (target.kind === "text") {
       setActiveBlockId(null);
+      setActiveCell(null);
+      setActiveCellStoredMarks(null);
       const block = findBlock(engine.getDocument().content, target.blockId);
       const targetOffset = block ? nearestGraphemeOffset(block.text, target.position.offset) : target.position.offset;
       if (block && clickCount >= 2) {
