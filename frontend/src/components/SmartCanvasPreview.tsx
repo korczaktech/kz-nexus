@@ -1859,7 +1859,7 @@ export function SmartCanvasPreview({ document, engine, headerText = "", footerTe
           const hasStructuralBlocks = imported.content.some(block => block.type !== "paragraph" && block.type !== "heading");
           if (hasStructuralBlocks) {
             const replacesWholeCell = structuralStart === 0 && structuralEnd === activeCell.text.length;
-            const appendsAtEnd = structuralStart === end && structuralEnd === activeCell.text.length;
+            const appendsAtEnd = structuralStart === structuralEnd && structuralEnd === activeCell.text.length;
             if (!replacesWholeCell && !appendsAtEnd) {
               onStatus?.("Para preservar listas, tabelas e outros blocos, selecione todo o conteúdo da célula para substituí-lo ou posicione o cursor no final para anexar.");
               event.preventDefault();
