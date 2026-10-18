@@ -180,11 +180,13 @@ try {
     }
     await route.continue();
   });
-  await input.evaluate(element => element.focus());
-  await page.keyboard.type(" " + reconnectSentinel);
+  // Register before typing: WebKit may trigger autosave quickly enough that
+  // registering after input changes races the first failed request.
   const failedSavePromise = page.waitForEvent("requestfailed", request =>
     request.method() === "POST" && new URL(request.url()).pathname.endsWith("/save"),
   );
+  await input.evaluate(element => element.focus());
+  await page.keyboard.type(" " + reconnectSentinel);
   await page.locator("button.editor-save").click({ force: true });
   await failedSavePromise;
   assert.equal(interruptedSave, true, "the network interruption must hit the actual save request");
