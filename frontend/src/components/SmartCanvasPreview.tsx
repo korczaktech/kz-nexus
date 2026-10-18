@@ -950,7 +950,7 @@ export function SmartCanvasPreview({ document, engine, headerText = "", footerTe
           block.id === current.focus.blockId && (block.type === "paragraph" || block.type === "heading")
         )
       : undefined;
-    const afterBlockId = activeCell?.tableId ?? selectedTopLevel?.id;
+    const afterBlockId = selectedTopLevel?.id;
     if (!afterBlockId) {
       onStatus?.("Selecione um parágrafo ou uma tabela antes de inserir uma quebra.");
       return;
