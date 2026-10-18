@@ -836,16 +836,21 @@ export function SmartCanvasPreview({ document, engine, headerText = "", footerTe
     onStatus?.(message);
     inputRef.current?.focus({ preventScroll: true });
   };
-  const getSelectedTopLevelTextBlock = () => {
+  const getSelectedTextBlock = () => {
+    const currentDocument = engine.getDocument();
     const current = engine.getSelection();
-    if (!current) return undefined;
-    return engine.getDocument().content.find(block =>
-      block.id === current.focus.blockId && (block.type === "paragraph" || block.type === "heading")
-    );
+    const position = activeCell
+      ? cellOffsetToPosition(currentDocument.content, activeCell, activeCell.offset)
+      : current ? { blockId: current.focus.blockId } : undefined;
+    if (!position) return undefined;
+    const node = findDocumentNode(currentDocument.content, position.blockId);
+    return node && (node.type === "paragraph" || node.type === "heading")
+      ? node as Extract<Block, { type: "paragraph" | "heading" }>
+      : undefined;
   };
   const applySmartCanvasHeading = () => {
     if (readOnly) return;
-    const block = getSelectedTopLevelTextBlock();
+    const block = getSelectedTextBlock();
     if (!block) {
       onStatus?.("Selecione um parágrafo de nível superior para alterar o estilo do título.");
       return;
@@ -862,9 +867,7 @@ export function SmartCanvasPreview({ document, engine, headerText = "", footerTe
   };
   const convertSmartCanvasBlockquote = () => {
     if (readOnly) return;
-    const current = engine.getSelection();
-    const node = current ? findDocumentNode(engine.getDocument().content, current.focus.blockId) : undefined;
-    const block = node && (node.type === "paragraph" || node.type === "heading") ? node as Extract<Block, { type: "paragraph" | "heading" }> : undefined;
+    const block = getSelectedTextBlock();
     if (!block) {
       onStatus?.("Selecione um parágrafo ou título editável para transformá-lo em citação.");
       return;
@@ -900,9 +903,7 @@ export function SmartCanvasPreview({ document, engine, headerText = "", footerTe
   };
   const convertSmartCanvasList = (ordered: boolean) => {
     if (readOnly) return;
-    const current = engine.getSelection();
-    const node = current ? findDocumentNode(engine.getDocument().content, current.focus.blockId) : undefined;
-    const block = node && (node.type === "paragraph" || node.type === "heading") ? node as Extract<Block, { type: "paragraph" | "heading" }> : undefined;
+    const block = getSelectedTextBlock();
     if (!block) {
       onStatus?.("Para criar uma lista, posicione o cursor em um parágrafo ou título editável.");
       return;
