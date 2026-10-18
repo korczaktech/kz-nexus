@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { layoutDocument, type TextMetrics } from "./layout";
 import { hitTestLayout } from "./hitTesting";
+import { getSelectionGeometry } from "./selectionGeometry";
 import type { Block, NexusDocument } from "../model/types";
 
 const metrics: TextMetrics = { measureText: text => text.length * 5, lineHeight: size => size * 1.2 };
@@ -402,6 +403,11 @@ describe("native layout engine", () => {
       measureText: (text, run) => metrics.measureText(text, run?.fontSize ?? 11, run?.fontFamily ?? "Arial", run?.marks),
     });
     expect(hit).toMatchObject({ kind: "table-cell", blockId: "inner-table", cellId: "inner-cell" });
+    const caret = getSelectionGeometry(result, 0, {
+      anchor: { blockId: "inner-list-paragraph", offset: 3 },
+      focus: { blockId: "inner-list-paragraph", offset: 3 },
+    }, (text, run) => metrics.measureText(text, run?.fontSize ?? 11, run?.fontFamily ?? "Arial", run?.marks));
+    expect(caret.caret).toBeDefined();
   });
 
 });
