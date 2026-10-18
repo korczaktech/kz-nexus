@@ -375,7 +375,7 @@ describe("native layout engine", () => {
       children: [{
         type: "listItem",
         id: "inner-item",
-        children: [paragraph("inner-list-paragraph", "Nested list text")],
+        children: [paragraph("inner-list-paragraph", "Nested list text") as Extract<Block, { type: "paragraph" }>],
       }],
     };
     const outerTable: Block = {
