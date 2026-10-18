@@ -172,23 +172,28 @@ try {
   // must persist the exact same canonical draft without silently reverting text.
   const reconnectSentinel = "SMARTCANVAS_RECONNECT_E2E_" + runId;
   let interruptedSave = false;
+  let resolveInterruptedRoute;
+  const interruptedRoutePromise = new Promise(resolve => {
+    resolveInterruptedRoute = resolve;
+  });
   await page.route("**/api/v1/documents/*/save", async route => {
     if (!interruptedSave && route.request().method() === "POST" && new URL(route.request().url()).pathname.endsWith("/save")) {
       interruptedSave = true;
-      await route.abort("internetdisconnected");
+      try {
+        await route.abort("internetdisconnected");
+      } finally {
+        // Synchronize on the interception itself rather than Playwright's
+        // requestfailed event, which is inconsistently emitted by WebKit.
+        resolveInterruptedRoute();
+      }
       return;
     }
     await route.continue();
   });
-  // Register before typing: WebKit may trigger autosave quickly enough that
-  // registering after input changes races the first failed request.
-  const failedSavePromise = page.waitForEvent("requestfailed", request =>
-    request.method() === "POST" && new URL(request.url()).pathname.endsWith("/save"),
-  );
   await input.evaluate(element => element.focus());
   await page.keyboard.type(" " + reconnectSentinel);
   await page.locator("button.editor-save").click({ force: true });
-  await failedSavePromise;
+  await interruptedRoutePromise;
   assert.equal(interruptedSave, true, "the network interruption must hit the actual save request");
   await page.unroute("**/api/v1/documents/*/save");
   const recoveredSavePromise = page.waitForResponse(response =>
