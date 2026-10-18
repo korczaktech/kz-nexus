@@ -120,7 +120,7 @@ Portanto, os testes automatizados do incremento estão verdes, mas não há auto
 
 O aceite automatizado das Fases 2A e 2B está registrado em [SMARTCANVAS-PHASE-2-ACCEPTANCE.md](SMARTCANVAS-PHASE-2-ACCEPTANCE.md). O código em `df745b9081e59c7ba3a30210010b0d1086f40567` passou em SmartCanvas validation, Kortex validation, API/MongoDB/Playwright E2E, baseline e publicação. O E2E real verificou persistência HTML/NSX, recuperação de rascunho, exportação DOCX/PDF, autosave e conflito de versão; o teste de componente cobre os estados de salvamento e falha com preservação do rascunho.
 
-Esta atualização substitui os registros anteriores que indicavam o E2E real como pendente. Ainda não há paridade universal: listas/tabelas coladas em células viram texto estruturado, operações que cruzam estruturas aninhadas têm limites e o IME não foi validado manualmente em todos os navegadores. SmartCanvas segue opt-in; não remover o legado nem iniciar otimização de memória nesta fase.
+Esta atualização substitui os registros anteriores que indicavam o E2E real como pendente. A colagem estrutural em células preserva nós aninhados no modelo canônico. O mapeamento de offsets inclui parágrafos/títulos dentro de contêineres aninhados e o hit-test evita rotear células complexas ao comando plano de texto. Permanecem limites em operações que cruzam diferentes tipos de contêineres e a validação manual de IME em todos os navegadores/dispositivos suportados. SmartCanvas segue opt-in; não remover o legado nem iniciar otimização de memória nesta fase.
 
 
 ## Atualização incremental — 2026-10-17
