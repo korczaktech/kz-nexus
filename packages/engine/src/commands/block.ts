@@ -1,5 +1,5 @@
 import type { Alignment, Block, NexusDocument, Paragraph, TextRun } from "../model/types";
-import { findParagraphLike, getPlainText, isParagraphLike, updateParagraphLike } from "../model/tree";
+import { findParagraphLike, getPlainText, isParagraphLike, replaceBlockById, updateParagraphLike } from "../model/tree";
 import { splitRunsAt } from "./text";
 import { engineError } from "../errors/errors";
 import { isValidColor } from "../schema/schema";
@@ -276,14 +276,28 @@ export function deleteBlock(params: { blockId: string }): Command {
 /** Converts a top-level paragraph or heading into a blockquote without discarding its text or marks. */
 export function convertBlockToBlockquote(params: { blockId: string }): Command {
   return (doc, ctx) => {
-    const index = findTopLevelIndex(doc.content, params.blockId);
-    if (index === -1) return err(engineError("NODE_NOT_FOUND", `Top-level block "${params.blockId}" not found`, { path: params.blockId }));
-    const source = doc.content[index];
-    if (!isParagraphLike(source)) return err(engineError("UNSUPPORTED_OPERATION", "Only a paragraph or heading can be converted into a blockquote", { path: params.blockId }));
-    const paragraph: Paragraph = { type: "paragraph", id: source.id, align: source.align, children: source.children };
-    const content = [...doc.content];
-    content[index] = { type: "blockquote", id: ctx.generateId(), children: [paragraph] };
-    return ok({ document: { ...doc, content }, selection: { blockId: paragraph.id, offset: 0 } });
+    const source = findParagraphLike(doc.content, params.blockId);
+    if (!source) return err(engineError("NODE_NOT_FOUND", \`Text block "\${params.blockId}" not found\`, { path: params.blockId }));
+    const paragraph: Paragraph = source.type === "paragraph" ? source : {
+      type: "paragraph",
+      id: source.id,
+      ...(source.align !== undefined ? { align: source.align } : {}),
+      ...(source.indent !== undefined ? { indent: source.indent } : {}),
+      ...("firstLineIndent" in source && source.firstLineIndent !== undefined ? { firstLineIndent: source.firstLineIndent } : {}),
+      ...("hangingIndent" in source && source.hangingIndent !== undefined ? { hangingIndent: source.hangingIndent } : {}),
+      ...(source.spacingBefore !== undefined ? { spacingBefore: source.spacingBefore } : {}),
+      ...(source.spacingAfter !== undefined ? { spacingAfter: source.spacingAfter } : {}),
+      ...(source.lineSpacing !== undefined ? { lineSpacing: source.lineSpacing } : {}),
+      ...(source.backgroundColor !== undefined ? { backgroundColor: source.backgroundColor } : {}),
+      ...(source.borderColor !== undefined ? { borderColor: source.borderColor } : {}),
+      ...(source.borderWidth !== undefined ? { borderWidth: source.borderWidth } : {}),
+      ...(source.padding !== undefined ? { padding: source.padding } : {}),
+      children: source.children,
+    };
+    const block: Block = { type: "blockquote", id: ctx.generateId(), children: [paragraph] };
+    const replaced = replaceBlockById(doc.content, params.blockId, [block]);
+    if (!replaced.found) return err(engineError("UNSUPPORTED_OPERATION", "This text block cannot be converted into a blockquote inside its current container", { path: params.blockId }));
+    return ok({ document: { ...doc, content: replaced.blocks }, selection: { blockId: paragraph.id, offset: 0 } });
   };
 }
 
