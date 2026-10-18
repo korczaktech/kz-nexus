@@ -150,7 +150,7 @@ function listBlock(element: Element): Extract<Block, { type: "bulletList" | "ord
 }
 
 function tableBlock(element: Element, resources: ResourceRef[]): Extract<Block, { type: "table" }> {
-  const rows = Array.from(element.querySelectorAll("tr")).map(row => ({
+  const rows = Array.from(element.querySelectorAll("tr")).filter(row => row.closest("table") === element).map(row => ({
     type: "tableRow" as const,
     id: nextId(),
     children: Array.from(row.children).filter(cell => ["td", "th"].includes(cell.tagName.toLowerCase())).map(cell => {
