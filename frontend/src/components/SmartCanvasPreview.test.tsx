@@ -1803,4 +1803,126 @@ describe("SmartCanvasPreview input integration", () => {
     expect(clipboard["text/plain"]).toContain("Table end");
   });
 
+
+  it("formats, copies and cuts a logical selection across paragraph, quote, list and table without flattening containers", async () => {
+    const document = createDocument({ title: "SmartCanvas mixed top-level selection" });
+    const initial = document.content[0];
+    if (!initial || initial.type !== "paragraph") throw new Error("Expected initial paragraph");
+    initial.children[0]!.text = "Paragraph start";
+    document.content.push(
+      {
+        type: "blockquote",
+        id: "mixquote_0001",
+        children: [{
+          type: "paragraph",
+          id: "mixquotepara_0001",
+          children: [{ type: "text", id: "mixquoterun_0001", text: "Quote middle", marks: [] }],
+        }],
+      },
+      {
+        type: "bulletList",
+        id: "mixlist_0001",
+        children: [{
+          type: "listItem",
+          id: "mixitem_0001",
+          children: [{
+            type: "paragraph",
+            id: "mixlistpara_0001",
+            children: [{ type: "text", id: "mixlistrun_0001", text: "List middle", marks: [] }],
+          }],
+        }],
+      },
+      {
+        type: "table",
+        id: "mixtable_0001",
+        children: [{
+          type: "tableRow",
+          id: "mixrow_0001",
+          children: [{
+            type: "tableCell",
+            id: "mixcell_0001",
+            children: [{
+              type: "paragraph",
+              id: "mixtablepara_0001",
+              children: [{ type: "text", id: "mixtablerun_0001", text: "Table end", marks: [] }],
+            }],
+          }],
+        }],
+      },
+    );
+    engine = createEditor({ document });
+    const resolveMixedBlocks = () => {
+      const current = engine!.getDocument();
+      const paragraph = current.content.find(block => block.type === "paragraph");
+      const quote = current.content.find(block => block.type === "blockquote");
+      const list = current.content.find(block => block.type === "bulletList");
+      const table = current.content.find(block => block.type === "table");
+      if (!paragraph || paragraph.type !== "paragraph" || !quote || quote.type !== "blockquote"
+        || !list || list.type !== "bulletList" || !table || table.type !== "table") {
+        throw new Error("Expected paragraph, quote, list and table to remain top-level containers");
+      }
+      const quoteParagraph = quote.children[0];
+      const listParagraph = list.children[0]?.children.find(block => block.type === "paragraph");
+      const tableParagraph = table.children[0]?.children[0]?.children.find(block => block.type === "paragraph");
+      if (!quoteParagraph || quoteParagraph.type !== "paragraph" || !listParagraph || !tableParagraph || tableParagraph.type !== "paragraph") {
+        throw new Error("Expected editable paragraphs in each mixed container");
+      }
+      return { current, paragraph, quote, quoteParagraph, list, listParagraph, table, tableParagraph };
+    };
+    let blocks = resolveMixedBlocks();
+    host = window.document.createElement("div");
+    window.document.body.append(host);
+    root = createRoot(host);
+    await act(async () => {
+      root?.render(createElement(SmartCanvasPreview, {
+        document: engine!.getDocument(),
+        engine: engine!,
+        onDocumentChange: vi.fn(),
+      }));
+    });
+    const textHit = host.querySelector('[data-testid="smartcanvas-text-hit"]') as HTMLButtonElement | null;
+    await act(async () => { textHit?.click(); });
+    const selectAcrossAll = () => engine!.setSelection({
+      anchor: { blockId: blocks.paragraph.id, offset: 0 },
+      focus: { blockId: blocks.tableParagraph.id, offset: getPlainText(blocks.tableParagraph).length },
+    });
+    await act(async () => {
+      expect(selectAcrossAll().ok).toBe(true);
+    });
+    const bold = host.querySelector('[aria-label="Negrito SmartCanvas"]') as HTMLButtonElement | null;
+    if (!bold) throw new Error("SmartCanvas bold control was not mounted");
+    await act(async () => { bold.click(); });
+    blocks = resolveMixedBlocks();
+    for (const paragraph of [blocks.paragraph, blocks.quoteParagraph, blocks.listParagraph, blocks.tableParagraph]) {
+      expect(paragraph.children.some(run => run.text.length > 0 && run.marks.some(mark => mark.type === "bold"))).toBe(true);
+    }
+
+    await act(async () => {
+      expect(selectAcrossAll().ok).toBe(true);
+    });
+    const input = host.querySelector('textarea[aria-label="Entrada de texto do SmartCanvas"]') as HTMLTextAreaElement | null;
+    if (!input) throw new Error("SmartCanvas input surface was not mounted");
+    const copied: Record<string, string> = {};
+    const copy = new Event("copy", { bubbles: true, cancelable: true });
+    Object.defineProperty(copy, "clipboardData", {
+      value: { setData: (type: string, value: string) => { copied[type] = value; } },
+    });
+    await act(async () => { input.dispatchEvent(copy); });
+    for (const text of ["Paragraph start", "Quote middle", "List middle", "Table end"]) {
+      expect(copied["text/plain"]).toContain(text);
+    }
+
+    const cut = new Event("cut", { bubbles: true, cancelable: true });
+    Object.defineProperty(cut, "clipboardData", {
+      value: { setData: vi.fn() },
+    });
+    await act(async () => { input.dispatchEvent(cut); });
+    blocks = resolveMixedBlocks();
+    expect(getPlainText(blocks.paragraph)).toBe("");
+    expect(getPlainText(blocks.quote)).toBe("");
+    expect(getPlainText(blocks.list)).toBe("");
+    expect(getPlainText(blocks.table)).toBe("");
+    expect(blocks.current.content.map(block => block.type)).toEqual(["paragraph", "blockquote", "bulletList", "table"]);
+  });
+
 });
