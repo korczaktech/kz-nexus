@@ -143,7 +143,7 @@ describe("row/column operations", () => {
     const table = document.content[1] as Table;
     const row = table.children[0];
     const cell = row.children[0];
-    const originalParagraph = cell.children[0];
+    const originalParagraph = paragraphAt(cell, 0);
     const paragraph = {
       ...originalParagraph,
       children: [
