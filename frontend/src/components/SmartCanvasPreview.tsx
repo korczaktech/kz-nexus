@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { addTableColumn, addTableRow, collapsedAt, convertBlockToBlockquote, convertBlockToList, deleteBlock, deleteText, insertImportedBlocksAtSelection, insertImageResource, insertPageBreak, insertTable as insertTableCommand, insertTableCellImageResource, insertTableCellBlocksAfterParagraph, insertTableIntoCell, insertText, insertThematicBreak, moveBlock, removeImage, removeMark, updateEditorObject, updateImage, getLineXAtOffset, getOffsetAtLineX, getPlainText, exportHtml, layoutDocument, mergeBlockWithPrevious, mergeListItemWithPrevious, replaceRange, removeTableColumn, removeTableRow, replaceTableCellContent, setAlign, setCellText, setHeadingLevel, setIndent, setParagraphStyle, splitBlock, toggleMark as toggleMarkCommand, type Block, type Editor as NexusEngineSession, type Mark, type NexusDocument, type Selection, type TextRun, type SmartCanvasHitTarget } from "../../../packages/engine/src/index";
+import { addTableColumn, addTableRow, collapsedAt, convertBlockToBlockquote, convertBlockToList, deleteBlock, deleteText, insertImportedBlocksAtSelection, insertImageResource, insertPageBreak, insertTable as insertTableCommand, insertTableCellImageResource, insertTableCellBlocksAfterParagraph, insertTableIntoCell, insertText, insertThematicBreak, moveBlock, removeImage, removeMark, updateEditorObject, updateImage, getLineXAtOffset, getOffsetAtLineX, getPlainText, exportHtml, layoutDocument, mergeBlockWithPrevious, mergeListItemWithPrevious, outdentListItem, replaceRange, removeTableColumn, removeTableRow, replaceTableCellContent, setAlign, setCellText, setHeadingLevel, setIndent, setParagraphStyle, splitBlock, toggleMark as toggleMarkCommand, type Block, type Editor as NexusEngineSession, type Mark, type NexusDocument, type Selection, type TextRun, type SmartCanvasHitTarget } from "../../../packages/engine/src/index";
 import { CanvasDocumentRenderer } from "./CanvasDocumentRenderer";
 import { nexusDocumentFromHtml } from "../services/nexusEngineAdapter";
 import { lineEndOffset, lineStartOffset, nearestGraphemeOffset, nextCodePointOffset, nextWordOffset, previousCodePointOffset, previousWordOffset, verticalLineOffset, wordRangeAt } from "./smartCanvasTextOffsets";
@@ -1804,15 +1804,14 @@ export function SmartCanvasPreview({ document, engine, headerText = "", footerTe
       let end = Math.max(current.anchor.offset, current.focus.offset);
       if (start === end && event.key === "Backspace" && start === 0) {
         const listContext = findListItemContext(engine.getDocument().content, block.id);
-        if (listContext?.childIndex === 0 && listContext.itemIndex > 0) {
-          const listMerge = engine.exec([mergeListItemWithPrevious({
-            listId: listContext.listId,
-            itemId: listContext.itemId,
-            blockId: block.id,
-          })], { group: "typing" });
-          if (listMerge.ok) {
+        if (listContext?.childIndex === 0) {
+          const listCommand = listContext.itemIndex > 0
+            ? mergeListItemWithPrevious({ listId: listContext.listId, itemId: listContext.itemId, blockId: block.id })
+            : outdentListItem({ listId: listContext.listId, itemId: listContext.itemId });
+          const listResult = engine.exec([listCommand], { group: "typing" });
+          if (listResult.ok) {
             setSelection(engine.getSelection() ?? null);
-            onDocumentChange(listMerge.value.document);
+            onDocumentChange(listResult.value.document);
             return;
           }
         }
