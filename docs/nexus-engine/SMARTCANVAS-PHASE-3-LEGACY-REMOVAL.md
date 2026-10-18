@@ -19,7 +19,9 @@ A Etapa 3 só pode remover definitivamente o caminho legado depois que a impleme
 ### 2. Estruturas e seleção lógica
 - [x] Testes de listas/tabelas aninhadas em células e preservação de nós, marcas inline e texto.
 - [x] Testes de seleção lógica entre blocos e células, incluindo encerramento de arraste quando o hit-test final falha/cancela.
-- [x] Corrigido o recorte lógico entre parágrafos em contêineres aninhados: quando há seleção entre blocos, a seleção do motor tem prioridade sobre o estado de célula ativa. Teste de componente verifica cópia/recorte e preservação dos contêineres lista/tabela.
+- [x] Corrigido o caminho de copiar/recortar e formatar seleções lógicas entre blocos aninhados: a seleção do motor tem prioridade sobre o estado de célula ativa.
+- [x] A coleta recursiva de texto agora inclui parágrafos simples dentro de tabelas aninhadas, sem confundir células simples de topo com células complexas.
+- [x] Teste de componente verifica negrito e recorte de uma seleção que atravessa lista e tabela aninhadas, preservando os contêineres.
 - [ ] Completar a matriz de comandos que atravessam contêineres mistos (lista ↔ tabela ↔ parágrafo ↔ citação), garantindo que delete/format não achatem nem removam contêineres indevidos.
 - [ ] Definir e testar o comportamento de seleção unificada entre células; se não fizer parte do contrato de produto, documentar o limite e fornecer feedback explícito em vez de falhar silenciosamente.
 
@@ -47,10 +49,10 @@ A Etapa 3 só pode remover definitivamente o caminho legado depois que a impleme
 
 ## Última rodada registrada
 
-Code commit: [`d94d9a9058995d6059d225a04c377b5c61fb26b6`](https://github.com/korczaktech/kz-nexus/commit/d94d9a9058995d6059d225a04c377b5c61fb26b6)
+Code commit: [`7a098a855c5c7c56b88fa8d249fff5b863edaf00`](https://github.com/korczaktech/kz-nexus/commit/7a098a855c5c7c56b88fa8d249fff5b863edaf00)
 
 - Incrementado o E2E de navegador real para testar Backspace no fim do texto e reinserção do caractere, validando a projeção do modelo canônico.
-- Corrigido o caminho de copy/cut: uma seleção lógica que atravessa blocos agora tem prioridade sobre o estado de célula ativa, evitando que o handler copie texto de uma célula em vez da seleção real do documento.
+- Corrigido o caminho de copy/cut e formatação: uma seleção lógica que atravessa blocos agora tem prioridade sobre o estado de célula ativa, e o coletor inclui parágrafos em tabelas aninhadas.
 - O teste inicialmente expôs IDs de fixture fora do formato canônico; os IDs foram corrigidos e a suíte completa passou.
 - No commit de código indicado, SmartCanvas validation, Kortex validation, integração API real, baseline de memória e deploy terminaram com sucesso.
 - A validação física de IME e leitor de tela não pode ser inferida do CI; precisa de execução em dispositivos/navegadores reais ou de evidência de teste fornecida pela equipe.
