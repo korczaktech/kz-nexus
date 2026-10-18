@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { createIdGenerator } from "../core/ids";
 import { createFixedClock } from "../core/clock";
 import { createDocument } from "./document";
-import { convertBlockToList, convertBlocksToList, convertListType, insertList, insertListItem, splitListItem, mergeListItemWithPrevious, removeListItem } from "./list";
+import { convertBlockToList, convertBlocksToList, convertListType, insertList, insertListItem, splitListItem, mergeListItemWithPrevious, outdentListItem, removeListItem } from "./list";
 import { insertText } from "./text";
 import { insertTable } from "./table";
 import { insertParagraphAfter } from "./block";
@@ -202,4 +202,31 @@ describe("insertListItem / removeListItem", () => {
     }
     void itemId;
   });
+
+  it("outdents the first list item from a table cell into the cell block sequence", () => {
+    const d = base();
+    const initial = d.content[0] as Paragraph;
+    const inserted = insertTable({ afterBlockId: initial.id, rows: 1, columns: 1 })(d, ctx());
+    if (!inserted.ok) throw inserted.error;
+    const table = inserted.value.document.content.find(block => block.type === "table");
+    if (!table || table.type !== "table") throw new Error("Expected table");
+    const row = table.children[0]!;
+    const cell = row.children[0]!;
+    const paragraph = cell.children[0];
+    if (!paragraph || paragraph.type !== "paragraph") throw new Error("Expected cell paragraph");
+    const listed = convertBlockToList({ blockId: paragraph.id, ordered: false })(inserted.value.document, ctx());
+    if (!listed.ok) throw listed.error;
+    const listedTable = listed.value.document.content.find(block => block.type === "table");
+    if (!listedTable || listedTable.type !== "table") throw new Error("Expected listed table");
+    const list = listedTable.children[0]!.children[0]!.children[0];
+    if (!list || list.type !== "bulletList") throw new Error("Expected nested list");
+    const item = list.children[0]!;
+    const outdented = outdentListItem({ listId: list.id, itemId: item.id })(listed.value.document, ctx());
+    if (!outdented.ok) throw outdented.error;
+    const outdentedTable = outdented.value.document.content.find(block => block.type === "table");
+    if (!outdentedTable || outdentedTable.type !== "table") throw new Error("Expected outdented table");
+    expect(outdentedTable.children[0]!.children[0]!.children.map(block => block.type)).toEqual(["paragraph"]);
+    expect(validateDocument(outdented.value.document).ok).toBe(true);
+  });
+
 });
