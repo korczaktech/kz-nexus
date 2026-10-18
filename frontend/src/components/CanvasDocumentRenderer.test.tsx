@@ -231,6 +231,7 @@ describe("CanvasDocumentRenderer visual regression contract", () => {
       first.dispatchEvent(pointerEvent("pointercancel", 100, 0));
     });
     expect(hits[hits.length - 1]).toEqual({ pageIndex: 0, phase: "end" });
+    expect(hits.filter(hit => hit.phase === "end")).toHaveLength(2);
   });
 
   it("draws text, table cells, semantic objects, header, footer, and page numbers", async () => {
