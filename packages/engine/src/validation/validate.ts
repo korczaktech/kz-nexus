@@ -279,6 +279,11 @@ function checkBlock(
     issues.push({ code: "INVALID_DOCUMENT", message: `Unknown block type at ${path}`, path });
     return;
   }
+  counter.maxDepth = Math.max(counter.maxDepth, depth);
+  if (depth > limits.maxTreeDepth) {
+    issues.push({ code: "LIMIT_EXCEEDED", message: `Tree depth exceeds limit at ${path}`, path });
+    return;
+  }
   switch (block.type) {
     case "paragraph":
     case "heading":
