@@ -1521,6 +1521,29 @@ describe("SmartCanvasPreview input integration", () => {
     expect(updatedCell.children.map(block => getPlainText(block)).join(" ")).toContain("Nested item");
   });
 
+
+  it("inserts a nested table with the table toolbar when a cell is active", async () => {
+    const document = createDocument({ title: "SmartCanvas nested table toolbar" });
+    engine = createEditor({ document });
+    const initial = engine.getDocument().content[0];
+    if (!initial || initial.type !== "paragraph") throw new Error("Expected initial paragraph");
+    expect(engine.exec([insertTable({ afterBlockId: initial.id, rows: 1, columns: 1 })]).ok).toBe(true);
+    host = window.document.createElement("div");
+    window.document.body.append(host);
+    root = createRoot(host);
+    await act(async () => {
+      root?.render(createElement(SmartCanvasPreview, { document: engine!.getDocument(), engine: engine!, onDocumentChange: vi.fn() }));
+    });
+    const cellHit = host.querySelector('[data-testid="smartcanvas-cell-hit"]') as HTMLButtonElement | null;
+    const insertTableButton = host.querySelector('[aria-label="Inserir tabela SmartCanvas"]') as HTMLButtonElement | null;
+    if (!cellHit || !insertTableButton) throw new Error("Table cell or insert table control was not mounted");
+    await act(async () => { cellHit.click(); });
+    await act(async () => { insertTableButton.click(); });
+    const outer = engine.getDocument().content.find(block => block.type === "table");
+    if (!outer || outer.type !== "table") throw new Error("Expected outer table after insertion");
+    expect(outer.children[0]!.children[0]!.children.some(block => block.type === "table")).toBe(true);
+  });
+
   it("edits a table cell and creates a row when Tab leaves the final cell", async () => {
     const document = createDocument({ title: "SmartCanvas table integration" });
     engine = createEditor({ document });
