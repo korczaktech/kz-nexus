@@ -123,7 +123,7 @@ describe("row/column operations", () => {
     if (!result.ok) throw result.error;
     const updated = result.value.document.content.find(block => block.type === "table" && block.id === tableId);
     if (!updated || updated.type !== "table") throw new Error("Expected updated table");
-    expect(updated.children[0].children[0].images).toHaveLength(1);
+    expect(updated.children[0].children[0].children.some(block => block.type === "image")).toBe(true);
     expect(result.value.document.resources).toHaveLength(1);
     expect(result.value.document.resources[0].name).toBe("cell.png");
   });
