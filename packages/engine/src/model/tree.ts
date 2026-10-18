@@ -277,6 +277,73 @@ function replaceListInBlock(
   return block;
 }
 
+/** Replaces a block by ID through the canonical tree, including table cells and nested list items. */
+export function replaceBlockById(blocks: Block[], id: string, replacement: Block[]): { blocks: Block[]; found: boolean } {
+  for (let index = 0; index < blocks.length; index += 1) {
+    const block = blocks[index]!;
+    if (block.id === id) {
+      const next = blocks.slice();
+      next.splice(index, 1, ...replacement);
+      return { blocks: next, found: true };
+    }
+    if (block.type === "table") {
+      for (let rowIndex = 0; rowIndex < block.children.length; rowIndex += 1) {
+        const row = block.children[rowIndex]!;
+        for (let cellIndex = 0; cellIndex < row.children.length; cellIndex += 1) {
+          const cell = row.children[cellIndex]!;
+          const nested = replaceBlockById(cell.children, id, replacement);
+          if (!nested.found) continue;
+          const cells = row.children.slice();
+          cells[cellIndex] = { ...cell, children: nested.blocks };
+          const rows = block.children.slice();
+          rows[rowIndex] = { ...row, children: cells };
+          const next = blocks.slice();
+          next[index] = { ...block, children: rows };
+          return { blocks: next, found: true };
+        }
+      }
+    } else if (block.type === "bulletList" || block.type === "orderedList") {
+      for (let itemIndex = 0; itemIndex < block.children.length; itemIndex += 1) {
+        const item = block.children[itemIndex]!;
+        for (let childIndex = 0; childIndex < item.children.length; childIndex += 1) {
+          const child = item.children[childIndex]!;
+          if (child.id === id) {
+            if (replacement.some(node => node.type !== "paragraph" && node.type !== "bulletList" && node.type !== "orderedList")) continue;
+            const itemChildren = item.children.slice();
+            itemChildren.splice(childIndex, 1, ...replacement as ListItemContent[]);
+            const items = block.children.slice();
+            items[itemIndex] = { ...item, children: itemChildren };
+            const next = blocks.slice();
+            next[index] = { ...block, children: items } as Block;
+            return { blocks: next, found: true };
+          }
+          if (child.type === "bulletList" || child.type === "orderedList") {
+            const nested = replaceBlockById([child], id, replacement);
+            if (!nested.found) continue;
+            const itemChildren = item.children.slice();
+            itemChildren.splice(childIndex, 1, ...nested.blocks as ListItemContent[]);
+            const items = block.children.slice();
+            items[itemIndex] = { ...item, children: itemChildren };
+            const next = blocks.slice();
+            next[index] = { ...block, children: items } as Block;
+            return { blocks: next, found: true };
+          }
+        }
+      }
+    } else if (block.type === "blockquote") {
+      const childIndex = block.children.findIndex(child => child.id === id);
+      if (childIndex >= 0 && replacement.length === 1 && replacement[0]?.type === "paragraph") {
+        const children = block.children.slice();
+        children.splice(childIndex, 1, replacement[0]);
+        const next = blocks.slice();
+        next[index] = { ...block, children };
+        return { blocks: next, found: true };
+      }
+    }
+  }
+  return { blocks, found: false };
+}
+
 export function findTable(blocks: Block[], tableId: string): Table | undefined {
   const visit = (block: Block): Table | undefined => {
     if (block.type === "table") {
