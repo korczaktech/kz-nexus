@@ -1325,7 +1325,7 @@ describe("SmartCanvasPreview input integration", () => {
     const table = engine.getDocument().content.find(block => block.type === "table");
     if (!table || table.type !== "table") throw new Error("Expected destination table");
     const cell = table.children[0]?.children[0];
-    expect(cell?.images).toHaveLength(1);
+    expect(cell?.images, JSON.stringify({ status: onStatus.mock.calls, content: engine.getDocument().content.map(block => ({ type: block.type, id: block.id })), resources: engine.getDocument().resources.map(resource => ({ kind: resource.kind, name: resource.name })) })).toHaveLength(1);
     expect(cell?.images?.[0]?.alt).toBe("cell-image.png");
     expect(engine.getDocument().resources.some(resource => resource.kind === "image" && resource.name === "cell-image.png")).toBe(true);
     expect(onDocumentChange).toHaveBeenCalled();
