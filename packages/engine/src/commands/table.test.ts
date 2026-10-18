@@ -378,7 +378,7 @@ describe("row/column operations", () => {
 
   it("inserts nested blocks at a selected cell paragraph without replacing adjacent content", () => {
     const { document, tableId } = tableDoc();
-    const context = ctx();
+    const context = { generateId: createIdGenerator("nested", 5) };
     const table = document.content.find(block => block.type === "table") as Table;
     const row = table.children[0]!;
     const cell = row.children[0]!;
