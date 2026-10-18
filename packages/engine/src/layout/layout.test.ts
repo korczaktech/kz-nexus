@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { layoutDocument, type TextMetrics } from "./layout";
+import { hitTestLayout } from "./hitTesting";
 import type { Block, NexusDocument } from "../model/types";
 
 const metrics: TextMetrics = { measureText: text => text.length * 5, lineHeight: size => size * 1.2 };
@@ -353,4 +354,54 @@ describe("native layout engine", () => {
     expect(result.diagnostics.some(item => item.code === "INVALID_PAGE_CONFIG")).toBe(true);
     expect(result.pages[0].content.width).toBeGreaterThan(0);
   });
+
+  it("lays out and hit-tests nested lists and tables inside a table cell", () => {
+    const innerTable: Block = {
+      type: "table",
+      id: "inner-table",
+      children: [{
+        type: "tableRow",
+        id: "inner-row",
+        children: [{
+          type: "tableCell",
+          id: "inner-cell",
+          children: [paragraph("inner-cell-paragraph", "Inner cell text")],
+        }],
+      }],
+    };
+    const nestedList: Block = {
+      type: "bulletList",
+      id: "inner-list",
+      children: [{
+        type: "listItem",
+        id: "inner-item",
+        children: [paragraph("inner-list-paragraph", "Nested list text")],
+      }],
+    };
+    const outerTable: Block = {
+      type: "table",
+      id: "outer-table",
+      children: [{
+        type: "tableRow",
+        id: "outer-row",
+        children: [{
+          type: "tableCell",
+          id: "outer-cell",
+          children: [nestedList, innerTable],
+        }],
+      }],
+    };
+    const result = layoutDocument(documentWith([outerTable]), { metrics });
+    const outerLayout = result.pages[0]!.blocks.find(block => block.blockId === "outer-table");
+    const children = outerLayout?.table?.rows[0]?.cells[0]?.children;
+    expect(children?.map(child => child.type)).toEqual(["bulletList", "table"]);
+    const nestedTableLayout = children?.find(child => child.blockId === "inner-table");
+    const innerCell = nestedTableLayout?.table?.rows[0]?.cells[0];
+    if (!innerCell) throw new Error("Expected nested table cell layout");
+    const hit = hitTestLayout(result, 0, innerCell.rect.x + 2, innerCell.rect.y + 2, {
+      measureText: (text, run) => metrics.measureText(text, run?.fontSize ?? 11, run?.fontFamily ?? "Arial", run?.marks),
+    });
+    expect(hit).toMatchObject({ kind: "table-cell", blockId: "inner-table", cellId: "inner-cell" });
+  });
+
 });
