@@ -34,7 +34,7 @@ function blockLines(block: Block): string[] {
     case "orderedList":
       return listLines(block, 0);
     case "table":
-      return block.children.map((row) => row.children.map((cell) => cell.children.map(getPlainText).join(" ")).join("\t"));
+      return block.children.map((row) => row.children.map((cell) => cell.children.flatMap(blockLines).join(" " )).join("\t"));
     case "image":
       return [`[image: ${block.alt}]`];
   }
