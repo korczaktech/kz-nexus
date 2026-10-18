@@ -1050,6 +1050,36 @@ describe("SmartCanvasPreview input integration", () => {
     expect(onDocumentChange).toHaveBeenCalled();
   });
 
+
+  it("copies selected rich text as both plain text and sanitized HTML", async () => {
+    const document = createDocument({ title: "SmartCanvas rich clipboard" });
+    const paragraph = document.content[0];
+    if (!paragraph || paragraph.type !== "paragraph") throw new Error("Expected initial paragraph");
+    paragraph.children[0]!.text = "Bold text";
+    paragraph.children[0]!.marks = [{ type: "bold" }];
+    engine = createEditor({ document });
+    expect(engine.setSelection({
+      anchor: { blockId: paragraph.id, offset: 0 },
+      focus: { blockId: paragraph.id, offset: 4 },
+    }).ok).toBe(true);
+    host = window.document.createElement("div");
+    window.document.body.append(host);
+    root = createRoot(host);
+    await act(async () => {
+      root?.render(createElement(SmartCanvasPreview, { document: engine!.getDocument(), engine: engine! }));
+    });
+    const input = host.querySelector('textarea[aria-label="Entrada de texto do SmartCanvas"]') as HTMLTextAreaElement | null;
+    if (!input) throw new Error("SmartCanvas input surface was not mounted");
+    const setData = vi.fn();
+    const copy = new Event("copy", { bubbles: true, cancelable: true });
+    Object.defineProperty(copy, "clipboardData", { value: { setData } });
+    await act(async () => { input.dispatchEvent(copy); });
+    expect(setData).toHaveBeenCalledWith("text/plain", "Bold");
+    const htmlCall = setData.mock.calls.find(([type]) => type === "text/html");
+    expect(htmlCall).toBeTruthy();
+    expect(String(htmlCall?.[1])).toContain("Bold");
+  });
+
   it("pastes sanitized rich HTML and preserves inline formatting in the engine model", async () => {
     const document = createDocument({ title: "SmartCanvas rich paste" });
     engine = createEditor({ document });
