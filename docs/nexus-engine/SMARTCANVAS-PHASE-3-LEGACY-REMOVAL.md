@@ -52,16 +52,16 @@ A Etapa 3 só pode remover definitivamente o caminho legado depois que a impleme
 
 ## Última rodada registrada
 
-Code commit: [`1be44642668db7f49b41095b536f860405546f94`](https://github.com/korczaktech/kz-nexus/commit/1be44642668db7f49b41095b536f860405546f94)
+Último commit funcional validado: [`f653ab88350fcedbd9b9694f2dff19575ec80a43`](https://github.com/korczaktech/kz-nexus/commit/f653ab88350fcedbd9b9694f2dff19575ec80a43)
 
-- Incrementado o E2E de navegador real para testar Backspace no fim do texto e reinserção do caractere, validando a projeção do modelo canônico.
-- A integração real com API/MongoDB/Playwright passou em Chromium, Firefox e WebKit no commit indicado.
-- Corrigido o caminho de copy/cut e formatação: uma seleção lógica que atravessa blocos agora tem prioridade sobre o estado de célula ativa, e o coletor inclui parágrafos em tabelas aninhadas.
-- O teste inicialmente expôs IDs de fixture fora do formato canônico; os IDs foram corrigidos e a suíte completa passou.
-- O primeiro E2E com interrupção/reconexão passou em Chromium e Firefox, mas revelou uma corrida de registro do evento `requestfailed` no WebKit. O teste foi corrigido para registrar o listener antes da digitação e aguarda nova execução no commit [`d5799ed`](https://github.com/korczaktech/kz-nexus/commit/d5799ed42dc0a34eac22ee52f9a630e43cd5fb09).
-- Adicionada matriz unitária de seleção entre parágrafo, citação, lista e tabela no commit [`d97fa9a`](https://github.com/korczaktech/kz-nexus/commit/d97fa9a998032fc29ffb722af27447992f0a5a7d).
-- A validação física de IME e leitor de tela não pode ser inferida do CI; precisa de execução em dispositivos/navegadores reais ou de evidência de teste fornecida pela equipe.
+- A integração real com API/MongoDB/Playwright passou em **Chromium, Firefox e WebKit** no workflow [`39164295180`](https://github.com/korczaktech/kz-nexus/actions/runs/39164295180), incluindo salvamento real, roundtrip do payload nativo NSX, recuperação de rascunho, DOCX/PDF, autosave, interrupção e reconexão de rede e conflito de versão.
+- O cenário de rede passou a bloquear service workers no contexto de teste e a inspecionar URLs de salvamento após interceptar requisições amplamente; isso evita a divergência de interceptação observada no WebKit.
+- O timeout de reconexão agora é limpo ao concluir a interceptação; a espera do popup PDF tem limite explícito, e o workflow limita cada processo de navegador a 120 segundos e a etapa E2E a 8 minutos.
+- A validação Kortex do mesmo commit passou em testes do motor, typecheck/build do frontend e testes/typecheck/build do SmartCanvas preview: [workflow `39164295119`](https://github.com/korczaktech/kz-nexus/actions/runs/39164295119).
+- As alterações anteriores de seleção lógica e cópia/recorte permanecem cobertas pelos testes de componente e motor; ver os commits [`d97fa9a`](https://github.com/korczaktech/kz-nexus/commit/d97fa9a998032fc29ffb722af27447992f0a5a7d) e [`fb469a3`](https://github.com/korczaktech/kz-nexus/commit/fb469a39edea8c9db861a6da44c4edd68c3221d7).
+- Uma execução anterior falhou no WebKit porque o contexto de teste ainda permitia service workers e a interceptação deliberada não era observada; o comportamento foi corrigido e a execução posterior passou nos três navegadores.
+- A validação física de IME, teclado e leitor de tela continua sem evidência: esses itens exigem dispositivos/sistemas reais ou resultados de teste fornecidos pela equipe. Também seguem pendentes a comparação visual real, abertura dos arquivos no Word/LibreOffice e a decisão de produto sobre ativação/remoção do legado.
 
 ## Critério de conclusão
 
-A Etapa 3 só será marcada como concluída quando todos os itens obrigatórios estiverem marcados, os workflows finais estiverem verdes no mesmo SHA e o relatório de regressão registrar o resultado dos testes manuais. Enquanto isso, o estado correto é **em execução**, não 100%.
+A Etapa 3 só será marcada como concluída quando todos os itens obrigatórios estiverem marcados, os workflows finais estiverem verdes no mesmo SHA e o relatório de regressão registrar o resultado dos testes manuais. Enquanto houver verificações físicas e de paridade sem evidência, o estado correto é **em execução**, não 100%.
