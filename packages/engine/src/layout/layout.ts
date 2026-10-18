@@ -258,7 +258,7 @@ function plainBlockText(block: Block): string {
       });
     return renderItems(block.children, 0, block.type === "orderedList", block.type === "orderedList" ? block.start : 1).join("\n");
   }
-  if (block.type === "table") return block.children.map(row => row.children.map(cell => cell.children.map(p => textOf(p.children)).join("\n")).join(" | ")).join("\n");
+  if (block.type === "table") return block.children.map(row => row.children.map(cell => cell.children.map(plainBlockText).join("\n")).join(" | ")).join("\n");
   if (block.type === "image") return block.alt;
   return "";
 }
@@ -389,9 +389,15 @@ export function layoutDocument(document: NexusDocument, options: LayoutOptions =
       const colWidth = content.width / columnCount;
       const rowLayouts = block.children.map(row => {
         const cells = row.children.map((cell, cellIndex) => {
-          const measuredParagraphs = cell.children.map(paragraph => blockTextLayout(
-            paragraph, content.x + cellIndex * colWidth + 4, 0, Math.max(1, colWidth - 8), options
-          ));
+          const measuredParagraphs = cell.children.map(child => {
+            const text = plainBlockText(child);
+            const paragraph: Paragraph = {
+              type: "paragraph",
+              id: child.id,
+              children: [{ type: "text", id: child.id + "_layout", text, marks: [] }],
+            };
+            return blockTextLayout(paragraph, content.x + cellIndex * colWidth + 4, 0, Math.max(1, colWidth - 8), options);
+          });
           const cellWidth = colWidth;
           const availableImageWidth = Math.max(12, cellWidth - 8);
           const imageSizes = (cell.images ?? []).map(image => {
