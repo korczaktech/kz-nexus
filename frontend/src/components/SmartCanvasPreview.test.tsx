@@ -1434,7 +1434,7 @@ describe("SmartCanvasPreview input integration", () => {
     expect(clearedSecond.children.every(run => run.marks.every(mark => mark.type !== "italic"))).toBe(true);
   });
 
-  it("pastes lists and tables into a cell as structured text instead of dropping their content", async () => {
+  it("preserves nested list and table nodes when pasting into a cell", async () => {
     const document = createDocument({ title: "SmartCanvas structured cell paste" });
     engine = createEditor({ document });
     const paragraph = engine.getDocument().content[0];
