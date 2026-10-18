@@ -221,6 +221,16 @@ describe("CanvasDocumentRenderer visual regression contract", () => {
     expect(hits.some(hit => hit.pageIndex === 0 && hit.phase === "start")).toBe(true);
     expect(hits.some(hit => hit.pageIndex === 1 && hit.phase === "move")).toBe(true);
     expect(hits.some(hit => hit.pageIndex === 1 && hit.phase === "end")).toBe(true);
+    expect(hits[hits.length - 1]).toEqual({ pageIndex: 1, phase: "end" });
+
+    // A cancelled drag must also close the logical selection even when hit-testing fails.
+    canvases.forEach((canvas, index) => { canvas.dataset.pageIndex = String(index); });
+    await act(async () => {
+      first.dispatchEvent(pointerEvent("pointerdown", 100, 1));
+      canvases.forEach(canvas => { canvas.dataset.pageIndex = "invalid"; });
+      first.dispatchEvent(pointerEvent("pointercancel", 100, 0));
+    });
+    expect(hits[hits.length - 1]).toEqual({ pageIndex: 0, phase: "end" });
   });
 
   it("draws text, table cells, semantic objects, header, footer, and page numbers", async () => {
