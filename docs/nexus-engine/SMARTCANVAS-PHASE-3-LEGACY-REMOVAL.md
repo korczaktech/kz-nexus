@@ -47,7 +47,7 @@ A Etapa 3 só pode remover definitivamente o caminho legado depois que a impleme
 
 ## Última rodada registrada
 
-Commit: [`c3039146ec88dec8a7dce2959d4f3729d1f7a49e`](https://github.com/korczaktech/kz-nexus/commit/c3039146ec88dec8a7dce2959d4f3729d1f7a49e)
+Code commit: [`d94d9a9058995d6059d225a04c377b5c61fb26b6`](https://github.com/korczaktech/kz-nexus/commit/d94d9a9058995d6059d225a04c377b5c61fb26b6)
 
 - Incrementado o E2E de navegador real para testar Backspace no fim do texto e reinserção do caractere, validando a projeção do modelo canônico.
 - Corrigido o caminho de copy/cut: uma seleção lógica que atravessa blocos agora tem prioridade sobre o estado de célula ativa, evitando que o handler copie texto de uma célula em vez da seleção real do documento.
