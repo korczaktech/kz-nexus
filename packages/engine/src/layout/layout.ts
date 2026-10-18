@@ -51,7 +51,7 @@ export interface LayoutBlock {
   depth?: number;
   quote?: boolean;
   style?: LayoutBlockStyle;
-  table?: { rows: Array<{ rowId: string; rect: LayoutRect; cells: Array<{ cellId: string; rect: LayoutRect; lines: LayoutLine[]; images?: Array<{ resourceId: string; alt: string; rect: LayoutRect }> }> }> };
+  table?: { rows: Array<{ rowId: string; rect: LayoutRect; cells: Array<{ cellId: string; rect: LayoutRect; lines: LayoutLine[]; images?: Array<{ resourceId: string; alt: string; rect: LayoutRect }>; children?: LayoutBlock[] }> }> };
   continued?: boolean;
   /** True when this paragraph-like block represents a selectable semantic object. */
   object?: boolean;
@@ -141,6 +141,31 @@ function validPage(page: PageConfig): boolean {
   const m = page.margins;
   return [page.width,page.height,m.top,m.right,m.bottom,m.left].every(n => Number.isFinite(n) && n >= 0)
     && page.width > m.left + m.right && page.height > m.top + m.bottom;
+}
+
+function shiftNestedLayout(block: LayoutBlock, dx: number, dy: number, pageIndex: number): LayoutBlock {
+  const shiftRect = (rect: LayoutRect): LayoutRect => ({ ...rect, x: rect.x + dx, y: rect.y + dy });
+  const shiftLine = (line: LayoutLine): LayoutLine => ({ ...line, x: line.x + dx, y: line.y + dy });
+  return {
+    ...block,
+    pageIndex,
+    rect: shiftRect(block.rect),
+    lines: block.lines.map(shiftLine),
+    children: block.children?.map(child => shiftNestedLayout(child, dx, dy, pageIndex)),
+    table: block.table ? {
+      rows: block.table.rows.map(row => ({
+        ...row,
+        rect: shiftRect(row.rect),
+        cells: row.cells.map(cell => ({
+          ...cell,
+          rect: shiftRect(cell.rect),
+          lines: cell.lines.map(shiftLine),
+          images: cell.images?.map(image => ({ ...image, rect: shiftRect(image.rect) })),
+          children: cell.children?.map(child => shiftNestedLayout(child, dx, dy, pageIndex)),
+        })),
+      })),
+    } : undefined,
+  };
 }
 function blockTextLayout(block: Paragraph | Heading, x: number, y: number, width: number, options: LayoutOptions): {lines: LayoutLine[];height:number} {
   const fallbackSize = block.type === "heading" ? HEADING_SIZES[block.level] : safeNumber(options.fontSize, DEFAULT_FONT);
@@ -389,6 +414,34 @@ export function layoutDocument(document: NexusDocument, options: LayoutOptions =
       const colWidth = content.width / columnCount;
       const rowLayouts = block.children.map(row => {
         const cells = row.children.map((cell, cellIndex) => {
+          const cellX = content.x + cellIndex * colWidth;
+          const hasNestedStructure = cell.children.some(child => child.type !== "paragraph" && child.type !== "heading");
+          let nestedBlocks: LayoutBlock[] | undefined;
+          let nestedHeight = 0;
+          if (hasNestedStructure) {
+            nestedBlocks = [];
+            let localY = 4;
+            for (const child of cell.children) {
+              const nestedDocument: NexusDocument = {
+                ...document,
+                content: [child],
+                pageConfig: {
+                  unit: "pt",
+                  width: Math.max(20, colWidth - 8),
+                  height: 100000,
+                  orientation: "portrait",
+                  margins: { top: 0, right: 0, bottom: 0, left: 0 },
+                },
+              };
+              const nestedLayout = layoutDocument(nestedDocument, options);
+              const childBlocks = nestedLayout.pages.flatMap(nestedPage => nestedPage.blocks);
+              const shifted = childBlocks.map(childBlock => shiftNestedLayout(childBlock, cellX + 4, localY, page.index));
+              nestedBlocks.push(...shifted);
+              const childBottom = childBlocks.reduce((bottom, childBlock) => Math.max(bottom, childBlock.rect.y + childBlock.rect.height), 0);
+              localY += childBottom + 2;
+            }
+            nestedHeight = Math.max(0, localY - 2);
+          }
           const measuredParagraphs = cell.children.map(child => {
             const text = plainBlockText(child);
             const paragraph: Paragraph = {
@@ -396,7 +449,7 @@ export function layoutDocument(document: NexusDocument, options: LayoutOptions =
               id: child.id,
               children: [{ type: "text", id: child.id + "_layout", text, marks: [] }],
             };
-            return blockTextLayout(paragraph, content.x + cellIndex * colWidth + 4, 0, Math.max(1, colWidth - 8), options);
+            return blockTextLayout(paragraph, cellX + 4, 0, Math.max(1, colWidth - 8), options);
           });
           const cellWidth = colWidth;
           const availableImageWidth = Math.max(12, cellWidth - 8);
@@ -406,8 +459,9 @@ export function layoutDocument(document: NexusDocument, options: LayoutOptions =
             const scale = Math.min(1, availableImageWidth / naturalWidth, content.height / naturalHeight);
             return { width: naturalWidth * scale, height: naturalHeight * scale };
           });
-          const cellHeight = 8 + measuredParagraphs.reduce((sum, item) => sum + item.height, 0) + imageSizes.reduce((sum, value) => sum + value.height + 4, 0);
-          return { cellId: cell.id, x: content.x + cellIndex * colWidth, width: colWidth, height: cellHeight, paragraphs: measuredParagraphs, sourceImages: cell.images ?? [], imageSizes };
+          const contentHeight = nestedBlocks ? nestedHeight : measuredParagraphs.reduce((sum, item) => sum + item.height, 0);
+          const cellHeight = 8 + contentHeight + imageSizes.reduce((sum, value) => sum + value.height + 4, 0);
+          return { cellId: cell.id, x: cellX, width: colWidth, height: cellHeight, paragraphs: measuredParagraphs, sourceImages: cell.images ?? [], imageSizes, nestedBlocks };
         });
         return { rowId: row.id, height: Math.max(24, ...cells.map(cell => cell.height)), cells };
       });
@@ -542,7 +596,7 @@ export function layoutDocument(document: NexusDocument, options: LayoutOptions =
             cellY += size.height + 4;
             return { resourceId: image.resourceId, alt: image.alt, rect };
           });
-          return { cellId: cell.cellId, rect: { x: cell.x, y: rowY, width: cell.width, height: row.height }, lines, images };
+          return { cellId: cell.cellId, rect: { x: cell.x, y: rowY, width: cell.width, height: row.height }, lines: cell.nestedBlocks ? [] : lines, images, children: cell.nestedBlocks?.map(child => shiftNestedLayout(child, 0, rowY, page.index)) };
         });
         fragmentRows.push({ rowId: row.rowId, rect: { x: content.x, y: rowY, width: content.width, height: row.height }, cells });
         cursorY += row.height; fragmentHeight += row.height;
