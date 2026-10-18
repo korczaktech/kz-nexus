@@ -563,12 +563,21 @@ export function CanvasPage({ page, pageCount, document, headerText, footerText, 
     if (event.currentTarget.hasPointerCapture?.(event.pointerId)) event.currentTarget.releasePointerCapture?.(event.pointerId);
   };
 
+  const handlePointerCancel = (event: ReactPointerEvent<HTMLCanvasElement>) => {
+    if (!onHitTest) return;
+    const target = lastHitTargetRef.current;
+    if (target) onHitTest(target, 1, "end");
+    lastHitTargetRef.current = null;
+    if (event.currentTarget.hasPointerCapture?.(event.pointerId)) event.currentTarget.releasePointerCapture?.(event.pointerId);
+  };
+
   return <div style={{ position: "relative", flex: "0 0 auto", width: cssWidth, height: cssHeight }}>
     <canvas
       ref={canvasRef}
       onPointerDown={onHitTest ? handlePointerDown : undefined}
       onPointerMove={onHitTest ? handlePointerMove : undefined}
       onPointerUp={onHitTest ? handlePointerUp : undefined}
+      onPointerCancel={onHitTest ? handlePointerCancel : undefined}
       tabIndex={onHitTest ? 0 : undefined}
       className="kortex-canvas-page"
       role="img"
