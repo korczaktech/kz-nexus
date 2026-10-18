@@ -12,6 +12,10 @@ function findBlock(blocks: LayoutBlock[], blockId: string): LayoutBlock | undefi
     if (block.blockId === blockId && block.lines.length) return block;
     const nested = findBlock(block.children ?? [], blockId);
     if (nested) return nested;
+    for (const row of block.table?.rows ?? []) for (const cell of row.cells) {
+      const nestedCell = findBlock(cell.children ?? [], blockId);
+      if (nestedCell) return nestedCell;
+    }
   }
   return undefined;
 }
@@ -57,6 +61,7 @@ export function getSelectionGeometry(
     for (const item of items) {
       if (item.lines.length) blocks.push({ pageIndex: currentPage, block: item });
       collect(item.children ?? [], currentPage);
+      for (const row of item.table?.rows ?? []) for (const cell of row.cells) collect(cell.children ?? [], currentPage);
     }
   };
   layout.pages.forEach(item => collect(item.blocks, item.index));
