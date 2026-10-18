@@ -104,10 +104,11 @@ jobs:
           cat /tmp/smartcanvas-frontend.log
           exit 1
       - name: Run SmartCanvas browser E2E against real API in Chromium, Firefox and WebKit
+        timeout-minutes: 8
         run: |
           for browser in chromium firefox webkit; do
             echo "Running SmartCanvas API E2E in $browser"
-            SMARTCANVAS_E2E_BROWSER="$browser" node scripts/smartcanvas-api-e2e.mjs
+            SMARTCANVAS_E2E_BROWSER="$browser" timeout 120s node scripts/smartcanvas-api-e2e.mjs
           done
         env:
           SMARTCANVAS_E2E_BASE_URL: http://localhost:5173
