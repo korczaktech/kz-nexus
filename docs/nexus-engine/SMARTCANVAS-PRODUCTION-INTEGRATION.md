@@ -232,3 +232,14 @@ Necessita de confirmação humana no navegador/dispositivo real: composição IM
 ### Critério de encerramento
 
 A Etapa 3 só poderá ser fechada quando: (1) o teste de arraste entre páginas passar no CI; (2) a estrutura aninhada for preservada de ponta a ponta sem achatamento; (3) a auditoria de paridade identificar e fechar ou justificar explicitamente cada comando; (4) os workflows estiverem verdes no mesmo SHA de `main`; e (5) a validação humana pendente estiver registada. Até lá, o estado é **em andamento**, e o editor legado permanece como fallback.
+
+### Resultado verificado no commit `a5f2d939f9e41a053697bff63cb3a264cac7917d`
+
+Consulta realizada após a conclusão dos workflows no mesmo SHA da branch `main`:
+
+- [Kortex validation](https://github.com/korczaktech/kz-nexus/actions/runs/39080394890): sucesso — testes, tipos e build do SmartCanvas preview; testes, tipos e build do motor; typecheck e build do frontend.
+- [SmartCanvas validation](https://github.com/korczaktech/kz-nexus/actions/runs/39080394808): sucesso.
+- [SmartCanvas Memory Baseline](https://github.com/korczaktech/kz-nexus/actions/runs/39080394870): sucesso.
+- [Deploy GitHub Pages](https://github.com/korczaktech/kz-nexus/actions/runs/39080394800): sucesso.
+
+Esses resultados confirmam que o teste de arraste entre páginas está verde nesse commit e que os quatro workflows citados concluíram com sucesso. Não encerram os bloqueios de preservação de estruturas aninhadas, auditoria completa de paridade nem validação humana descritos acima.
