@@ -140,6 +140,26 @@ function flattenPastedCellContent(nodes: readonly unknown[], images: PastedCellI
 type EditableCell = { tableId: string; rowId: string; cellId: string; text: string };
 type CellParagraph = { id: string; text: string; start: number };
 
+function collectParagraphTextBlocks(nodes: readonly unknown[]): Array<{ id: string; text: string }> {
+  const paragraphs: Array<{ id: string; text: string }> = [];
+  const visit = (values: readonly unknown[]) => {
+    for (const value of values) {
+      if (!value || typeof value !== "object") continue;
+      const block = value as { id?: unknown; type?: unknown; children?: unknown };
+      if (typeof block.id === "string" && (block.type === "paragraph" || block.type === "heading")) {
+        paragraphs.push({
+          id: block.id,
+          text: getPlainText(value as Extract<NexusDocument["content"][number], { type: "paragraph" | "heading" }>),
+        });
+        continue;
+      }
+      if (Array.isArray(block.children)) visit(block.children);
+    }
+  };
+  visit(nodes);
+  return paragraphs;
+}
+
 function collectCellParagraphs(nodes: readonly unknown[], tableId: string, rowId: string, cellId: string): CellParagraph[] {
   for (const value of nodes) {
     if (!value || typeof value !== "object") continue;
@@ -154,16 +174,11 @@ function collectCellParagraphs(nodes: readonly unknown[], tableId: string, rowId
           const cell = cellValue as { id?: unknown; children?: unknown };
           if (cell.id !== cellId || !Array.isArray(cell.children)) continue;
           let start = 0;
-          const paragraphs: CellParagraph[] = [];
-          for (const child of cell.children as unknown[]) {
-            if (!child || typeof child !== "object") continue;
-            const block = child as { id?: unknown; type?: unknown; children?: unknown };
-            if (typeof block.id !== "string" || (block.type !== "paragraph" && block.type !== "heading")) continue;
-            const text = getPlainText(child as Extract<NexusDocument["content"][number], { type: "paragraph" | "heading" }>);
-            paragraphs.push({ id: block.id, text, start });
-            start += text.length + 1;
-          }
-          return paragraphs;
+          return collectParagraphTextBlocks(cell.children).map(paragraph => {
+            const result = { ...paragraph, start };
+            start += paragraph.text.length + 1;
+            return result;
+          });
         }
       }
       return [];
@@ -207,13 +222,7 @@ function collectTableCells(nodes: readonly unknown[]): EditableCell[] {
           if (!cellValue || typeof cellValue !== "object") continue;
           const cell = cellValue as { id?: unknown; children?: unknown };
           if (typeof cell.id !== "string" || !Array.isArray(cell.children)) continue;
-          const text = (cell.children as unknown[]).map(child => {
-            if (!child || typeof child !== "object") return "";
-            const block = child as { type?: unknown; children?: unknown };
-            return block.type === "paragraph" || block.type === "heading"
-              ? getPlainText(child as Extract<NexusDocument["content"][number], { type: "paragraph" | "heading" }>)
-              : "";
-          }).join("\n");
+          const text = collectParagraphTextBlocks(cell.children as unknown[]).map(paragraph => paragraph.text).join("\n");
           cells.push({ tableId: node.id, rowId: row.id, cellId: cell.id, text });
         }
       }
