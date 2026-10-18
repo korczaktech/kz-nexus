@@ -1,4 +1,4 @@
-import type { Block, ImageBlock, Mark, Paragraph, Table, TableCell, TableRow, TextRun } from "../model/types";
+import type { Block, Heading, ImageBlock, Mark, Paragraph, ResourceRef, Table, TableCell, TableRow, TextRun } from "../model/types";
 import { EngineError, engineError } from "../errors/errors";
 import { err, ok } from "../utils/result";
 import type { Command } from "./types";
@@ -31,6 +31,83 @@ export function insertTable(params: { afterBlockId: string; rows: number; column
     const content = [...doc.content];
     content.splice(index + 1, 0, table);
     return ok({ document: { ...doc, content } });
+  };
+}
+
+function cloneCellBlock(block: Block, resourceIds: Map<string, string>, generateId: () => string): Block {
+  switch (block.type) {
+    case "paragraph":
+    case "heading":
+      return { ...block, id: generateId(), children: block.children.map(run => ({ ...run, id: generateId(), marks: run.marks.map(mark => ({ ...mark })) })) };
+    case "blockquote":
+      return { ...block, id: generateId(), children: block.children.map(child => cloneCellBlock(child, resourceIds, generateId) as Paragraph) };
+    case "thematicBreak":
+      return { ...block, id: generateId() };
+    case "bulletList":
+    case "orderedList":
+      return { ...block, id: generateId(), children: block.children.map(item => ({
+        ...item,
+        id: generateId(),
+        children: item.children.map(child => child.type === "paragraph"
+          ? cloneCellBlock(child, resourceIds, generateId) as Paragraph
+          : cloneCellBlock(child, resourceIds, generateId) as typeof child),
+      })) };
+    case "table":
+      return { ...block, id: generateId(), children: block.children.map(row => ({
+        ...row,
+        id: generateId(),
+        children: row.children.map(cell => ({
+          ...cell,
+          id: generateId(),
+          children: cell.children.map(child => cloneCellBlock(child, resourceIds, generateId)),
+          images: cell.images?.map(image => {
+            const resourceId = resourceIds.get(image.resourceId);
+            if (!resourceId) throw engineError("RESOURCE_NOT_FOUND", `Nested cell image resource "${image.resourceId}" was not imported`);
+            return { ...image, id: generateId(), resourceId };
+          }),
+        })),
+      })) };
+    case "image": {
+      const resourceId = resourceIds.get(block.resourceId);
+      if (!resourceId) throw engineError("RESOURCE_NOT_FOUND", `Image resource "${block.resourceId}" was not imported`);
+      return { ...block, id: generateId(), resourceId };
+    }
+  }
+}
+
+/** Replaces or appends canonical block structures in a cell without flattening lists/tables. */
+export function replaceTableCellContent(params: {
+  tableId: string;
+  rowId: string;
+  cellId: string;
+  blocks: Block[];
+  resources?: ResourceRef[];
+  append?: boolean;
+}): Command {
+  return (doc, ctx) => {
+    const resourceIds = new Map<string, string>();
+    let nextDocument = doc;
+    for (const resource of params.resources ?? []) {
+      const added = addResource(nextDocument, { kind: resource.kind, mimeType: resource.mimeType, data: resource.data, name: resource.name }, ctx.generateId);
+      if (!added.ok) return added;
+      resourceIds.set(resource.id, added.value.resource.id);
+      nextDocument = added.value.document;
+    }
+    let targetFound = false;
+    const prepared = params.blocks.map(block => cloneCellBlock(block, resourceIds, ctx.generateId));
+    const updated = transformNestedTable(nextDocument.content, params.tableId, table => ({
+      ...table,
+      children: table.children.map(row => row.id !== params.rowId ? row : ({
+        ...row,
+        children: row.children.map(cell => {
+          if (cell.id !== params.cellId) return cell;
+          targetFound = true;
+          return { ...cell, children: params.append ? [...cell.children, ...prepared] : prepared };
+        }),
+      })),
+    }));
+    if (!updated.found || !targetFound) return err(engineError("NODE_NOT_FOUND", "Target table cell was not found", { path: params.cellId }));
+    return ok({ document: { ...nextDocument, content: updated.blocks } });
   };
 }
 
