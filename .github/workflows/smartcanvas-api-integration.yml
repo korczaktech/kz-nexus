@@ -26,6 +26,7 @@ on:
       - "frontend/src/components/editorDocxRoundtrip.test.ts"
       - "frontend/src/services/cloudStorage.ts"
       - "scripts/smartcanvas-api-e2e.mjs"
+      - "docs/nexus-engine/SMARTCANVAS-PHASE-3-LEGACY-REMOVAL.md"
       - "frontend/package.json"
 
 permissions:
