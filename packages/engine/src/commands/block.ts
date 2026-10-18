@@ -191,6 +191,57 @@ function splitNestedBlockArray(blocks: Block[], blockId: string, offset: number,
   return { blocks, found: false };
 }
 
+function mergeNestedBlockArray(blocks: Block[], blockId: string): { blocks: Block[]; found: boolean; selection?: { blockId: string; offset: number } } {
+  for (let index = 0; index < blocks.length; index += 1) {
+    const block = blocks[index]!;
+    if ((block.type === "paragraph" || block.type === "heading") && block.id === blockId) {
+      const previous = blocks[index - 1];
+      if (!previous || (previous.type !== "paragraph" && previous.type !== "heading")) return { blocks, found: false };
+      const offset = getPlainText(previous).length;
+      const merged = { ...previous, children: [...previous.children, ...block.children] } as Paragraph | Heading;
+      const next = blocks.slice();
+      next.splice(index - 1, 2, merged);
+      return { blocks: next, found: true, selection: { blockId: previous.id, offset } };
+    }
+    if (block.type === "blockquote") {
+      const nested = mergeNestedBlockArray(block.children as Block[], blockId);
+      if (nested.found) {
+        const next = blocks.slice();
+        next[index] = { ...block, children: nested.blocks as Paragraph[] };
+        return { blocks: next, found: true, selection: nested.selection };
+      }
+    } else if (block.type === "table") {
+      for (let rowIndex = 0; rowIndex < block.children.length; rowIndex += 1) {
+        const row = block.children[rowIndex]!;
+        for (let cellIndex = 0; cellIndex < row.children.length; cellIndex += 1) {
+          const cell = row.children[cellIndex]!;
+          const nested = mergeNestedBlockArray(cell.children, blockId);
+          if (!nested.found) continue;
+          const cells = row.children.slice();
+          cells[cellIndex] = { ...cell, children: nested.blocks };
+          const rows = block.children.slice();
+          rows[rowIndex] = { ...row, children: cells };
+          const next = blocks.slice();
+          next[index] = { ...block, children: rows };
+          return { blocks: next, found: true, selection: nested.selection };
+        }
+      }
+    } else if (block.type === "bulletList" || block.type === "orderedList") {
+      for (let itemIndex = 0; itemIndex < block.children.length; itemIndex += 1) {
+        const item = block.children[itemIndex]!;
+        const nested = mergeNestedBlockArray(item.children as Block[], blockId);
+        if (!nested.found) continue;
+        const items = block.children.slice();
+        items[itemIndex] = { ...item, children: nested.blocks as typeof item.children };
+        const next = blocks.slice();
+        next[index] = { ...block, children: items } as Block;
+        return { blocks: next, found: true, selection: nested.selection };
+      }
+    }
+  }
+  return { blocks, found: false };
+}
+
 /** Splits the top-level paragraph/heading `blockId` at `offset` into two sibling blocks. */
 export function splitBlock(params: { blockId: string; offset: number }): Command {
   return (doc, ctx) => {
@@ -320,6 +371,8 @@ export function mergeBlockWithPrevious(params: { blockId: string }): Command {
         }
       }
     }
+    const nestedMerge = mergeNestedBlockArray(doc.content, params.blockId);
+    if (nestedMerge.found) return ok({ document: { ...doc, content: nestedMerge.blocks }, selection: nestedMerge.selection });
     return err(engineError("UNSUPPORTED_OPERATION", "No previous paragraph exists in this container", { path: params.blockId }));
   };
 }
