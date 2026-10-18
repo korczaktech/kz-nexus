@@ -44,17 +44,19 @@ describe(".nsx round-trip", () => {
     if (!inserted.ok) throw inserted.error;
     const table = inserted.value.document.content.find(block => block.type === "table");
     if (!table || table.type !== "table") throw new Error("Expected table");
+    const nestedId = createIdGenerator("nested", 100);
+    const nestedParagraph = (text: string): Extract<Block, { type: "paragraph" }> => ({
+      type: "paragraph",
+      id: nestedId(),
+      children: [{ type: "text", id: nestedId(), text, marks: [] }],
+    });
     const nested: Block[] = [
-      { type: "bulletList", id: "nested-list", children: [{
-        type: "listItem", id: "nested-item", children: [{
-          type: "paragraph", id: "nested-list-paragraph", children: [{ type: "text", id: "nested-list-run", text: "List inside cell", marks: [] }],
-        }],
+      { type: "bulletList", id: nestedId(), children: [{
+        type: "listItem", id: nestedId(), children: [nestedParagraph("List inside cell")],
       }] },
-      { type: "table", id: "nested-table", children: [{
-        type: "tableRow", id: "nested-row", children: [{
-          type: "tableCell", id: "nested-cell", children: [{
-            type: "paragraph", id: "nested-table-paragraph", children: [{ type: "text", id: "nested-table-run", text: "Table inside cell", marks: [] }],
-          }],
+      { type: "table", id: nestedId(), children: [{
+        type: "tableRow", id: nestedId(), children: [{
+          type: "tableCell", id: nestedId(), children: [nestedParagraph("Table inside cell")],
         }],
       }] },
     ];
