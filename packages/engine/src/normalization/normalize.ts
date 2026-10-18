@@ -99,7 +99,8 @@ function normalizeTable(table: Table, nextId: (id: string) => string): Table {
       children: row.children.map((cell) => ({
         ...cell,
         id: nextId(cell.id),
-        children: cell.children.map((paragraph) => normalizeParagraph(paragraph, nextId)),
+        children: cell.children.map((child) => normalizeBlock(child, nextId)),
+        images: cell.images?.map((image) => ({ ...image, id: nextId(image.id) })),
       })),
     })),
   };
