@@ -133,7 +133,7 @@ describe("row/column operations", () => {
     const result = setCellText({ tableId, rowId: row.id, cellId: cell.id, text: "Hello cell" })(document, ctx());
     if (!result.ok) throw result.error;
     const updatedTable = result.value.document.content[1] as Table;
-    expect(getPlainText(updatedTable.children[0].children[0].children[0])).toBe("Hello cell");
+    expect(getPlainText(paragraphAt(updatedTable.children[0].children[0], 0))).toBe("Hello cell");
   });
 
   it("preserves existing inline marks and inherits marks at the edit point", () => {
@@ -289,7 +289,7 @@ describe("row/column operations", () => {
 
     const result = setCellText({ tableId, rowId: row.id, cellId: cell.id, text: "keep" })(seededDocument, ctx());
     if (!result.ok) throw result.error;
-    const updatedParagraph = (result.value.document.content[1] as Table).children[0].children[0].children[0];
+    const updatedParagraph = paragraphAt((result.value.document.content[1] as Table).children[0].children[0], 0);
     expect(updatedParagraph.align).toBe("center");
     expect(updatedParagraph.children.map(run => run.text)).toEqual(["keep"]);
     expect(updatedParagraph.children[0].marks).toEqual([{ type: "italic" }]);
