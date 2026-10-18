@@ -156,6 +156,46 @@ function withTable(doc: Parameters<Command>[0], tableId: string, transform: (tab
   }
 }
 
+/** Inserts imported blocks after a cell paragraph while preserving the rest of the cell tree. */
+export function insertTableCellBlocksAfterParagraph(params: {
+  tableId: string;
+  rowId: string;
+  cellId: string;
+  afterBlockId: string;
+  blocks: Block[];
+  resources?: ResourceRef[];
+}): Command {
+  return (doc, ctx) => {
+    const resourceIds = new Map<string, string>();
+    let nextDocument = doc;
+    for (const resource of params.resources ?? []) {
+      const added = addResource(nextDocument, { kind: resource.kind, mimeType: resource.mimeType, data: resource.data, name: resource.name }, ctx.generateId);
+      if (!added.ok) return added;
+      resourceIds.set(resource.id, added.value.resource.id);
+      nextDocument = added.value.document;
+    }
+    let targetFound = false;
+    const prepared = params.blocks.map(block => cloneCellBlock(block, resourceIds, ctx.generateId));
+    const updated = transformNestedTable(nextDocument.content, params.tableId, table => ({
+      ...table,
+      children: table.children.map(row => row.id !== params.rowId ? row : ({
+        ...row,
+        children: row.children.map(cell => {
+          if (cell.id !== params.cellId) return cell;
+          const index = cell.children.findIndex(child => child.id === params.afterBlockId);
+          if (index < 0) return cell;
+          targetFound = true;
+          const children = [...cell.children];
+          children.splice(index + 1, 0, ...prepared);
+          return { ...cell, children };
+        }),
+      })),
+    }));
+    if (!updated.found || !targetFound) return err(engineError("NODE_NOT_FOUND", "Insertion paragraph or table cell was not found", { path: params.afterBlockId }));
+    return ok({ document: { ...nextDocument, content: updated.blocks } });
+  };
+}
+
 /** Adds an image resource to a table cell as a first-class part of the canonical document. */
 export function insertTableCellImageResource(params: {
   tableId: string;
