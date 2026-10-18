@@ -790,8 +790,9 @@ export function SmartCanvasPreview({ document, engine, headerText = "", footerTe
       return;
     }
     const document = engine.getDocument();
-    const table = document.content.find(block => block.type === "table" && block.id === activeCell.tableId);
-    if (!table || table.type !== "table") {
+    const tableNode = findDocumentNode(document.content, activeCell.tableId);
+    const table = tableNode?.type === "table" ? tableNode as Extract<Block, { type: "table" }> : undefined;
+    if (!table) {
       onStatus?.("A tabela selecionada não está mais disponível.");
       return;
     }
@@ -824,8 +825,9 @@ export function SmartCanvasPreview({ document, engine, headerText = "", footerTe
       return;
     }
     if (resetCell) {
-      const updatedTable = result.value.document.content.find(block => block.type === "table" && block.id === activeCell.tableId);
-      const firstCell = updatedTable?.type === "table" ? collectTableCells([updatedTable])[0] : undefined;
+      const updatedTableNode = findDocumentNode(result.value.document.content, activeCell.tableId);
+      const updatedTable = updatedTableNode?.type === "table" ? updatedTableNode as Extract<Block, { type: "table" }> : undefined;
+      const firstCell = updatedTable ? collectTableCells([updatedTable])[0] : undefined;
       if (firstCell) setActiveCell({ ...firstCell, anchorOffset: 0, offset: 0 });
       else setActiveCell(null);
       setActiveCellStoredMarks(null);
