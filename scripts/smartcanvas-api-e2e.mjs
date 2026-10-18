@@ -167,6 +167,38 @@ try {
   assert.ok(persisted.content?.includes(autosaveSentinel), "autosave should persist updated HTML through the real API");
   assert.ok(persisted.native_content?.includes(autosaveSentinel), "autosave should persist updated native SmartCanvas content");
 
+  // Simulate a dropped connection during a real save, then reconnect and retry.
+  // The first request is deliberately aborted at the browser boundary; the second
+  // must persist the exact same canonical draft without silently reverting text.
+  const reconnectSentinel = "SMARTCANVAS_RECONNECT_E2E_" + runId;
+  let interruptedSave = false;
+  await page.route("**/api/v1/documents/*/save", async route => {
+    if (!interruptedSave && route.request().method() === "POST" && new URL(route.request().url()).pathname.endsWith("/save")) {
+      interruptedSave = true;
+      await route.abort("internetdisconnected");
+      return;
+    }
+    await route.continue();
+  });
+  await input.evaluate(element => element.focus());
+  await page.keyboard.type(" " + reconnectSentinel);
+  const failedSavePromise = page.waitForEvent("requestfailed", request =>
+    request.method() === "POST" && new URL(request.url()).pathname.endsWith("/save"),
+  );
+  await page.locator("button.editor-save").click({ force: true });
+  await failedSavePromise;
+  assert.equal(interruptedSave, true, "the network interruption must hit the actual save request");
+  await page.unroute("**/api/v1/documents/*/save");
+  const recoveredSavePromise = page.waitForResponse(response =>
+    response.request().method() === "POST" && new URL(response.url()).pathname.endsWith("/save"),
+  );
+  await page.locator("button.editor-save").click({ force: true });
+  const recoveredSave = await recoveredSavePromise;
+  if (!recoveredSave.ok()) throw new Error("Save after reconnection returned " + recoveredSave.status() + ": " + await recoveredSave.text());
+  persisted = await apiDocument(created.id, token);
+  assert.ok(persisted.content?.includes(reconnectSentinel), "reconnected save must persist the draft text in HTML");
+  assert.ok(persisted.native_content?.includes(reconnectSentinel), "reconnected save must persist the same canonical native draft");
+
   // Create an external version with the current version id; the editor's next autosave must surface a conflict.
   const externalSave = await fetch(apiUrl + "/api/v1/documents/" + encodeURIComponent(created.id) + "/save", {
     method: "POST",
@@ -189,7 +221,7 @@ try {
   console.log(JSON.stringify({
     ok: true,
     documentId: created.id,
-    checks: ["real API save", "native payload roundtrip", "draft recovery", "DOCX export", "PDF export", "real API autosave", "version conflict"],
+    checks: ["real API save", "native payload roundtrip", "draft recovery", "DOCX export", "PDF export", "real API autosave", "network interruption and reconnect recovery", "version conflict"],
   }));
   await context.close();
 } finally {
