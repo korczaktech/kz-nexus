@@ -22,6 +22,7 @@ A Etapa 3 só pode remover definitivamente o caminho legado depois que a impleme
 - [x] Corrigido o caminho de copiar/recortar e formatar seleções lógicas entre blocos aninhados: a seleção do motor tem prioridade sobre o estado de célula ativa.
 - [x] A coleta recursiva de texto agora inclui parágrafos simples dentro de tabelas aninhadas, sem confundir células simples de topo com células complexas.
 - [x] Teste de componente verifica negrito e recorte de uma seleção que atravessa lista e tabela aninhadas, preservando os contêineres.
+- [x] Teste unitário mapeia a seleção nos dois sentidos entre parágrafo, citação, lista e tabela, mantendo a identidade dos contêineres.
 - [ ] Completar a matriz de comandos que atravessam contêineres mistos (lista ↔ tabela ↔ parágrafo ↔ citação), garantindo que delete/format não achatem nem removam contêineres indevidos.
 - [ ] Definir e testar o comportamento de seleção unificada entre células; se não fizer parte do contrato de produto, documentar o limite e fornecer feedback explícito em vez de falhar silenciosamente.
 
@@ -57,7 +58,8 @@ Code commit: [`1be44642668db7f49b41095b536f860405546f94`](https://github.com/kor
 - A integração real com API/MongoDB/Playwright passou em Chromium, Firefox e WebKit no commit indicado.
 - Corrigido o caminho de copy/cut e formatação: uma seleção lógica que atravessa blocos agora tem prioridade sobre o estado de célula ativa, e o coletor inclui parágrafos em tabelas aninhadas.
 - O teste inicialmente expôs IDs de fixture fora do formato canônico; os IDs foram corrigidos e a suíte completa passou.
-- A integração API real agora também injeta uma falha de rede em um salvamento e confirma a persistência após a reconexão; aguarda o resultado do workflow deste commit.
+- O primeiro E2E com interrupção/reconexão passou em Chromium e Firefox, mas revelou uma corrida de registro do evento `requestfailed` no WebKit. O teste foi corrigido para registrar o listener antes da digitação e aguarda nova execução no commit [`d5799ed`](https://github.com/korczaktech/kz-nexus/commit/d5799ed42dc0a34eac22ee52f9a630e43cd5fb09).
+- Adicionada matriz unitária de seleção entre parágrafo, citação, lista e tabela no commit [`d97fa9a`](https://github.com/korczaktech/kz-nexus/commit/d97fa9a998032fc29ffb722af27447992f0a5a7d).
 - A validação física de IME e leitor de tela não pode ser inferida do CI; precisa de execução em dispositivos/navegadores reais ou de evidência de teste fornecida pela equipe.
 
 ## Critério de conclusão
