@@ -154,24 +154,14 @@ function tableBlock(element: Element, resources: ResourceRef[]): Extract<Block, 
     type: "tableRow" as const,
     id: nextId(),
     children: Array.from(row.children).filter(cell => ["td", "th"].includes(cell.tagName.toLowerCase())).map(cell => {
-      const nested = Array.from(cell.children).filter(child => /^(P|H[1-6])$/.test(child.tagName)).map(child => {
-        const paragraph = makeParagraph(child);
-        return paragraph.type === "heading" ? { type: "paragraph" as const, id: paragraph.id, align: paragraph.align, children: paragraph.children } : paragraph;
-      });
-      const images = Array.from(cell.querySelectorAll("img")).flatMap(element => {
-        const src = element.getAttribute("src") || "";
-        const match = /^data:(image\/(?:png|jpeg|gif|webp|svg\+xml));base64,([a-z0-9+/=]+)$/i.exec(src);
-        if (!match) return [];
-        const mimeType = match[1].toLowerCase();
-        const data = match[2];
-        const resourceId = nextId();
-        const alt = element.getAttribute("alt") || "Imagem";
-        resources.push({ id: resourceId, kind: "image", mimeType, data, byteLength: Math.floor(data.replace(/=+$/, "").length * 3 / 4), name: alt });
-        const width = Number(element.getAttribute("width")) || undefined;
-        const height = Number(element.getAttribute("height")) || undefined;
-        return [{ type: "image" as const, id: nextId(), resourceId, alt, width, height }];
-      });
-      return { type: "tableCell" as const, id: nextId(), children: nested.length ? nested : [makeParagraph(cell) as Extract<Block, { type: "paragraph" }>], ...(images.length ? { images } : {}) };
+      // Reuse the canonical HTML block parser for cell content so nested lists,
+      // headings, blockquotes, images and tables retain their real node types.
+      const nested = blocksFromHtml(cell.innerHTML, resources);
+      return {
+        type: "tableCell" as const,
+        id: nextId(),
+        children: nested.length ? nested : [makeParagraph(cell) as Extract<Block, { type: "paragraph" }>],
+      };
     }),
   })).filter(row => row.children.length > 0);
   return { type: "table", id: nextId(), children: rows };
