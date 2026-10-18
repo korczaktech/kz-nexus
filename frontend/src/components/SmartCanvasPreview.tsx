@@ -825,22 +825,18 @@ export function SmartCanvasPreview({ document, engine, headerText = "", footerTe
       }
       return;
     }
-    const blocks = collectTextBlocks(engine.getDocument().content);
-    const anchorIndex = blocks.findIndex(block => block.id === current.anchor.blockId);
-    const focusIndex = blocks.findIndex(block => block.id === current.focus.blockId);
-    if (anchorIndex < 0 || focusIndex < 0) {
+    // Use the canonical selection mapper for cross-block formatting. The
+    // renderer's cell-aware text collector intentionally omits simple top-level
+    // table cells; a logical selection spanning into such a cell must still
+    // format its paragraph without flattening the table.
+    const ranges = getSmartCanvasTextSelectionRanges(engine.getDocument().content, current);
+    if (!ranges) {
       onStatus?.("A seleção atual não corresponde a blocos de texto editáveis.");
       return;
     }
-    const firstIndex = Math.min(anchorIndex, focusIndex);
-    const lastIndex = Math.max(anchorIndex, focusIndex);
-    const start = anchorIndex < focusIndex ? current.anchor.offset : current.focus.offset;
-    const end = anchorIndex < focusIndex ? current.focus.offset : current.anchor.offset;
-    const commands = blocks.slice(firstIndex, lastIndex + 1).flatMap((block, index) => {
-      const from = index === 0 ? start : 0;
-      const to = index === lastIndex - firstIndex ? end : block.text.length;
-      return to > from ? [toggleMarkCommand({ blockId: block.id, start: from, end: to, mark })] : [];
-    });
+    const commands = ranges
+      .filter(range => range.end > range.start)
+      .map(range => toggleMarkCommand({ blockId: range.block.id, start: range.start, end: range.end, mark }));
     if (!commands.length) {
       onStatus?.("Selecione texto para aplicar a formatação.");
       return;
