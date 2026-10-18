@@ -161,7 +161,9 @@ function tableBlock(element: Element, resources: ResourceRef[]): Extract<Block, 
     children: Array.from(row.children).filter(cell => ["td", "th"].includes(cell.tagName.toLowerCase())).map(cell => {
       // Reuse the canonical HTML block parser for cell content so nested lists,
       // headings, blockquotes, images and tables retain their real node types.
-      const nested = blocksFromHtml(cell.innerHTML, resources);
+      const hasBlockChildren = Array.from(cell.children).some(child => /^(P|H[1-6]|UL|OL|BLOCKQUOTE|TABLE|HR|DIV|PRE)$/.test(child.tagName));
+      const cellHtml = hasBlockChildren ? cell.innerHTML : "<p>" + cell.innerHTML + "</p>";
+      const nested = blocksFromHtml(cellHtml, resources);
       return {
         type: "tableCell" as const,
         id: nextId(),
