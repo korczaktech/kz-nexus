@@ -6,7 +6,7 @@ import { insertText } from "./text";
 import { convertBlockToBlockquote, deleteBlock, insertParagraphAfter, mergeBlockWithPrevious, setAlign, setIndent, setParagraphStyle, setHeadingLevel, splitBlock } from "./block";
 import { getPlainText } from "../model/tree";
 import { insertTable } from "./table";
-import type { Paragraph } from "../model/types";
+import type { Block, Paragraph } from "../model/types";
 import { validateDocument } from "../validation/validate";
 
 const generateTestId = createIdGenerator("id", 3);
@@ -226,6 +226,57 @@ describe("insertParagraphAfter / deleteBlock", () => {
     expect(deletedTable.children[0]!.children[0]!.children).toHaveLength(1);
     expect(deletedTable.children[0]!.children[0]!.children[0]?.type).toBe("paragraph");
     expect(validateDocument(deleted.value.document).ok).toBe(true);
+  });
+
+
+  it("splits and merges text paragraphs nested inside a cell list", () => {
+    const { document: d } = setup("start");
+    const initial = d.content[0] as Paragraph;
+    const inserted = insertTable({ afterBlockId: initial.id, rows: 1, columns: 1 })(d, ctx());
+    if (!inserted.ok) throw inserted.error;
+    const table = inserted.value.document.content.find(block => block.type === "table");
+    if (!table || table.type !== "table") throw new Error("Expected table");
+    const row = table.children[0]!;
+    const cell = row.children[0]!;
+    const nestedId = createIdGenerator("nested", 23);
+    const nestedParagraph: Extract<Block, { type: "paragraph" }> = {
+      type: "paragraph",
+      id: nestedId(),
+      children: [{ type: "text", id: nestedId(), text: "Nested text", marks: [] }],
+    };
+    const list: Extract<Block, { type: "bulletList" }> = {
+      type: "bulletList",
+      id: nestedId(),
+      children: [{ type: "listItem", id: nestedId(), children: [nestedParagraph] }],
+    };
+    const withList = {
+      ...inserted.value.document,
+      content: inserted.value.document.content.map(block => block.id === table.id ? {
+        ...table,
+        children: table.children.map(itemRow => itemRow.id === row.id ? {
+          ...itemRow,
+          children: itemRow.children.map(itemCell => itemCell.id === cell.id ? { ...itemCell, children: [list] } : itemCell),
+        } : itemRow),
+      } : block),
+    };
+    const split = splitBlock({ blockId: nestedParagraph.id, offset: 6 })(withList, ctx());
+    if (!split.ok) throw split.error;
+    const splitTable = split.value.document.content.find(block => block.type === "table");
+    if (!splitTable || splitTable.type !== "table") throw new Error("Expected table after split");
+    const splitList = splitTable.children[0]!.children[0]!.children[0];
+    if (!splitList || splitList.type !== "bulletList") throw new Error("Expected nested list after split");
+    expect(splitList.children[0]!.children).toHaveLength(2);
+    expect(validateDocument(split.value.document).ok).toBe(true);
+    const merge = mergeBlockWithPrevious({ blockId: split.value.selection!.blockId })(split.value.document);
+    if (!merge.ok) throw merge.error;
+    const mergedTable = merge.value.document.content.find(block => block.type === "table");
+    if (!mergedTable || mergedTable.type !== "table") throw new Error("Expected table after merge");
+    const mergedList = mergedTable.children[0]!.children[0]!.children[0];
+    if (!mergedList || mergedList.type !== "bulletList") throw new Error("Expected nested list after merge");
+    const mergedParagraph = mergedList.children[0]!.children[0];
+    if (!mergedParagraph || mergedParagraph.type !== "paragraph") throw new Error("Expected merged paragraph");
+    expect(getPlainText(mergedParagraph)).toBe("Nested text");
+    expect(validateDocument(merge.value.document).ok).toBe(true);
   });
 
 });
