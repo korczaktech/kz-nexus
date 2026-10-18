@@ -11,7 +11,7 @@ describe("Nexus editor adapter", () => {
     const table = document.content.find(block => block.type === "table");
     expect(table?.type).toBe("table");
     if (!table || table.type !== "table") throw new Error("Expected imported table");
-    expect(table.children[0].children[0].images).toHaveLength(1);
+    expect(table.children[0].children[0].children.some(block => block.type === "image")).toBe(true);
     expect(document.resources).toHaveLength(1);
     const exported = htmlFromNexusDocument(document);
     expect(exported).toContain('alt="Cell image"');
@@ -19,7 +19,7 @@ describe("Nexus editor adapter", () => {
     const roundtripTable = roundtrip.content.find(block => block.type === "table");
     expect(roundtripTable?.type).toBe("table");
     if (!roundtripTable || roundtripTable.type !== "table") throw new Error("Expected round-tripped table");
-    expect(roundtripTable.children[0].children[0].images).toHaveLength(1);
+    expect(roundtripTable.children[0].children[0].children.some(block => block.type === "image")).toBe(true);
     expect(roundtrip.resources[0]?.data).toBe("aGVsbG8=");
   });
 
@@ -179,6 +179,23 @@ describe("Nexus editor adapter", () => {
     expect(document.resources[0].byteLength).toBe(5);
     expect(document.content.some(block => block.type === "image")).toBe(true);
     expect(htmlFromNexusDocument(document)).toContain('src="data:image/png;base64,aGVsbG8="');
+  });
+
+
+  it("preserves nested lists and tables when importing HTML table cells", () => {
+    const source = '<table><tbody><tr><td><ul><li><p>Nested list</p></li></ul><table><tbody><tr><td><p>Nested table</p></td></tr></tbody></table></td></tr></tbody></table>';
+    const document = nexusDocumentFromHtml(source, "Nested cell structures");
+    const outer = document.content.find(block => block.type === "table");
+    if (!outer || outer.type !== "table") throw new Error("Expected outer table");
+    const cell = outer.children[0]!.children[0]!;
+    expect(cell.children.map(block => block.type)).toEqual(["bulletList", "table"]);
+    const nestedTable = cell.children.find(block => block.type === "table");
+    if (!nestedTable || nestedTable.type !== "table") throw new Error("Expected nested table");
+    expect(getPlainText(nestedTable)).toContain("Nested table");
+    const reopened = nexusDocumentFromHtml(htmlFromNexusDocument(document), "Nested cell structures");
+    const reopenedOuter = reopened.content.find(block => block.type === "table");
+    if (!reopenedOuter || reopenedOuter.type !== "table") throw new Error("Expected reopened outer table");
+    expect(reopenedOuter.children[0]!.children[0]!.children.map(block => block.type)).toEqual(["bulletList", "table"]);
   });
 
   it("preserves multiple paragraphs inside a table cell", () => {
