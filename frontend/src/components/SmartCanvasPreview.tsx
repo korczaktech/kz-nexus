@@ -774,7 +774,9 @@ export function SmartCanvasPreview({ document, engine, headerText = "", footerTe
   };
   const applySmartCanvasMark = (mark: Mark) => {
     if (readOnly) return;
-    if (activeCell) {
+    const logicalSelection = engine.getSelection();
+    const hasCrossBlockSelection = !!logicalSelection && logicalSelection.anchor.blockId !== logicalSelection.focus.blockId;
+    if (activeCell && !hasCrossBlockSelection) {
       const start = Math.min(activeCell.anchorOffset, activeCell.offset);
       const end = Math.max(activeCell.anchorOffset, activeCell.offset);
       if (start === end) {
@@ -807,7 +809,7 @@ export function SmartCanvasPreview({ document, engine, headerText = "", footerTe
       }
       return;
     }
-    const current = engine.getSelection();
+    const current = logicalSelection;
     if (!current) {
       onStatus?.("Selecione um ponto de inserção ou um trecho de texto.");
       return;
