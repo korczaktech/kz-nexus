@@ -2,7 +2,7 @@
 
 `NexusDocument { id, schemaVersion, metadata, pageConfig, content: Block[], resources }`.
 
-Blocos: `paragraph`, `heading` (1–6), `blockquote`, `thematicBreak`, `bulletList`, `orderedList` (com `start`), `table` (linhas → células → parágrafos), `image` (referência a recurso + `alt`).
+Blocos: `paragraph`, `heading` (1–6), `blockquote`, `thematicBreak`, `bulletList`, `orderedList` (com `start`), `table` (linhas → células → blocos recursivos, incluindo parágrafos, títulos, listas, blockquotes, imagens e outras tabelas), `image` (referência a recurso + `alt`).
 Texto: `TextRun { type:"text", id, text, marks }`. Marcas: `bold`, `italic`, `underline`, `strike`, `color` (#RGB/#RRGGBB), `highlight`, `fontSize` (pt), `fontFamily`, `link`, `superscript`, `subscript` (URLs `http`, `https`, `mailto` ou âncoras internas; esquemas executáveis são rejeitados).
 Parágrafo/título: alinhamento e recuo esquerdo opcional em pontos. Página: unidade `pt`, largura/altura, orientação, margens.
 
