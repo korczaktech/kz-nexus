@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { stat } from "node:fs/promises";
-import { chromium } from "../frontend/node_modules/playwright/index.mjs";
+import { chromium, firefox, webkit } from "../frontend/node_modules/playwright/index.mjs";
 
 const baseUrl = process.env.SMARTCANVAS_E2E_BASE_URL || "http://localhost:5173";
 const apiUrl = process.env.SMARTCANVAS_E2E_API_URL || "http://127.0.0.1:8000";
@@ -39,7 +39,10 @@ async function waitForEditorProjection(page, sentinel) {
   }
 }
 
-const browser = await chromium.launch({ headless: true });
+const browserName = process.env.SMARTCANVAS_E2E_BROWSER || "chromium";
+const browserType = { chromium, firefox, webkit }[browserName];
+if (!browserType) throw new Error("Unsupported SMARTCANVAS_E2E_BROWSER: " + browserName);
+const browser = await browserType.launch({ headless: true });
 try {
   const context = await browser.newContext({ acceptDownloads: true });
   await context.addInitScript(() => {
