@@ -12,13 +12,15 @@ A Etapa 3 só pode remover definitivamente o caminho legado depois que a impleme
 ### 1. Entrada de texto e teclado real
 - [x] Cobertura de componente para edição canônica, undo/redo, Backspace/Delete, navegação de cursor, composição IME sintética e prevenção de duplicação após composição.
 - [x] E2E de navegador contra API real para digitação no SmartCanvas e projeção acessível do texto.
+- [x] E2E de navegador real cobre Backspace no fim do texto e reinserção do caractere, validando a projeção do modelo canônico.
 - [ ] Confirmar no Chromebook-alvo: setas, Home/End, Backspace/Delete, Shift+setas e seleção que atravessa páginas.
 - [ ] Executar IME físico em cada navegador/sistema operacional suportado, incluindo confirmar, cancelar e compor caracteres repetidos.
 
 ### 2. Estruturas e seleção lógica
 - [x] Testes de listas/tabelas aninhadas em células e preservação de nós, marcas inline e texto.
 - [x] Testes de seleção lógica entre blocos e células, incluindo encerramento de arraste quando o hit-test final falha/cancela.
-- [ ] Completar a matriz de comandos que atravessam contêineres mistos (lista ↔ tabela ↔ parágrafo ↔ citação), garantindo que cut/delete/format não achatem nem removam contêineres indevidos.
+- [x] Corrigido o recorte lógico entre parágrafos em contêineres aninhados: quando há seleção entre blocos, a seleção do motor tem prioridade sobre o estado de célula ativa. Teste de componente verifica cópia/recorte e preservação dos contêineres lista/tabela.
+- [ ] Completar a matriz de comandos que atravessam contêineres mistos (lista ↔ tabela ↔ parágrafo ↔ citação), garantindo que delete/format não achatem nem removam contêineres indevidos.
 - [ ] Definir e testar o comportamento de seleção unificada entre células; se não fizer parte do contrato de produto, documentar o limite e fornecer feedback explícito em vez de falhar silenciosamente.
 
 ### 3. Acessibilidade
@@ -48,7 +50,9 @@ A Etapa 3 só pode remover definitivamente o caminho legado depois que a impleme
 Commit: [`c3039146ec88dec8a7dce2959d4f3729d1f7a49e`](https://github.com/korczaktech/kz-nexus/commit/c3039146ec88dec8a7dce2959d4f3729d1f7a49e)
 
 - Incrementado o E2E de navegador real para testar Backspace no fim do texto e reinserção do caractere, validando a projeção do modelo canônico.
-- Os workflows desta rodada ainda precisam terminar antes de marcar o incremento como aprovado.
+- Corrigido o caminho de copy/cut: uma seleção lógica que atravessa blocos agora tem prioridade sobre o estado de célula ativa, evitando que o handler copie texto de uma célula em vez da seleção real do documento.
+- O teste inicialmente expôs IDs de fixture fora do formato canônico; os IDs foram corrigidos e a suíte completa passou.
+- No commit de código indicado, SmartCanvas validation, Kortex validation, integração API real, baseline de memória e deploy terminaram com sucesso.
 - A validação física de IME e leitor de tela não pode ser inferida do CI; precisa de execução em dispositivos/navegadores reais ou de evidência de teste fornecida pela equipe.
 
 ## Critério de conclusão
