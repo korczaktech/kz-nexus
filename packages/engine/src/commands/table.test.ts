@@ -7,6 +7,7 @@ import { getPlainText } from "../model/tree";
 import type { Block, Paragraph, Table, TableCell } from "../model/types";
 import { validateDocument } from "../validation/validate";
 import { exportHtml } from "../exporters/html";
+import { exportMarkdown } from "../exporters/markdown";
 
 function paragraphAt(cell: TableCell, index = 0): Paragraph {
   const child = cell.children[index];
@@ -363,6 +364,10 @@ describe("row/column operations", () => {
     expect(html).toContain("<table>");
     expect(html).toContain("Nested list");
     expect(html).toContain("Nested table");
+    const markdown = exportMarkdown(replaced.value.document);
+    expect(markdown).toContain("<ul>");
+    expect(markdown).toContain("<table>");
+    expect(markdown).toContain("Nested table");
 
     const nestedTable = cell.children.find(block => block.type === "table");
     if (!nestedTable || nestedTable.type !== "table") throw new Error("Expected nested table");
