@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { createIdGenerator } from "../core/ids";
 import { createFixedClock } from "../core/clock";
 import { createDocument } from "./document";
-import { addTableColumn, addTableRow, insertTable, insertTableCellImageResource, removeTableColumn, removeTableRow, replaceTableCellContent, insertTableCellBlocksAfterParagraph, setCellText } from "./table";
+import { addTableColumn, addTableRow, insertTable, insertTableCellImageResource, removeTableColumn, removeTableRow, replaceTableCellContent, insertTableCellBlocksAfterParagraph, insertTableIntoCell, setCellText } from "./table";
 import { getPlainText } from "../model/tree";
 import type { Block, Paragraph, Table, TableCell } from "../model/types";
 import { validateDocument } from "../validation/validate";
@@ -409,6 +409,31 @@ describe("row/column operations", () => {
     expect(updatedCell.children.map(block => block.type)).toEqual(["paragraph", "bulletList"]);
     expect(getPlainText(updatedCell.children[1]!)).toContain("Inserted list");
     expect(validateDocument(inserted.value.document).ok).toBe(true);
+  });
+
+
+  it("inserts a nested table through the table-cell command", () => {
+    const { document, tableId } = tableDoc();
+    const table = document.content.find(block => block.type === "table") as Table;
+    const row = table.children[0]!;
+    const cell = row.children[0]!;
+    const result = insertTableIntoCell({
+      tableId,
+      rowId: row.id,
+      cellId: cell.id,
+      afterBlockId: paragraphAt(cell, 0).id,
+      rows: 2,
+      columns: 2,
+    })(document, { generateId: createIdGenerator("nested", 17) });
+    if (!result.ok) throw result.error;
+    const updatedTable = result.value.document.content.find(block => block.type === "table") as Table;
+    const updatedCell = updatedTable.children[0]!.children[0]!;
+    const nestedTable = updatedCell.children.find(block => block.type === "table");
+    expect(nestedTable?.type).toBe("table");
+    if (!nestedTable || nestedTable.type !== "table") throw new Error("Expected nested table");
+    expect(nestedTable.children).toHaveLength(2);
+    expect(nestedTable.children[0]!.children).toHaveLength(2);
+    expect(validateDocument(result.value.document).ok).toBe(true);
   });
 
 });
