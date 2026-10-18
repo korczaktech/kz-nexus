@@ -152,7 +152,7 @@ try {
 
   await page.getByRole("button", { name: "Arquivo", exact: true }).click();
   await page.getByRole("button", { name: "Exportar", exact: true }).click();
-  const popupPromise = page.waitForEvent("popup");
+  const popupPromise = page.waitForEvent("popup", { timeout: 15000 });
   await page.getByRole("button", { name: /PDF \(\.pdf\)/ }).click();
   const pdfWindow = await popupPromise;
   await pdfWindow.waitForLoadState("domcontentloaded").catch(() => undefined);
