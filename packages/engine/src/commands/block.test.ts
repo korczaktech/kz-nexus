@@ -279,4 +279,22 @@ describe("insertParagraphAfter / deleteBlock", () => {
     expect(validateDocument(merge.value.document).ok).toBe(true);
   });
 
+
+  it("applies heading levels to paragraphs nested directly in table cells", () => {
+    const { document: d } = setup("start");
+    const initial = d.content[0] as Paragraph;
+    const inserted = insertTable({ afterBlockId: initial.id, rows: 1, columns: 1 })(d, ctx());
+    if (!inserted.ok) throw inserted.error;
+    const table = inserted.value.document.content.find(block => block.type === "table");
+    if (!table || table.type !== "table") throw new Error("Expected table");
+    const paragraph = table.children[0]!.children[0]!.children[0];
+    if (!paragraph || paragraph.type !== "paragraph") throw new Error("Expected cell paragraph");
+    const changed = setHeadingLevel({ blockId: paragraph.id, level: 2 })(inserted.value.document);
+    if (!changed.ok) throw changed.error;
+    const changedTable = changed.value.document.content.find(block => block.type === "table");
+    if (!changedTable || changedTable.type !== "table") throw new Error("Expected changed table");
+    expect(changedTable.children[0]!.children[0]!.children[0]?.type).toBe("heading");
+    expect(validateDocument(changed.value.document).ok).toBe(true);
+  });
+
 });
