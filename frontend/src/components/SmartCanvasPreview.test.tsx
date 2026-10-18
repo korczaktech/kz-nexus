@@ -2,7 +2,7 @@
 import { act, createElement } from "react";
 import { createRoot } from "react-dom/client";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { createDocument, createEditor, getPlainText, insertImageResource, insertTable, insertText } from "../../../packages/engine/src/index";
+import { createDocument, createEditor, getPlainText, insertImageResource, insertTable, insertText, setCellText } from "../../../packages/engine/src/index";
 import type { NexusDocument, Selection, SmartCanvasHitTarget } from "../../../packages/engine/src/index";
 import { SmartCanvasPreview } from "./SmartCanvasPreview";
 
@@ -1484,6 +1484,41 @@ describe("SmartCanvasPreview input integration", () => {
     expect(getPlainText(nestedTable)).toContain("Right cell");
     expect(onDocumentChange).toHaveBeenCalled();
     expect(onStatus).toHaveBeenLastCalledWith("Estruturas aninhadas coladas na célula sem achatamento.");
+  });
+
+
+  it("inserts nested structures at the logical cell caret without replacing existing text", async () => {
+    const document = createDocument({ title: "SmartCanvas nested paste insertion" });
+    engine = createEditor({ document });
+    const initial = engine.getDocument().content[0];
+    if (!initial || initial.type !== "paragraph") throw new Error("Expected initial paragraph");
+    expect(engine.exec([insertTable({ afterBlockId: initial.id, rows: 1, columns: 1 })]).ok).toBe(true);
+    const table = engine.getDocument().content.find(block => block.type === "table");
+    if (!table || table.type !== "table") throw new Error("Expected table");
+    const row = table.children[0]!;
+    const cell = row.children[0]!;
+    expect(engine.exec([setCellText({ tableId: table.id, rowId: row.id, cellId: cell.id, text: "Existing text" })]).ok).toBe(true);
+    host = window.document.createElement("div");
+    window.document.body.append(host);
+    root = createRoot(host);
+    await act(async () => {
+      root?.render(createElement(SmartCanvasPreview, { document: engine!.getDocument(), engine: engine! }));
+    });
+    const cellHit = host.querySelector('[data-testid="smartcanvas-cell-hit"]') as HTMLButtonElement | null;
+    await act(async () => { cellHit?.click(); });
+    const input = host.querySelector('textarea[aria-label="Entrada de texto do SmartCanvas"]') as HTMLTextAreaElement | null;
+    if (!input) throw new Error("SmartCanvas input surface was not mounted");
+    const paste = new Event("paste", { bubbles: true, cancelable: true });
+    Object.defineProperty(paste, "clipboardData", {
+      value: { getData: (type: string) => type === "text/html" ? "<ul><li><p>Nested item</p></li></ul>" : "Nested item" },
+    });
+    await act(async () => { input.dispatchEvent(paste); });
+    const updated = engine.getDocument().content.find(block => block.type === "table");
+    if (!updated || updated.type !== "table") throw new Error("Expected updated table");
+    const updatedCell = updated.children[0]!.children[0]!;
+    expect(updatedCell.children.some(block => block.type === "bulletList")).toBe(true);
+    expect(updatedCell.children.map(block => getPlainText(block)).join(" ")).toContain("Existing text");
+    expect(updatedCell.children.map(block => getPlainText(block)).join(" ")).toContain("Nested item");
   });
 
   it("edits a table cell and creates a row when Tab leaves the final cell", async () => {
