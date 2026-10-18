@@ -1416,7 +1416,7 @@ describe("SmartCanvasPreview input integration", () => {
     expect(pastedText).toContain("Left cell");
     expect(pastedText).toContain("Right cell");
     expect(pastedText).toContain("• Alpha item");
-    expect(cell?.children.some(paragraph => paragraph.children.some(run => run.text.includes("Alpha") && run.marks.some(mark => mark.type === "bold")))).toBe(true);
+    expect(cell?.children.some(paragraph => paragraph.type === "paragraph" && paragraph.children.some(run => run.text.includes("Alpha") && run.marks.some(mark => mark.type === "bold")))).toBe(true);
     expect(pastedText).toContain("• Beta item");
     expect(onDocumentChange).toHaveBeenCalled();
     expect(onStatus).toHaveBeenLastCalledWith("Listas e tabelas coladas na célula foram convertidas em texto estruturado.");
