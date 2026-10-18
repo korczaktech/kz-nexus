@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { addTableColumn, addTableRow, collapsedAt, convertBlockToBlockquote, convertBlockToList, deleteBlock, deleteText, insertImportedBlocksAtSelection, insertImageResource, insertPageBreak, insertTable as insertTableCommand, insertTableCellImageResource, insertText, insertThematicBreak, moveBlock, removeImage, removeMark, updateEditorObject, updateImage, getLineXAtOffset, getOffsetAtLineX, getPlainText, layoutDocument, mergeBlockWithPrevious, replaceRange, removeTableColumn, removeTableRow, replaceTableCellContent, setAlign, setCellText, setHeadingLevel, setIndent, setParagraphStyle, splitBlock, toggleMark as toggleMarkCommand, type Editor as NexusEngineSession, type Mark, type NexusDocument, type Selection, type SmartCanvasHitTarget } from "../../../packages/engine/src/index";
+import { addTableColumn, addTableRow, collapsedAt, convertBlockToBlockquote, convertBlockToList, deleteBlock, deleteText, insertImportedBlocksAtSelection, insertImageResource, insertPageBreak, insertTable as insertTableCommand, insertTableCellImageResource, insertTableCellBlocksAfterParagraph, insertText, insertThematicBreak, moveBlock, removeImage, removeMark, updateEditorObject, updateImage, getLineXAtOffset, getOffsetAtLineX, getPlainText, layoutDocument, mergeBlockWithPrevious, replaceRange, removeTableColumn, removeTableRow, replaceTableCellContent, setAlign, setCellText, setHeadingLevel, setIndent, setParagraphStyle, splitBlock, toggleMark as toggleMarkCommand, type Editor as NexusEngineSession, type Mark, type NexusDocument, type Selection, type SmartCanvasHitTarget } from "../../../packages/engine/src/index";
 import { CanvasDocumentRenderer } from "./CanvasDocumentRenderer";
 import { nexusDocumentFromHtml } from "../services/nexusEngineAdapter";
 import { lineEndOffset, lineStartOffset, nearestGraphemeOffset, nextCodePointOffset, nextWordOffset, previousCodePointOffset, previousWordOffset, verticalLineOffset, wordRangeAt } from "./smartCanvasTextOffsets";
@@ -1903,21 +1903,43 @@ export function SmartCanvasPreview({ document, engine, headerText = "", footerTe
           const hasStructuralBlocks = imported.content.some(block => block.type !== "paragraph" && block.type !== "heading");
           if (hasStructuralBlocks) {
             const replacesWholeCell = structuralStart === 0 && structuralEnd === activeCell.text.length;
-            const appendsAtEnd = structuralStart === structuralEnd && structuralEnd === activeCell.text.length;
-            if (!replacesWholeCell && !appendsAtEnd) {
-              onStatus?.("Para preservar listas, tabelas e outros blocos, selecione todo o conteúdo da célula para substituí-lo ou posicione o cursor no final para anexar.");
-              event.preventDefault();
-              return;
+            const commands = [];
+            if (replacesWholeCell) {
+              commands.push(replaceTableCellContent({
+                tableId: activeCell.tableId,
+                rowId: activeCell.rowId,
+                cellId: activeCell.cellId,
+                blocks: imported.content,
+                resources: imported.resources,
+              }));
+            } else {
+              const position = cellOffsetToPosition(engine.getDocument().content, activeCell, structuralStart);
+              if (!position) {
+                onStatus?.("Não foi possível localizar o ponto lógico de inserção da célula.");
+                event.preventDefault();
+                return;
+              }
+              if (structuralStart !== structuralEnd) {
+                const nextText = activeCell.text.slice(0, structuralStart) + activeCell.text.slice(structuralEnd);
+                commands.push(setCellText({
+                  tableId: activeCell.tableId,
+                  rowId: activeCell.rowId,
+                  cellId: activeCell.cellId,
+                  text: nextText,
+                  insertionRange: { start: structuralStart, end: structuralStart },
+                }));
+              }
+              commands.push(splitBlock({ blockId: position.blockId, offset: position.offset }));
+              commands.push(insertTableCellBlocksAfterParagraph({
+                tableId: activeCell.tableId,
+                rowId: activeCell.rowId,
+                cellId: activeCell.cellId,
+                afterBlockId: position.blockId,
+                blocks: imported.content,
+                resources: imported.resources,
+              }));
             }
-            const append = !replacesWholeCell && appendsAtEnd && activeCell.text.length > 0;
-            const result = engine.exec([replaceTableCellContent({
-              tableId: activeCell.tableId,
-              rowId: activeCell.rowId,
-              cellId: activeCell.cellId,
-              blocks: imported.content,
-              resources: imported.resources,
-              append,
-            })], { group: "structural" });
+            const result = engine.exec(commands, { group: "structural" });
             if (!result.ok) {
               onStatus?.("A colagem estrutural na célula falhou: " + result.error.message);
               event.preventDefault();
