@@ -240,6 +240,7 @@ function drawBlock(ctx: CanvasRenderingContext2D, block: LayoutBlock, document: 
             ctx.fillText(embedded.alt || "Imagem carregando…", imageX + 4, imageY + 4, Math.max(0, imageWidth - 8));
           }
         }
+        for (const child of cell.children ?? []) drawBlock(ctx, child, document, imageCache, showFormattingMarks);
       }
     }
   }
@@ -276,7 +277,10 @@ function pageText(page: LayoutPage): string {
   const visit = (block: LayoutBlock) => {
     if (block.marker) parts.push(block.marker);
     for (const line of block.lines) parts.push(line.text);
-    for (const row of block.table?.rows ?? []) for (const cell of row.cells) for (const line of cell.lines) parts.push(line.text);
+    for (const row of block.table?.rows ?? []) for (const cell of row.cells) {
+      for (const line of cell.lines) parts.push(line.text);
+      for (const child of cell.children ?? []) visit(child);
+    }
     for (const child of block.children ?? []) visit(child);
   };
   page.blocks.forEach(visit);
@@ -325,6 +329,7 @@ export function CanvasPage({ page, pageCount, document, headerText, footerText, 
         for (const row of block.table?.rows ?? []) {
           for (const cell of row.cells) {
             for (const embedded of cell.images ?? []) pageImageIds.add(embedded.resourceId);
+            if (cell.children?.length) collectImageIds(cell.children);
           }
         }
         if (block.children?.length) collectImageIds(block.children);
