@@ -267,7 +267,7 @@ describe("insertParagraphAfter / deleteBlock", () => {
     if (!splitList || splitList.type !== "bulletList") throw new Error("Expected nested list after split");
     expect(splitList.children[0]!.children).toHaveLength(2);
     expect(validateDocument(split.value.document).ok).toBe(true);
-    const merge = mergeBlockWithPrevious({ blockId: split.value.selection!.blockId })(split.value.document);
+    const merge = mergeBlockWithPrevious({ blockId: split.value.selection!.blockId })(split.value.document, ctx());
     if (!merge.ok) throw merge.error;
     const mergedTable = merge.value.document.content.find(block => block.type === "table");
     if (!mergedTable || mergedTable.type !== "table") throw new Error("Expected table after merge");
@@ -289,7 +289,7 @@ describe("insertParagraphAfter / deleteBlock", () => {
     if (!table || table.type !== "table") throw new Error("Expected table");
     const paragraph = table.children[0]!.children[0]!.children[0];
     if (!paragraph || paragraph.type !== "paragraph") throw new Error("Expected cell paragraph");
-    const changed = setHeadingLevel({ blockId: paragraph.id, level: 2 })(inserted.value.document);
+    const changed = setHeadingLevel({ blockId: paragraph.id, level: 2 })(inserted.value.document, ctx());
     if (!changed.ok) throw changed.error;
     const changedTable = changed.value.document.content.find(block => block.type === "table");
     if (!changedTable || changedTable.type !== "table") throw new Error("Expected changed table");
