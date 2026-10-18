@@ -202,7 +202,7 @@ describe("insertParagraphAfter / deleteBlock", () => {
   });
 
   it("converts and deletes blockquotes inside table cells without breaking the cell", () => {
-    const d = setup("start");
+    const { document: d } = setup("start");
     const initial = d.content[0] as Paragraph;
     const inserted = insertTable({ afterBlockId: initial.id, rows: 1, columns: 1 })(d, ctx());
     if (!inserted.ok) throw inserted.error;
