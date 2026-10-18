@@ -16,35 +16,45 @@ function makeRow(generateId: () => string, columns: number): TableRow {
   return { type: "tableRow", id: generateId(), children: Array.from({ length: columns }, () => makeCell(generateId)) };
 }
 
-function findTableIndex(blocks: Block[], tableId: string): number {
-  return blocks.findIndex((block) => block.type === "table" && block.id === tableId);
-}
-
-export function insertTable(params: { afterBlockId: string; rows: number; columns: number }): Command {
-  return (doc, ctx) => {
-    if (params.rows < 1 || params.columns < 1) {
-      return err(engineError("INVALID_DOCUMENT", "Table must have at least 1 row and 1 column"));
+function transformNestedTable(blocks: Block[], tableId: string, transform: (table: Table) => Table): { blocks: Block[]; found: boolean } {
+  let found = false;
+  const visit = (block: Block): Block => {
+    if (block.type === "table") {
+      if (block.id === tableId) {
+        found = true;
+        return transform(block);
+      }
+      return {
+        ...block,
+        children: block.children.map(row => ({
+          ...row,
+          children: row.children.map(cell => {
+            const nested = transformNestedTable(cell.children, tableId, transform);
+            if (nested.found) found = true;
+            return { ...cell, children: nested.blocks };
+          }),
+        })),
+      };
     }
-    const index = doc.content.findIndex((block) => block.id === params.afterBlockId);
-    if (index === -1) return err(engineError("NODE_NOT_FOUND", `Top-level block "${params.afterBlockId}" not found`, { path: params.afterBlockId }));
-    const table: Table = {
-      type: "table",
-      id: ctx.generateId(),
-      children: Array.from({ length: params.rows }, () => makeRow(ctx.generateId, params.columns)),
-    };
-    const content = [...doc.content];
-    content.splice(index + 1, 0, table);
-    return ok({ document: { ...doc, content } });
+    if (block.type === "bulletList" || block.type === "orderedList") {
+      return {
+        ...block,
+        children: block.children.map(item => ({
+          ...item,
+          children: item.children.map(child => child.type === "paragraph" ? child : visit(child)),
+        })),
+      };
+    }
+    return block;
   };
+  return { blocks: blocks.map(visit), found };
 }
 
 function withTable(doc: Parameters<Command>[0], tableId: string, transform: (table: Table) => Table): ReturnType<Command> {
-  const index = findTableIndex(doc.content, tableId);
-  if (index === -1) return err(engineError("NODE_NOT_FOUND", `Table "${tableId}" not found`, { path: tableId }));
   try {
-    const content = [...doc.content];
-    content[index] = transform(doc.content[index] as Table);
-    return ok({ document: { ...doc, content } });
+    const result = transformNestedTable(doc.content, tableId, transform);
+    if (!result.found) return err(engineError("NODE_NOT_FOUND", `Table "${tableId}" not found`, { path: tableId }));
+    return ok({ document: { ...doc, content: result.blocks } });
   } catch (error) {
     if (error instanceof EngineError) return err(error);
     throw error;
