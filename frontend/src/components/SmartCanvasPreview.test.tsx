@@ -256,26 +256,6 @@ describe("SmartCanvasPreview input integration", () => {
         onDocumentChange: vi.fn(),
       }));
     });
-    const bold = host.querySelector('[aria-label="Negrito SmartCanvas"]') as HTMLButtonElement | null;
-    if (!bold) throw new Error("SmartCanvas bold control was not mounted");
-    await act(async () => { bold.click(); });
-    const formattedOuter = engine.getDocument().content.find(block => block.type === "table");
-    if (!formattedOuter || formattedOuter.type !== "table") throw new Error("Expected outer table after formatting");
-    const formattedCell = formattedOuter.children[0]!.children[0]!;
-    const formattedList = formattedCell.children.find(block => block.type === "bulletList");
-    const formattedNestedTable = formattedCell.children.find(block => block.type === "table");
-    if (!formattedList || formattedList.type !== "bulletList" || !formattedNestedTable || formattedNestedTable.type !== "table") throw new Error("Nested containers must survive formatting");
-    const formattedListParagraph = formattedList.children[0]!.children.find(block => block.type === "paragraph");
-    const formattedTableParagraph = formattedNestedTable.children[0]!.children[0]!.children[0]!;
-    if (!formattedListParagraph || formattedListParagraph.type !== "paragraph" || formattedTableParagraph.type !== "paragraph") throw new Error("Expected formatted nested paragraphs");
-    expect(formattedListParagraph.children.some(run => run.text === "List start" && run.marks.some(mark => mark.type === "bold"))).toBe(true);
-    expect(formattedTableParagraph.children.some(run => run.text === "Table end" && run.marks.some(mark => mark.type === "bold"))).toBe(true);
-    await act(async () => {
-      expect(engine!.setSelection({
-        anchor: { blockId: formattedListParagraph.id, offset: 0 },
-        focus: { blockId: formattedTableParagraph.id, offset: getPlainText(formattedTableParagraph).length },
-      }).ok).toBe(true);
-    });
     const input = host.querySelector('textarea[aria-label="Entrada de texto do SmartCanvas"]') as HTMLTextAreaElement | null;
     if (!input) throw new Error("SmartCanvas input surface was not mounted");
     const cut = new Event("cut", { bubbles: true, cancelable: true });
@@ -1768,6 +1748,26 @@ describe("SmartCanvasPreview input integration", () => {
       expect(engine!.setSelection({
         anchor: { blockId: listParagraph.id, offset: 0 },
         focus: { blockId: tableParagraph.id, offset: getPlainText(tableParagraph).length },
+      }).ok).toBe(true);
+    });
+    const bold = host.querySelector('[aria-label="Negrito SmartCanvas"]') as HTMLButtonElement | null;
+    if (!bold) throw new Error("SmartCanvas bold control was not mounted");
+    await act(async () => { bold.click(); });
+    const formattedOuter = engine.getDocument().content.find(block => block.type === "table");
+    if (!formattedOuter || formattedOuter.type !== "table") throw new Error("Expected outer table after formatting");
+    const formattedCell = formattedOuter.children[0]!.children[0]!;
+    const formattedList = formattedCell.children.find(block => block.type === "bulletList");
+    const formattedNestedTable = formattedCell.children.find(block => block.type === "table");
+    if (!formattedList || formattedList.type !== "bulletList" || !formattedNestedTable || formattedNestedTable.type !== "table") throw new Error("Nested containers must survive formatting");
+    const formattedListParagraph = formattedList.children[0]!.children.find(block => block.type === "paragraph");
+    const formattedTableParagraph = formattedNestedTable.children[0]!.children[0]!.children[0]!;
+    if (!formattedListParagraph || formattedListParagraph.type !== "paragraph" || formattedTableParagraph.type !== "paragraph") throw new Error("Expected formatted nested paragraphs");
+    expect(formattedListParagraph.children.some(run => run.text === "List start" && run.marks.some(mark => mark.type === "bold"))).toBe(true);
+    expect(formattedTableParagraph.children.some(run => run.text === "Table end" && run.marks.some(mark => mark.type === "bold"))).toBe(true);
+    await act(async () => {
+      expect(engine!.setSelection({
+        anchor: { blockId: formattedListParagraph.id, offset: 0 },
+        focus: { blockId: formattedTableParagraph.id, offset: getPlainText(formattedTableParagraph).length },
       }).ok).toBe(true);
     });
     const input = host.querySelector('textarea[aria-label="Entrada de texto do SmartCanvas"]') as HTMLTextAreaElement | null;
