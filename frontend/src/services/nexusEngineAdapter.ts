@@ -140,7 +140,9 @@ function makeParagraph(node: Element, type: "paragraph" | "heading" = "paragraph
 function listBlock(element: Element, resources: ResourceRef[] = []): Extract<Block, { type: "bulletList" | "orderedList" }> {
   const ordered = element.tagName.toLowerCase() === "ol";
   const children = Array.from(element.children).filter(item => item.tagName.toLowerCase() === "li").map(item => {
-    const parsed = blocksFromHtml(item.innerHTML, resources).filter((child): child is Extract<Block, { type: "paragraph" | "bulletList" | "orderedList" }> =>
+    const hasBlockChildren = Array.from(item.children).some(child => /^(P|H[1-6]|UL|OL|BLOCKQUOTE|TABLE|HR|DIV|PRE)$/.test(child.tagName));
+    const itemHtml = hasBlockChildren ? item.innerHTML : "<p>" + item.innerHTML + "</p>";
+    const parsed = blocksFromHtml(itemHtml, resources).filter((child): child is Extract<Block, { type: "paragraph" | "bulletList" | "orderedList" }> =>
       child.type === "paragraph" || child.type === "bulletList" || child.type === "orderedList"
     );
     return {
