@@ -262,14 +262,18 @@ export function insertParagraphAfter(params: { blockId: string }): Command {
 export function deleteBlock(params: { blockId: string }): Command {
   return (doc) => {
     const index = findTopLevelIndex(doc.content, params.blockId);
-    if (index === -1) return err(engineError("NODE_NOT_FOUND", `Top-level block "${params.blockId}" not found`, { path: params.blockId }));
-    if (doc.content.length === 1) {
-      return err(engineError("UNSUPPORTED_OPERATION", "Cannot delete the only block of a document", { path: params.blockId }));
+    if (index >= 0) {
+      if (doc.content.length === 1) {
+        return err(engineError("UNSUPPORTED_OPERATION", "Cannot delete the only block of a document", { path: params.blockId }));
+      }
+      const content = doc.content.filter((block) => block.id !== params.blockId);
+      const fallback = content[Math.max(0, index - 1)];
+      const selection = isParagraphLike(fallback) ? { blockId: fallback.id, offset: getPlainText(fallback).length } : undefined;
+      return ok({ document: { ...doc, content }, selection });
     }
-    const content = doc.content.filter((block) => block.id !== params.blockId);
-    const fallback = content[Math.max(0, index - 1)];
-    const selection = isParagraphLike(fallback) ? { blockId: fallback.id, offset: getPlainText(fallback).length } : undefined;
-    return ok({ document: { ...doc, content }, selection });
+    const replaced = replaceBlockById(doc.content, params.blockId, []);
+    if (!replaced.found) return err(engineError("NODE_NOT_FOUND", `Block "${params.blockId}" not found`, { path: params.blockId }));
+    return ok({ document: { ...doc, content: replaced.blocks } });
   };
 }
 
