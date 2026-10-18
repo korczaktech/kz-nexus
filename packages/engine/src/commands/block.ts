@@ -162,13 +162,18 @@ export function splitBlock(params: { blockId: string; offset: number }): Command
           const row = top.children[rowIndex]!;
           for (let cellIndex = 0; cellIndex < row.children.length; cellIndex++) {
             const cell = row.children[cellIndex]!;
-            const childIndex = cell.children.findIndex(child => child.id === params.blockId);
+            const childIndex = cell.children.findIndex(child => child.type === "paragraph" && child.id === params.blockId);
             if (childIndex < 0) continue;
+            const target = cell.children[childIndex];
+            if (!target || target.type !== "paragraph") continue;
             try {
-              const split = splitParagraph(cell.children[childIndex]!, cell.children, childIndex);
+              const paragraphs = cell.children.filter((child): child is Paragraph => child.type === "paragraph");
+              const paragraphIndex = paragraphs.findIndex(child => child.id === params.blockId);
+              const split = splitParagraph(target, paragraphs, paragraphIndex);
+              const nestedChildren = cell.children.flatMap((child, index) => index === childIndex ? split.children : [child]);
               const rows = [...top.children];
               const cells = [...row.children];
-              cells[cellIndex] = { ...cell, children: split.children };
+              cells[cellIndex] = { ...cell, children: nestedChildren };
               rows[rowIndex] = { ...row, children: cells };
               const content = [...doc.content];
               content[topIndex] = { ...top, children: rows };
@@ -217,10 +222,11 @@ export function mergeBlockWithPrevious(params: { blockId: string }): Command {
           const row = top.children[rowIndex]!;
           for (let cellIndex = 0; cellIndex < row.children.length; cellIndex++) {
             const cell = row.children[cellIndex]!;
-            const childIndex = cell.children.findIndex(child => child.id === params.blockId);
+            const childIndex = cell.children.findIndex(child => child.type === "paragraph" && child.id === params.blockId);
             if (childIndex <= 0) continue;
-            const previous = cell.children[childIndex - 1]!;
-            const current = cell.children[childIndex]!;
+            const previous = cell.children[childIndex - 1];
+            const current = cell.children[childIndex];
+            if (!previous || previous.type !== "paragraph" || !current || current.type !== "paragraph") continue;
             const mergeOffset = getPlainText(previous).length;
             const children = [...cell.children];
             children.splice(childIndex - 1, 2, { ...previous, children: [...previous.children, ...current.children] });
