@@ -116,7 +116,7 @@ export function setHeadingLevel(params: { blockId: string; level: 1 | 2 | 3 | 4 
 
 function splitNestedTextBlock(block: Paragraph | Heading, offset: number, generateId: () => string): { first: Paragraph | Heading; second: Paragraph; newId: string } {
   const length = getPlainText(block).length;
-  if (offset < 0 || offset > length) throw engineError("INVALID_POSITION", \`Offset \${offset} out of range\`, { path: block.id });
+  if (offset < 0 || offset > length) throw engineError("INVALID_POSITION", `Offset ${offset} out of range`, { path: block.id });
   const parts = splitRunsAt(block.children, offset, generateId);
   const ensureRun = (runs: TextRun[]): TextRun[] => runs.length ? runs : [{ type: "text", id: generateId(), text: "", marks: [] }];
   const first = { ...block, children: ensureRun(parts.before) } as Paragraph | Heading;
