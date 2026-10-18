@@ -38,8 +38,9 @@ A Etapa 3 só pode remover definitivamente o caminho legado depois que a impleme
 
 ### 5. Persistência e recuperação
 - [x] E2E contra API/MongoDB para salvamento, payload nativo, recuperação de rascunho, autosave, exportação DOCX/PDF e conflito de versão.
-- [ ] Repetir com rede interrompida/reconectada e verificar que nenhuma alteração é perdida ou sobrescrita silenciosamente.
-- [ ] Validar payload NSX inválido, somente leitura e falha de exportação.
+- [x] E2E real: interromper deliberadamente uma requisição de salvamento, reconectar e verificar que HTML e payload NSX persistem o mesmo texto canônico após nova tentativa. (A indisponibilidade após fechar/reabrir o navegador ainda exige teste manual.)
+- [x] Testes unitários rejeitam HTML, JSON inválido, envelope de formato incorreto e versões futuras de NSX.
+- [ ] Exercitar em E2E a recuperação de payload NSX inválido, documento somente leitura e falha de exportação.
 
 ### 6. Ativação e remoção do legado
 - [ ] Mudar a seleção do editor padrão para SmartCanvas somente após os itens bloqueantes acima passarem ou receberem aceite explícito de produto.
@@ -50,13 +51,13 @@ A Etapa 3 só pode remover definitivamente o caminho legado depois que a impleme
 
 ## Última rodada registrada
 
-Code commit: [`0919be29b833e4ee5de4966b374d620c9aba0907`](https://github.com/korczaktech/kz-nexus/commit/0919be29b833e4ee5de4966b374d620c9aba0907)
+Code commit: [`1be44642668db7f49b41095b536f860405546f94`](https://github.com/korczaktech/kz-nexus/commit/1be44642668db7f49b41095b536f860405546f94)
 
 - Incrementado o E2E de navegador real para testar Backspace no fim do texto e reinserção do caractere, validando a projeção do modelo canônico.
 - A integração real com API/MongoDB/Playwright passou em Chromium, Firefox e WebKit no commit indicado.
 - Corrigido o caminho de copy/cut e formatação: uma seleção lógica que atravessa blocos agora tem prioridade sobre o estado de célula ativa, e o coletor inclui parágrafos em tabelas aninhadas.
 - O teste inicialmente expôs IDs de fixture fora do formato canônico; os IDs foram corrigidos e a suíte completa passou.
-- No commit de código indicado, SmartCanvas validation, Kortex validation, integração API real, baseline de memória e deploy terminaram com sucesso.
+- A integração API real agora também injeta uma falha de rede em um salvamento e confirma a persistência após a reconexão; aguarda o resultado do workflow deste commit.
 - A validação física de IME e leitor de tela não pode ser inferida do CI; precisa de execução em dispositivos/navegadores reais ou de evidência de teste fornecida pela equipe.
 
 ## Critério de conclusão
