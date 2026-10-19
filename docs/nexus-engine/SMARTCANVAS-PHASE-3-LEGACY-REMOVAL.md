@@ -55,14 +55,16 @@ A Etapa 3 só pode remover definitivamente o caminho legado depois que a impleme
 
 ## Última rodada registrada
 
-Último commit funcional validado por CI: [`a20ba971db865a0d4a5421436aec73c3fdbfed40`](https://github.com/korczaktech/kz-nexus/commit/a20ba971db865a0d4a5421436aec73c3fdbfed40).
+Último commit com CI automatizada verde: [`ff72c80d8d3803818aa6ada136f8d340331b869e`](https://github.com/korczaktech/kz-nexus/commit/ff72c80d8d3803818aa6ada136f8d340331b869e), na branch `main`.
 
-- **Integração real aprovada:** workflow [SmartCanvas API integration `39202816236`](https://github.com/korczaktech/kz-nexus/actions/runs/39202816236), concluído com sucesso no SHA `a20ba97`. Executou testes da API com MongoDB, build de frontend e E2E Playwright contra API real em Chromium, Firefox e WebKit.
-- **Validação geral aprovada:** workflow [Kortex validation `39202816325`](https://github.com/korczaktech/kz-nexus/actions/runs/39202816325), concluído com sucesso no mesmo SHA; engine tests, SmartCanvas preview tests, typechecks e builds passaram.
-- **Nova cobertura de recuperação:** o E2E agora recarrega a página inteira após autosave e verifica a restauração do conteúdo canônico no editor, além do fluxo existente de sair e reabrir o editor. A validação espera a restauração assíncrona da sessão/navegação e aceita tanto a restauração direta do editor quanto o retorno à lista.
-- **Cobertura E2E reportada pelo script:** criação/edição, ausência do DOM do editor legado no fluxo SmartCanvas, digitação e projeção acessível, Backspace e reinserção, recuperação de rascunho, persistência na API real, roundtrip do payload nativo NSX, exportação DOCX/PDF, autosave, recuperação após reload completo, interrupção e reconexão de rede e conflito de versão. O workflow percorre Chromium, Firefox e WebKit.
-- O teste de seleção mista revelou um defeito real: a formatação usava um coletor que omitia células simples de tabela, embora o mapeador de seleção canônica as incluísse. A formatação foi corrigida para usar os intervalos canônicos, e a suíte verifica formatação, cópia e recorte atravessando parágrafo, citação, lista e tabela sem achatar os contêineres.
-- As alterações anteriores de seleção lógica e cópia/recorte permanecem cobertas pelos testes de componente e motor; ver os commits [`d97fa9a`](https://github.com/korczaktech/kz-nexus/commit/d97fa9a998032fc29ffb722af27447992f0a5a7d) e [`fb469a3`](https://github.com/korczaktech/kz-nexus/commit/fb469a39edea8c9db861a6da44c4edd68c3221d7).
+- **Backend CI aprovada:** workflow [Backend CI `39207232204`](https://github.com/korczaktech/kz-nexus/actions/runs/39207232204), concluído com sucesso no SHA `ff72c80`; testes Python com MongoDB e verificação de segredos passaram.
+- **Integração da API real aprovada:** workflow [SmartCanvas API integration `39207232195`](https://github.com/korczaktech/kz-nexus/actions/runs/39207232195), concluído com sucesso no mesmo SHA. A integração MongoDB, o build do frontend contra a API local e o E2E Playwright contra a API real em Chromium, Firefox e WebKit passaram.
+- **Validação geral aprovada:** workflow [Kortex validation `39207232150`](https://github.com/korczaktech/kz-nexus/actions/runs/39207232150), concluído com sucesso no mesmo SHA; testes do motor, testes de preview do SmartCanvas, verificações de tipos e builds passaram.
+- **Correção de validação da API:** o handler agora normaliza o contexto de erros de validação para texto antes de serializar a resposta JSON. Isso evita que objetos de exceção não serializáveis convertam uma entrada inválida em erro interno.
+- **Correção de contrato de telemetria:** `/telemetry/metrics` expõe os campos agregados na raiz e mantém o objeto `metrics` agrupado para compatibilidade com consumidores existentes.
+- **Cobertura de NSX inválido:** a integração API verifica rejeição de conteúdo nativo inválido tanto na criação quanto no salvamento e confirma que uma tentativa inválida não sobrescreve o conteúdo válido existente.
+- As falhas de CI nos commits anteriores `90659f7` foram seguidas pelas correções acima; os três workflows finais passaram no SHA `ff72c80`. Não usar os resultados de commits anteriores como evidência para um commit posterior.
+- Os testes automatizados continuam sendo evidência apenas dos caminhos executados na CI. Teclado/IME físicos, leitor de tela real, paridade visual observada, abertura de DOCX em Word/LibreOffice, recuperação com navegador fechado e aprovação do plano de rollback continuam pendentes de evidência humana.
 
 ### Protocolo obrigatório para a rodada manual
 
