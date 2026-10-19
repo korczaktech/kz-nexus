@@ -114,6 +114,15 @@ try {
   await page.keyboard.type(finalCharacter);
   await waitForEditorProjection(page, initialSentinel);
 
+  // Exercise a real shift-selection replacement at the caret boundary. Replacing
+  // the selected final character with itself proves the selection is editable
+  // without making the expected canonical text depend on browser-specific layout.
+  await input.evaluate(element => element.focus());
+  await page.keyboard.press("End");
+  await page.keyboard.press("Shift+ArrowLeft");
+  await page.keyboard.type(finalCharacter);
+  await waitForEditorProjection(page, initialSentinel);
+
   // Force the same hidden-tab checkpoint used by the editor to preserve a recoverable draft.
   await page.evaluate(() => {
     Object.defineProperty(document, "visibilityState", { configurable: true, get: () => "hidden" });
