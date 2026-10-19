@@ -25,7 +25,16 @@ def register_exception_handlers(app: FastAPI) -> None:
                 "error": {
                     "code": "validation_error",
                     "message": "Dados de entrada inválidos",
-                    "details": exc.errors(),
+                    "details": [
+                        {
+                            **error,
+                            "ctx": {
+                                key: str(value)
+                                for key, value in error.get("ctx", {}).items()
+                            },
+                        }
+                        for error in exc.errors()
+                    ],
                 }
             },
         )
