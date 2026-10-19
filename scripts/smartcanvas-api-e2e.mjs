@@ -173,6 +173,28 @@ try {
   await pdfWindow.waitForFunction(value => document.body?.textContent?.includes(value) ?? false, initialSentinel, { timeout: 15000 });
   await pdfWindow.close();
 
+  // A blocked popup is a real export failure mode. Verify that PDF export
+  // reports an accessible error and leaves the current canonical draft intact.
+  await page.evaluate(() => {
+    window.__smartCanvasOriginalOpen = window.open;
+    window.open = () => null;
+  });
+  await page.getByRole("button", { name: "Arquivo", exact: true }).click();
+  await page.getByRole("button", { name: "Exportar", exact: true }).click();
+  await page.getByRole("button", { name: /PDF \\(\\.pdf\\)/ }).click();
+  const blockedPdfAlert = page.getByRole("alert");
+  await blockedPdfAlert.waitFor({ state: "visible", timeout: 10000 });
+  assert.match(await blockedPdfAlert.innerText(), /bloqueou a janela de impressão|Permita pop-ups/i,
+    "blocked PDF export must explain how to recover");
+  await page.evaluate(() => {
+    if (window.__smartCanvasOriginalOpen) window.open = window.__smartCanvasOriginalOpen;
+    delete window.__smartCanvasOriginalOpen;
+  });
+  await waitForEditorProjection(page, initialSentinel);
+  persisted = await apiDocument(created.id, token);
+  assert.ok(persisted.content?.includes(initialSentinel), "failed export must not alter the saved HTML content");
+  assert.ok(persisted.native_content?.includes(initialSentinel), "failed export must not alter the saved native payload");
+
   // The eight-second editor autosave must persist the native payload through the real API.
   await input.evaluate(element => element.focus());
   await page.keyboard.type(" " + autosaveSentinel);
