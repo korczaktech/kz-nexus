@@ -43,6 +43,36 @@ async def test_api_end_to_end() -> None:
     ).json()
     document_id = document["id"]
     assert document["current_version_id"]
+
+    # Invalid native NSX envelopes must be rejected before create/save can
+    # persist them or overwrite a previously valid document version.
+    invalid_create = client.post(
+        "/api/v1/documents",
+        headers=headers,
+        json={
+            "name": "NSX inválido",
+            "document_type": "html",
+            "content": "<p>conteúdo legado preservado</p>",
+            "native_content": "{not-json",
+        },
+    )
+    assert invalid_create.status_code == 422
+    invalid_save = client.post(
+        f"/api/v1/documents/{document_id}/save",
+        headers=headers,
+        json={
+            "name": "Documento de teste",
+            "document_type": "txt",
+            "content": "conteúdo que não deve substituir o original",
+            "native_content": "{not-json",
+            "base_version_id": document["current_version_id"],
+        },
+    )
+    assert invalid_save.status_code == 422
+    unchanged_after_invalid_nsx = client.get(f"/api/v1/documents/{document_id}", headers=headers)
+    assert unchanged_after_invalid_nsx.status_code == 200
+    assert unchanged_after_invalid_nsx.json()["content"] == "v1"
+
     base_version_id = document["current_version_id"]
     saved = client.post(f"/api/v1/documents/{document_id}/save", headers=headers, json={"name":"Documento de teste","document_type":"txt","content":"conteúdo pequeno salvo","base_version_id":base_version_id,"create_version":True})
     assert saved.status_code == 200
