@@ -569,6 +569,7 @@ export function SmartCanvasPreview({ document, engine, headerText = "", footerTe
   const composing = useRef(false);
   const lastCompositionValue = useRef<string | null>(null);
   const dragSelectionAnchor = useRef<Selection["anchor"] | null>(null);
+  const dragSelectionCellAnchor = useRef<string | null>(null);
   const preferredVerticalX = useRef<number | null>(null);
   const preferredCellColumn = useRef<number | null>(null);
   useEffect(() => { onSelectionChange?.(selection); }, [selection, onSelectionChange]);
@@ -662,9 +663,11 @@ export function SmartCanvasPreview({ document, engine, headerText = "", footerTe
     const currentDocument = engine.getDocument();
     if (phase === "start" && target.kind === "text") {
       dragSelectionAnchor.current = { blockId: target.position.blockId, offset: target.position.offset };
+      dragSelectionCellAnchor.current = null;
     } else if (phase === "start" && target.kind === "table-cell") {
       const cell = collectTableCells(currentDocument.content).find(item => item.tableId === target.blockId && item.cellId === target.cellId);
       dragSelectionAnchor.current = cell ? cellOffsetToPosition(currentDocument.content, cell, target.offset) ?? null : null;
+      dragSelectionCellAnchor.current = cell?.cellId ?? null;
     }
     // A drag may pass over images, page-breaks, or other non-text blocks.
     // Ignore those intermediate hits instead of cancelling the active logical
@@ -685,11 +688,18 @@ export function SmartCanvasPreview({ document, engine, headerText = "", footerTe
         syncSelection({ anchor: dragSelectionAnchor.current, focus });
         inputRef.current?.focus({ preventScroll: true });
       }
-      if (phase === "end") dragSelectionAnchor.current = null;
+      if (phase === "end") {
+        if (target.kind === "table-cell" && dragSelectionCellAnchor.current && dragSelectionCellAnchor.current !== target.cellId) {
+          onStatus?.("A seleção entre células é linear (texto); a seleção retangular de células não está disponível.");
+        }
+        dragSelectionAnchor.current = null;
+        dragSelectionCellAnchor.current = null;
+      }
       return;
     }
     if (phase === "end") {
       dragSelectionAnchor.current = null;
+      dragSelectionCellAnchor.current = null;
       return;
     }
     preferredVerticalX.current = null;
