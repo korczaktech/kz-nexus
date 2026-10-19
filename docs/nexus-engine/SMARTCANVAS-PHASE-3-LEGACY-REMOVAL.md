@@ -13,6 +13,7 @@ A Etapa 3 só pode remover definitivamente o caminho legado depois que a impleme
 - [x] Cobertura de componente para edição canônica, undo/redo, Backspace/Delete, navegação de cursor, composição IME sintética e prevenção de duplicação após composição.
 - [x] E2E de navegador contra API real para digitação no SmartCanvas e projeção acessível do texto.
 - [x] E2E de navegador real cobre Backspace no fim do texto e reinserção do caractere, validando a projeção do modelo canônico.
+- [x] E2E em Chromium, Firefox e WebKit cobre seleção real com `Shift+ArrowLeft` e substituição do caractere selecionado, verificando que o texto canônico permanece íntegro.
 - [ ] Confirmar no Chromebook-alvo: setas, Home/End, Backspace/Delete, Shift+setas e seleção que atravessa páginas.
 - [ ] Executar IME físico em cada navegador/sistema operacional suportado, incluindo confirmar, cancelar e compor caracteres repetidos.
 
