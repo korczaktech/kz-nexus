@@ -197,8 +197,12 @@ async def telemetry_metrics() -> dict:
         history = await cursor.to_list(length=24)
     except Exception:
         logger.warning("Telemetry metrics: database ping or history query failed")
+    metrics = snapshot()
     return {
-        "metrics": snapshot(),
+        # Keep aggregate metrics available at the root for existing clients,
+        # while retaining the grouped shape used by the current dashboard.
+        **metrics,
+        "metrics": metrics,
         "database_status": database_status,
         "database_latency_ms": database_latency_ms,
         "engine_ci": await get_engine_ci_status(),
