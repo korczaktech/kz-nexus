@@ -54,9 +54,9 @@ A Etapa 3 só pode remover definitivamente o caminho legado depois que a impleme
 
 ## Última rodada registrada
 
-Último commit funcional validado: [`54dcd90c554e9dd6b7a14ebfe0541e4f3b73bb79`](https://github.com/korczaktech/kz-nexus/commit/54dcd90c554e9dd6b7a14ebfe0541e4f3b73bb79)
+Último commit funcional validado: [`3065dc3547e73ddab7799e6217751c0ff45cdec7`](https://github.com/korczaktech/kz-nexus/commit/3065dc3547e73ddab7799e6217751c0ff45cdec7)
 
-- A integração real com API/MongoDB/Playwright passou em **Chromium, Firefox e WebKit** no workflow [`39165137727`](https://github.com/korczaktech/kz-nexus/actions/runs/39165137727), incluindo salvamento real, roundtrip do payload nativo NSX, recuperação de rascunho, DOCX/PDF, autosave, interrupção e reconexão de rede e conflito de versão.
+- A integração real com API/MongoDB/Playwright passou em **Chromium, Firefox e WebKit** no workflow [`39165414475`](https://github.com/korczaktech/kz-nexus/actions/runs/39165414475), no commit `3065dc3547e73ddab7799e6217751c0ff45cdec7`, incluindo salvamento real, roundtrip do payload nativo NSX, recuperação de rascunho, DOCX/PDF, autosave, interrupção e reconexão de rede e conflito de versão. O log confirma a interceptação deliberada do salvamento nos três navegadores.
 - A validação Kortex, a validação SmartCanvas, o baseline de memória e o deploy GitHub Pages passaram no mesmo SHA: [Kortex `39165137817`](https://github.com/korczaktech/kz-nexus/actions/runs/39165137817), [SmartCanvas `39165137741`](https://github.com/korczaktech/kz-nexus/actions/runs/39165137741), [Memory Baseline `39165137771`](https://github.com/korczaktech/kz-nexus/actions/runs/39165137771), [Pages `39165137769`](https://github.com/korczaktech/kz-nexus/actions/runs/39165137769).
 - O cenário de rede bloqueia service workers no contexto de teste e inspeciona URLs de salvamento após interceptar requisições amplamente; isso elimina a divergência de interceptação observada no WebKit.
 - O timeout de reconexão é limpo ao concluir a interceptação; a espera do popup PDF tem limite explícito, e o workflow limita cada processo de navegador a 120 segundos e a etapa E2E a 8 minutos.
