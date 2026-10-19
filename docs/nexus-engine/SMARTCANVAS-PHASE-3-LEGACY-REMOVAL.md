@@ -54,15 +54,28 @@ A Etapa 3 só pode remover definitivamente o caminho legado depois que a impleme
 
 ## Última rodada registrada
 
-Último commit funcional validado: [`3065dc3547e73ddab7799e6217751c0ff45cdec7`](https://github.com/korczaktech/kz-nexus/commit/3065dc3547e73ddab7799e6217751c0ff45cdec7)
+Último commit validado por CI: [`5a27dad1ebc7e871721666dc246a589f978ee696`](https://github.com/korczaktech/kz-nexus/commit/5a27dad1ebc7e871721666dc246a589f978ee696).
 
-- A integração real com API/MongoDB/Playwright passou em **Chromium, Firefox e WebKit** no workflow [`39165414475`](https://github.com/korczaktech/kz-nexus/actions/runs/39165414475), no commit `3065dc3547e73ddab7799e6217751c0ff45cdec7`, incluindo salvamento real, roundtrip do payload nativo NSX, recuperação de rascunho, DOCX/PDF, autosave, interrupção e reconexão de rede e conflito de versão. O log confirma a interceptação deliberada do salvamento nos três navegadores.
-- A validação Kortex, a validação SmartCanvas, o baseline de memória e o deploy GitHub Pages passaram no mesmo SHA: [Kortex `39165137817`](https://github.com/korczaktech/kz-nexus/actions/runs/39165137817), [SmartCanvas `39165137741`](https://github.com/korczaktech/kz-nexus/actions/runs/39165137741), [Memory Baseline `39165137771`](https://github.com/korczaktech/kz-nexus/actions/runs/39165137771), [Pages `39165137769`](https://github.com/korczaktech/kz-nexus/actions/runs/39165137769).
-- O cenário de rede bloqueia service workers no contexto de teste e inspeciona URLs de salvamento após interceptar requisições amplamente; isso elimina a divergência de interceptação observada no WebKit.
-- O timeout de reconexão é limpo ao concluir a interceptação; a espera do popup PDF tem limite explícito, e o workflow limita cada processo de navegador a 120 segundos e a etapa E2E a 8 minutos.
-- O teste de seleção mista revelou um defeito real: a formatação usava um coletor que omite células simples de tabela, embora o mapeador de seleção canônica as inclua. A formatação foi alterada para usar os intervalos canônicos, e a suíte agora verifica formatação, cópia e recorte atravessando parágrafo, citação, lista e tabela sem achatar os contêineres.
+- **Integração real aprovada no mesmo SHA:** workflow [SmartCanvas API integration `39194363433`](https://github.com/korczaktech/kz-nexus/actions/runs/39194363433), concluído com sucesso em `5a27dad`. O job executou os testes de integração da API com MongoDB, build de frontend e o E2E Playwright contra API real em Chromium, Firefox e WebKit. O passo E2E e a limpeza do job concluíram com sucesso.
+- **Validação geral aprovada no mesmo SHA:** workflow [Kortex validation `39194363349`](https://github.com/korczaktech/kz-nexus/actions/runs/39194363349), com sucesso em testes do engine, testes de preview SmartCanvas, typechecks e builds.
+- **Cobertura E2E reportada pelo script:** criação/edição, ausência do DOM do editor legado no fluxo SmartCanvas, digitação e projeção acessível, Backspace e reinserção, recuperação do rascunho, salvamento na API real, roundtrip do payload nativo NSX, exportação DOCX/PDF, autosave, interrupção e reconexão de rede e conflito de versão. O workflow percorre Chromium, Firefox e WebKit.
+- A rodada funcional anterior [`3065dc3`](https://github.com/korczaktech/kz-nexus/commit/3065dc3547e73ddab7799e6217751c0ff45cdec7) também passou na integração real, mas a rodada `39194363433` agora comprova a execução no SHA documental mais recente.
+- O teste de seleção mista revelou um defeito real: a formatação usava um coletor que omite células simples de tabela, embora o mapeador de seleção canônica as inclua. A formatação foi alterada para usar os intervalos canônicos, e a suíte verifica formatação, cópia e recorte atravessando parágrafo, citação, lista e tabela sem achatar os contêineres.
 - As alterações anteriores de seleção lógica e cópia/recorte permanecem cobertas pelos testes de componente e motor; ver os commits [`d97fa9a`](https://github.com/korczaktech/kz-nexus/commit/d97fa9a998032fc29ffb722af27447992f0a5a7d) e [`fb469a3`](https://github.com/korczaktech/kz-nexus/commit/fb469a39edea8c9db861a6da44c4edd68c3221d7).
-- A validação física de IME, teclado e leitor de tela continua sem evidência: esses itens exigem dispositivos/sistemas reais ou resultados de teste fornecidos pela equipe. Também seguem pendentes a comparação visual real, abertura dos arquivos no Word/LibreOffice e a decisão de produto sobre ativação/remoção do legado.
+
+### Protocolo obrigatório para a rodada manual
+
+Registre dispositivo, sistema operacional, navegador/versão, documento de teste, resultado (passou/falhou/não executado), evidência e defeito associado. Não marque um item como aprovado sem resultado observável.
+
+1. **Teclado:** setas, Home/End, Backspace/Delete, Shift+setas e seleção cruzando quebra de página; repetir com parágrafo, citação, lista e tabela.
+2. **IME real:** compor, confirmar e cancelar texto; repetir caracteres, acentos e composição dentro de seleção; verificar ausência de duplicação/perda.
+3. **Acessibilidade:** operar sem mouse; conferir foco visível, ordem de tabulação, nomes/estados dos controles, mensagens de status e fluxo com leitor de tela real.
+4. **Paridade:** abrir o mesmo corpus no legado e no SmartCanvas em Chromium, Firefox e WebKit; registrar margens, fontes, imagens, tabelas longas, objetos, numeração, cabeçalhos/rodapés e quebras de página.
+5. **Exportação:** abrir DOCX no Microsoft Word e no LibreOffice; comparar PDF exportado com a prévia e registrar diferenças aceitas.
+6. **Recuperação e erros:** fechar e reabrir o navegador com rascunho pendente; testar payload NSX inválido, documento somente leitura e falha de exportação.
+7. **Produto e rollback:** aprovar por escrito o editor padrão, janela de observação, métricas e gatilhos de rollback antes de remover o fallback.
+
+A CI verde comprova somente os caminhos automatizados descritos. A validação física de IME, teclado e leitor de tela, a comparação visual real, a abertura dos arquivos no Word/LibreOffice e a decisão de produto sobre ativação/remoção do legado continuam sem evidência e exigem execução humana em ambientes apropriados.
 
 ## Critério de conclusão
 
