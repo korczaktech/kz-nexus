@@ -66,6 +66,8 @@ A Etapa 3 só pode remover definitivamente o caminho legado depois que a impleme
 
 ### Protocolo obrigatório para a rodada manual
 
+Use o [relatório de validação manual](./SMARTCANVAS-MANUAL-VALIDATION-REPORT.md) para registrar SHA, dispositivo, sistema, navegador, resultado por cenário e evidências. O arquivo começa explicitamente como **NÃO EXECUTADO** e não deve ser marcado como aprovado sem observação real.
+
 Registre dispositivo, sistema operacional, navegador/versão, documento de teste, resultado (passou/falhou/não executado), evidência e defeito associado. Não marque um item como aprovado sem resultado observável.
 
 1. **Teclado:** setas, Home/End, Backspace/Delete, Shift+setas e seleção cruzando quebra de página; repetir com parágrafo, citação, lista e tabela.
