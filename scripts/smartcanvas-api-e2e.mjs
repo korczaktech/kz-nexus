@@ -175,12 +175,21 @@ try {
   // Verify durable recovery after a full page reload, not only leaving and reopening
   // the editor component. The authenticated session and saved draft must survive reload.
   await page.reload({ waitUntil: "domcontentloaded" });
+  // Authentication and persisted navigation restore asynchronously after reload.
+  // Wait until either the editor or the document list is actually ready.
+  await page.waitForFunction(() => {
+    const buttons = [...document.querySelectorAll("button")];
+    const editorReady = buttons.some(button =>
+      button.closest(".editor-head .editor-actions") && button.innerText.includes("Sair")
+    );
+    const documentListReady = buttons.some(button => button.innerText.trim() === "Editar documento");
+    return editorReady || documentListReady;
+  }, null, { timeout: 20000 });
   // Depending on the app's persisted navigation state, reload may restore the
   // editor directly or return to the document list. Support both routes.
   const editorExit = page.locator(".editor-head .editor-actions button").filter({ hasText: "Sair" });
   if (await editorExit.count() === 0) {
     const editDocument = page.getByRole("button", { name: "Editar documento", exact: true }).first();
-    await editDocument.waitFor({ timeout: 20000 });
     await editDocument.click();
   }
   await waitForEditorProjection(page, autosaveSentinel);
