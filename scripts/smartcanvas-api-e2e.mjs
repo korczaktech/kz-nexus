@@ -172,6 +172,16 @@ try {
   assert.ok(persisted.content?.includes(autosaveSentinel), "autosave should persist updated HTML through the real API");
   assert.ok(persisted.native_content?.includes(autosaveSentinel), "autosave should persist updated native SmartCanvas content");
 
+  // Verify durable recovery after a full page reload, not only leaving and reopening
+  // the editor component. The authenticated session and saved draft must survive reload.
+  await page.reload({ waitUntil: "domcontentloaded" });
+  await page.getByRole("button", { name: "Editar documento", exact: true }).first().waitFor({ timeout: 20000 });
+  await page.getByRole("button", { name: "Editar documento", exact: true }).first().click();
+  await waitForEditorProjection(page, autosaveSentinel);
+  persisted = await apiDocument(created.id, token);
+  assert.ok(persisted.content?.includes(autosaveSentinel), "reload recovery should preserve the saved HTML draft");
+  assert.ok(persisted.native_content?.includes(autosaveSentinel), "reload recovery should preserve the saved native draft");
+
   // Simulate a dropped connection during a real save, then reconnect and retry.
   // The first request is deliberately aborted at the browser boundary; the second
   // must persist the exact same canonical draft without silently reverting text.
@@ -252,7 +262,7 @@ try {
   console.log(JSON.stringify({
     ok: true,
     documentId: created.id,
-    checks: ["real API save", "native payload roundtrip", "draft recovery", "DOCX export", "PDF export", "real API autosave", "network interruption and reconnect recovery", "version conflict"],
+    checks: ["real API save", "native payload roundtrip", "draft recovery", "DOCX export", "PDF export", "real API autosave", "full page reload recovery", "network interruption and reconnect recovery", "version conflict"],
   }));
   await context.close();
 } finally {
