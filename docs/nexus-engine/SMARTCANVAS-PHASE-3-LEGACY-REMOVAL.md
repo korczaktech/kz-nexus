@@ -26,7 +26,7 @@ A Etapa 3 só pode remover definitivamente o caminho legado depois que a impleme
 - [x] Teste de componente cobre formatação, cópia e recorte de uma seleção lógica que atravessa parágrafo, citação, lista e célula simples de tabela, mantendo os quatro contêineres.
 - [x] Corrigida a formatação de seleção lógica para usar os intervalos canônicos do motor; o coletor visual de texto não inclui células simples de tabela no mesmo caminho, o que deixava a formatação cross-container incompleta.
 - [ ] Completar a matriz de comandos em ambas as direções e com mais estruturas aninhadas (lista ↔ tabela ↔ parágrafo ↔ citação), garantindo que delete/format não achatem nem removam contêineres indevidos.
-- [ ] Definir e testar o comportamento de seleção unificada entre células; se não fizer parte do contrato de produto, documentar o limite e fornecer feedback explícito em vez de falhar silenciosamente.
+- [ ] Seleção de texto linear entre células é coberta por testes de mapeamento nos dois sentidos e preserva a identidade dos contêineres. **Contrato pendente de aceite de produto:** isso não equivale a seleção retangular/unificada de células; essa interação continua fora do escopo implementado. Antes do fechamento, decidir formalmente se seleção retangular será suportada; se não for, a UI deve explicar o limite quando o usuário tentar essa interação, sem falha silenciosa.
 
 ### 3. Acessibilidade
 - [x] A superfície de captura do teclado tem rótulo acessível; páginas do canvas expõem texto acessível para verificação automatizada.
