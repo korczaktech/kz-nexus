@@ -1622,7 +1622,8 @@ describe("SmartCanvasPreview input integration", () => {
     expect(host.querySelector('[data-testid="smartcanvas-selection"]')?.getAttribute("data-focus-block")).toBe(second.id);
   });
 
-  it("maps drag selection from one table cell to another into canonical paragraph positions", async () => {
+  it("maps cross-cell drag to a linear text selection and explains that rectangular cell selection is unsupported", async () => {
+    const onStatus = vi.fn();
     const document = createDocument({ title: "SmartCanvas cross-cell drag selection" });
     const table = {
       type: "table" as const,
@@ -1650,6 +1651,7 @@ describe("SmartCanvasPreview input integration", () => {
         document: engine!.getDocument(),
         engine: engine!,
         onDocumentChange: vi.fn(),
+        onStatus,
       }));
     });
     const start = host.querySelector('[data-testid="smartcanvas-cell-drag-start"]') as HTMLButtonElement | null;
@@ -1660,6 +1662,9 @@ describe("SmartCanvasPreview input integration", () => {
       anchor: { blockId: firstParagraph.id, offset: 1 },
       focus: { blockId: secondParagraph.id, offset: 3 },
     });
+    expect(onStatus).toHaveBeenLastCalledWith(
+      "A seleção entre células é linear (texto); a seleção retangular de células não está disponível.",
+    );
   });
 
   it("formats and cuts a logical selection across nested list and table containers without flattening them", async () => {
