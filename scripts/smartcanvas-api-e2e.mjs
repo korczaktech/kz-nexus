@@ -178,7 +178,10 @@ try {
   // Authentication and persisted navigation restore asynchronously after reload.
   // Wait until either the editor or the document list is actually ready.
   await page.waitForFunction(() => {
-    const buttons = [...document.querySelectorAll("button")];
+    const isVisible = (element) => element instanceof HTMLElement
+      && element.getClientRects().length > 0
+      && getComputedStyle(element).visibility !== "hidden";
+    const buttons = [...document.querySelectorAll("button")].filter(isVisible);
     const editorReady = buttons.some(button =>
       button.closest(".editor-head .editor-actions") && button.innerText.includes("Sair")
     );
@@ -186,10 +189,24 @@ try {
     return editorReady || documentListReady;
   }, null, { timeout: 20000 });
   // Depending on the app's persisted navigation state, reload may restore the
-  // editor directly or return to the document list. Support both routes.
-  const editorExit = page.locator(".editor-head .editor-actions button").filter({ hasText: "Sair" });
-  if (await editorExit.count() === 0) {
+  // editor directly or return to the document list. Support both routes, but
+  // only treat visible controls as ready; hidden stale buttons can survive while
+  // authentication/navigation state is being rehydrated.
+  const editorExit = page.locator(".editor-head .editor-actions button").filter({ hasText: "Sair" }).first();
+  if (!(await editorExit.isVisible().catch(() => false))) {
     const editDocument = page.getByRole("button", { name: "Editar documento", exact: true }).first();
+    if (!(await editDocument.isVisible().catch(() => false))) {
+      const diagnostic = await page.evaluate(() => ({
+        title: document.title,
+        url: location.href,
+        bodyText: document.body.innerText.slice(-3000),
+        tokenPresent: Boolean(localStorage.getItem("korczak_documents_token")),
+        visibleButtons: [...document.querySelectorAll("button")]
+          .filter(button => button instanceof HTMLElement && button.getClientRects().length > 0)
+          .map(button => button.innerText.trim()).filter(Boolean).slice(-40),
+      }));
+      throw new Error("Document/editor navigation did not recover after reload: " + JSON.stringify(diagnostic));
+    }
     await editDocument.click();
   }
   await waitForEditorProjection(page, autosaveSentinel);
