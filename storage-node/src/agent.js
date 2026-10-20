@@ -5,7 +5,7 @@ import { fileURLToPath } from "node:url";
 import process from "node:process";
 
 const DEFAULT_API_BASE = "https://kzdoc.onrender.com/api/v1";
-const HEARTBEAT_INTERVAL_MS = 60_000;
+const HEARTBEAT_INTERVAL_MS = 15_000;
 const REQUEST_TIMEOUT_MS = 15_000;
 const MAX_BACKOFF_MS = 5 * 60_000;
 const STORAGE_DIR = join(homedir(), ".local", "share", "korczak-nexus", "files");
