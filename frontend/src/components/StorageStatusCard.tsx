@@ -44,8 +44,8 @@ export function StorageStatusCard({guest, selection}: Props) {
       : refreshError
         ? 'Não foi possível consultar os servidores'
         : vaultNodes.length
-          ? vaultNodes.map((node, index) => `Servidor ${index === 0 ? 'I' : index === 1 ? 'II' : index + 1} · ${node.device_name}`).join(' / ')
-          : 'Servidor I · Note20 Ultra não conectado';
+          ? vaultNodes.map((_, index) => `Servidor ${index === 0 ? 'I' : index === 1 ? 'II' : index + 1}`).join(' / ')
+          : 'Nenhum servidor Korczak Vault conectado';
 
   return <section className="storage-status-card" aria-labelledby="storage-status-heading">
     <div className="storage-status-card-heading">
@@ -73,6 +73,6 @@ export function StorageStatusCard({guest, selection}: Props) {
         <StatusPill online={!guest && localConfigured} />
       </div>
     </div>
-    <p className="storage-status-footnote">Dispositivo é o armazenamento local da pessoa. Korczak Vault representa os dispositivos-servidores vinculados, como o Note20 Ultra.</p>
+    <p className="storage-status-footnote">Dispositivo é o armazenamento local da pessoa. Korczak Vault identifica os servidores vinculados exclusivamente por função: Servidor I, Servidor II e assim por diante.</p>
   </section>;
 }
