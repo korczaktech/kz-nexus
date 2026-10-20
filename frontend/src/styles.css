@@ -3070,6 +3070,10 @@ html:has(.app-shell.editor-mode),body:has(.app-shell.editor-mode),#root:has(.app
 .storage-status-provider strong{font-size:11px;color:var(--text);overflow-wrap:anywhere}
 .storage-status-provider small{font-size:10px;line-height:1.45;color:var(--muted);overflow-wrap:anywhere}
 .storage-status-icon{display:grid;place-items:center;width:31px;height:31px;flex:none;border-radius:9px;background:var(--surface2);color:var(--text);font-size:14px;font-weight:700}
+.storage-status-svg{display:block;width:23px;height:23px;overflow:visible}
+.storage-status-icon.google,.storage-status-icon.microsoft{background:#fff}
+.storage-status-icon.vault{background:var(--surface2)}
+.storage-status-icon.device{background:rgba(110,214,166,.1)}
 .storage-status-icon.google{color:#4285f4}
 .storage-status-icon.microsoft{color:#1684d6}
 .storage-status-icon.vault{color:var(--text)}
