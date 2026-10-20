@@ -1,6 +1,9 @@
 import test from "node:test";
+import { mkdtemp, readFile, rm } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import assert from "node:assert/strict";
-import { sendHeartbeat, validateConfig } from "../src/agent.js";
+import { claimAndStoreJob, safeStoredFilename, sendHeartbeat, validateConfig } from "../src/agent.js";
 
 const validConfig = {
   apiBase: "https://kzdoc.onrender.com/api/v1",
@@ -53,4 +56,37 @@ test("retries server failures rather than treating them as successful", async ()
     sendHeartbeat(validConfig, async () => ({ ok: false, status: 503 })),
     /HTTP 503/,
   );
+});
+
+
+test("sanitizes file names before writing them to node storage", () => {
+  assert.equal(safeStoredFilename("../../private\\\\notes.nsx"), "notes.nsx");
+  assert.equal(safeStoredFilename(""), "arquivo");
+});
+
+test("claims a save job, persists its content, and confirms the durable write", async () => {
+  const storageDir = await mkdtemp(join(tmpdir(), "nexus-node-test-"));
+  const calls = [];
+  const result = await claimAndStoreJob(validConfig, {
+    storageDir,
+    log: { info() {} },
+    fetchImpl: async (url, options) => {
+      calls.push({ url, options });
+      if (url.endsWith("/jobs/claim")) {
+        return { ok: true, status: 200, json: async () => ({ job: {
+          id: "job-1", name: "sample.nsx", content: "{\\\"format\\\":\\\"nsx\\\"}", mime_type: "application/x-korczak-nexus",
+        } }) };
+      }
+      return { ok: true, status: 200, json: async () => ({ status: "completed" }) };
+    },
+  });
+  try {
+    assert.equal(result.status, "completed");
+    assert.equal(await readFile(result.stored_path, "utf8"), "{\\\"format\\\":\\\"nsx\\\"}");
+    assert.equal(calls.length, 2);
+    assert.match(calls[1].url, /jobs\\/job-1\\/complete$/);
+    assert.equal(JSON.parse(calls[1].options.body).status, "completed");
+  } finally {
+    await rm(storageDir, { recursive: true, force: true });
+  }
 });
