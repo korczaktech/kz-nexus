@@ -1,0 +1,14 @@
+{
+  "name": "@korczak-nexus/storage-node",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Termux agent for securely registering a Nexus storage node heartbeat",
+  "type": "module",
+  "scripts": {
+    "start": "node src/agent.js",
+    "test": "node --test"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
