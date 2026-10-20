@@ -221,3 +221,11 @@ def test_completed_storage_job_accepts_agent_reported_path():
     assert payload.status == "completed"
     assert payload.stored_path.endswith("job-1-file.nsx")
 
+def test_completed_storage_job_rejects_relative_or_blank_paths():
+    from pydantic import ValidationError
+
+    with pytest.raises(ValidationError, match="caminho absoluto"):
+        storage_nodes.JobCompletionRequest(status="completed", stored_path="files/document.nsx")
+    with pytest.raises(ValidationError, match="stored_path"):
+        storage_nodes.JobCompletionRequest(status="completed", stored_path="   ")
+
