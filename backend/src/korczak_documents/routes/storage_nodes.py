@@ -38,6 +38,21 @@ def _now() -> datetime:
     return datetime.now(timezone.utc)
 
 
+def _node_status(node: dict, now: datetime | None = None) -> str:
+    if node.get("revoked_at") is not None:
+        return "revoked"
+    last_seen = node.get("last_seen_at")
+    if not last_seen:
+        return "offline"
+    # PyMongo returns naive UTC datetimes unless tz_aware is enabled.
+    if last_seen.tzinfo is None:
+        last_seen = last_seen.replace(tzinfo=timezone.utc)
+    now = now or _now()
+    if now.tzinfo is None:
+        now = now.replace(tzinfo=timezone.utc)
+    return "online" if now - last_seen <= timedelta(seconds=180) else "offline"
+
+
 @router.post("/pairing-codes", status_code=201)
 async def create_pairing_code(user: dict = Depends(current_user)) -> dict:
     """Create a short-lived, single-use code for pairing a trusted storage node."""
@@ -137,14 +152,8 @@ async def list_nodes(user: dict = Depends(current_user)) -> dict:
     )
     nodes = await cursor.to_list(length=100)
     now = _now()
-    online_window = timedelta(seconds=180)
     for node in nodes:
-        if node.get("revoked_at") is not None:
-            node["status"] = "revoked"
-        elif node.get("last_seen_at") and now - node["last_seen_at"] <= online_window:
-            node["status"] = "online"
-        else:
-            node["status"] = "offline"
+        node["status"] = _node_status(node, now)
     return {"nodes": nodes}
 
 
