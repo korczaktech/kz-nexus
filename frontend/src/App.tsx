@@ -504,10 +504,8 @@ function AppAuthenticated(){
       try{const raw=localStorage.getItem('kz_nexus_drive_source_'+selected.id);if(raw)source=JSON.parse(raw) as CloudFile}catch{}
       const nativePayload=data.native_content||data.content;
       const nativeName=data.name.toLowerCase().endsWith('.nsx')?data.name:data.name+'.nsx';
-      let routedToNode=false;
       try{
         const route=await api.routeSavedFile({name:nativeName,content:nativePayload,mime_type:'application/x-korczak-nexus'});
-        routedToNode=route.status==='queued';
         if(route.status==='fallback_required'&&!source){
           const cloud=await import('./services/cloudStorage');
           if(cloud.getCloudSession('google-drive')){
@@ -517,7 +515,7 @@ function AppAuthenticated(){
             await saveLocalBackup(nativeName,nativePayload,'application/x-korczak-nexus');
           }
         }
-      }catch(routeError){
+      }catch{
         // The canonical Nexus save already succeeded; preserve an independent local copy if routing fails.
         try{await saveLocalBackup(nativeName,nativePayload,'application/x-korczak-nexus')}catch{}
       }
