@@ -1,6 +1,7 @@
-import { chmod, readFile, stat } from "node:fs/promises";
+import { readFile, stat } from "node:fs/promises";
 import { homedir } from "node:os";
 import { join } from "node:path";
+import { fileURLToPath } from "node:url";
 import process from "node:process";
 
 const DEFAULT_API_BASE = "https://kzdoc.onrender.com/api/v1";
@@ -113,6 +114,6 @@ async function main() {
   process.exitCode = await runAgent(config, { signal: controller.signal });
 }
 
-if (process.argv[1] && new URL(import.meta.url).pathname === process.argv[1]) {
+if (process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1]) {
   await main();
 }
