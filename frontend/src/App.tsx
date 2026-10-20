@@ -506,7 +506,23 @@ function AppAuthenticated(){
       const nativeName=data.name.toLowerCase().endsWith('.nsx')?data.name:data.name+'.nsx';
       try{
         const route=await api.routeSavedFile({name:nativeName,content:nativePayload,mime_type:'application/x-korczak-nexus'});
-        if(route.status==='fallback_required'&&!source){
+        let shouldFallback=route.status==='fallback_required';
+        if(route.status==='queued'&&route.job_id){
+          let jobStatus:'pending'|'processing'|'completed'|'failed'='pending';
+          const deadline=Date.now()+20000;
+          while(Date.now()<deadline){
+            try{
+              const status=await api.storageJobStatus(route.job_id);
+              jobStatus=status.status;
+              if(jobStatus==='completed'||jobStatus==='failed')break;
+            }catch{break}
+            await new Promise(resolve=>window.setTimeout(resolve,1500));
+          }
+          shouldFallback=jobStatus!=='completed';
+        }else if(route.status==='queued'){
+          shouldFallback=true;
+        }
+        if(shouldFallback&&!source){
           const cloud=await import('./services/cloudStorage');
           if(cloud.getCloudSession('google-drive')){
             try{await cloud.createCloudBackup(nativeName,nativePayload)}
