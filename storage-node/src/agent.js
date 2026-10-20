@@ -78,17 +78,24 @@ export async function runAgent(config, {
   maxBackoffMs = MAX_BACKOFF_MS,
 } = {}) {
   let failures = 0;
+  let connected = false;
+  let recovering = false;
   while (!signal?.aborted) {
     try {
       const result = await sendHeartbeat(config, fetchImpl);
+      if (!connected || recovering) {
+        log.info?.(`Nó Nexus online: ${result.node_id}`);
+      }
+      connected = true;
+      recovering = false;
       failures = 0;
-      log.info?.(`Nó Nexus online: ${result.node_id}`);
       await sleep(intervalMs);
     } catch (error) {
       if (error?.permanent) {
         log.error?.(error.message);
         return 2;
       }
+      recovering = connected;
       failures += 1;
       const backoff = Math.min(maxBackoffMs, 1_000 * (2 ** Math.min(failures - 1, 8)));
       log.warn?.(`Heartbeat falhou; nova tentativa em ${Math.ceil(backoff / 1000)}s.`);
