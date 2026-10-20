@@ -203,6 +203,7 @@ async def node_heartbeat(
         raise AppError("Credencial de nó obrigatória.", "node_authentication_required", 401)
 
     now = _now()
+    metrics = payload if isinstance(payload, NodeHeartbeatMetrics) else NodeHeartbeatMetrics()
     result = await get_database()["storage_nodes"].update_one(
         {
             "id": node_id,
@@ -211,9 +212,9 @@ async def node_heartbeat(
         },
         {"$set": {
             "last_seen_at": now,
-            "free_bytes": payload.free_bytes,
-            "total_bytes": payload.total_bytes,
-            "internet_connected": payload.internet_connected,
+            "free_bytes": metrics.free_bytes,
+            "total_bytes": metrics.total_bytes,
+            "internet_connected": metrics.internet_connected,
         }},
     )
     if not result.matched_count:
