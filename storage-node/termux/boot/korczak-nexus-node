@@ -1,15 +1,15 @@
 #!/data/data/com.termux/files/usr/bin/sh
 set -eu
 
-NODE_DIR="$HOME/kz-nexus/storage-node"
+REPO_DIR="$HOME/kz-nexus"
 STATE_DIR="$HOME/.local/state/korczak-nexus"
 LOG_FILE="$STATE_DIR/agent.log"
 PID_FILE="$STATE_DIR/agent.pid"
+SUPERVISOR="$REPO_DIR/storage-node/termux/supervise-node.sh"
 
 mkdir -p "$STATE_DIR"
 chmod 700 "$STATE_DIR"
 
-# Avoid launching a second agent if the previous process is still alive.
 if [ -f "$PID_FILE" ]; then
   OLD_PID="$(cat "$PID_FILE" 2>/dev/null || true)"
   if [ -n "$OLD_PID" ] && kill -0 "$OLD_PID" 2>/dev/null; then
@@ -18,9 +18,8 @@ if [ -f "$PID_FILE" ]; then
   rm -f "$PID_FILE"
 fi
 
-# Also recognize an agent started manually or by another scheduler.
 if command -v pgrep >/dev/null 2>&1; then
-  RUNNING_PID="$(pgrep -f '[n]ode src/agent.js' | head -n 1 || true)"
+  RUNNING_PID="$(pgrep -f '[s]upervise-node.sh' | head -n 1 || true)"
   if [ -n "$RUNNING_PID" ]; then
     echo "$RUNNING_PID" > "$PID_FILE"
     chmod 600 "$PID_FILE"
@@ -33,12 +32,11 @@ if [ ! -f "$HOME/.config/korczak-nexus/node.json" ]; then
   exit 1
 fi
 
-if [ ! -f "$NODE_DIR/package.json" ]; then
-  echo "Nexus storage-node project missing at $NODE_DIR." >> "$LOG_FILE"
+if [ ! -f "$SUPERVISOR" ]; then
+  echo "Nexus supervisor missing at $SUPERVISOR." >> "$LOG_FILE"
   exit 1
 fi
 
-cd "$NODE_DIR"
-nohup node src/agent.js >> "$LOG_FILE" 2>&1 &
+nohup sh "$SUPERVISOR" >> "$LOG_FILE" 2>&1 &
 echo "$!" > "$PID_FILE"
 chmod 600 "$PID_FILE" "$LOG_FILE"
