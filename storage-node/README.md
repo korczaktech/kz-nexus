@@ -69,6 +69,17 @@ Se o GitHub estiver indisponível, houver alterações locais no clone ou os tes
 Depois de atualizar o clone do repositório, instale o lançador atualizado (este passo é necessário uma vez em cada celular; o lançador copiado para `~/.termux/boot` não é atualizado automaticamente pelo Git):
 
 ```sh
+# Encerre o agente antigo, se houver PID registrado.
+PID_FILE="$HOME/.local/state/korczak-nexus/agent.pid"
+if [ -f "$PID_FILE" ]; then
+  OLD_PID="$(cat "$PID_FILE" 2>/dev/null || true)"
+  if [ -n "$OLD_PID" ] && kill -0 "$OLD_PID" 2>/dev/null; then
+    kill -TERM "$OLD_PID" 2>/dev/null || true
+    sleep 2
+  fi
+  rm -f "$PID_FILE"
+fi
+
 mkdir -p "$HOME/.termux/boot"
 cp "$HOME/kz-nexus/storage-node/termux/boot/korczak-nexus-node" "$HOME/.termux/boot/korczak-nexus-node"
 chmod 700 "$HOME/.termux/boot/korczak-nexus-node"
