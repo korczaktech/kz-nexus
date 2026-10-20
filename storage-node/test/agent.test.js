@@ -90,3 +90,69 @@ test("claims a save job, persists its content, and confirms the durable write", 
     await rm(storageDir, { recursive: true, force: true });
   }
 });
+
+test("reports directory creation failures instead of confirming a physical write", async () => {
+  const parent = await mkdtemp(join(tmpdir(), "nexus-node-mkdir-test-"));
+  const storageDir = join(parent, "not-a-directory");
+  const { writeFile: createFile } = await import("node:fs/promises");
+  await createFile(storageDir, "block mkdir");
+  const calls = [];
+  try {
+    await assert.rejects(
+      claimAndStoreJob(validConfig, {
+        storageDir,
+        log: { info() {} },
+        fetchImpl: async (url, options) => {
+          calls.push({ url, options });
+          if (url.endsWith("/jobs/claim")) {
+            return { ok: true, status: 200, json: async () => ({ job: {
+              id: "job-dir-fail", name: "sample.nsx", content: "payload",
+            } }) };
+          }
+          return { ok: true, status: 200, json: async () => ({ status: "failed" }) };
+        },
+      }),
+      /Não foi possível gravar o arquivo no nó/,
+    );
+    const completion = calls.find((call) => call.url.endsWith("/jobs/job-dir-fail/complete"));
+    assert.ok(completion);
+    assert.equal(JSON.parse(completion.options.body).status, "failed");
+    assert.equal(JSON.parse(completion.options.body).stored_path, null);
+  } finally {
+    const { rm } = await import("node:fs/promises");
+    await rm(parent, { recursive: true, force: true });
+  }
+});
+
+test("reports file write conflicts instead of overwriting an existing file", async () => {
+  const storageDir = await mkdtemp(join(tmpdir(), "nexus-node-write-test-"));
+  const { writeFile: createFile } = await import("node:fs/promises");
+  await createFile(join(storageDir, "job-write-fail-sample.nsx"), "existing");
+  const calls = [];
+  try {
+    await assert.rejects(
+      claimAndStoreJob(validConfig, {
+        storageDir,
+        log: { info() {} },
+        fetchImpl: async (url, options) => {
+          calls.push({ url, options });
+          if (url.endsWith("/jobs/claim")) {
+            return { ok: true, status: 200, json: async () => ({ job: {
+              id: "job-write-fail", name: "sample.nsx", content: "new payload",
+            } }) };
+          }
+          return { ok: true, status: 200, json: async () => ({ status: "failed" }) };
+        },
+      }),
+      /Não foi possível gravar o arquivo no nó/,
+    );
+    assert.equal(await readFile(join(storageDir, "job-write-fail-sample.nsx"), "utf8"), "existing");
+    const completion = calls.find((call) => call.url.endsWith("/jobs/job-write-fail/complete"));
+    assert.ok(completion);
+    assert.equal(JSON.parse(completion.options.body).status, "failed");
+    assert.equal(JSON.parse(completion.options.body).stored_path, null);
+  } finally {
+    await rm(storageDir, { recursive: true, force: true });
+  }
+});
+
