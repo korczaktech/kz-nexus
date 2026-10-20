@@ -59,7 +59,7 @@ O agente envia um heartbeat imediatamente e depois a cada 60 segundos. Falhas tr
 
 ## Parear o Note20 sem exibir a credencial permanente
 
-1. Em um cliente autenticado do Nexus, faça `POST /api/v1/storage/nodes/pairing-codes` com o token de sessão do usuário no cabeçalho `Authorization: Bearer`. O código é válido por cinco minutos e só pode ser usado uma vez.
+1. No site do Nexus, entre na sua conta, abra **Configurações → Nós de armazenamento** e clique em **Gerar código de pareamento**. O código é válido por cinco minutos e só pode ser usado uma vez.
 2. No Termux, instale `curl` e `jq` caso ainda não existam (`pkg install curl jq`).
 3. Execute o bloco abaixo. Ele solicita o código temporário, envia o pareamento por HTTPS e grava apenas a configuração necessária em um arquivo privado. A credencial permanente não é impressa no terminal.
 
