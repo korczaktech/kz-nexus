@@ -16,6 +16,11 @@ PAIRING_CODE_MINUTES = 5
 NODE_TOKEN_PREFIX = "knode_"
 
 
+class SetNodeSavingRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    enabled: bool
+
+
 class PairNodeRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
     pairing_code: str = Field(min_length=32, max_length=128)
@@ -102,6 +107,7 @@ async def pair_node(payload: PairNodeRequest) -> dict:
             "created_at": now,
             "last_seen_at": None,
             "revoked_at": None,
+            "saving_enabled": True,
         })
     except Exception:
         # The code stays consumed on failure to prevent replay; the user can
@@ -122,7 +128,7 @@ async def list_nodes(user: dict = Depends(current_user)) -> dict:
     """List only the authenticated user's storage nodes."""
     cursor = get_database()["storage_nodes"].find(
         {"user_id": user["id"]},
-        {"_id": 0, "id": 1, "device_name": 1, "created_at": 1, "last_seen_at": 1, "revoked_at": 1},
+        {"_id": 0, "id": 1, "device_name": 1, "created_at": 1, "last_seen_at": 1, "revoked_at": 1, "saving_enabled": 1},
     )
     nodes = await cursor.to_list(length=100)
     now = _now()
@@ -135,6 +141,35 @@ async def list_nodes(user: dict = Depends(current_user)) -> dict:
                 node[field] = value.replace(tzinfo=timezone.utc)
         node["status"] = _node_status(node, now)
     return {"nodes": nodes}
+
+
+@router.patch("/{node_id}/saving")
+async def set_node_saving(
+    node_id: str,
+    payload: SetNodeSavingRequest,
+    user: dict = Depends(current_user),
+) -> dict:
+    """Pause or resume file writes for one node without stopping its heartbeat."""
+    database = get_database()
+    result = await database["storage_nodes"].update_one(
+        {"id": node_id, "user_id": user["id"], "revoked_at": None},
+        {"$set": {"saving_enabled": payload.enabled, "saving_updated_at": _now()}},
+    )
+    if not result.matched_count:
+        raise AppError("Dispositivo não encontrado.", "node_not_found", 404)
+
+    # Unclaimed jobs must not unexpectedly write after a later resume.
+    if not payload.enabled:
+        await database["storage_node_jobs"].update_many(
+            {"node_id": node_id, "status": "pending"},
+            {"$set": {
+                "status": "failed",
+                "completed_at": _now(),
+                "error": "Gravação pausada pelo usuário antes do início da gravação.",
+                "content": None,
+            }},
+        )
+    return {"node_id": node_id, "saving_enabled": payload.enabled}
 
 
 @router.delete("/{node_id}", status_code=204)
@@ -182,6 +217,8 @@ def _node_role(name: str) -> str | None:
 
 def _node_can_store(node: dict, size: int, now: datetime) -> bool:
     if _node_status(node, now) != "online" or node.get("internet_connected") is not True:
+        return False
+    if node.get("saving_enabled", True) is False:
         return False
     free_bytes = node.get("free_bytes")
     if not isinstance(free_bytes, int) or free_bytes < size:
@@ -305,6 +342,8 @@ async def claim_storage_job(
     })
     if not node:
         raise AppError("Credencial de nó inválida ou revogada.", "invalid_node_credential", 401)
+    if node.get("saving_enabled", True) is False:
+        return {"job": None}
     job = await database["storage_node_jobs"].find_one_and_update(
         {"node_id": node_id, "status": "pending"},
         {"$set": {"status": "processing", "claimed_at": _now()}},
