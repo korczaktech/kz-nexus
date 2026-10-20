@@ -8,6 +8,15 @@ Este agente mantém um heartbeat autenticado para o backend Nexus. Ele **não** 
 - Um nó já pareado pelo backend.
 - Credencial do nó guardada no diretório privado do Termux, nunca em armazenamento compartilhado.
 
+Instale as ferramentas e clone o repositório em um diretório separado do protótipo anterior:
+
+```sh
+pkg install git nodejs-lts curl jq
+git clone https://github.com/korczaktech/kz-nexus.git "$HOME/kz-nexus"
+cd "$HOME/kz-nexus/storage-node"
+npm test
+```
+
 ## Configuração
 
 Crie o arquivo privado:
