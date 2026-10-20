@@ -65,6 +65,18 @@ async function ensureRootFolder(){
   const created=await request("https://www.googleapis.com/drive/v3/files",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({name:"Korczak Nexus",mimeType:"application/vnd.google-apps.folder",parents:["root"]})});
   const folder=await created.json();const all=read();all["google-drive"]={...s,rootFolderId:folder.id};write(all);return folder;
 }
+export async function createCloudBackup(name:string,content:string):Promise<CloudFile>{
+  const session=getCloudSession("google-drive");
+  if(!session)throw new Error("Nenhuma sessão do Google Drive está conectada.");
+  const folder=await ensureRootFolder();
+  const safeName=(name.trim().replace(/[\\/\\x00-\\x1f]/g,"_").slice(0,220)||"documento")+(name.toLowerCase().endsWith(".nsx")?"":".nsx");
+  const boundary="nexus_"+b64url(crypto.getRandomValues(new Uint8Array(18)));
+  const metadata={name:safeName,mimeType:"application/x-korczak-nexus",parents:[folder.id]};
+  const body="--"+boundary+"\\r\\nContent-Type: application/json; charset=UTF-8\\r\\n\\r\\n"+JSON.stringify(metadata)+"\\r\\n--"+boundary+"\\r\\nContent-Type: application/x-korczak-nexus\\r\\n\\r\\n"+content+"\\r\\n--"+boundary+"--";
+  const response=await request("https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id,name,mimeType,size,modifiedTime,parents,webViewLink",{method:"POST",headers:{"Content-Type":"multipart/related; boundary="+boundary},body});
+  return await response.json() as CloudFile;
+}
+
 export async function listCloudFiles(folderId?:string):Promise<{files:CloudFile[];nextPageToken?:string}>{
   const s=getCloudSession("google-drive");
   if(!s)throw new Error("Conecte seu Google Drive primeiro.");
