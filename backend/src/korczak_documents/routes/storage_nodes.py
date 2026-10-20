@@ -341,6 +341,7 @@ async def complete_storage_job(
         "completed_at": now,
         "error": payload.error if payload.status == "failed" else None,
         "stored_path": payload.stored_path if payload.status == "completed" else None,
+        "content": None,
     }
     changed = await get_database()["storage_node_jobs"].update_one(
         {"id": job_id, "node_id": node_id, "status": "processing"},
