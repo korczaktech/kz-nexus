@@ -9,6 +9,7 @@ COLLECTIONS = (
     "grupos",
     "storage_nodes",
     "storage_node_pairing_codes",
+    "storage_node_jobs",
 )
 
 
