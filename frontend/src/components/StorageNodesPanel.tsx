@@ -24,7 +24,6 @@ export function StorageNodesPanel(){
   const[expiresAt,setExpiresAt]=useState('');
   const[remainingSeconds,setRemainingSeconds]=useState(0);
   const[openMenu,setOpenMenu]=useState<string|null>(null);
-  const[shutdownTarget,setShutdownTarget]=useState<StorageNode|null>(null);
 
   const refresh=useCallback(async()=>{
     setError('');
@@ -82,9 +81,19 @@ export function StorageNodesPanel(){
     }finally{setBusy(false)}
   }
 
-  function requestShutdown(node:StorageNode){
-    setOpenMenu(null);
-    setShutdownTarget(node);
+  async function toggleSaving(node:StorageNode){
+    const label=serverLabel(node);
+    const enabled=node.saving_enabled===false;
+    setOpenMenu(null);setBusy(true);setError('');setNotice('');
+    try{
+      await api.setStorageNodeSaving(node.id,enabled);
+      setNodes(current=>current.map(item=>item.id===node.id?{...item,saving_enabled:enabled}:item));
+      setNotice(enabled?`Gravações retomadas em ${label}.`:`Gravações pausadas em ${label}. O agente continuará conectado.`);
+      await refresh();
+    }catch(e){
+      setError(e instanceof Error?e.message:'Não foi possível alterar a permissão de gravação.');
+      await refresh();
+    }finally{setBusy(false)}
   }
 
   const onlineCount=nodes.filter(node=>node.status==='online').length;
@@ -95,7 +104,7 @@ export function StorageNodesPanel(){
       <div className="storage-nodes-hero-copy">
         <span className="storage-nodes-kicker">INFRAESTRUTURA · KORCZAK NEXUS</span>
         <h2 id="storage-nodes-heading">Servidores</h2>
-        <p>Gerencie os servidores de armazenamento, acompanhe a conexão e controle o acesso dos dispositivos pareados.</p>
+        <p>Gerencie a conexão dos servidores e pause ou retome as gravações sem desligar os agentes no celular.</p>
       </div>
       <button className="storage-nodes-refresh" type="button" onClick={()=>void refresh()} disabled={loading||busy}>
         <span aria-hidden="true">↻</span> Atualizar
@@ -115,13 +124,14 @@ export function StorageNodesPanel(){
           const label=serverLabel(node);
           const online=node.status==='online';
           const revoked=node.status==='revoked';
+          const savingEnabled=node.saving_enabled!==false;
           return <article key={node.id} className={`storage-node-item${online?' is-online':''}${revoked?' is-revoked':''}`}>
             <div className="storage-node-glyph" aria-hidden="true"><span>▤</span><i/></div>
-            <div className="storage-node-details"><div className="storage-node-title"><strong>{label}</strong><span className={`storage-node-status status-${node.status}`}><i/>{online?'Online':revoked?'Acesso revogado':'Offline'}</span></div><p>Último sinal <span>{formatDate(node.last_seen_at)}</span></p><p>Adicionado <span>{formatDate(node.created_at)}</span></p></div>
+            <div className="storage-node-details"><div className="storage-node-title"><strong>{label}</strong><span className={`storage-node-status status-${node.status}`}><i/>{online?'Online':revoked?'Acesso revogado':'Offline'}</span>{!revoked&&<span className={`storage-node-status ${savingEnabled?'status-saving-on':'status-saving-paused'}`}><i/>{savingEnabled?'Gravações ativas':'Gravações pausadas'}</span>}</div><p>Último sinal <span>{formatDate(node.last_seen_at)}</span></p><p>Adicionado <span>{formatDate(node.created_at)}</span></p></div>
             <div className="storage-node-actions">{!revoked&&<div className="storage-node-menu-wrap">
-              <button type="button" className="storage-node-revoke" aria-haspopup="menu" aria-expanded={openMenu===node.id} onClick={()=>setOpenMenu(openMenu===node.id?null:node.id)} disabled={busy}>Desligar <span aria-hidden="true">⌄</span></button>
+              <button type="button" className="storage-node-revoke" aria-haspopup="menu" aria-expanded={openMenu===node.id} onClick={()=>setOpenMenu(openMenu===node.id?null:node.id)} disabled={busy}>Ações <span aria-hidden="true">⌄</span></button>
               {openMenu===node.id&&<><button type="button" className="storage-node-menu-backdrop" aria-label="Fechar menu" onClick={()=>setOpenMenu(null)}/><div className="storage-node-menu" role="menu" aria-label={`Ações para ${label}`}>
-                <button type="button" role="menuitem" onClick={()=>requestShutdown(node)}><span className="storage-node-menu-icon">⏻</span><span><strong>Desligar servidor</strong><small>Parar o agente no dispositivo</small></span></button>
+                <button type="button" role="menuitem" onClick={()=>void toggleSaving(node)}><span className="storage-node-menu-icon">{savingEnabled?'Ⅱ':'▶'}</span><span><strong>{savingEnabled?'Pausar gravações':'Retomar gravações'}</strong><small>{savingEnabled?'Bloquear novos salvamentos neste servidor':'Permitir novos salvamentos neste servidor'}</small></span></button>
                 <button type="button" role="menuitem" className="is-danger" onClick={()=>void revoke(node)}><span className="storage-node-menu-icon">⊘</span><span><strong>Revogar acesso</strong><small>Invalidar a credencial do nó</small></span></button>
               </div></>}
             </div>}</div>
@@ -137,9 +147,8 @@ export function StorageNodesPanel(){
       {pairingCode&&remainingSeconds===0&&<p className="storage-pair-expired">O código expirou. Gere outro para parear um servidor.</p>}
     </section>
 
-    {shutdownTarget&&<div className="storage-nodes-dialog-backdrop" role="presentation" onMouseDown={e=>{if(e.target===e.currentTarget)setShutdownTarget(null)}}><section className="storage-nodes-dialog" role="dialog" aria-modal="true" aria-labelledby="storage-shutdown-title"><span className="storage-nodes-dialog-icon">⏻</span><h3 id="storage-shutdown-title">Desligar {serverLabel(shutdownTarget)}?</h3><p>Desligar significa encerrar o agente Nexus no Termux, sem revogar o pareamento. No momento, a API e o agente deste repositório ainda não implementam um comando remoto de desligamento; por isso, não é seguro simular que o servidor foi desligado.</p><div className="storage-nodes-dialog-actions"><button type="button" onClick={()=>setShutdownTarget(null)}>Cancelar</button><button type="button" className="is-primary" onClick={()=>{setShutdownTarget(null);setNotice('O desligamento remoto ainda não está disponível. Para parar o agente, encerre o processo no Termux; o pareamento será mantido.')}}>Entendi</button></div></section></div>}
     {notice&&<p className="storage-nodes-notice" role="status"><span aria-hidden="true">✓</span>{notice}</p>}
     {error&&<p className="storage-nodes-error" role="alert">{error}</p>}
-    <p className="storage-nodes-security"><span aria-hidden="true">▣</span><span><strong>Segurança do armazenamento</strong><br/>As credenciais permanecem no armazenamento privado do Termux. Nunca compartilhe tokens; revogue o acesso nesta página se um dispositivo for perdido.</span></p>
+    <p className="storage-nodes-security"><span aria-hidden="true">▣</span><span><strong>Segurança do armazenamento</strong><br/>Pausar bloqueia novos salvamentos e cancela tarefas ainda não iniciadas. O agente continua conectado; uma gravação já iniciada pode terminar antes de a pausa surtir efeito. Revogue o acesso se um dispositivo for perdido.</span></p>
   </section>;
 }
