@@ -3084,3 +3084,23 @@ html:has(.app-shell.editor-mode),body:has(.app-shell.editor-mode),#root:has(.app
 .storage-status-pill.is-offline{background:rgba(128,139,153,.12);color:var(--muted)}
 .storage-status-footnote{margin-top:0}
 @media(max-width:600px){.storage-status-card-heading{align-items:flex-start}.storage-status-row{padding:11px 9px;gap:8px}.storage-status-provider{gap:8px}.storage-status-icon{width:28px;height:28px}.storage-status-pill{min-width:58px;padding:5px 6px}}
+
+/* Sidebar: permite rolagem vertical até o fim do próprio menu, sem mover a página. */
+.sidebar{
+  height:100vh;
+  height:100dvh;
+  min-height:0;
+  overflow-x:hidden;
+  overflow-y:auto;
+  overscroll-behavior-y:contain;
+  scrollbar-width:thin;
+  scrollbar-color:rgba(151,164,190,.42) transparent;
+  -webkit-overflow-scrolling:touch;
+}
+.sidebar > *{flex-shrink:0}
+.sidebar .sidebar-spacer{flex:1 0 16px}
+.sidebar::-webkit-scrollbar{width:6px}
+.sidebar::-webkit-scrollbar-track{background:transparent}
+.sidebar::-webkit-scrollbar-thumb{background:rgba(151,164,190,.32);border-radius:999px}
+.sidebar::-webkit-scrollbar-thumb:hover{background:rgba(151,164,190,.58)}
+
