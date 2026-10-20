@@ -13,6 +13,8 @@ INDEX_DEFINITIONS = {
     "eventos": [("user_id", ASCENDING), ("created_at", DESCENDING)],
     "notificacoes": [("user_id", ASCENDING), ("read", ASCENDING), ("created_at", DESCENDING)],
     "grupos": [("owner_id", ASCENDING), ("name", ASCENDING)],
+    "storage_nodes": [("user_id", ASCENDING), ("created_at", DESCENDING)],
+    "storage_node_pairing_codes": [("user_id", ASCENDING), ("expires_at", DESCENDING)],
 }
 
 
@@ -143,4 +145,30 @@ async def ensure_indexes(database) -> None:
         [("resource", ASCENDING), ("created_at", DESCENDING)],
         name="audit_resource_created_at",
         existing_indexes=existing_by_collection["eventos"],
+    )
+
+
+    # Storage-node credentials are stored only as digests and indexed for fast
+    # lookup. Pairing codes are short-lived; TTL cleanup is asynchronous, while
+    # endpoint queries enforce expires_at independently.
+    await _ensure_index(
+        collections["storage_nodes"],
+        "token_hash",
+        name="storage_node_token_hash_unique",
+        unique=True,
+        existing_indexes=existing_by_collection["storage_nodes"],
+    )
+    await _ensure_index(
+        collections["storage_node_pairing_codes"],
+        "code_hash",
+        name="storage_node_pairing_code_hash_unique",
+        unique=True,
+        existing_indexes=existing_by_collection["storage_node_pairing_codes"],
+    )
+    await _ensure_index(
+        collections["storage_node_pairing_codes"],
+        "expires_at",
+        name="storage_node_pairing_code_expiry",
+        expire_after_seconds=0,
+        existing_indexes=existing_by_collection["storage_node_pairing_codes"],
     )
