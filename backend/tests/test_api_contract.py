@@ -48,6 +48,11 @@ EXPECTED = {
     ("GET", "/api/v1/audit"),
     ("GET", "/api/v1/notifications"),
     ("POST", "/api/v1/notifications/{notification_id}/read"),
+    ("POST", "/api/v1/storage/nodes/pairing-codes"),
+    ("POST", "/api/v1/storage/nodes/pair"),
+    ("POST", "/api/v1/storage/nodes/{node_id}/heartbeat"),
+    ("GET", "/api/v1/storage/nodes"),
+    ("DELETE", "/api/v1/storage/nodes/{node_id}"),
 }
 
 
@@ -112,3 +117,22 @@ def test_native_kortex_payload_requires_a_valid_nsx_envelope() -> None:
         assert "native_content" in str(exc)
     else:
         raise AssertionError("Payload HTML não pode ser aceito como documento NSX")
+
+
+
+def test_storage_node_pairing_payload_rejects_extra_fields_and_blank_names() -> None:
+    from korczak_documents.routes.storage_nodes import PairNodeRequest
+
+    try:
+        PairNodeRequest(pairing_code="x" * 32, device_name="   ")
+    except Exception as exc:
+        assert "device_name" in str(exc)
+    else:
+        raise AssertionError("Nome de dispositivo em branco deve ser rejeitado")
+
+    try:
+        PairNodeRequest(pairing_code="x" * 32, device_name="Note20", unexpected=True)
+    except Exception as exc:
+        assert "unexpected" in str(exc)
+    else:
+        raise AssertionError("Campos desconhecidos devem ser rejeitados")
