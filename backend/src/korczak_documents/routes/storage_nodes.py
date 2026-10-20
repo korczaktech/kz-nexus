@@ -4,11 +4,11 @@ import secrets
 from uuid import uuid4
 
 from fastapi import APIRouter, Depends, Header
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from ..database.connection import get_database
 from ..dependencies import current_user
-from ..errors import AppError, ValidationError
+from ..errors import AppError
 
 router = APIRouter(prefix="/storage/nodes", tags=["storage-nodes"])
 
@@ -16,14 +16,18 @@ PAIRING_CODE_MINUTES = 5
 NODE_TOKEN_PREFIX = "knode_"
 
 
-class PairingCodeRequest(BaseModel):
-    model_config = ConfigDict(extra="forbid")
-
-
 class PairNodeRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
     pairing_code: str = Field(min_length=32, max_length=128)
     device_name: str = Field(min_length=1, max_length=80)
+
+    @field_validator("device_name")
+    @classmethod
+    def normalize_device_name(cls, value: str) -> str:
+        value = value.strip()
+        if not value:
+            raise ValueError("O nome do dispositivo não pode ficar vazio")
+        return value
 
 
 def _digest(value: str) -> str:
