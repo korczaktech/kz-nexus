@@ -136,6 +136,15 @@ async def list_nodes(user: dict = Depends(current_user)) -> dict:
         {"_id": 0, "id": 1, "device_name": 1, "created_at": 1, "last_seen_at": 1, "revoked_at": 1},
     )
     nodes = await cursor.to_list(length=100)
+    now = _now()
+    online_window = timedelta(seconds=180)
+    for node in nodes:
+        if node.get("revoked_at") is not None:
+            node["status"] = "revoked"
+        elif node.get("last_seen_at") and now - node["last_seen_at"] <= online_window:
+            node["status"] = "online"
+        else:
+            node["status"] = "offline"
     return {"nodes": nodes}
 
 
