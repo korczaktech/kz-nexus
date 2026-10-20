@@ -57,16 +57,15 @@ EXPECTED = {
 
 
 def test_api_route_inventory() -> None:
-    # O prefixo /api/v1 é aplicado pelo aplicativo na montagem do router.
-    # O inventário é validado na fonte do router para manter o contrato
-    # independente da forma interna de montagem do FastAPI.
-    # Inspect the assembled FastAPI app so routes registered through nested
-    # routers are included with their final /api/v1 prefix.
+    # OpenAPI resolves all nested routers and the final /api/v1 prefix.
+    # app.routes itself contains an included-router wrapper on supported
+    # FastAPI versions, so inspecting it directly misses nested route paths.
+    paths = app.openapi()["paths"]
     routes = {
-        (method, route.path)
-        for route in app.routes
-        for method in getattr(route, "methods", set())
-        if method != "HEAD"
+        (method.upper(), path)
+        for path, operations in paths.items()
+        for method in operations
+        if method.lower() in {"get", "post", "put", "patch", "delete"}
     }
     assert EXPECTED <= routes
 
