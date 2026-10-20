@@ -270,42 +270,53 @@ async def route_saved_file(payload: RouteSaveRequest, user: dict = Depends(curre
         {"_id": 0},
     ).to_list(length=100)
     by_role = {_node_role(node.get("device_name", "")): node for node in nodes if _node_role(node.get("device_name", ""))}
-    selected = None
-    selected_role = None
-    for role in ("server_i", "server_ii"):
-        candidate = by_role.get(role)
-        if candidate and _node_can_store(candidate, size, now):
-            selected, selected_role = candidate, role
-            break
-    if selected is None:
+    eligible = [
+        (role, by_role[role])
+        for role in ("server_i", "server_ii")
+        if role in by_role and _node_can_store(by_role[role], size, now)
+    ]
+    if not eligible:
         return {
             "status": "fallback_required",
             "destination": None,
-            "reason": "Nenhum servidor configurado está online, conectado e com espaço suficiente.",
+            "destinations": [],
+            "jobs": [],
+            "reason": "Nenhum servidor configurado está online, conectado, autorizado a gravar e com espaço suficiente.",
             "size_bytes": size,
         }
 
-    job_id = str(uuid4())
-    await database["storage_node_jobs"].insert_one({
-        "id": job_id,
-        "user_id": user["id"],
-        "node_id": selected["id"],
-        "name": payload.name.strip(),
-        "mime_type": payload.mime_type,
-        "content": payload.content,
-        "size_bytes": size,
-        "status": "pending",
-        "created_at": now,
-        "claimed_at": None,
-        "completed_at": None,
-        "error": None,
-        "stored_path": None,
-    })
+    jobs = []
+    for role, node in eligible:
+        job_id = str(uuid4())
+        await database["storage_node_jobs"].insert_one({
+            "id": job_id,
+            "user_id": user["id"],
+            "node_id": node["id"],
+            "destination": role,
+            "name": payload.name.strip(),
+            "mime_type": payload.mime_type,
+            "content": payload.content,
+            "size_bytes": size,
+            "status": "pending",
+            "created_at": now,
+            "claimed_at": None,
+            "completed_at": None,
+            "error": None,
+            "stored_path": None,
+        })
+        jobs.append({
+            "job_id": job_id,
+            "destination": role,
+            "device_name": node.get("device_name"),
+        })
+    # Backwards-compatible top-level fields refer to the first destination.
     return {
         "status": "queued",
-        "destination": selected_role,
-        "device_name": selected.get("device_name"),
-        "job_id": job_id,
+        "destination": eligible[0][0],
+        "destinations": [role for role, _ in eligible],
+        "device_name": eligible[0][1].get("device_name"),
+        "job_id": jobs[0]["job_id"],
+        "jobs": jobs,
         "size_bytes": size,
     }
 
