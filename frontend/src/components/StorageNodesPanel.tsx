@@ -1,4 +1,5 @@
 import {useCallback, useEffect, useState} from 'react';
+import {createPortal} from 'react-dom';
 import {api, type StorageNode} from '../services/api';
 
 function formatDate(value:string|null){
@@ -24,6 +25,7 @@ export function StorageNodesPanel(){
   const[expiresAt,setExpiresAt]=useState('');
   const[remainingSeconds,setRemainingSeconds]=useState(0);
   const[openMenu,setOpenMenu]=useState<string|null>(null);
+  const[menuPosition,setMenuPosition]=useState<{top:number;left:number}|null>(null);
 
   const refresh=useCallback(async()=>{
     setError('');
@@ -69,7 +71,7 @@ export function StorageNodesPanel(){
 
   async function revoke(node:StorageNode){
     const label=serverLabel(node);
-    setOpenMenu(null);
+    setOpenMenu(null);setMenuPosition(null);
     if(!window.confirm(`Revogar o acesso de “${label}”? O dispositivo perderá acesso à API até ser pareado novamente.`))return;
     setBusy(true);setError('');setNotice('');
     try{
@@ -84,7 +86,7 @@ export function StorageNodesPanel(){
   async function toggleSaving(node:StorageNode){
     const label=serverLabel(node);
     const enabled=node.saving_enabled===false;
-    setOpenMenu(null);setBusy(true);setError('');setNotice('');
+    setOpenMenu(null);setMenuPosition(null);setBusy(true);setError('');setNotice('');
     try{
       await api.setStorageNodeSaving(node.id,enabled);
       setNodes(current=>current.map(item=>item.id===node.id?{...item,saving_enabled:enabled}:item));
@@ -129,11 +131,11 @@ export function StorageNodesPanel(){
             <div className="storage-node-glyph" aria-hidden="true"><span>▤</span><i/></div>
             <div className="storage-node-details"><div className="storage-node-title"><strong>{label}</strong><span className={`storage-node-status status-${node.status}`}><i/>{online?'Online':revoked?'Acesso revogado':'Offline'}</span>{!revoked&&<span className={`storage-node-status ${savingEnabled?'status-saving-on':'status-saving-paused'}`}><i/>{savingEnabled?'Gravações ativas':'Gravações pausadas'}</span>}</div><p>Último sinal <span>{formatDate(node.last_seen_at)}</span></p><p>Adicionado <span>{formatDate(node.created_at)}</span></p></div>
             <div className="storage-node-actions">{!revoked&&<div className="storage-node-menu-wrap">
-              <button type="button" className="storage-node-revoke" aria-haspopup="menu" aria-expanded={openMenu===node.id} onClick={()=>setOpenMenu(openMenu===node.id?null:node.id)} disabled={busy}>Ações <span aria-hidden="true">⌄</span></button>
-              {openMenu===node.id&&<><button type="button" className="storage-node-menu-backdrop" aria-label="Fechar menu" onClick={()=>setOpenMenu(null)}/><div className="storage-node-menu" role="menu" aria-label={`Ações para ${label}`}>
+              <button type="button" className="storage-node-revoke" aria-haspopup="menu" aria-expanded={openMenu===node.id} onClick={event=>{if(openMenu===node.id){setOpenMenu(null);setMenuPosition(null);return}const rect=event.currentTarget.getBoundingClientRect();const menuWidth=Math.min(280,window.innerWidth-24);setMenuPosition({top:Math.min(rect.bottom+7,window.innerHeight-150),left:Math.max(12,Math.min(rect.right-menuWidth,window.innerWidth-menuWidth-12))});setOpenMenu(node.id)}} disabled={busy}>Ações <span aria-hidden="true">⌄</span></button>
+              {openMenu===node.id&&menuPosition&&createPortal(<><button type="button" className="storage-node-menu-backdrop" aria-label="Fechar menu" onClick={()=>{setOpenMenu(null);setMenuPosition(null)}}/><div className="storage-node-menu" role="menu" aria-label={`Ações para ${label}`} style={{position:'fixed',top:menuPosition.top,left:menuPosition.left,right:'auto'}}>
                 <button type="button" role="menuitem" onClick={()=>void toggleSaving(node)}><span className="storage-node-menu-icon">{savingEnabled?'Ⅱ':'▶'}</span><span><strong>{savingEnabled?'Pausar gravações':'Retomar gravações'}</strong><small>{savingEnabled?'Bloquear novos salvamentos neste servidor':'Permitir novos salvamentos neste servidor'}</small></span></button>
                 <button type="button" role="menuitem" className="is-danger" onClick={()=>void revoke(node)}><span className="storage-node-menu-icon">⊘</span><span><strong>Revogar acesso</strong><small>Invalidar a credencial do nó</small></span></button>
-              </div></>}
+              </div></>,document.body)}
             </div>}</div>
           </article>;
         })}
