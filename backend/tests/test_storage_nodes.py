@@ -108,3 +108,14 @@ async def test_revoked_node_cannot_send_heartbeat(monkeypatch):
 
     with pytest.raises(Exception):
         await storage_nodes.node_heartbeat("node-1", f"Bearer {token}")
+
+
+def test_node_status_handles_naive_mongodb_timestamps_and_revocation():
+    from datetime import timedelta
+
+    now = datetime.now(timezone.utc)
+    assert storage_nodes._node_status({"last_seen_at": now}, now) == "online"
+    assert storage_nodes._node_status({"last_seen_at": now.replace(tzinfo=None)}, now) == "online"
+    assert storage_nodes._node_status({"last_seen_at": now - timedelta(minutes=5)}, now) == "offline"
+    assert storage_nodes._node_status({"last_seen_at": now, "revoked_at": now}, now) == "revoked"
+    assert storage_nodes._node_status({"last_seen_at": None}, now) == "offline"
