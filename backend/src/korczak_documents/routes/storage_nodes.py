@@ -153,6 +153,12 @@ async def list_nodes(user: dict = Depends(current_user)) -> dict:
     nodes = await cursor.to_list(length=100)
     now = _now()
     for node in nodes:
+        # Serialize MongoDB's naive UTC datetimes as explicitly UTC timestamps
+        # so browsers do not reinterpret them as local wall-clock times.
+        for field in ("created_at", "last_seen_at", "revoked_at"):
+            value = node.get(field)
+            if isinstance(value, datetime) and value.tzinfo is None:
+                node[field] = value.replace(tzinfo=timezone.utc)
         node["status"] = _node_status(node, now)
     return {"nodes": nodes}
 
