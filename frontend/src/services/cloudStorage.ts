@@ -69,7 +69,7 @@ export async function createCloudBackup(name:string,content:string):Promise<Clou
   const session=getCloudSession("google-drive");
   if(!session)throw new Error("Nenhuma sessão do Google Drive está conectada.");
   const folder=await ensureRootFolder();
-  const safeName=(name.trim().replace(/[\\/\\x00-\\x1f]/g,"_").slice(0,220)||"documento")+(name.toLowerCase().endsWith(".nsx")?"":".nsx");
+  const safeName=(name.trim().replace(/[\/\\\x00-\x1f]/g,"_").slice(0,220)||"documento")+(name.toLowerCase().endsWith(".nsx")?"":".nsx");
   const boundary="nexus_"+b64url(crypto.getRandomValues(new Uint8Array(18)));
   const metadata={name:safeName,mimeType:"application/x-korczak-nexus",parents:[folder.id]};
   const body="--"+boundary+"\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n"+JSON.stringify(metadata)+"\r\n--"+boundary+"\r\nContent-Type: application/x-korczak-nexus\r\n\r\n"+content+"\r\n--"+boundary+"--";
