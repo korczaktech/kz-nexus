@@ -152,14 +152,19 @@ export async function chooseLocalFolder(): Promise<StorageSelection | null> {
 
   // Substitui o conjunto anterior pela pasta recém-selecionada, mantendo o conteúdo no próprio navegador.
   await withLocalStore<void>('readwrite', (store, resolve, reject) => {
-    const clear = store.clear();
-    clear.onerror = () => reject(clear.error);
-    clear.onsuccess = () => {
-      for (const record of records) {
-        const request = store.put(record);
-        request.onerror = () => reject(request.error);
-      }
-      resolve();
+    const existing = store.getAll();
+    existing.onerror = () => reject(existing.error);
+    existing.onsuccess = () => {
+      const backups = (existing.result as StoredLocalFile[]).filter(record => record.id.startsWith('backup:'));
+      const clear = store.clear();
+      clear.onerror = () => reject(clear.error);
+      clear.onsuccess = () => {
+        for (const record of [...backups, ...records]) {
+          const request = store.put(record);
+          request.onerror = () => reject(request.error);
+        }
+        resolve();
+      };
     };
   });
 
