@@ -3187,3 +3187,28 @@ html:has(.app-shell.editor-mode),body:has(.app-shell.editor-mode),#root:has(.app
 @media(max-width:760px){.storage-nodes-hero{padding:23px;min-height:170px}.storage-nodes-hero-mark{right:35px;bottom:12px;opacity:.48}.storage-nodes-hero-copy{max-width:calc(100% - 25px)}.storage-nodes-hero p{max-width:440px}.storage-nodes-pair-section{grid-template-columns:minmax(0,1fr) 125px;padding:18px}.storage-nodes-pair-visual{min-height:120px}.storage-pair-orbit{width:110px;height:110px}.storage-pair-orbit.orbit-b{width:78px;height:78px}}
 @media(max-width:540px){.storage-nodes-panel{gap:14px}.storage-nodes-hero{padding:20px;min-height:0}.storage-nodes-hero h2{font-size:28px}.storage-nodes-hero p{font-size:11px}.storage-nodes-hero-mark{display:none}.storage-nodes-summary{gap:9px}.storage-nodes-metric{grid-template-columns:32px minmax(0,1fr);column-gap:8px;padding:13px 10px}.storage-nodes-metric-icon{width:31px;height:31px;border-radius:9px;font-size:17px}.storage-nodes-metric div{display:grid;gap:3px}.storage-nodes-metric div small{font-size:9px}.storage-nodes-metric div strong{font-size:21px}.storage-nodes-metric-note{font-size:8px}.storage-nodes-section-heading{align-items:flex-start}.storage-nodes-live{font-size:9px}.storage-nodes-panel .storage-node-item{grid-template-columns:35px minmax(0,1fr);gap:10px;padding:12px}.storage-node-glyph{width:35px;height:35px;border-radius:10px;font-size:18px}.storage-node-title{gap:7px}.storage-nodes-panel .storage-node-details strong{font-size:12px}.storage-node-details p{font-size:9px}.storage-nodes-panel .storage-node-actions{grid-column:2;justify-content:flex-start}.storage-nodes-panel .storage-node-revoke{padding:7px 9px}.storage-nodes-pair-section{grid-template-columns:minmax(0,1fr);gap:6px;padding:18px}.storage-nodes-pair-copy p{margin-bottom:13px}.storage-nodes-pair-visual{display:none}.storage-nodes-panel .storage-pairing-code{align-items:flex-start;flex-direction:column}.storage-nodes-panel .storage-pairing-code code{font-size:14px}.storage-nodes-panel .storage-pairing-code button{width:100%}.storage-nodes-panel .storage-nodes-refresh{padding:8px 9px;font-size:10px}}
 @media(prefers-reduced-motion:reduce){.storage-nodes-loader{animation:none}.storage-nodes-panel .storage-node-item{transition:none}}
+
+/* Server action menu and native Nexus confirmation dialog */
+.storage-node-menu-wrap{position:relative;display:inline-flex}
+.storage-nodes-panel .storage-node-actions .storage-node-revoke{display:inline-flex;align-items:center;gap:8px;white-space:nowrap}
+.storage-node-menu-wrap>button span{font-size:14px;opacity:.8}
+.storage-nodes-panel .storage-node-menu-backdrop{position:fixed;z-index:39;inset:0;width:100vw;height:100vh;padding:0;border:0;background:transparent;cursor:default}
+.storage-nodes-panel .storage-node-menu{position:absolute;z-index:40;right:0;top:calc(100% + 7px);width:230px;max-width:calc(100vw - 36px);display:grid;gap:4px;padding:6px;border:1px solid var(--line2);border-radius:12px;background:var(--surface);box-shadow:0 16px 45px rgba(0,0,0,.28);animation:storage-menu-in .12s ease-out}
+.storage-nodes-panel .storage-node-menu>button{display:flex;align-items:center;gap:10px;width:100%;padding:10px;border:1px solid transparent;border-radius:8px;background:transparent;color:var(--text);text-align:left;cursor:pointer}
+.storage-nodes-panel .storage-node-menu>button:hover,.storage-nodes-panel .storage-node-menu>button:focus-visible{outline:none;border-color:var(--line);background:var(--surface2)}
+.storage-node-menu-icon{display:grid;place-items:center;flex:none;width:31px;height:31px;border:1px solid var(--line);border-radius:9px;background:var(--surface2);font-size:17px}
+.storage-nodes-panel .storage-node-menu>button>span:last-child{display:grid;gap:3px;min-width:0}
+.storage-nodes-panel .storage-node-menu strong{font-size:11px;font-weight:700}
+.storage-nodes-panel .storage-node-menu small{color:var(--muted);font-size:9px;line-height:1.45}
+.storage-nodes-panel .storage-node-menu>button.is-danger{color:#df7b8b}
+.storage-nodes-panel .storage-node-menu>button.is-danger .storage-node-menu-icon{border-color:rgba(221,104,125,.22);background:rgba(171,58,78,.08)}
+.storage-nodes-dialog-backdrop{position:fixed;z-index:1000;inset:0;display:grid;place-items:center;padding:20px;background:rgba(3,8,18,.66);backdrop-filter:blur(5px);animation:storage-menu-in .14s ease-out}
+.storage-nodes-panel .storage-nodes-dialog{width:min(440px,100%);padding:23px;border:1px solid var(--line2);border-radius:16px;background:var(--surface);box-shadow:0 24px 80px rgba(0,0,0,.4);color:var(--text)}
+.storage-nodes-dialog-icon{display:grid;place-items:center;width:42px;height:42px;border:1px solid rgba(221,104,125,.23);border-radius:12px;background:rgba(171,58,78,.09);color:#df8b9a;font-size:22px}
+.storage-nodes-panel .storage-nodes-dialog h3{margin:15px 0 8px;color:var(--text);font-size:18px;font-weight:750;letter-spacing:-.3px}
+.storage-nodes-panel .storage-nodes-dialog p{margin:0;color:var(--muted);font-size:11px;line-height:1.75}
+.storage-nodes-dialog-actions{display:flex;justify-content:flex-end;flex-wrap:wrap;gap:8px;margin-top:20px}
+.storage-nodes-panel .storage-nodes-dialog-actions button{padding:9px 13px;border:1px solid var(--line2);border-radius:8px;background:var(--surface2);color:var(--text);font-size:11px;font-weight:650}
+.storage-nodes-panel .storage-nodes-dialog-actions button.is-primary{border-color:#6579ff;background:#5367eb;color:white}
+@keyframes storage-menu-in{from{opacity:0;transform:translateY(-3px)}to{opacity:1;transform:translateY(0)}}
+@media(prefers-reduced-motion:reduce){.storage-nodes-panel .storage-node-menu,.storage-nodes-dialog-backdrop{animation:none}}
