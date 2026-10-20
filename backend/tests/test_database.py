@@ -9,8 +9,8 @@ def test_database_name_is_kzdocs() -> None:
 
 
 def test_expected_collections_are_defined() -> None:
-    # Identidades e credenciais vivem no banco Contas; KZDocs guarda
-    # somente os recursos do serviço documental.
+    # KZDocs guarda os recursos documentais e as credenciais dos nós de armazenamento;
+    # as identidades das contas continuam no banco Contas.
     assert COLLECTIONS == (
         "documentos",
         "versoes",
@@ -20,6 +20,8 @@ def test_expected_collections_are_defined() -> None:
         "eventos",
         "notificacoes",
         "grupos",
+        "storage_nodes",
+        "storage_node_pairing_codes",
     )
 
 
