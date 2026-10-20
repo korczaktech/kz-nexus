@@ -3052,3 +3052,31 @@ html:has(.app-shell.editor-mode),body:has(.app-shell.editor-mode),#root:has(.app
 .storage-node-status.status-revoked{color:#f19baa}
 .storage-nodes-panel .muted{padding:3px 0;margin:0}
 @media(max-width:600px){.storage-node-item{align-items:flex-start}.storage-nodes-heading{align-items:flex-start}.storage-pairing-code{grid-template-columns:minmax(0,1fr)}.storage-pairing-code button{justify-self:start}}
+
+
+/* Storage status card */
+.settings-storage-nodes{display:block!important;min-width:0}
+.storage-status-card{display:grid;gap:13px;min-width:0;width:100%}
+.storage-status-card-heading{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}
+.storage-status-card-heading strong{font-size:13px;color:var(--text)}
+.storage-status-card-heading p,.storage-status-footnote{font-size:10px;line-height:1.55;color:var(--muted);margin:5px 0 0}
+.storage-status-card button{border:1px solid var(--line2);background:var(--surface2);color:var(--text);border-radius:7px;padding:7px 10px;font-size:10px;white-space:nowrap}
+.storage-status-card button:disabled{opacity:.55;cursor:not-allowed}
+.storage-status-list{display:grid;gap:0;border:1px solid var(--line);border-radius:10px;overflow:hidden;background:var(--surface)}
+.storage-status-row{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:13px 12px;min-width:0}
+.storage-status-row+.storage-status-row{border-top:1px solid var(--line)}
+.storage-status-provider{display:flex;align-items:center;gap:10px;min-width:0}
+.storage-status-provider>span:last-child{display:grid;gap:3px;min-width:0}
+.storage-status-provider strong{font-size:11px;color:var(--text);overflow-wrap:anywhere}
+.storage-status-provider small{font-size:10px;line-height:1.45;color:var(--muted);overflow-wrap:anywhere}
+.storage-status-icon{display:grid;place-items:center;width:31px;height:31px;flex:none;border-radius:9px;background:var(--surface2);color:var(--text);font-size:14px;font-weight:700}
+.storage-status-icon.google{color:#4285f4}
+.storage-status-icon.microsoft{color:#1684d6}
+.storage-status-icon.vault{color:var(--text)}
+.storage-status-icon.device{color:#6ed6a6}
+.storage-status-pill{display:inline-flex;align-items:center;justify-content:center;flex:none;min-width:62px;padding:5px 8px;border-radius:999px;font-size:9px;font-weight:650;white-space:nowrap;background:var(--surface2);color:var(--muted)}
+.storage-status-pill:before{content:"";width:5px;height:5px;border-radius:50%;margin-right:5px;background:currentColor}
+.storage-status-pill.is-online{background:rgba(49,180,123,.12);color:#239b69}
+.storage-status-pill.is-offline{background:rgba(128,139,153,.12);color:var(--muted)}
+.storage-status-footnote{margin-top:0}
+@media(max-width:600px){.storage-status-card-heading{align-items:flex-start}.storage-status-row{padding:11px 9px;gap:8px}.storage-status-provider{gap:8px}.storage-status-icon{width:28px;height:28px}.storage-status-pill{min-width:58px;padding:5px 6px}}
