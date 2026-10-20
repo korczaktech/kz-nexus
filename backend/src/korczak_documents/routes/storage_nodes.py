@@ -172,3 +172,188 @@ async def revoke_node(node_id: str, user: dict = Depends(current_user)) -> None:
     )
     if not result.matched_count:
         raise AppError("Dispositivo não encontrado.", "node_not_found", 404)
+
+
+# Capacity and durable file-routing queue. Node liveness is based on heartbeats;
+# capacity is reported by the agent and is never inferred from a stale heartbeat.
+class NodeHeartbeatMetrics(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    free_bytes: int = Field(default=0, ge=0)
+    total_bytes: int = Field(default=0, ge=0)
+    internet_connected: bool = False
+
+
+class RouteSaveRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    name: str = Field(min_length=1, max_length=240)
+    content: str = Field(max_length=20_000_000)
+    mime_type: str = Field(default="text/html", max_length=120)
+
+
+class JobCompletionRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    status: str = Field(pattern="^(completed|failed)$")
+    error: str | None = Field(default=None, max_length=500)
+    stored_path: str | None = Field(default=None, max_length=1000)
+
+
+def _node_role(name: str) -> str | None:
+    normalized = " ".join(name.strip().lower().replace("-", " ").split())
+    if normalized in {"servidor i", "server i", "servidor 1", "server 1"}:
+        return "server_i"
+    if normalized in {"servidor ii", "server ii", "servidor 2", "server 2"}:
+        return "server_ii"
+    return None
+
+
+def _node_can_store(node: dict, size: int, now: datetime) -> bool:
+    if _node_status(node, now) != "online" or node.get("internet_connected") is not True:
+        return False
+    free_bytes = node.get("free_bytes")
+    if not isinstance(free_bytes, int) or free_bytes < size:
+        return False
+    return True
+
+
+@router.post("/{node_id}/heartbeat")
+async def node_heartbeat(
+    node_id: str,
+    payload: NodeHeartbeatMetrics = Body(default=NodeHeartbeatMetrics()),
+    authorization: str | None = Header(default=None),
+) -> dict:
+    """Record liveness and measured capacity using the node credential."""
+    token = ""
+    if authorization and authorization.lower().startswith("bearer "):
+        token = authorization[7:].strip()
+    if not token.startswith(NODE_TOKEN_PREFIX):
+        raise AppError("Credencial de nó obrigatória.", "node_authentication_required", 401)
+
+    now = _now()
+    result = await get_database()["storage_nodes"].update_one(
+        {
+            "id": node_id,
+            "token_hash": _digest(token),
+            "revoked_at": None,
+        },
+        {"$set": {
+            "last_seen_at": now,
+            "free_bytes": payload.free_bytes,
+            "total_bytes": payload.total_bytes,
+            "internet_connected": payload.internet_connected,
+        }},
+    )
+    if not result.matched_count:
+        raise AppError("Credencial de nó inválida ou revogada.", "invalid_node_credential", 401)
+    return {"node_id": node_id, "status": "online", "last_seen_at": now.isoformat()}
+
+
+@router.post("/route-save")
+async def route_saved_file(payload: RouteSaveRequest, user: dict = Depends(current_user)) -> dict:
+    """Queue a saved file on Server I, then Server II; report fallback when neither qualifies."""
+    database = get_database()
+    now = _now()
+    size = len(payload.content.encode("utf-8"))
+    nodes = await database["storage_nodes"].find(
+        {"user_id": user["id"], "revoked_at": None},
+        {"_id": 0},
+    ).to_list(length=100)
+    by_role = {_node_role(node.get("device_name", "")): node for node in nodes if _node_role(node.get("device_name", ""))}
+    selected = None
+    selected_role = None
+    for role in ("server_i", "server_ii"):
+        candidate = by_role.get(role)
+        if candidate and _node_can_store(candidate, size, now):
+            selected, selected_role = candidate, role
+            break
+    if selected is None:
+        return {
+            "status": "fallback_required",
+            "destination": None,
+            "reason": "Nenhum servidor configurado está online, conectado e com espaço suficiente.",
+            "size_bytes": size,
+        }
+
+    job_id = str(uuid4())
+    await database["storage_node_jobs"].insert_one({
+        "id": job_id,
+        "user_id": user["id"],
+        "node_id": selected["id"],
+        "name": payload.name.strip(),
+        "mime_type": payload.mime_type,
+        "content": payload.content,
+        "size_bytes": size,
+        "status": "pending",
+        "created_at": now,
+        "claimed_at": None,
+        "completed_at": None,
+        "error": None,
+        "stored_path": None,
+    })
+    return {
+        "status": "queued",
+        "destination": selected_role,
+        "device_name": selected.get("device_name"),
+        "job_id": job_id,
+        "size_bytes": size,
+    }
+
+
+@router.post("/{node_id}/jobs/claim")
+async def claim_storage_job(
+    node_id: str,
+    authorization: str | None = Header(default=None),
+) -> dict:
+    """Claim one pending job for this authenticated node."""
+    token = authorization[7:].strip() if authorization and authorization.lower().startswith("bearer ") else ""
+    if not token.startswith(NODE_TOKEN_PREFIX):
+        raise AppError("Credencial de nó obrigatória.", "node_authentication_required", 401)
+    database = get_database()
+    node = await database["storage_nodes"].find_one({
+        "id": node_id, "token_hash": _digest(token), "revoked_at": None,
+    })
+    if not node:
+        raise AppError("Credencial de nó inválida ou revogada.", "invalid_node_credential", 401)
+    job = await database["storage_node_jobs"].find_one_and_update(
+        {"node_id": node_id, "status": "pending"},
+        {"$set": {"status": "processing", "claimed_at": _now()}},
+        sort=[("created_at", 1)],
+        return_document=True,
+    )
+    if not job:
+        return {"job": None}
+    return {"job": {
+        "id": job["id"], "name": job["name"], "mime_type": job["mime_type"],
+        "content": job["content"], "size_bytes": job["size_bytes"],
+    }}
+
+
+@router.post("/{node_id}/jobs/{job_id}/complete")
+async def complete_storage_job(
+    node_id: str,
+    job_id: str,
+    payload: JobCompletionRequest,
+    authorization: str | None = Header(default=None),
+) -> dict:
+    """Record a node's durable-write result; never mark a job complete on mere dispatch."""
+    token = authorization[7:].strip() if authorization and authorization.lower().startswith("bearer ") else ""
+    if not token.startswith(NODE_TOKEN_PREFIX):
+        raise AppError("Credencial de nó obrigatória.", "node_authentication_required", 401)
+    now = _now()
+    result = await get_database()["storage_nodes"].find_one({
+        "id": node_id, "token_hash": _digest(token), "revoked_at": None,
+    })
+    if not result:
+        raise AppError("Credencial de nó inválida ou revogada.", "invalid_node_credential", 401)
+    update = {
+        "status": payload.status,
+        "completed_at": now,
+        "error": payload.error if payload.status == "failed" else None,
+        "stored_path": payload.stored_path if payload.status == "completed" else None,
+    }
+    changed = await get_database()["storage_node_jobs"].update_one(
+        {"id": job_id, "node_id": node_id, "status": "processing"},
+        {"$set": update},
+    )
+    if not changed.matched_count:
+        raise AppError("Tarefa não encontrada ou já finalizada.", "storage_job_not_found", 404)
+    return {"job_id": job_id, "status": payload.status}
