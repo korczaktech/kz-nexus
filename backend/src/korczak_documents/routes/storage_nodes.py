@@ -192,8 +192,8 @@ def _node_can_store(node: dict, size: int, now: datetime) -> bool:
 @router.post("/{node_id}/heartbeat")
 async def node_heartbeat(
     node_id: str,
-    payload: NodeHeartbeatMetrics = Body(default=NodeHeartbeatMetrics()),
     authorization: str | None = Header(default=None),
+    payload: NodeHeartbeatMetrics = Body(default=NodeHeartbeatMetrics()),
 ) -> dict:
     """Record liveness and measured capacity using the node credential."""
     token = ""
