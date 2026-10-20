@@ -195,3 +195,27 @@ async def test_pausing_node_is_owner_scoped(monkeypatch):
             "node-1", storage_nodes.SetNodeSavingRequest(enabled=False), {"id": "other-user"}
         )
     assert database["storage_nodes"].documents[0]["saving_enabled"] is True
+
+def test_completed_storage_job_requires_physical_path():
+    from pydantic import ValidationError
+
+    with pytest.raises(ValidationError, match="stored_path"):
+        storage_nodes.JobCompletionRequest(status="completed")
+
+
+def test_failed_storage_job_cannot_claim_a_stored_path():
+    from pydantic import ValidationError
+
+    with pytest.raises(ValidationError, match="stored_path"):
+        storage_nodes.JobCompletionRequest(
+            status="failed", error="permission denied", stored_path="/private/file.nsx"
+        )
+
+
+def test_completed_storage_job_accepts_agent_reported_path():
+    payload = storage_nodes.JobCompletionRequest(
+        status="completed", stored_path="/data/data/com.termux/files/home/.local/share/korczak-nexus/files/job-1-file.nsx"
+    )
+    assert payload.status == "completed"
+    assert payload.stored_path.endswith("job-1-file.nsx")
+
