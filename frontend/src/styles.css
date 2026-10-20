@@ -3212,3 +3212,9 @@ html:has(.app-shell.editor-mode),body:has(.app-shell.editor-mode),#root:has(.app
 .storage-nodes-panel .storage-nodes-dialog-actions button.is-primary{border-color:#6579ff;background:#5367eb;color:white}
 @keyframes storage-menu-in{from{opacity:0;transform:translateY(-3px)}to{opacity:1;transform:translateY(0)}}
 @media(prefers-reduced-motion:reduce){.storage-nodes-panel .storage-node-menu,.storage-nodes-dialog-backdrop{animation:none}}
+
+
+/* Per-server file-saving permission state */
+.storage-nodes-panel .storage-node-title{flex-wrap:wrap}
+.storage-nodes-panel .status-saving-on{border-color:rgba(58,174,126,.24);background:rgba(58,174,126,.08);color:#52bd91}
+.storage-nodes-panel .status-saving-paused{border-color:rgba(221,164,74,.28);background:rgba(221,164,74,.09);color:#d7a64d}
