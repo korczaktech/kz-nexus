@@ -7,6 +7,8 @@ COLLECTIONS = (
     "eventos",
     "notificacoes",
     "grupos",
+    "storage_nodes",
+    "storage_node_pairing_codes",
 )
 
 
