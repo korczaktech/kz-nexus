@@ -3218,3 +3218,7 @@ html:has(.app-shell.editor-mode),body:has(.app-shell.editor-mode),#root:has(.app
 .storage-nodes-panel .storage-node-title{flex-wrap:wrap}
 .storage-nodes-panel .status-saving-on{border-color:rgba(58,174,126,.24);background:rgba(58,174,126,.08);color:#52bd91}
 .storage-nodes-panel .status-saving-paused{border-color:rgba(221,164,74,.28);background:rgba(221,164,74,.09);color:#d7a64d}
+
+/* Keep the server actions popover above page cards and outside their stacking contexts. */
+.storage-nodes-panel .storage-node-menu-backdrop{z-index:9998}
+.storage-nodes-panel .storage-node-menu{z-index:9999;max-height:calc(100dvh - 24px);overflow-y:auto;overscroll-behavior:contain}
