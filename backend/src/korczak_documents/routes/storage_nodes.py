@@ -173,9 +173,9 @@ class JobCompletionRequest(BaseModel):
 
 def _node_role(name: str) -> str | None:
     normalized = " ".join(name.strip().lower().replace("-", " ").split())
-    if normalized in {"servidor i", "server i", "servidor 1", "server 1"}:
+    if normalized in {"servidor i", "server i", "servidor 1", "server 1", "note20", "samsung note20 ultra"}:
         return "server_i"
-    if normalized in {"servidor ii", "server ii", "servidor 2", "server 2"}:
+    if normalized in {"servidor ii", "server ii", "servidor 2", "server 2", "galaxy j8", "samsung galaxy j8"}:
         return "server_ii"
     return None
 
