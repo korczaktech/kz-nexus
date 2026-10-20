@@ -4,7 +4,7 @@ import secrets
 from uuid import uuid4
 
 from fastapi import APIRouter, Body, Depends, Header
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 from ..database.connection import get_database
 from ..dependencies import current_user
@@ -203,7 +203,15 @@ class JobCompletionRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
     status: str = Field(pattern="^(completed|failed)$")
     error: str | None = Field(default=None, max_length=500)
-    stored_path: str | None = Field(default=None, max_length=1000)
+    stored_path: str | None = Field(default=None, min_length=1, max_length=1000)
+
+    @model_validator(mode="after")
+    def require_path_for_completed_write(self):
+        if self.status == "completed" and not self.stored_path:
+            raise ValueError("stored_path é obrigatório para confirmar uma gravação concluída")
+        if self.status == "failed" and self.stored_path is not None:
+            raise ValueError("stored_path não deve ser informado quando a gravação falha")
+        return self
 
 
 def _node_role(name: str) -> str | None:
