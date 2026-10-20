@@ -89,5 +89,7 @@ Se o pareamento falhar, gere um código novo. Não copie a resposta JSON bruta p
 
 - O backend fornece pareamento temporário, heartbeat, listagem e revogação.
 - O agente ainda não lê comandos remotos, não transfere arquivos e não garante inicialização automática após reinício do Android.
-- Para operação contínua, configure um serviço de inicialização do Termux/Termux:Boot e exclua o Termux das otimizações de bateria do Android. Isso precisa ser validado no dispositivo real.
-- O nó aparece como online quando recebe heartbeat; a API ainda não calcula uma janela de expiração para exibir offline automaticamente.
+- Para instalar o projeto no telefone, clone o repositório em `$HOME/kz-nexus` e execute `cd "$HOME/kz-nexus/storage-node" && npm test`.
+- Para iniciar automaticamente após reiniciar, instale o aplicativo Termux:Boot, crie `$HOME/.termux/boot` e copie `storage-node/termux/boot/korczak-nexus-node` para esse diretório; aplique `chmod 700 "$HOME/.termux/boot/korczak-nexus-node"`. O script registra logs em `$HOME/.local/state/korczak-nexus/agent.log`, sem gravar o token nos logs.
+- Exclua o Termux das otimizações de bateria do Android. Não habilite um wake lock permanente sem avaliar o consumo. O comportamento após reinício, bloqueio de tela e Doze precisa ser validado no dispositivo real.
+- O nó aparece como online quando recebe heartbeat e muda para offline se não houver heartbeat nos últimos 180 segundos. A revogação aparece como estado `revoked`.
