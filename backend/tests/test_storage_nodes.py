@@ -133,6 +133,8 @@ def test_node_status_handles_naive_mongodb_timestamps_and_revocation():
 def test_storage_node_roles_match_server_order_without_repairing_credentials():
     assert storage_nodes._node_role("Servidor I") == "server_i"
     assert storage_nodes._node_role("Samsung Note20 Ultra") == "server_i"
+    assert storage_nodes._node_role("Note20 Ultra") == "server_i"
+    assert storage_nodes._node_role("Note 20 Ultra") == "server_i"
     assert storage_nodes._node_role("Servidor II") == "server_ii"
     assert storage_nodes._node_role("Samsung Galaxy J8") == "server_ii"
     assert storage_nodes._node_role("Unknown device") is None
