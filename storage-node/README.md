@@ -57,6 +57,38 @@ npm start
 
 O agente envia um heartbeat imediatamente e depois a cada 60 segundos. Falhas transitórias usam backoff exponencial limitado. Uma resposta 401/403 encerra o agente, pois indica credencial inválida ou revogada. O encerramento por SIGINT/SIGTERM é suportado.
 
+
+## Atualização automática do agente Android
+
+O supervisor `storage-node/termux/supervise-node.sh` verifica a branch `main` na inicialização e, enquanto estiver ativo, a cada 30 minutos. Quando encontra uma atualização, aplica apenas um avanço fast-forward, executa `npm test` e só mantém a nova versão se os testes passarem. Se os testes falharem, restaura o commit anterior. A configuração privada em `~/.config/korczak-nexus/node.json` e os arquivos gravados em `~/.local/share/korczak-nexus/files/` ficam fora do repositório e não são substituídos pela atualização.
+
+Se o GitHub estiver indisponível, houver alterações locais no clone ou os testes falharem, o supervisor mantém a versão instalada e registra o resultado em `~/.local/state/korczak-nexus/agent.log`. Atualizações aprovadas reiniciam o agente para carregar o código novo. O supervisor também tenta iniciar novamente o agente se o processo terminar.
+
+### Ativar ou atualizar o lançador do Termux:Boot
+
+Depois de atualizar o clone do repositório, instale o lançador atualizado (este passo é necessário uma vez em cada celular; o lançador copiado para `~/.termux/boot` não é atualizado automaticamente pelo Git):
+
+```sh
+mkdir -p "$HOME/.termux/boot"
+cp "$HOME/kz-nexus/storage-node/termux/boot/korczak-nexus-node" "$HOME/.termux/boot/korczak-nexus-node"
+chmod 700 "$HOME/.termux/boot/korczak-nexus-node"
+chmod 700 "$HOME/kz-nexus/storage-node/termux/update-node.sh" "$HOME/kz-nexus/storage-node/termux/supervise-node.sh"
+```
+
+Instale o aplicativo Termux:Boot, abra-o pelo menos uma vez e exclua o Termux das otimizações de bateria do Android. Para iniciar o supervisor imediatamente sem reiniciar, execute:
+
+```sh
+sh "$HOME/.termux/boot/korczak-nexus-node"
+```
+
+Confira os registros com:
+
+```sh
+tail -n 100 "$HOME/.local/state/korczak-nexus/agent.log"
+```
+
+A atualização automática depende de internet, Git e Node.js/npm funcionais. Ela atualiza o código do agente de armazenamento; não atualiza automaticamente o aplicativo Android/Termux, não implanta o backend hospedado e não substitui testes reais de gravação/restauração nos dispositivos.
+
 ## Parear o Note20 sem exibir a credencial permanente
 
 1. No site do Nexus, entre na sua conta, abra **Configurações → Nós de armazenamento** e clique em **Gerar código de pareamento**. O código é válido por cinco minutos e só pode ser usado uma vez.
