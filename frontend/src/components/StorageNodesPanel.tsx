@@ -9,8 +9,8 @@ function formatDate(value:string|null){
 
 function serverLabel(node:StorageNode){
   const name=node.device_name.trim().toLowerCase().replace(/[-_]+/g,' ').replace(/\s+/g,' ');
-  if(name==='servidor i'||name==='server i'||name==='servidor 1'||name==='server 1'||name==='note20'||name==='samsung note20 ultra')return 'Servidor I';
-  if(name==='servidor ii'||name==='server ii'||name==='servidor 2'||name==='server 2'||name==='galaxy j8'||name==='samsung galaxy j8')return 'Servidor II';
+  if(name==='servidor i'||name==='server i'||name==='servidor 1'||name==='server 1'||name.includes('note20'))return 'Servidor I';
+  if(name==='servidor ii'||name==='server ii'||name==='servidor 2'||name==='server 2'||name.includes('galaxy j8'))return 'Servidor II';
   return node.device_name;
 }
 
