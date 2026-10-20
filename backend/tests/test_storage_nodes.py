@@ -119,3 +119,28 @@ def test_node_status_handles_naive_mongodb_timestamps_and_revocation():
     assert storage_nodes._node_status({"last_seen_at": now - timedelta(minutes=5)}, now) == "offline"
     assert storage_nodes._node_status({"last_seen_at": now, "revoked_at": now}, now) == "revoked"
     assert storage_nodes._node_status({"last_seen_at": None}, now) == "offline"
+
+
+def test_storage_node_roles_match_server_order_without_repairing_credentials():
+    assert storage_nodes._node_role("Servidor I") == "server_i"
+    assert storage_nodes._node_role("Samsung Note20 Ultra") == "server_i"
+    assert storage_nodes._node_role("Servidor II") == "server_ii"
+    assert storage_nodes._node_role("Samsung Galaxy J8") == "server_ii"
+    assert storage_nodes._node_role("Unknown device") is None
+
+
+def test_storage_node_selection_requires_fresh_heartbeat_internet_and_capacity():
+    from datetime import timedelta
+
+    now = datetime.now(timezone.utc)
+    base = {
+        "last_seen_at": now,
+        "revoked_at": None,
+        "internet_connected": True,
+        "free_bytes": 1024,
+    }
+    assert storage_nodes._node_can_store(base, 1024, now)
+    assert not storage_nodes._node_can_store(base, 1025, now)
+    assert not storage_nodes._node_can_store({**base, "internet_connected": False}, 1, now)
+    assert not storage_nodes._node_can_store({**base, "last_seen_at": now - timedelta(minutes=4)}, 1, now)
+    assert not storage_nodes._node_can_store({**base, "revoked_at": now}, 1, now)
