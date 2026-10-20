@@ -34,13 +34,24 @@ export function StorageStatusCard({guest, selection}: Props) {
 
   useEffect(() => { void refresh(); }, [refresh]);
 
-  const deviceOnline = nodes.some(node => node.status === 'online');
+  const localConfigured = selection?.provider === 'local';
+  const vaultNodes = nodes.filter(node => node.status !== 'revoked');
+  const vaultOnline = vaultNodes.some(node => node.status === 'online');
+  const vaultSubtitle = guest
+    ? 'Entre na conta para consultar os servidores'
+    : loading
+      ? 'Consultando servidores…'
+      : refreshError
+        ? 'Não foi possível consultar os servidores'
+        : vaultNodes.length
+          ? vaultNodes.map((node, index) => `Servidor ${index === 0 ? 'I' : index === 1 ? 'II' : index + 1} · ${node.device_name}`).join(' / ')
+          : 'Servidor I · Note20 Ultra não conectado';
 
   return <section className="storage-status-card" aria-labelledby="storage-status-heading">
     <div className="storage-status-card-heading">
       <div>
         <strong id="storage-status-heading">Card de Armazenamento</strong>
-        <p>Status dos provedores de armazenamento e do dispositivo vinculado.</p>
+        <p>Serviços em nuvem, armazenamento local e servidores Korczak Vault.</p>
       </div>
       <button type="button" onClick={() => void refresh()} disabled={loading || guest}>Atualizar</button>
     </div>
@@ -54,14 +65,14 @@ export function StorageStatusCard({guest, selection}: Props) {
         <StatusPill online={false} />
       </div>
       <div className="storage-status-row">
-        <span className="storage-status-provider"><span className="storage-status-icon vault">K</span><span><strong>Korczak Vault</strong><small>Servidor I · não conectado</small></span></span>
-        <StatusPill online={false} />
+        <span className="storage-status-provider"><span className="storage-status-icon vault">K</span><span><strong>Korczak Vault</strong><small>{vaultSubtitle}</small></span></span>
+        <StatusPill online={!guest && !loading && !refreshError && vaultOnline} label={guest ? 'Indisponível' : loading ? 'Verificando' : refreshError ? 'Indisponível' : undefined} />
       </div>
       <div className="storage-status-row">
-        <span className="storage-status-provider"><span className="storage-status-icon device">▣</span><span><strong>Dispositivo</strong><small>{guest ? 'Entre na conta para consultar o estado' : loading ? 'Consultando conexão…' : refreshError ? 'Não foi possível consultar o estado' : nodes.length ? nodes.filter(node => node.status === 'online').map(node => node.device_name).join(', ') : 'Nenhum dispositivo vinculado'}</small></span></span>
-        <StatusPill online={!guest && !loading && !refreshError && deviceOnline} label={guest ? 'Indisponível' : loading ? 'Verificando' : refreshError ? 'Indisponível' : undefined} />
+        <span className="storage-status-provider"><span className="storage-status-icon device">▣</span><span><strong>Dispositivo</strong><small>{guest ? 'Entre na conta para consultar o armazenamento local' : localConfigured ? (selection?.folderName ? `Local · ${selection.folderName}` : 'Armazenamento local configurado') : 'Armazenamento local não configurado'}</small></span></span>
+        <StatusPill online={!guest && localConfigured} />
       </div>
     </div>
-    <p className="storage-status-footnote">OneDrive e Korczak Vault ainda não estão conectados ao site. O estado do dispositivo é consultado no serviço Nexus.</p>
+    <p className="storage-status-footnote">Dispositivo é o armazenamento local da pessoa. Korczak Vault representa os dispositivos-servidores vinculados, como o Note20 Ultra.</p>
   </section>;
 }
