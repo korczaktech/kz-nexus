@@ -1,6 +1,6 @@
 # Korczak Nexus — agente de nó de armazenamento (Termux)
 
-Este agente mantém um heartbeat autenticado para o backend Nexus. Ele **não** abre uma porta de entrada no Android e não implementa ainda transferência de arquivos nem sincronização de conteúdo.
+Este agente mantém um heartbeat autenticado, informa a capacidade livre do dispositivo e busca tarefas de gravação no backend Nexus. Ele **não** abre uma porta de entrada no Android: as transferências usam conexões de saída iniciadas pelo próprio nó.
 
 ## Requisitos
 
