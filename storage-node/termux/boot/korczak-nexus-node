@@ -18,6 +18,16 @@ if [ -f "$PID_FILE" ]; then
   rm -f "$PID_FILE"
 fi
 
+# Also recognize an agent started manually or by another scheduler.
+if command -v pgrep >/dev/null 2>&1; then
+  RUNNING_PID="$(pgrep -f '[n]ode src/agent.js' | head -n 1 || true)"
+  if [ -n "$RUNNING_PID" ]; then
+    echo "$RUNNING_PID" > "$PID_FILE"
+    chmod 600 "$PID_FILE"
+    exit 0
+  fi
+fi
+
 if [ ! -f "$HOME/.config/korczak-nexus/node.json" ]; then
   echo "Nexus node config missing; skipping startup." >> "$LOG_FILE"
   exit 1
