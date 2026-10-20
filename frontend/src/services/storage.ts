@@ -175,3 +175,22 @@ export async function connectCloudStorage(provider: 'google-drive') {
   const {connectCloud} = await import('./cloudStorage');
   return connectCloud();
 }
+
+
+/** Persist a server-unavailable backup in this browser's IndexedDB. */
+export async function saveLocalBackup(name: string, content: string, type = 'application/x-korczak-nexus'): Promise<StoredLocalFile> {
+  const safeName = name.trim().replace(/[\\/\\x00-\\x1f]/g, '_').slice(0, 220) || 'documento.nsx';
+  const finalName = /\\.[a-z0-9]{1,10}$/i.test(safeName) ? safeName : safeName + '.nsx';
+  const file = new File([content], finalName, { type, lastModified: Date.now() });
+  const id = 'backup:' + (globalThis.crypto?.randomUUID?.() || Date.now().toString(36) + Math.random().toString(36).slice(2));
+  const record: StoredLocalFile = {
+    id, name: finalName, path: 'Korczak Nexus/' + finalName, type, size: file.size,
+    lastModified: file.lastModified, file,
+  };
+  await withLocalStore<void>('readwrite', (store, resolve, reject) => {
+    const request = store.put(record);
+    request.onsuccess = () => resolve();
+    request.onerror = () => reject(request.error || new Error('Não foi possível gravar o backup local.'));
+  });
+  return record;
+}
