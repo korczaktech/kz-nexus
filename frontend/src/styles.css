@@ -3192,16 +3192,16 @@ html:has(.app-shell.editor-mode),body:has(.app-shell.editor-mode),#root:has(.app
 .storage-node-menu-wrap{position:relative;display:inline-flex}
 .storage-nodes-panel .storage-node-actions .storage-node-revoke{display:inline-flex;align-items:center;gap:8px;white-space:nowrap}
 .storage-node-menu-wrap>button span{font-size:14px;opacity:.8}
-.storage-nodes-panel .storage-node-menu-backdrop{position:fixed;z-index:39;inset:0;width:100vw;height:100vh;padding:0;border:0;background:transparent;cursor:default}
-.storage-nodes-panel .storage-node-menu{position:absolute;z-index:40;right:0;top:calc(100% + 7px);width:230px;max-width:calc(100vw - 36px);display:grid;gap:4px;padding:6px;border:1px solid var(--line2);border-radius:12px;background:var(--surface);box-shadow:0 16px 45px rgba(0,0,0,.28);animation:storage-menu-in .12s ease-out}
-.storage-nodes-panel .storage-node-menu>button{display:flex;align-items:center;gap:10px;width:100%;padding:10px;border:1px solid transparent;border-radius:8px;background:transparent;color:var(--text);text-align:left;cursor:pointer}
-.storage-nodes-panel .storage-node-menu>button:hover,.storage-nodes-panel .storage-node-menu>button:focus-visible{outline:none;border-color:var(--line);background:var(--surface2)}
+.storage-node-menu-backdrop{position:fixed;z-index:39;inset:0;width:100vw;height:100vh;padding:0;border:0;background:transparent;cursor:default}
+.storage-node-menu{position:absolute;z-index:40;right:0;top:calc(100% + 7px);width:230px;max-width:calc(100vw - 36px);display:grid;gap:4px;padding:6px;border:1px solid var(--line2);border-radius:12px;background:var(--surface);box-shadow:0 16px 45px rgba(0,0,0,.28);animation:storage-menu-in .12s ease-out}
+.storage-node-menu>button{display:flex;align-items:center;gap:10px;width:100%;padding:10px;border:1px solid transparent;border-radius:8px;background:transparent;color:var(--text);text-align:left;cursor:pointer}
+.storage-node-menu>button:hover,.storage-node-menu>button:focus-visible{outline:none;border-color:var(--line);background:var(--surface2)}
 .storage-node-menu-icon{display:grid;place-items:center;flex:none;width:31px;height:31px;border:1px solid var(--line);border-radius:9px;background:var(--surface2);font-size:17px}
-.storage-nodes-panel .storage-node-menu>button>span:last-child{display:grid;gap:3px;min-width:0}
-.storage-nodes-panel .storage-node-menu strong{font-size:11px;font-weight:700}
-.storage-nodes-panel .storage-node-menu small{color:var(--muted);font-size:9px;line-height:1.45}
-.storage-nodes-panel .storage-node-menu>button.is-danger{color:#df7b8b}
-.storage-nodes-panel .storage-node-menu>button.is-danger .storage-node-menu-icon{border-color:rgba(221,104,125,.22);background:rgba(171,58,78,.08)}
+.storage-node-menu>button>span:last-child{display:grid;gap:3px;min-width:0}
+.storage-node-menu strong{font-size:11px;font-weight:700}
+.storage-node-menu small{color:var(--muted);font-size:9px;line-height:1.45}
+.storage-node-menu>button.is-danger{color:#df7b8b}
+.storage-node-menu>button.is-danger .storage-node-menu-icon{border-color:rgba(221,104,125,.22);background:rgba(171,58,78,.08)}
 .storage-nodes-dialog-backdrop{position:fixed;z-index:1000;inset:0;display:grid;place-items:center;padding:20px;background:rgba(3,8,18,.66);backdrop-filter:blur(5px);animation:storage-menu-in .14s ease-out}
 .storage-nodes-panel .storage-nodes-dialog{width:min(440px,100%);padding:23px;border:1px solid var(--line2);border-radius:16px;background:var(--surface);box-shadow:0 24px 80px rgba(0,0,0,.4);color:var(--text)}
 .storage-nodes-dialog-icon{display:grid;place-items:center;width:42px;height:42px;border:1px solid rgba(221,104,125,.23);border-radius:12px;background:rgba(171,58,78,.09);color:#df8b9a;font-size:22px}
@@ -3211,7 +3211,7 @@ html:has(.app-shell.editor-mode),body:has(.app-shell.editor-mode),#root:has(.app
 .storage-nodes-panel .storage-nodes-dialog-actions button{padding:9px 13px;border:1px solid var(--line2);border-radius:8px;background:var(--surface2);color:var(--text);font-size:11px;font-weight:650}
 .storage-nodes-panel .storage-nodes-dialog-actions button.is-primary{border-color:#6579ff;background:#5367eb;color:white}
 @keyframes storage-menu-in{from{opacity:0;transform:translateY(-3px)}to{opacity:1;transform:translateY(0)}}
-@media(prefers-reduced-motion:reduce){.storage-nodes-panel .storage-node-menu,.storage-nodes-dialog-backdrop{animation:none}}
+@media(prefers-reduced-motion:reduce){.storage-node-menu,.storage-nodes-dialog-backdrop{animation:none}}
 
 
 /* Per-server file-saving permission state */
@@ -3220,5 +3220,5 @@ html:has(.app-shell.editor-mode),body:has(.app-shell.editor-mode),#root:has(.app
 .storage-nodes-panel .status-saving-paused{border-color:rgba(221,164,74,.28);background:rgba(221,164,74,.09);color:#d7a64d}
 
 /* Keep the server actions popover above page cards and outside their stacking contexts. */
-.storage-nodes-panel .storage-node-menu-backdrop{z-index:9998}
-.storage-nodes-panel .storage-node-menu{z-index:9999;max-height:calc(100dvh - 24px);overflow-y:auto;overscroll-behavior:contain}
+.storage-node-menu-backdrop{z-index:9998}
+.storage-node-menu{z-index:9999;max-height:calc(100dvh - 24px);overflow-y:auto;overscroll-behavior:contain}
