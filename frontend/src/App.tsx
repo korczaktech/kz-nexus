@@ -509,39 +509,42 @@ function AppAuthenticated(){
       try{
         const route=await api.routeSavedFile({name:nativeName,content:nativePayload,mime_type:'application/x-korczak-nexus'});
         let shouldFallback=route.status==='fallback_required';
-        let failureReason=route.status==='fallback_required'?(route.reason||'Nenhum servidor elegível recebeu o arquivo.'):''; 
-        if(route.status==='queued'&&route.job_id){
+        let failureReason=route.status==='fallback_required'?(route.reason||'Nenhum servidor elegível recebeu o arquivo.'):'';
+        const jobs=route.jobs?.length?route.jobs:(route.job_id?[{job_id:route.job_id,destination:route.destination||'server_ii' as const,device_name:route.device_name}]:[]);
+        const results=await Promise.all(jobs.map(async job=>{
           let jobStatus:'pending'|'processing'|'completed'|'failed'='pending';
           let jobError='';
           const deadline=Date.now()+20000;
           while(Date.now()<deadline){
             try{
-              const status=await api.storageJobStatus(route.job_id);
+              const status=await api.storageJobStatus(job.job_id);
               jobStatus=status.status;
               jobError=status.error||'';
               if(jobStatus==='completed'||jobStatus==='failed')break;
             }catch{break}
             await new Promise(resolve=>window.setTimeout(resolve,1500));
           }
-          shouldFallback=jobStatus!=='completed';
-          if(shouldFallback)failureReason=jobStatus==='failed'?(jobError||'O servidor recusou a gravação.'):'O servidor não confirmou a gravação em 20 segundos.';
-        }else if(route.status==='queued'){
-          shouldFallback=true;
-          failureReason='A API não retornou um identificador para acompanhar a gravação.';
+          return {destination:job.destination,device_name:job.device_name,status:jobStatus,error:jobError};
+        }));
+        const failed=results.filter(result=>result.status!=='completed');
+        shouldFallback=shouldFallback||failed.length>0||jobs.length===0;
+        if(shouldFallback&&route.status!=='fallback_required'){
+          failureReason=failed.map(result=>(result.device_name||result.destination)+': '+(result.status==='failed'?(result.error||'gravação recusada'):'sem confirmação após 20 segundos')).join('; ')||'A API não retornou tarefas de gravação.';
         }
         if(shouldFallback){
+          const completed=results.filter(result=>result.status==='completed');
+          const completedLabels=completed.map(result=>result.device_name||result.destination);
           if(source){
-            storageWarning='Documento salvo no Nexus, mas o servidor físico não confirmou a gravação. A sincronização existente com o Google Drive será tentada separadamente.';
+            storageWarning='Documento salvo no Nexus. '+(completed.length?'Gravação confirmada em: '+completedLabels.join(', ')+'. ':'')+'Falha ou ausência de confirmação nos demais servidores: '+failureReason+'. A sincronização existente com o Google Drive será tentada separadamente.';
           }else{
             const cloud=await import('./services/cloudStorage');
-            let fallbackSaved=false;
             if(cloud.getCloudSession('google-drive')){
-              try{await cloud.createCloudBackup(nativeName,nativePayload);fallbackSaved=true}
-              catch{await saveLocalBackup(nativeName,nativePayload,'application/x-korczak-nexus');fallbackSaved=true}
+              try{await cloud.createCloudBackup(nativeName,nativePayload)}
+              catch{await saveLocalBackup(nativeName,nativePayload,'application/x-korczak-nexus')}
             }else{
-              await saveLocalBackup(nativeName,nativePayload,'application/x-korczak-nexus');fallbackSaved=true;
+              await saveLocalBackup(nativeName,nativePayload,'application/x-korczak-nexus');
             }
-            if(fallbackSaved)storageWarning='Documento salvo no Nexus, mas NÃO confirmado no servidor físico. Foi criada uma cópia de contingência no armazenamento local/Google Drive. Motivo: '+failureReason;
+            storageWarning='Documento salvo no Nexus. '+(completed.length?'Gravação confirmada em: '+completedLabels.join(', ')+'. ':'')+'A gravação NÃO foi confirmada em todos os servidores solicitados. Cópia de contingência local/Google Drive tentada. Motivo: '+failureReason;
           }
         }
       }catch(routeError){
