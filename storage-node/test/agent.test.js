@@ -84,7 +84,7 @@ test("claims a save job, persists its content, and confirms the durable write", 
     assert.equal(result.status, "completed");
     assert.equal(await readFile(result.stored_path, "utf8"), "{\\\"format\\\":\\\"nsx\\\"}");
     assert.equal(calls.length, 2);
-    assert.match(calls[1].url, /jobs\\/job-1\\/complete$/);
+    assert.ok(calls[1].url.endsWith("/jobs/job-1/complete"));
     assert.equal(JSON.parse(calls[1].options.body).status, "completed");
   } finally {
     await rm(storageDir, { recursive: true, force: true });
