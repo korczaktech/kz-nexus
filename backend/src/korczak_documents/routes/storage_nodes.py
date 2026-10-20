@@ -3,7 +3,7 @@ from hashlib import sha256
 import secrets
 from uuid import uuid4
 
-from fastapi import APIRouter, Depends, Header
+from fastapi import APIRouter, Body, Depends, Header
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from ..database.connection import get_database
@@ -115,32 +115,6 @@ async def pair_node(payload: PairNodeRequest) -> dict:
         "created_at": now.isoformat(),
         "warning": "Guarde o token com segurança; ele não poderá ser recuperado.",
     }
-
-
-@router.post("/{node_id}/heartbeat")
-async def node_heartbeat(
-    node_id: str,
-    authorization: str | None = Header(default=None),
-) -> dict:
-    """Record liveness using the node credential, never a user session token."""
-    token = ""
-    if authorization and authorization.lower().startswith("bearer "):
-        token = authorization[7:].strip()
-    if not token.startswith(NODE_TOKEN_PREFIX):
-        raise AppError("Credencial de nó obrigatória.", "node_authentication_required", 401)
-
-    now = _now()
-    result = await get_database()["storage_nodes"].update_one(
-        {
-            "id": node_id,
-            "token_hash": _digest(token),
-            "revoked_at": None,
-        },
-        {"$set": {"last_seen_at": now}},
-    )
-    if not result.matched_count:
-        raise AppError("Credencial de nó inválida ou revogada.", "invalid_node_credential", 401)
-    return {"node_id": node_id, "status": "online", "last_seen_at": now.isoformat()}
 
 
 @router.get("")
