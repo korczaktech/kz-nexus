@@ -1,0 +1,30 @@
+name: Storage node agent CI
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "storage-node/**"
+      - ".github/workflows/storage-node-ci.yml"
+  pull_request:
+    paths:
+      - "storage-node/**"
+      - ".github/workflows/storage-node-ci.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  node-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Run agent tests
+        working-directory: storage-node
+        run: npm test
