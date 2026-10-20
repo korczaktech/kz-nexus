@@ -32,12 +32,21 @@ class FakeCollection:
                 return type("UpdateResult", (), {"matched_count": 1})()
         return type("UpdateResult", (), {"matched_count": 0})()
 
+    async def update_many(self, query, update):
+        matched = 0
+        for document in self.documents:
+            if all(document.get(key) == value for key, value in query.items()):
+                document.update(update["$set"])
+                matched += 1
+        return type("UpdateResult", (), {"matched_count": matched})()
+
 
 class FakeDatabase:
     def __init__(self):
         self.collections = {
             "storage_node_pairing_codes": FakeCollection(),
             "storage_nodes": FakeCollection(),
+            "storage_node_jobs": FakeCollection(),
         }
 
     def __getitem__(self, name):
@@ -144,3 +153,45 @@ def test_storage_node_selection_requires_fresh_heartbeat_internet_and_capacity()
     assert not storage_nodes._node_can_store({**base, "internet_connected": False}, 1, now)
     assert not storage_nodes._node_can_store({**base, "last_seen_at": now - timedelta(minutes=4)}, 1, now)
     assert not storage_nodes._node_can_store({**base, "revoked_at": now}, 1, now)
+
+
+@pytest.mark.asyncio
+async def test_pausing_node_blocks_saves_and_cancels_unclaimed_jobs(monkeypatch):
+    database = FakeDatabase()
+    monkeypatch.setattr(storage_nodes, "get_database", lambda: database)
+    now = datetime.now(timezone.utc)
+    await database["storage_nodes"].insert_one({
+        "id": "node-1", "user_id": "user-a", "device_name": "Servidor I",
+        "revoked_at": None, "saving_enabled": True, "last_seen_at": now,
+        "internet_connected": True, "free_bytes": 4096,
+    })
+    await database["storage_node_jobs"].insert_one({
+        "id": "job-1", "node_id": "node-1", "status": "pending", "content": "secret file",
+    })
+
+    result = await storage_nodes.set_node_saving(
+        "node-1", storage_nodes.SetNodeSavingRequest(enabled=False), {"id": "user-a"}
+    )
+
+    assert result["saving_enabled"] is False
+    node = database["storage_nodes"].documents[0]
+    assert not storage_nodes._node_can_store(node, 1, now)
+    job = database["storage_node_jobs"].documents[0]
+    assert job["status"] == "failed"
+    assert job["content"] is None
+    assert "pausada" in job["error"]
+
+
+@pytest.mark.asyncio
+async def test_pausing_node_is_owner_scoped(monkeypatch):
+    database = FakeDatabase()
+    monkeypatch.setattr(storage_nodes, "get_database", lambda: database)
+    await database["storage_nodes"].insert_one({
+        "id": "node-1", "user_id": "owner-a", "revoked_at": None, "saving_enabled": True,
+    })
+
+    with pytest.raises(Exception):
+        await storage_nodes.set_node_saving(
+            "node-1", storage_nodes.SetNodeSavingRequest(enabled=False), {"id": "other-user"}
+        )
+    assert database["storage_nodes"].documents[0]["saving_enabled"] is True
