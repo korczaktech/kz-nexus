@@ -505,37 +505,50 @@ function AppAuthenticated(){
       try{const raw=localStorage.getItem('kz_nexus_drive_source_'+selected.id);if(raw)source=JSON.parse(raw) as CloudFile}catch{}
       const nativePayload=data.native_content||data.content;
       const nativeName=data.name.toLowerCase().endsWith('.nsx')?data.name:data.name+'.nsx';
+      let storageWarning='';
       try{
         const route=await api.routeSavedFile({name:nativeName,content:nativePayload,mime_type:'application/x-korczak-nexus'});
         let shouldFallback=route.status==='fallback_required';
+        let failureReason=route.status==='fallback_required'?(route.reason||'Nenhum servidor elegível recebeu o arquivo.'):''; 
         if(route.status==='queued'&&route.job_id){
           let jobStatus:'pending'|'processing'|'completed'|'failed'='pending';
+          let jobError='';
           const deadline=Date.now()+20000;
           while(Date.now()<deadline){
             try{
               const status=await api.storageJobStatus(route.job_id);
               jobStatus=status.status;
+              jobError=status.error||'';
               if(jobStatus==='completed'||jobStatus==='failed')break;
             }catch{break}
             await new Promise(resolve=>window.setTimeout(resolve,1500));
           }
           shouldFallback=jobStatus!=='completed';
+          if(shouldFallback)failureReason=jobStatus==='failed'?(jobError||'O servidor recusou a gravação.'):'O servidor não confirmou a gravação em 20 segundos.';
         }else if(route.status==='queued'){
           shouldFallback=true;
+          failureReason='A API não retornou um identificador para acompanhar a gravação.';
         }
-        if(shouldFallback&&!source){
-          const cloud=await import('./services/cloudStorage');
-          if(cloud.getCloudSession('google-drive')){
-            try{await cloud.createCloudBackup(nativeName,nativePayload)}
-            catch{await saveLocalBackup(nativeName,nativePayload,'application/x-korczak-nexus')}
+        if(shouldFallback){
+          if(source){
+            storageWarning='Documento salvo no Nexus, mas o servidor físico não confirmou a gravação. A sincronização existente com o Google Drive será tentada separadamente.';
           }else{
-            await saveLocalBackup(nativeName,nativePayload,'application/x-korczak-nexus');
+            const cloud=await import('./services/cloudStorage');
+            let fallbackSaved=false;
+            if(cloud.getCloudSession('google-drive')){
+              try{await cloud.createCloudBackup(nativeName,nativePayload);fallbackSaved=true}
+              catch{await saveLocalBackup(nativeName,nativePayload,'application/x-korczak-nexus');fallbackSaved=true}
+            }else{
+              await saveLocalBackup(nativeName,nativePayload,'application/x-korczak-nexus');fallbackSaved=true;
+            }
+            if(fallbackSaved)storageWarning='Documento salvo no Nexus, mas NÃO confirmado no servidor físico. Foi criada uma cópia de contingência no armazenamento local/Google Drive. Motivo: '+failureReason;
           }
         }
-      }catch{
-        // The canonical Nexus save already succeeded; preserve an independent local copy if routing fails.
+      }catch(routeError){
         try{await saveLocalBackup(nativeName,nativePayload,'application/x-korczak-nexus')}catch{}
+        storageWarning='Documento salvo no Nexus, mas a gravação no servidor físico falhou. Uma cópia local de contingência foi tentada. Motivo: '+(routeError instanceof Error?routeError.message:'erro desconhecido');
       }
+      if(storageWarning)setError(storageWarning);
       if(source){
         try{const {saveCloudFile}=await import('./services/cloudStorage');await saveCloudFile(source,data.content)}
         catch(syncError){
