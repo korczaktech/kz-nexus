@@ -5,7 +5,7 @@ import {SplashScreen} from './components/SplashScreen';
 import {markdownToHtml} from './components/markdown';
 import {ApiError} from './services/api';
 import {StorageStatusCard} from './components/StorageStatusCard';
-import {chooseLocalFolder, getStorageSelection, saveStorageSelection, storageLabel, connectCloudStorage, listLocalFiles, getLocalFile, deleteLocalFile, type StorageProvider} from './services/storage';
+import {chooseLocalFolder, getStorageSelection, saveStorageSelection, storageLabel, connectCloudStorage, listLocalFiles, getLocalFile, deleteLocalFile, saveLocalBackup, type StorageProvider} from './services/storage';
 
 import {listIOSFiles, getIOSFile, deleteIOSFile, shareIOSFile} from './services/iosFiles';
 import {isIOS} from './iosPwa';
@@ -502,9 +502,31 @@ function AppAuthenticated(){
       if(data.create_version&&saved.current_version_id!==selected.current_version_id)setVersions(await api.versions(selected.id));
       let source:CloudFile|null=null;
       try{const raw=localStorage.getItem('kz_nexus_drive_source_'+selected.id);if(raw)source=JSON.parse(raw) as CloudFile}catch{}
+      const nativePayload=data.native_content||data.content;
+      const nativeName=data.name.toLowerCase().endsWith('.nsx')?data.name:data.name+'.nsx';
+      let routedToNode=false;
+      try{
+        const route=await api.routeSavedFile({name:nativeName,content:nativePayload,mime_type:'application/x-korczak-nexus'});
+        routedToNode=route.status==='queued';
+        if(route.status==='fallback_required'&&!source){
+          const cloud=await import('./services/cloudStorage');
+          if(cloud.getCloudSession('google-drive')){
+            try{await cloud.createCloudBackup(nativeName,nativePayload)}
+            catch{await saveLocalBackup(nativeName,nativePayload,'application/x-korczak-nexus')}
+          }else{
+            await saveLocalBackup(nativeName,nativePayload,'application/x-korczak-nexus');
+          }
+        }
+      }catch(routeError){
+        // The canonical Nexus save already succeeded; preserve an independent local copy if routing fails.
+        try{await saveLocalBackup(nativeName,nativePayload,'application/x-korczak-nexus')}catch{}
+      }
       if(source){
         try{const {saveCloudFile}=await import('./services/cloudStorage');await saveCloudFile(source,data.content)}
-        catch(syncError){setError('Documento salvo no Nexus, mas não foi possível sincronizar com o Google Drive: '+(syncError instanceof Error?syncError.message:'erro desconhecido'))}
+        catch(syncError){
+          try{await saveLocalBackup(nativeName,nativePayload,'application/x-korczak-nexus')}catch{}
+          setError('Documento salvo no Nexus, mas a sincronização com o Google Drive falhou; uma cópia local foi tentada. '+(syncError instanceof Error?syncError.message:'erro desconhecido'))
+        }
       }
       return 'saved' as const;
     }catch(error){
