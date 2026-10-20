@@ -205,6 +205,18 @@ class JobCompletionRequest(BaseModel):
     error: str | None = Field(default=None, max_length=500)
     stored_path: str | None = Field(default=None, min_length=1, max_length=1000)
 
+    @field_validator("stored_path")
+    @classmethod
+    def normalize_stored_path(cls, value: str | None) -> str | None:
+        if value is None:
+            return None
+        value = value.strip()
+        if not value:
+            raise ValueError("stored_path não pode ficar vazio")
+        if not value.startswith("/"):
+            raise ValueError("stored_path deve ser um caminho absoluto do dispositivo")
+        return value
+
     @model_validator(mode="after")
     def require_path_for_completed_write(self):
         if self.status == "completed" and not self.stored_path:
