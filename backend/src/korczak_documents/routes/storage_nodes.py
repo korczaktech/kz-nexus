@@ -160,7 +160,7 @@ class NodeHeartbeatMetrics(BaseModel):
 class RouteSaveRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
     name: str = Field(min_length=1, max_length=240)
-    content: str = Field(max_length=20_000_000)
+    content: str = Field(max_length=3_000_000)
     mime_type: str = Field(default="text/html", max_length=120)
 
 
@@ -269,6 +269,23 @@ async def route_saved_file(payload: RouteSaveRequest, user: dict = Depends(curre
         "device_name": selected.get("device_name"),
         "job_id": job_id,
         "size_bytes": size,
+    }
+
+
+@router.get("/jobs/{job_id}")
+async def get_storage_job_status(job_id: str, user: dict = Depends(current_user)) -> dict:
+    """Let the saving browser verify that the selected node actually wrote the file."""
+    job = await get_database()["storage_node_jobs"].find_one(
+        {"id": job_id, "user_id": user["id"]},
+        {"_id": 0, "id": 1, "status": 1, "error": 1, "stored_path": 1, "node_id": 1, "created_at": 1, "completed_at": 1},
+    )
+    if not job:
+        raise AppError("Tarefa de armazenamento não encontrada.", "storage_job_not_found", 404)
+    return {
+        "job_id": job["id"],
+        "status": job["status"],
+        "error": job.get("error"),
+        "stored": job.get("status") == "completed",
     }
 
 
