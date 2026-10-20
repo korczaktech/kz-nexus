@@ -7,6 +7,13 @@ function formatDate(value:string|null){
   return Number.isNaN(date.getTime())?'Data indisponível':date.toLocaleString('pt-BR');
 }
 
+function serverLabel(node:StorageNode){
+  const name=node.device_name.trim().toLowerCase().replace(/[-_]+/g,' ').replace(/\s+/g,' ');
+  if(name==='servidor i'||name==='server i'||name==='servidor 1'||name==='server 1'||name==='note20'||name==='samsung note20 ultra')return 'Servidor I';
+  if(name==='servidor ii'||name==='server ii'||name==='servidor 2'||name==='server 2'||name==='galaxy j8'||name==='samsung galaxy j8')return 'Servidor II';
+  return node.device_name;
+}
+
 export function StorageNodesPanel(){
   const[nodes,setNodes]=useState<StorageNode[]>([]);
   const[loading,setLoading]=useState(true);
@@ -23,7 +30,7 @@ export function StorageNodesPanel(){
       const result=await api.storageNodes();
       setNodes(result.nodes);
     }catch(e){
-      setError(e instanceof Error?e.message:'Não foi possível carregar os dispositivos.');
+      setError(e instanceof Error?e.message:'Não foi possível carregar os servidores.');
     }finally{
       setLoading(false);
     }
@@ -44,7 +51,7 @@ export function StorageNodesPanel(){
       const result=await api.createStorageNodePairingCode();
       setPairingCode(result.pairing_code);
       setExpiresAt(result.expires_at);
-      setNotice('Código criado. Use-o no Note20 em até cinco minutos; ele só pode ser usado uma vez.');
+      setNotice('Código criado. Ele vale por cinco minutos e só pode ser usado uma vez.');
     }catch(e){
       setError(e instanceof Error?e.message:'Não foi possível criar o código de pareamento.');
     }finally{setBusy(false)}
@@ -60,47 +67,64 @@ export function StorageNodesPanel(){
   }
 
   async function revoke(node:StorageNode){
-    if(!window.confirm(`Revogar o acesso de “${node.device_name}”? O dispositivo perderá acesso imediatamente.`))return;
+    const label=serverLabel(node);
+    if(!window.confirm(`Revogar o acesso de “${label}”? O servidor perderá acesso imediatamente.`))return;
     setBusy(true);setError('');setNotice('');
     try{
       await api.revokeStorageNode(node.id);
-      setNotice(`Acesso de ${node.device_name} revogado.`);
+      setNotice(`Acesso de ${label} revogado.`);
       await refresh();
     }catch(e){
-      setError(e instanceof Error?e.message:'Não foi possível revogar o dispositivo.');
+      setError(e instanceof Error?e.message:'Não foi possível revogar o servidor.');
     }finally{setBusy(false)}
   }
 
+  const onlineCount=nodes.filter(node=>node.status==='online').length;
+  const activeCount=nodes.filter(node=>node.status!=='revoked').length;
+
   return <section className="storage-nodes-panel" aria-labelledby="storage-nodes-heading">
-    <div className="storage-nodes-heading">
-      <div><strong id="storage-nodes-heading">Nós de armazenamento</strong><p>Conecte o Note20 como nó remoto. O celular mantém a conexão de saída; não é necessário abrir portas no roteador.</p></div>
-      <button type="button" onClick={()=>void refresh()} disabled={loading||busy}>Atualizar</button>
+    <header className="storage-nodes-hero">
+      <div className="storage-nodes-hero-copy">
+        <span className="storage-nodes-kicker">INFRAESTRUTURA · KORCZAK NEXUS</span>
+        <h2 id="storage-nodes-heading">Servidores</h2>
+        <p>Gerencie os servidores de armazenamento, acompanhe a conexão e controle o acesso dos dispositivos pareados.</p>
+      </div>
+      <button className="storage-nodes-refresh" type="button" onClick={()=>void refresh()} disabled={loading||busy}>
+        <span aria-hidden="true">↻</span> Atualizar
+      </button>
+      <div className="storage-nodes-hero-mark" aria-hidden="true"><span>KN</span><i/><i/><i/></div>
+    </header>
+
+    <div className="storage-nodes-summary" aria-label="Resumo dos servidores">
+      <article className="storage-nodes-metric"><span className="storage-nodes-metric-icon">◉</span><div><small>Servidores online</small><strong>{loading?'—':onlineCount}</strong></div><span className="storage-nodes-metric-note">Conectados agora</span></article>
+      <article className="storage-nodes-metric"><span className="storage-nodes-metric-icon">▤</span><div><small>Servidores cadastrados</small><strong>{loading?'—':activeCount}</strong></div><span className="storage-nodes-metric-note">Acesso não revogado</span></article>
     </div>
-    <div className="storage-nodes-pair">
-      <button type="button" onClick={()=>void createCode()} disabled={busy}>Gerar código de pareamento</button>
-      <small>O código vale por cinco minutos e pode ser usado uma única vez.</small>
-      {pairingCode&&remainingSeconds>0&&<div className="storage-pairing-code">
-        <code>{pairingCode}</code>
-        <button type="button" onClick={()=>void copyCode()}>Copiar código</button>
-        <small>Expira em {Math.floor(remainingSeconds/60)}:{String(remainingSeconds%60).padStart(2,'0')}</small>
+
+    <section className="storage-nodes-section" aria-labelledby="storage-nodes-list-heading">
+      <div className="storage-nodes-section-heading"><div><span className="storage-nodes-kicker">ESTADO DA REDE</span><h3 id="storage-nodes-list-heading">Seus servidores</h3></div><span className="storage-nodes-live"><i/> Atualização manual</span></div>
+      {loading?<div className="storage-nodes-empty"><span className="storage-nodes-loader"/>Carregando servidores…</div>:nodes.length===0?<div className="storage-nodes-empty"><span className="storage-nodes-empty-icon">▤</span><strong>Nenhum servidor pareado</strong><p>Gere um código de pareamento para conectar o primeiro servidor.</p></div>:<div className="storage-nodes-list">
+        {nodes.map(node=>{
+          const label=serverLabel(node);
+          const online=node.status==='online';
+          const revoked=node.status==='revoked';
+          return <article key={node.id} className={`storage-node-item${online?' is-online':''}${revoked?' is-revoked':''}`}>
+            <div className="storage-node-glyph" aria-hidden="true"><span>▤</span><i/></div>
+            <div className="storage-node-details"><div className="storage-node-title"><strong>{label}</strong><span className={`storage-node-status status-${node.status}`}><i/>{online?'Online':revoked?'Acesso revogado':'Offline'}</span></div><p>Último sinal <span>{formatDate(node.last_seen_at)}</span></p><p>Adicionado <span>{formatDate(node.created_at)}</span></p></div>
+            <div className="storage-node-actions">{!revoked&&<button type="button" className="storage-node-revoke" onClick={()=>void revoke(node)} disabled={busy}>Revogar acesso</button>}</div>
+          </article>;
+        })}
       </div>}
-      {pairingCode&&remainingSeconds===0&&<p className="muted">O código expirou. Gere outro para parear um dispositivo.</p>}
-    </div>
-    {notice&&<p className="storage-nodes-notice" role="status">{notice}</p>}
-    {error&&<p className="alert-error" role="alert">{error}</p>}
-    <div className="storage-nodes-list">
-      {loading?<p className="muted">Carregando dispositivos…</p>:nodes.length===0?<p className="muted">Nenhum dispositivo pareado ainda.</p>:nodes.map(node=><article key={node.id} className="storage-node-item">
-        <div className="storage-node-details">
-          <strong>{node.device_name}</strong>
-          <small>Último sinal: {formatDate(node.last_seen_at)}</small>
-          <small>Adicionado: {formatDate(node.created_at)}</small>
-        </div>
-        <div className="storage-node-actions">
-          <span className={`storage-node-status status-${node.status}`}>{node.status==='online'?'Online':node.status==='revoked'?'Revogado':'Offline'}</span>
-          {node.status!=='revoked'&&<button type="button" onClick={()=>void revoke(node)} disabled={busy}>Revogar</button>}
-        </div>
-      </article>)}
-    </div>
-    <p className="storage-nodes-security">A credencial permanente é salva no espaço privado do Termux. Nunca a compartilhe; revogue o dispositivo aqui se o celular for perdido.</p>
+    </section>
+
+    <section className="storage-nodes-pair-section" aria-labelledby="storage-nodes-pair-heading">
+      <div className="storage-nodes-pair-copy"><span className="storage-nodes-kicker">ADICIONAR DISPOSITIVO</span><h3 id="storage-nodes-pair-heading">Parear um servidor</h3><p>Crie um código temporário e insira-o no Termux do dispositivo que deseja conectar. O código expira em cinco minutos e só pode ser usado uma vez.</p><button type="button" className="storage-nodes-primary" onClick={()=>void createCode()} disabled={busy}><span aria-hidden="true">＋</span> Gerar código de pareamento</button></div>
+      <div className="storage-nodes-pair-visual" aria-hidden="true"><div className="storage-pair-orbit orbit-a"/><div className="storage-pair-orbit orbit-b"/><div className="storage-pair-device">KN</div><span className="storage-pair-dot dot-a"/><span className="storage-pair-dot dot-b"/></div>
+      {pairingCode&&remainingSeconds>0&&<div className="storage-pairing-code"><div><small>CÓDIGO TEMPORÁRIO</small><code>{pairingCode}</code><span>Expira em {Math.floor(remainingSeconds/60)}:{String(remainingSeconds%60).padStart(2,'0')}</span></div><button type="button" onClick={()=>void copyCode()}>Copiar código</button></div>}
+      {pairingCode&&remainingSeconds===0&&<p className="storage-pair-expired">O código expirou. Gere outro para parear um servidor.</p>}
+    </section>
+
+    {notice&&<p className="storage-nodes-notice" role="status"><span aria-hidden="true">✓</span>{notice}</p>}
+    {error&&<p className="storage-nodes-error" role="alert">{error}</p>}
+    <p className="storage-nodes-security"><span aria-hidden="true">▣</span><span><strong>Segurança do armazenamento</strong><br/>As credenciais permanecem no armazenamento privado do Termux. Nunca compartilhe tokens; revogue o acesso nesta página se um dispositivo for perdido.</span></p>
   </section>;
 }
