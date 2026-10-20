@@ -563,7 +563,15 @@ function AppAuthenticated(){
 
   const title=view==='servers'?'Servidores':nav.concat(secondary).find(n=>n[0]===view)?.[1]||'Korczak Nexus';
   const requireAccount=()=>{setError('Entre na sua conta para usar este recurso.');setModal(false);setShowStoragePicker(false)};
-  const requestCreate=()=>guest?requireAccount():setModal(true);
+  const requestCreate=async()=>{
+    if(guest){requireAccount();return}
+    setError('');setModal(false);
+    try{
+      const created=await api.createDocument({name:'Sem título.nsx',document_type:'nsx',description:'',content:''});
+      const full=await api.document(created.id);
+      setSelected(full);setVersions([]);setCompareVersion(null);setView('editor');
+    }catch(x){setError(x instanceof Error?x.message:'Não foi possível criar o documento.')}
+  };
   const action=async(d:DocumentItem)=>{
     if(d.id.startsWith('local:')){
       try{await deleteLocalFile(d.id.slice(6));await load(view)}catch(x){setError(x instanceof Error?x.message:'Não foi possível remover o arquivo da lista local.')}
