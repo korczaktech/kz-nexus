@@ -1,4 +1,4 @@
-import { readFile, stat } from "node:fs/promises";
+import { mkdir, readFile, stat, statfs, writeFile } from "node:fs/promises";
 import { homedir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -8,6 +8,7 @@ const DEFAULT_API_BASE = "https://kzdoc.onrender.com/api/v1";
 const HEARTBEAT_INTERVAL_MS = 60_000;
 const REQUEST_TIMEOUT_MS = 15_000;
 const MAX_BACKOFF_MS = 5 * 60_000;
+const STORAGE_DIR = join(homedir(), ".local", "share", "korczak-nexus", "files");
 
 export function validateConfig(config) {
   if (!config || typeof config !== "object" || Array.isArray(config)) {
@@ -43,14 +44,22 @@ export async function loadConfig(configPath = join(homedir(), ".config", "korcza
   return validateConfig(parsed);
 }
 
-export async function sendHeartbeat(config, fetchImpl = globalThis.fetch) {
+export async function readStorageMetrics(storageDir = STORAGE_DIR) {
+  await mkdir(storageDir, { recursive: true, mode: 0o700 });
+  const fs = await statfs(storageDir);
+  return { free_bytes: Number(fs.bavail) * Number(fs.bsize), total_bytes: Number(fs.blocks) * Number(fs.bsize), internet_connected: true };
+}
+
+export async function sendHeartbeat(config, fetchImpl = globalThis.fetch, metrics = { free_bytes: 0, total_bytes: 0, internet_connected: true }) {
   const endpoint = `${config.apiBase}/storage/nodes/${encodeURIComponent(config.nodeId)}/heartbeat`;
   const response = await fetchImpl(endpoint, {
     method: "POST",
     headers: {
       Authorization: `Bearer ${config.nodeToken}`,
       Accept: "application/json",
+      "Content-Type": "application/json",
     },
+    body: JSON.stringify(metrics),
     signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
   });
   if (response.status === 401 || response.status === 403) {
@@ -68,6 +77,34 @@ export async function sendHeartbeat(config, fetchImpl = globalThis.fetch) {
   return payload;
 }
 
+export function safeStoredFilename(name) {
+  const basename = String(name || "arquivo").replace(/\\/g, "/").split("/").pop() || "arquivo";
+  const cleaned = basename.replace(/[\x00-\x1f<>:"|?*]/g, "_").replace(/^\.+$/, "arquivo").slice(0, 180);
+  return cleaned || "arquivo";
+}
+
+export async function claimAndStoreJob(config, { fetchImpl = globalThis.fetch, storageDir = STORAGE_DIR, log = console } = {}) {
+  const headers = { Authorization: "Bearer " + config.nodeToken, Accept: "application/json", "Content-Type": "application/json" };
+  const base = config.apiBase + "/storage/nodes/" + encodeURIComponent(config.nodeId);
+  const response = await fetchImpl(base + "/jobs/claim", { method: "POST", headers, signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS) });
+  if (response.status === 401 || response.status === 403) { const error = new Error("Credencial do nó inválida ou revogada; o agente será encerrado."); error.permanent = true; throw error; }
+  if (!response.ok) throw new Error("Consulta de tarefas recusada pela API (HTTP " + response.status + ").");
+  const data = await response.json(); const job = data.job;
+  if (!job) return null;
+  let status = "failed"; let errorMessage = null; let storedPath = null;
+  try {
+    await mkdir(storageDir, { recursive: true, mode: 0o700 });
+    const fileName = String(job.id) + "-" + safeStoredFilename(job.name);
+    storedPath = join(storageDir, fileName);
+    await writeFile(storedPath, String(job.content ?? ""), { encoding: "utf8", mode: 0o600, flag: "wx" });
+    status = "completed"; log.info?.("Arquivo armazenado no nó: " + safeStoredFilename(job.name));
+  } catch (err) { errorMessage = err instanceof Error ? err.message.slice(0, 500) : "Falha ao gravar o arquivo."; storedPath = null; }
+  const completed = await fetchImpl(base + "/jobs/" + encodeURIComponent(job.id) + "/complete", { method: "POST", headers, body: JSON.stringify({ status, error: errorMessage, stored_path: storedPath }), signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS) });
+  if (!completed.ok) throw new Error("Confirmação da tarefa recusada pela API (HTTP " + completed.status + ").");
+  if (status !== "completed") throw new Error("Não foi possível gravar o arquivo no nó: " + errorMessage);
+  return { job_id: job.id, status, stored_path: storedPath };
+}
+
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
 export async function runAgent(config, {
@@ -82,7 +119,10 @@ export async function runAgent(config, {
   let recovering = false;
   while (!signal?.aborted) {
     try {
-      const result = await sendHeartbeat(config, fetchImpl);
+      const metrics = await readStorageMetrics();
+      const result = await sendHeartbeat(config, fetchImpl, metrics);
+      try { await claimAndStoreJob(config, { fetchImpl, log }); }
+      catch (jobError) { if (jobError?.permanent) throw jobError; log.warn?.("Não foi possível processar uma tarefa de armazenamento nesta tentativa."); }
       if (!connected || recovering) {
         log.info?.(`Nó Nexus online: ${result.node_id}`);
       }
