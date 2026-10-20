@@ -60,9 +60,11 @@ def test_api_route_inventory() -> None:
     # O prefixo /api/v1 é aplicado pelo aplicativo na montagem do router.
     # O inventário é validado na fonte do router para manter o contrato
     # independente da forma interna de montagem do FastAPI.
+    # Inspect the assembled FastAPI app so routes registered through nested
+    # routers are included with their final /api/v1 prefix.
     routes = {
-        (method, f"/api/v1{route.path}")
-        for route in api_router.routes
+        (method, route.path)
+        for route in app.routes
         for method in getattr(route, "methods", set())
         if method != "HEAD"
     }
