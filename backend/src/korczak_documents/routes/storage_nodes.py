@@ -437,10 +437,19 @@ async def complete_storage_job(
         "stored_path": payload.stored_path if payload.status == "completed" else None,
         "content": None,
     }
-    changed = await get_database()["storage_node_jobs"].update_one(
+    jobs = get_database()["storage_node_jobs"]
+    changed = await jobs.update_one(
         {"id": job_id, "node_id": node_id, "status": "processing"},
         {"$set": update},
     )
     if not changed.matched_count:
+        # The API response may be lost after MongoDB commits. Treat an identical
+        # repeated completion as success so the agent can safely retry.
+        existing = await jobs.find_one({"id": job_id, "node_id": node_id})
+        if existing and existing.get("status") == payload.status:
+            if payload.status == "completed" and existing.get("stored_path") == payload.stored_path:
+                return {"job_id": job_id, "status": payload.status}
+            if payload.status == "failed" and existing.get("error") == payload.error:
+                return {"job_id": job_id, "status": payload.status}
         raise AppError("Tarefa não encontrada ou já finalizada.", "storage_job_not_found", 404)
     return {"job_id": job_id, "status": payload.status}
