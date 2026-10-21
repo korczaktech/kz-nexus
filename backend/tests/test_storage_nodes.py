@@ -1,4 +1,4 @@
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 
 import pytest
 
@@ -14,6 +14,26 @@ class FakeCollection:
         return type("InsertResult", (), {"inserted_id": document.get("id")})()
 
     async def find_one_and_update(self, query, update, return_document=True):
+        if "$or" in query:
+            stale_before = next(
+                (condition["claimed_at"]["$lt"] for condition in query["$or"] if "claimed_at" in condition and isinstance(condition["claimed_at"], dict)),
+                None,
+            )
+            for document in self.documents:
+                if document.get("node_id") != query.get("node_id"):
+                    continue
+                status = document.get("status")
+                claimed_at = document.get("claimed_at")
+                reclaimable = status == "pending" or (
+                    status == "processing" and (
+                        claimed_at is None or (stale_before is not None and claimed_at < stale_before)
+                    )
+                )
+                if reclaimable:
+                    document.update(update["$set"])
+                    return dict(document)
+            return None
+
         now = query["expires_at"]["$gt"]
         for document in self.documents:
             if (
@@ -329,3 +349,36 @@ async def test_repeated_identical_completion_is_idempotent(monkeypatch):
     )
 
     assert result == {"job_id": "job-1", "status": "completed"}
+
+
+@pytest.mark.asyncio
+async def test_claim_recovers_a_processing_job_abandoned_for_more_than_five_minutes(monkeypatch):
+    database = FakeDatabase()
+    monkeypatch.setattr(storage_nodes, "get_database", lambda: database)
+    token = "knode_" + "A" * 64
+    now = datetime.now(timezone.utc)
+    await database["storage_nodes"].insert_one({
+        "id": "node-1",
+        "token_hash": storage_nodes._digest(token),
+        "revoked_at": None,
+        "saving_enabled": True,
+    })
+    await database["storage_node_jobs"].insert_one({
+        "id": "job-stale",
+        "node_id": "node-1",
+        "user_id": "user-a",
+        "name": "recovery.nsx",
+        "mime_type": "application/x-korczak-nexus",
+        "content": "payload",
+        "size_bytes": 7,
+        "status": "processing",
+        "created_at": now - timedelta(minutes=10),
+        "claimed_at": now - timedelta(minutes=10),
+    })
+
+    result = await storage_nodes.claim_storage_job("node-1", f"Bearer {token}")
+
+    assert result["job"]["id"] == "job-stale"
+    job = database["storage_node_jobs"].documents[0]
+    assert job["status"] == "processing"
+    assert job["claimed_at"] > now - timedelta(seconds=5)
