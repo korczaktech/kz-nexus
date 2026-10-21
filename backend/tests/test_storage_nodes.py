@@ -40,6 +40,19 @@ class FakeCollection:
                 matched += 1
         return type("UpdateResult", (), {"matched_count": matched})()
 
+    def find(self, query, projection=None):
+        documents = [
+            dict(document) for document in self.documents
+            if all(document.get(key) == value for key, value in query.items())
+        ]
+        return type("FakeCursor", (), {
+            "to_list": lambda self, length: _resolved(documents[:length])
+        })()
+
+
+async def _resolved(value):
+    return value
+
 
 class FakeDatabase:
     def __init__(self):
@@ -238,3 +251,38 @@ def test_completed_storage_job_rejects_relative_or_blank_paths():
     with pytest.raises(ValidationError, match="stored_path"):
         storage_nodes.JobCompletionRequest(status="completed", stored_path="   ")
 
+
+
+
+@pytest.mark.asyncio
+async def test_route_save_assigns_each_document_to_exactly_one_least_used_node(monkeypatch):
+    database = FakeDatabase()
+    monkeypatch.setattr(storage_nodes, "get_database", lambda: database)
+    now = datetime.now(timezone.utc)
+    common = {
+        "user_id": "user-a",
+        "revoked_at": None,
+        "saving_enabled": True,
+        "last_seen_at": now,
+        "internet_connected": True,
+        "total_bytes": 1000,
+    }
+    await database["storage_nodes"].insert_one({
+        **common, "id": "node-i", "device_name": "Servidor I",
+        "free_bytes": 100,
+    })
+    await database["storage_nodes"].insert_one({
+        **common, "id": "node-ii", "device_name": "Servidor II",
+        "free_bytes": 800,
+    })
+
+    result = await storage_nodes.route_saved_file(
+        storage_nodes.RouteSaveRequest(name="teste.nsx", content="conteúdo"),
+        {"id": "user-a"},
+    )
+
+    assert result["status"] == "queued"
+    assert result["destinations"] == ["server_ii"]
+    assert len(result["jobs"]) == 1
+    assert len(database["storage_node_jobs"].documents) == 1
+    assert database["storage_node_jobs"].documents[0]["node_id"] == "node-ii"
