@@ -3,7 +3,7 @@ import { mkdtemp, readFile, rm, stat } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import assert from "node:assert/strict";
-import { claimAndStoreJob, getUserDocumentsDir, readStorageMetrics, safeStoredFilename, sendHeartbeat, validateConfig } from "../src/agent.js";
+import { claimAndStoreJob, getUserDocumentsDir, normalizeReportedStoragePath, readStorageMetrics, safeStoredFilename, sendHeartbeat, validateConfig } from "../src/agent.js";
 
 const validConfig = {
   apiBase: "https://kzdoc.onrender.com/api/v1",
@@ -205,6 +205,8 @@ test("reports file write conflicts instead of overwriting an existing file", asy
 
 
 test("retries transient completion failures and normalizes Android storage aliases", async () => {
+  assert.equal(normalizeReportedStoragePath("/storage/self/primary/.Nexus/users/user-a/documents/a.nsx"), "/storage/emulated/0/.Nexus/users/user-a/documents/a.nsx");
+  assert.equal(normalizeReportedStoragePath("/tmp/.Nexus/a.nsx"), "/tmp/.Nexus/a.nsx");
   const root = await mkdtemp(join(tmpdir(), "nexus-node-retry-test-"));
   const calls = [];
   let completionAttempts = 0;
