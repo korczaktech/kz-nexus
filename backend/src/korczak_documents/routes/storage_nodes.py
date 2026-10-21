@@ -288,7 +288,7 @@ async def node_heartbeat(
 
 @router.post("/route-save")
 async def route_saved_file(payload: RouteSaveRequest, user: dict = Depends(current_user)) -> dict:
-    """Queue a saved file on Server I, then Server II; report fallback when neither qualifies."""
+    """Queue each saved file on one eligible node; report fallback when none qualifies."""
     database = get_database()
     now = _now()
     size = len(payload.content.encode("utf-8"))
@@ -302,6 +302,19 @@ async def route_saved_file(payload: RouteSaveRequest, user: dict = Depends(curre
         for role in ("server_i", "server_ii")
         if role in by_role and _node_can_store(by_role[role], size, now)
     ]
+    # Distributed placement: each save is written to exactly one physical node.
+    # Prefer the node with the lower used-capacity ratio; use Server I as a
+    # deterministic tie-breaker. A paused/offline/full node is excluded above.
+    def utilization(item):
+        _, node = item
+        total = node.get("total_bytes", 0)
+        free = node.get("free_bytes", 0)
+        if not isinstance(total, int) or total <= 0 or not isinstance(free, int):
+            return 1.0
+        return max(0.0, min(1.0, (total - free) / total))
+
+    eligible.sort(key=lambda item: (utilization(item), 0 if item[0] == "server_i" else 1))
+    eligible = eligible[:1]
     if not eligible:
         return {
             "status": "fallback_required",
