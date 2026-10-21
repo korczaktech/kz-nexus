@@ -230,7 +230,7 @@ class JobCompletionRequest(BaseModel):
             or parts[0] != "users"
             or not parts[1]
             or parts[1] in {".", ".."}
-            or not parts[1].replace("_", "").replace("-", "").isalnum()
+            or not all(char.isascii() and (char.isalnum() or char in "_-") for char in parts[1])
             or parts[2] != "documents"
             or not parts[3]
             or parts[3] in {".", ".."}
