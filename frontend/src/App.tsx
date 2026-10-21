@@ -514,7 +514,7 @@ function AppAuthenticated(){
         const results=await Promise.all(jobs.map(async job=>{
           let jobStatus:'pending'|'processing'|'completed'|'failed'='pending';
           let jobError='';
-          const deadline=Date.now()+20000;
+          const deadline=Date.now()+60000;
           while(Date.now()<deadline){
             try{
               const status=await api.storageJobStatus(job.job_id);
@@ -529,7 +529,7 @@ function AppAuthenticated(){
         const failed=results.filter(result=>result.status!=='completed');
         shouldFallback=shouldFallback||failed.length>0||jobs.length===0;
         if(shouldFallback&&route.status!=='fallback_required'){
-          failureReason=failed.map(result=>(result.device_name||result.destination)+': '+(result.status==='failed'?(result.error||'gravação recusada'):'sem confirmação após 20 segundos')).join('; ')||'A API não retornou tarefas de gravação.';
+          failureReason=failed.map(result=>(result.device_name||result.destination)+': '+(result.status==='failed'?(result.error||'gravação recusada'):'sem confirmação após 60 segundos')).join('; ')||'A API não retornou tarefas de gravação.';
         }
         if(shouldFallback){
           const completed=results.filter(result=>result.status==='completed');
