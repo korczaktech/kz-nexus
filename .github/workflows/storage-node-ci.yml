@@ -28,3 +28,10 @@ jobs:
       - name: Run agent tests
         working-directory: storage-node
         run: npm test
+      - name: Validate Termux shell scripts
+        shell: bash
+        run: |
+          set -euo pipefail
+          for script in storage-node/termux/supervise-node.sh storage-node/termux/update-node.sh storage-node/termux/boot/korczak-nexus-node; do
+            sh -n "$script"
+          done
