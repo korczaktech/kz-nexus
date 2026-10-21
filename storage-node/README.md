@@ -7,11 +7,13 @@ Este agente mantém um heartbeat autenticado, informa a capacidade livre do disp
 - Node.js 20 ou superior no Termux.
 - Um nó já pareado pelo backend.
 - Credencial do nó guardada no diretório privado do Termux, nunca em armazenamento compartilhado.
+- Permissão do Termux para acessar o armazenamento compartilhado do Android.
 
 Instale as ferramentas e clone o repositório em um diretório separado do protótipo anterior:
 
 ```sh
 pkg install git nodejs-lts curl jq
+termux-setup-storage
 git clone https://github.com/korczaktech/kz-nexus.git "$HOME/kz-nexus"
 cd "$HOME/kz-nexus/storage-node"
 npm test
@@ -45,6 +47,28 @@ chmod 600 "$HOME/.config/korczak-nexus/node.json"
 
 Não cole nem envie o token em mensagens, issues, logs ou screenshots. O agente recusa arquivos com permissões acessíveis a grupo/outros.
 
+## Armazenamento compartilhado do Android (.Nexus)
+
+O destino oficial dos documentos é a pasta **Armazenamento interno/.Nexus** do aplicativo Meus Arquivos. Antes de iniciar o agente, execute `termux-setup-storage` e aceite a permissão de arquivos do Android. Isso cria o atalho `$HOME/storage/shared` para o armazenamento interno compartilhado.
+
+Estrutura criada pelo agente:
+
+```text
+Armazenamento interno/
+└── .Nexus/
+    ├── users/
+    │   └── <ID_DO_USUARIO>/
+    │       └── documents/
+    │           └── <ID_DA_TAREFA>-<nome-original>
+    └── system/
+        └── nodes/
+            └── <ID_DO_NO>/
+```
+
+O backend inclui o identificador do proprietário em cada tarefa, para que cada usuário tenha seu próprio diretório. Os documentos são gravados diretamente em `.Nexus/users/<ID_DO_USUARIO>/documents/`; `.Nexus/system/nodes/` reserva a área de metadados do nó. A credencial continua apenas no diretório privado do Termux.
+
+O agente valida que `$HOME/storage/shared` aponta para o armazenamento interno compartilhado real. Se a permissão não foi concedida ou o atalho não existe, ele **não** grava numa pasta alternativa escondida no Termux: a tarefa falha e o erro aparece no log. Se a pasta não aparecer em Meus Arquivos, ative a exibição de arquivos ocultos.
+
 ## Executar
 
 A partir da raiz do repositório:
@@ -55,12 +79,12 @@ npm test
 npm start
 ```
 
-O agente envia um heartbeat imediatamente e depois a cada 60 segundos. Falhas transitórias usam backoff exponencial limitado. Uma resposta 401/403 encerra o agente, pois indica credencial inválida ou revogada. O encerramento por SIGINT/SIGTERM é suportado.
+O agente envia um heartbeat imediatamente e depois a cada 15 segundos. Falhas transitórias usam backoff exponencial limitado. Uma resposta 401/403 encerra o agente, pois indica credencial inválida ou revogada. O encerramento por SIGINT/SIGTERM é suportado.
 
 
 ## Atualização automática do agente Android
 
-O supervisor `storage-node/termux/supervise-node.sh` verifica a branch `main` na inicialização e, enquanto estiver ativo, a cada 30 minutos. Quando encontra uma atualização, aplica apenas um avanço fast-forward, executa `npm test` e só mantém a nova versão se os testes passarem. Se os testes falharem, restaura o commit anterior. A configuração privada em `~/.config/korczak-nexus/node.json` e os arquivos gravados em `~/.local/share/korczak-nexus/files/` ficam fora do repositório e não são substituídos pela atualização.
+O supervisor `storage-node/termux/supervise-node.sh` verifica a branch `main` na inicialização e, enquanto estiver ativo, a cada 30 minutos. Quando encontra uma atualização, aplica apenas um avanço fast-forward, executa `npm test` e só mantém a nova versão se os testes passarem. Se os testes falharem, restaura o commit anterior. A configuração privada em `~/.config/korczak-nexus/node.json` e os documentos em `/storage/emulated/0/.Nexus/` ficam fora do repositório e não são substituídos pela atualização.
 
 Se o GitHub estiver indisponível, houver alterações locais no clone ou os testes falharem, o supervisor mantém a versão instalada e registra o resultado em `~/.local/state/korczak-nexus/agent.log`. Atualizações aprovadas reiniciam o agente para carregar o código novo. O supervisor também tenta iniciar novamente o agente se o processo terminar.
 
