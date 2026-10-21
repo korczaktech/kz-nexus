@@ -133,14 +133,48 @@ export async function claimAndStoreJob(config, { fetchImpl = globalThis.fetch, s
     await mkdir(targetDir, { recursive: true, mode: 0o700 });
     const fileName = String(job.id) + "-" + safeStoredFilename(job.name);
     storedPath = join(targetDir, fileName);
-    await writeFile(storedPath, String(job.content ?? ""), { encoding: "utf8", mode: 0o600, flag: "wx" });
+    const expectedContent = String(job.content ?? "");
+    try {
+      await writeFile(storedPath, expectedContent, { encoding: "utf8", mode: 0o600, flag: "wx" });
+    } catch (writeError) {
+      // Recover safely if the process wrote the file but died before the API confirmation.
+      if (writeError?.code !== "EEXIST") throw writeError;
+      const existingContent = await readFile(storedPath, "utf8");
+      if (existingContent !== expectedContent) {
+        throw new Error("Já existe um arquivo com o mesmo identificador, mas o conteúdo é diferente.");
+      }
+      log.info?.("Arquivo já existente com conteúdo idêntico; retomando confirmação da gravação.");
+    }
     status = "completed"; log.info?.("Arquivo armazenado no nó: " + safeStoredFilename(job.name));
   } catch (err) { errorMessage = err instanceof Error ? err.message.slice(0, 500) : "Falha ao gravar o arquivo."; storedPath = null; }
-  const completed = await fetchImpl(base + "/jobs/" + encodeURIComponent(job.id) + "/complete", { method: "POST", headers, body: JSON.stringify({ status, error: errorMessage, stored_path: storedPath }), signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS) });
-  if (!completed.ok) {
-    const details = typeof completed.text === "function" ? await completed.text().catch(() => "") : "";
-    throw new Error("Confirmação da tarefa recusada pela API (HTTP " + completed.status + ")" + (details ? ": " + details.slice(0, 500) : "") + ".");
+  const reportedPath = storedPath?.replace(/^\/storage\/self\/primary\//, "/storage/emulated/0/") ?? null;
+  let completed;
+  let completionError;
+  for (let attempt = 1; attempt <= 3; attempt += 1) {
+    try {
+      completed = await fetchImpl(base + "/jobs/" + encodeURIComponent(job.id) + "/complete", {
+        method: "POST", headers,
+        body: JSON.stringify({ status, error: errorMessage, stored_path: reportedPath }),
+        signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
+      });
+      if (completed.ok) break;
+      const details = typeof completed.text === "function" ? await completed.text().catch(() => "") : "";
+      const message = "Confirmação da tarefa recusada pela API (HTTP " + completed.status + ")" + (details ? ": " + details.slice(0, 500) : "") + ".";
+      if (completed.status === 401 || completed.status === 403) {
+        const authError = new Error(message);
+        authError.permanent = true;
+        throw authError;
+      }
+      completionError = new Error(message);
+      if (completed.status < 500 && completed.status !== 408 && completed.status !== 429) break;
+    } catch (requestError) {
+      if (requestError?.permanent) throw requestError;
+      completionError = requestError instanceof Error ? requestError : new Error(String(requestError));
+    }
+    if (attempt < 3) await new Promise(resolve => setTimeout(resolve, 500 * (2 ** (attempt - 1))));
   }
+  if (!completed?.ok) throw completionError ?? new Error("Não foi possível confirmar a gravação na API.");
+
   if (status !== "completed") throw new Error("Não foi possível gravar o arquivo no nó: " + errorMessage);
   return { job_id: job.id, status, stored_path: storedPath };
 }
