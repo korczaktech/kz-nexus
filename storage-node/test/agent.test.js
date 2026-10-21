@@ -202,3 +202,63 @@ test("reports file write conflicts instead of overwriting an existing file", asy
   }
 });
 
+
+
+test("retries transient completion failures and normalizes Android storage aliases", async () => {
+  const root = await mkdtemp(join(tmpdir(), "nexus-node-retry-test-"));
+  const calls = [];
+  let completionAttempts = 0;
+  try {
+    const result = await claimAndStoreJob(validConfig, {
+      nexusRoot: root,
+      log: { info() {} },
+      fetchImpl: async (url, options) => {
+        calls.push({ url, options });
+        if (url.endsWith("/jobs/claim")) {
+          return { ok: true, status: 200, json: async () => ({ job: {
+            id: "job-retry", user_id: "user-a", name: "hello.nsx", content: "document",
+          } }) };
+        }
+        completionAttempts += 1;
+        if (completionAttempts === 1) {
+          return { ok: false, status: 503, text: async () => "temporarily unavailable" };
+        }
+        return { ok: true, status: 200, json: async () => ({ status: "completed" }) };
+      },
+    });
+    assert.equal(result.status, "completed");
+    assert.equal(completionAttempts, 2);
+    assert.equal(JSON.parse(calls.at(-1).options.body).stored_path, result.stored_path);
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
+test("accepts an identical existing file as a recoverable prior write", async () => {
+  const root = await mkdtemp(join(tmpdir(), "nexus-node-recovery-test-"));
+  const target = join(root, "users", "user-a", "documents", "job-recover-sample.nsx");
+  const { mkdir: makeDir, writeFile: createFile } = await import("node:fs/promises");
+  await makeDir(join(root, "users", "user-a", "documents"), { recursive: true });
+  await createFile(target, "same payload");
+  const calls = [];
+  try {
+    const result = await claimAndStoreJob(validConfig, {
+      nexusRoot: root,
+      log: { info() {} },
+      fetchImpl: async (url, options) => {
+        calls.push({ url, options });
+        if (url.endsWith("/jobs/claim")) {
+          return { ok: true, status: 200, json: async () => ({ job: {
+            id: "job-recover", user_id: "user-a", name: "sample.nsx", content: "same payload",
+          } }) };
+        }
+        return { ok: true, status: 200, json: async () => ({ status: "completed" }) };
+      },
+    });
+    assert.equal(result.status, "completed");
+    assert.equal(await readFile(target, "utf8"), "same payload");
+    assert.equal(JSON.parse(calls.at(-1).options.body).status, "completed");
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});
