@@ -399,9 +399,18 @@ async def claim_storage_job(
         raise AppError("Credencial de nó inválida ou revogada.", "invalid_node_credential", 401)
     if node.get("saving_enabled", True) is False:
         return {"job": None}
+    claim_time = _now()
+    stale_before = claim_time - timedelta(minutes=5)
     job = await database["storage_node_jobs"].find_one_and_update(
-        {"node_id": node_id, "status": "pending"},
-        {"$set": {"status": "processing", "claimed_at": _now()}},
+        {
+            "node_id": node_id,
+            "$or": [
+                {"status": "pending"},
+                {"status": "processing", "claimed_at": {"$lt": stale_before}},
+                {"status": "processing", "claimed_at": None},
+            ],
+        },
+        {"$set": {"status": "processing", "claimed_at": claim_time}},
         sort=[("created_at", 1)],
         return_document=True,
     )
