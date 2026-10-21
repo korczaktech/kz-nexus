@@ -164,10 +164,10 @@ Se o pareamento falhar, gere um código novo. Não copie a resposta JSON bruta p
 ## Estado atual e limites
 
 - O backend fornece pareamento temporário, heartbeat com capacidade, fila autenticada de gravação, confirmação do resultado, listagem e revogação.
-- Ao receber uma tarefa, o agente grava o conteúdo no diretório privado `~/.local/share/korczak-nexus/files/`, com nomes sanitizados e permissões privadas, e confirma a gravação à API.
-- O Nexus tenta o Servidor I primeiro e o Servidor II em seguida. A decisão usa heartbeat recente, conectividade de saída e espaço livre medido. Os nomes reconhecidos incluem `Servidor I`/ `Note20 Ultra` e `Servidor II`/ `Galaxy J8`.
-- Se nenhum nó elegível estiver disponível no momento do salvamento, o navegador tenta o Google Drive conectado; se não conseguir, cria um backup persistente no IndexedDB local.
-- O agente processa uma tarefa por ciclo de heartbeat; por padrão, o intervalo é de 15 segundos. A conclusão da gravação no dispositivo físico e a restauração de arquivos do nó ainda exigem validação e implementação adicionais.
+- Ao receber uma tarefa, o agente grava o conteúdo diretamente em `/storage/emulated/0/.Nexus/users/<ID_DO_USUARIO>/documents/` e confirma à API o caminho físico da gravação.
+- O armazenamento é **dividido, sem replicação automática**: cada salvamento é enfileirado em apenas um nó elegível. O backend escolhe o nó com menor proporção de armazenamento ocupado; em empate, prefere o Servidor I. Um nó pausado, offline, sem internet ou sem espaço suficiente é excluído da seleção.
+- Se nenhum nó elegível estiver disponível no momento do salvamento, o navegador tenta o Google Drive conectado; se não conseguir, cria um backup persistente no IndexedDB local. Esse backup de contingência não significa que o documento foi gravado no celular.
+- O agente processa uma tarefa por ciclo de heartbeat; por padrão, o intervalo é de 15 segundos. O site espera até 20 segundos por confirmação e informa quando a gravação física não foi confirmada. A instalação, o pareamento, a execução contínua e a gravação real precisam ser verificados nos dois celulares.
 - Para instalar o projeto no telefone, clone o repositório em `$HOME/kz-nexus` e execute `cd "$HOME/kz-nexus/storage-node" && npm test`.
 - Para iniciar automaticamente após reiniciar, instale o aplicativo Termux:Boot, crie `$HOME/.termux/boot` e copie `storage-node/termux/boot/korczak-nexus-node` para esse diretório; aplique `chmod 700 "$HOME/.termux/boot/korczak-nexus-node"`. O script registra logs em `$HOME/.local/state/korczak-nexus/agent.log`, sem gravar o token nos logs.
 - Exclua o Termux das otimizações de bateria do Android. Não habilite um wake lock permanente sem avaliar o consumo. O comportamento após reinício, bloqueio de tela e Doze precisa ser validado no dispositivo real.
