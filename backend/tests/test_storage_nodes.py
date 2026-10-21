@@ -221,6 +221,15 @@ def test_completed_storage_job_accepts_agent_reported_path():
     assert payload.status == "completed"
     assert payload.stored_path.endswith("job-1-file.nsx")
 
+def test_completed_storage_job_rejects_paths_outside_shared_nexus():
+    from pydantic import ValidationError
+
+    with pytest.raises(ValidationError, match="pasta compartilhada .Nexus"):
+        storage_nodes.JobCompletionRequest(
+            status="completed", stored_path="/data/data/com.termux/files/home/private/file.nsx"
+        )
+
+
 def test_completed_storage_job_rejects_relative_or_blank_paths():
     from pydantic import ValidationError
 
