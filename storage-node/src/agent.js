@@ -1,4 +1,4 @@
-import { mkdir, readFile, stat, statfs, writeFile } from "node:fs/promises";
+import { mkdir, readFile, realpath, stat, statfs, writeFile } from "node:fs/promises";
 import { homedir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -8,7 +8,7 @@ const DEFAULT_API_BASE = "https://kzdoc.onrender.com/api/v1";
 const HEARTBEAT_INTERVAL_MS = 15_000;
 const REQUEST_TIMEOUT_MS = 15_000;
 const MAX_BACKOFF_MS = 5 * 60_000;
-const STORAGE_DIR = join(homedir(), ".local", "share", "korczak-nexus", "files");
+const SHARED_STORAGE_DIR = join(homedir(), "storage", "shared");
 
 export function validateConfig(config) {
   if (!config || typeof config !== "object" || Array.isArray(config)) {
@@ -44,9 +44,34 @@ export async function loadConfig(configPath = join(homedir(), ".config", "korcza
   return validateConfig(parsed);
 }
 
-export async function readStorageMetrics(storageDir = STORAGE_DIR) {
-  await mkdir(storageDir, { recursive: true, mode: 0o700 });
-  const fs = await statfs(storageDir);
+async function resolveNexusRoot() {
+  let sharedRoot;
+  try {
+    sharedRoot = await realpath(SHARED_STORAGE_DIR);
+  } catch {
+    throw new Error("Armazenamento compartilhado do Android indisponível. Execute termux-setup-storage e conceda a permissão de arquivos.");
+  }
+  if (sharedRoot !== "/storage/emulated/0" && sharedRoot !== "/storage/self/primary") {
+    throw new Error("O caminho de armazenamento compartilhado não aponta para a memória interna do Android.");
+  }
+  return join(sharedRoot, ".Nexus");
+}
+
+function safePathSegment(value, label) {
+  if (typeof value !== "string" || !/^[A-Za-z0-9_-]{1,128}$/.test(value)) {
+    throw new Error("Identificador inválido para diretório de " + label + ".");
+  }
+  return value;
+}
+
+export function getUserDocumentsDir(userId, nexusRoot = join(SHARED_STORAGE_DIR, ".Nexus")) {
+  return join(nexusRoot, "users", safePathSegment(userId, "usuário"), "documents");
+}
+
+export async function readStorageMetrics(storageDir) {
+  const targetDir = storageDir ?? await resolveNexusRoot();
+  await mkdir(targetDir, { recursive: true, mode: 0o700 });
+  const fs = await statfs(targetDir);
   return { free_bytes: Number(fs.bavail) * Number(fs.bsize), total_bytes: Number(fs.blocks) * Number(fs.bsize), internet_connected: true };
 }
 
@@ -83,7 +108,7 @@ export function safeStoredFilename(name) {
   return cleaned || "arquivo";
 }
 
-export async function claimAndStoreJob(config, { fetchImpl = globalThis.fetch, storageDir = STORAGE_DIR, log = console } = {}) {
+export async function claimAndStoreJob(config, { fetchImpl = globalThis.fetch, storageDir, log = console } = {}) {
   const headers = { Authorization: "Bearer " + config.nodeToken, Accept: "application/json", "Content-Type": "application/json" };
   const base = config.apiBase + "/storage/nodes/" + encodeURIComponent(config.nodeId);
   const response = await fetchImpl(base + "/jobs/claim", { method: "POST", headers, signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS) });
@@ -93,9 +118,17 @@ export async function claimAndStoreJob(config, { fetchImpl = globalThis.fetch, s
   if (!job) return null;
   let status = "failed"; let errorMessage = null; let storedPath = null;
   try {
-    await mkdir(storageDir, { recursive: true, mode: 0o700 });
+    let targetDir = storageDir;
+    if (!targetDir) {
+      const nexusRoot = await resolveNexusRoot();
+      const userId = safePathSegment(job.user_id, "usuário");
+      const nodeId = safePathSegment(config.nodeId, "nó");
+      targetDir = getUserDocumentsDir(userId, nexusRoot);
+      await mkdir(join(nexusRoot, "system", "nodes", nodeId), { recursive: true, mode: 0o700 });
+    }
+    await mkdir(targetDir, { recursive: true, mode: 0o700 });
     const fileName = String(job.id) + "-" + safeStoredFilename(job.name);
-    storedPath = join(storageDir, fileName);
+    storedPath = join(targetDir, fileName);
     await writeFile(storedPath, String(job.content ?? ""), { encoding: "utf8", mode: 0o600, flag: "wx" });
     status = "completed"; log.info?.("Arquivo armazenado no nó: " + safeStoredFilename(job.name));
   } catch (err) { errorMessage = err instanceof Error ? err.message.slice(0, 500) : "Falha ao gravar o arquivo."; storedPath = null; }
