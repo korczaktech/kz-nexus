@@ -215,7 +215,11 @@ class JobCompletionRequest(BaseModel):
             raise ValueError("stored_path não pode ficar vazio")
         if not value.startswith("/"):
             raise ValueError("stored_path deve ser um caminho absoluto do dispositivo")
-        if not value.startswith("/storage/emulated/0/.Nexus/"):
+        allowed_prefixes = (
+            "/storage/emulated/0/.Nexus/",
+            "/storage/self/primary/.Nexus/",
+        )
+        if not value.startswith(allowed_prefixes):
             raise ValueError("stored_path deve apontar para a pasta compartilhada .Nexus")
         return value
 
