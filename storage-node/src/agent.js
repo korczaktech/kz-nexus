@@ -68,11 +68,12 @@ export function getUserDocumentsDir(userId, nexusRoot = join(SHARED_STORAGE_DIR,
   return join(nexusRoot, "users", safePathSegment(userId, "usuário"), "documents");
 }
 
-export async function readStorageMetrics(storageDir) {
+export async function readStorageMetrics(storageDir, nodeId) {
   const targetDir = storageDir ?? await resolveNexusRoot();
   await mkdir(targetDir, { recursive: true, mode: 0o700 });
   await mkdir(join(targetDir, "users"), { recursive: true, mode: 0o700 });
   await mkdir(join(targetDir, "system"), { recursive: true, mode: 0o700 });
+  if (nodeId) await mkdir(join(targetDir, "system", "nodes", safePathSegment(nodeId, "nó")), { recursive: true, mode: 0o700 });
   const fs = await statfs(targetDir);
   return { free_bytes: Number(fs.bavail) * Number(fs.bsize), total_bytes: Number(fs.blocks) * Number(fs.bsize), internet_connected: true };
 }
@@ -154,7 +155,7 @@ export async function runAgent(config, {
   let recovering = false;
   while (!signal?.aborted) {
     try {
-      const metrics = await readStorageMetrics();
+      const metrics = await readStorageMetrics(undefined, config.nodeId);
       const result = await sendHeartbeat(config, fetchImpl, metrics);
       try { await claimAndStoreJob(config, { fetchImpl, log }); }
       catch (jobError) { if (jobError?.permanent) throw jobError; log.warn?.("Não foi possível processar uma tarefa de armazenamento nesta tentativa."); }
