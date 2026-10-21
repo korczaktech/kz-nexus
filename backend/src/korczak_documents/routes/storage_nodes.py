@@ -222,7 +222,7 @@ class JobCompletionRequest(BaseModel):
         prefix = next((candidate for candidate in allowed_prefixes if value.startswith(candidate)), None)
         if prefix is None:
             raise ValueError("stored_path deve apontar para a pasta compartilhada .Nexus")
-        if "\\x00" in value or "\\\\" in value:
+        if "\x00" in value or "\\" in value:
             raise ValueError("stored_path contém caracteres inválidos")
         parts = value[len(prefix):].split("/")
         if (
