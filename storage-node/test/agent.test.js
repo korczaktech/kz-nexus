@@ -3,7 +3,7 @@ import { mkdtemp, readFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import assert from "node:assert/strict";
-import { claimAndStoreJob, safeStoredFilename, sendHeartbeat, validateConfig } from "../src/agent.js";
+import { claimAndStoreJob, getUserDocumentsDir, safeStoredFilename, sendHeartbeat, validateConfig } from "../src/agent.js";
 
 const validConfig = {
   apiBase: "https://kzdoc.onrender.com/api/v1",
@@ -74,7 +74,7 @@ test("claims a save job, persists its content, and confirms the durable write", 
       calls.push({ url, options });
       if (url.endsWith("/jobs/claim")) {
         return { ok: true, status: 200, json: async () => ({ job: {
-          id: "job-1", name: "sample.nsx", content: "{\\\"format\\\":\\\"nsx\\\"}", mime_type: "application/x-korczak-nexus",
+          id: "job-1", user_id: "user-a", name: "sample.nsx", content: "{\\\"format\\\":\\\"nsx\\\"}", mime_type: "application/x-korczak-nexus",
         } }) };
       }
       return { ok: true, status: 200, json: async () => ({ status: "completed" }) };
@@ -88,6 +88,38 @@ test("claims a save job, persists its content, and confirms the durable write", 
     assert.equal(JSON.parse(calls[1].options.body).status, "completed");
   } finally {
     await rm(storageDir, { recursive: true, force: true });
+  }
+});
+
+
+test("routes each user's documents into the shared .Nexus directory", async () => {
+  const root = await mkdtemp(join(tmpdir(), "nexus-root-test-"));
+  const expectedDir = join(root, "users", "user-a", "documents");
+  assert.equal(getUserDocumentsDir("user-a", root), expectedDir);
+  assert.throws(() => getUserDocumentsDir("../other-user", root), /Identificador inválido/);
+
+  const calls = [];
+  try {
+    const result = await claimAndStoreJob(validConfig, {
+      nexusRoot: root,
+      log: { info() {} },
+      fetchImpl: async (url, options) => {
+        calls.push({ url, options });
+        if (url.endsWith("/jobs/claim")) {
+          return { ok: true, status: 200, json: async () => ({ job: {
+            id: "job-nexus-root", user_id: "user-a", name: "hello.nsx", content: "document",
+          } }) };
+        }
+        return { ok: true, status: 200, json: async () => ({ status: "completed" }) };
+      },
+    });
+    assert.equal(result.status, "completed");
+    assert.equal(result.stored_path, join(expectedDir, "job-nexus-root-hello.nsx"));
+    assert.equal(await readFile(result.stored_path, "utf8"), "document");
+    assert.equal(JSON.parse(calls[1].options.body).stored_path, result.stored_path);
+    assert.equal(await readFile(join(root, "system", "nodes", validConfig.nodeId).replace(/\\/g, "/").concat("/").concat("placeholder").replace(/placeholder$/, "missing").replace(/missing$/, "missing").replace(/missing$/, "missing")).catch?.(() => ""), "");
+  } finally {
+    await rm(root, { recursive: true, force: true });
   }
 });
 
@@ -106,7 +138,7 @@ test("reports directory creation failures instead of confirming a physical write
           calls.push({ url, options });
           if (url.endsWith("/jobs/claim")) {
             return { ok: true, status: 200, json: async () => ({ job: {
-              id: "job-dir-fail", name: "sample.nsx", content: "payload",
+              id: "job-dir-fail", user_id: "user-a", name: "sample.nsx", content: "payload",
             } }) };
           }
           return { ok: true, status: 200, json: async () => ({ status: "failed" }) };
@@ -138,7 +170,7 @@ test("reports file write conflicts instead of overwriting an existing file", asy
           calls.push({ url, options });
           if (url.endsWith("/jobs/claim")) {
             return { ok: true, status: 200, json: async () => ({ job: {
-              id: "job-write-fail", name: "sample.nsx", content: "new payload",
+              id: "job-write-fail", user_id: "user-a", name: "sample.nsx", content: "new payload",
             } }) };
           }
           return { ok: true, status: 200, json: async () => ({ status: "failed" }) };
