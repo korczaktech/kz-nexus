@@ -277,6 +277,21 @@ def test_completed_storage_job_accepts_android_primary_storage_alias():
     assert payload.stored_path.startswith("/storage/self/primary/.Nexus/")
 
 
+def test_completed_storage_job_rejects_traversal_and_malformed_nexus_paths():
+    from pydantic import ValidationError
+
+    invalid_paths = [
+        "/storage/emulated/0/.Nexus/users/user-a/../private.nsx",
+        "/storage/emulated/0/.Nexus/users/user-a/documents/../../private.nsx",
+        "/storage/emulated/0/.Nexus/system/nodes/node-1/file.nsx",
+        "/storage/emulated/0/.Nexus/users/user-a/documents/",
+        "/storage/emulated/0/.Nexus/users/user-a/documents\\\\file.nsx",
+    ]
+    for path in invalid_paths:
+        with pytest.raises(ValidationError):
+            storage_nodes.JobCompletionRequest(status="completed", stored_path=path)
+
+
 def test_completed_storage_job_rejects_relative_or_blank_paths():
     from pydantic import ValidationError
 
