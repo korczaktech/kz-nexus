@@ -389,8 +389,8 @@ async def claim_storage_job(
     if not job:
         return {"job": None}
     return {"job": {
-        "id": job["id"], "name": job["name"], "mime_type": job["mime_type"],
-        "content": job["content"], "size_bytes": job["size_bytes"],
+        "id": job["id"], "user_id": job["user_id"], "name": job["name"],
+        "mime_type": job["mime_type"], "content": job["content"], "size_bytes": job["size_bytes"],
     }}
 
 
