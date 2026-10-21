@@ -106,6 +106,10 @@ export async function sendHeartbeat(config, fetchImpl = globalThis.fetch, metric
   return payload;
 }
 
+export function normalizeReportedStoragePath(storedPath) {
+  return storedPath?.replace(/^\/storage\/self\/primary\//, "/storage/emulated/0/") ?? null;
+}
+
 export function safeStoredFilename(name) {
   const basename = String(name || "arquivo").replace(/\\/g, "/").split("/").pop() || "arquivo";
   const cleaned = basename.replace(/[\x00-\x1f<>:"|?*]/g, "_").replace(/^\.+$/, "arquivo").slice(0, 180);
@@ -147,7 +151,7 @@ export async function claimAndStoreJob(config, { fetchImpl = globalThis.fetch, s
     }
     status = "completed"; log.info?.("Arquivo armazenado no nó: " + safeStoredFilename(job.name));
   } catch (err) { errorMessage = err instanceof Error ? err.message.slice(0, 500) : "Falha ao gravar o arquivo."; storedPath = null; }
-  const reportedPath = storedPath?.replace(/^\/storage\/self\/primary\//, "/storage/emulated/0/") ?? null;
+  const reportedPath = normalizeReportedStoragePath(storedPath);
   let completed;
   let completionError;
   for (let attempt = 1; attempt <= 3; attempt += 1) {
