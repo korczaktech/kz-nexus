@@ -243,6 +243,14 @@ def test_completed_storage_job_rejects_paths_outside_shared_nexus():
         )
 
 
+def test_completed_storage_job_accepts_android_primary_storage_alias():
+    payload = storage_nodes.JobCompletionRequest(
+        status="completed",
+        stored_path="/storage/self/primary/.Nexus/users/user-a/documents/job-1-file.nsx",
+    )
+    assert payload.stored_path.startswith("/storage/self/primary/.Nexus/")
+
+
 def test_completed_storage_job_rejects_relative_or_blank_paths():
     from pydantic import ValidationError
 
