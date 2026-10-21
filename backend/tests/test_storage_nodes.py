@@ -13,7 +13,7 @@ class FakeCollection:
         self.documents.append(dict(document))
         return type("InsertResult", (), {"inserted_id": document.get("id")})()
 
-    async def find_one_and_update(self, query, update, return_document=True):
+    async def find_one_and_update(self, query, update, return_document=True, sort=None):
         if "$or" in query:
             stale_before = next(
                 (condition["claimed_at"]["$lt"] for condition in query["$or"] if "claimed_at" in condition and isinstance(condition["claimed_at"], dict)),
