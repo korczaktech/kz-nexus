@@ -96,7 +96,8 @@ export async function sendHeartbeat(config, fetchImpl = globalThis.fetch, metric
     throw error;
   }
   if (!response.ok) {
-    throw new Error(`Heartbeat recusado pela API (HTTP ${response.status}).`);
+    const details = typeof response.text === "function" ? await response.text().catch(() => "") : "";
+    throw new Error(`Heartbeat recusado pela API (HTTP ${response.status})${details ? ": " + details.slice(0, 300) : ""}.`);
   }
   const payload = await response.json();
   if (payload.node_id !== config.nodeId || payload.status !== "online") {
@@ -136,7 +137,10 @@ export async function claimAndStoreJob(config, { fetchImpl = globalThis.fetch, s
     status = "completed"; log.info?.("Arquivo armazenado no nó: " + safeStoredFilename(job.name));
   } catch (err) { errorMessage = err instanceof Error ? err.message.slice(0, 500) : "Falha ao gravar o arquivo."; storedPath = null; }
   const completed = await fetchImpl(base + "/jobs/" + encodeURIComponent(job.id) + "/complete", { method: "POST", headers, body: JSON.stringify({ status, error: errorMessage, stored_path: storedPath }), signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS) });
-  if (!completed.ok) throw new Error("Confirmação da tarefa recusada pela API (HTTP " + completed.status + ").");
+  if (!completed.ok) {
+    const details = typeof completed.text === "function" ? await completed.text().catch(() => "") : "";
+    throw new Error("Confirmação da tarefa recusada pela API (HTTP " + completed.status + ")" + (details ? ": " + details.slice(0, 500) : "") + ".");
+  }
   if (status !== "completed") throw new Error("Não foi possível gravar o arquivo no nó: " + errorMessage);
   return { job_id: job.id, status, stored_path: storedPath };
 }
@@ -158,7 +162,10 @@ export async function runAgent(config, {
       const metrics = await readStorageMetrics(undefined, config.nodeId);
       const result = await sendHeartbeat(config, fetchImpl, metrics);
       try { await claimAndStoreJob(config, { fetchImpl, log }); }
-      catch (jobError) { if (jobError?.permanent) throw jobError; log.warn?.("Não foi possível processar uma tarefa de armazenamento nesta tentativa."); }
+      catch (jobError) {
+        if (jobError?.permanent) throw jobError;
+        log.warn?.("Falha ao processar tarefa de armazenamento: " + (jobError instanceof Error ? jobError.message : String(jobError)));
+      }
       if (!connected || recovering) {
         log.info?.(`Nó Nexus online: ${result.node_id}`);
       }
@@ -174,7 +181,7 @@ export async function runAgent(config, {
       recovering = connected;
       failures += 1;
       const backoff = Math.min(maxBackoffMs, 1_000 * (2 ** Math.min(failures - 1, 8)));
-      log.warn?.(`Heartbeat falhou; nova tentativa em ${Math.ceil(backoff / 1000)}s.`);
+      log.warn?.(`Heartbeat falhou (${error instanceof Error ? error.message : String(error)}); nova tentativa em ${Math.ceil(backoff / 1000)}s.`);
       await sleep(backoff);
     }
   }
