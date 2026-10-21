@@ -219,8 +219,24 @@ class JobCompletionRequest(BaseModel):
             "/storage/emulated/0/.Nexus/",
             "/storage/self/primary/.Nexus/",
         )
-        if not value.startswith(allowed_prefixes):
+        prefix = next((candidate for candidate in allowed_prefixes if value.startswith(candidate)), None)
+        if prefix is None:
             raise ValueError("stored_path deve apontar para a pasta compartilhada .Nexus")
+        if "\\x00" in value or "\\\\" in value:
+            raise ValueError("stored_path contém caracteres inválidos")
+        parts = value[len(prefix):].split("/")
+        if (
+            len(parts) != 4
+            or parts[0] != "users"
+            or not parts[1]
+            or parts[1] in {".", ".."}
+            or not parts[1].replace("_", "").replace("-", "").isalnum()
+            or parts[2] != "documents"
+            or not parts[3]
+            or parts[3] in {".", ".."}
+            or any(part in {"", ".", ".."} for part in parts)
+        ):
+            raise ValueError("stored_path deve apontar para um arquivo de usuário dentro de .Nexus")
         return value
 
     @model_validator(mode="after")
