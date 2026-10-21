@@ -1,5 +1,5 @@
 import test from "node:test";
-import { mkdtemp, readFile, rm } from "node:fs/promises";
+import { mkdtemp, readFile, rm, stat } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import assert from "node:assert/strict";
@@ -117,7 +117,7 @@ test("routes each user's documents into the shared .Nexus directory", async () =
     assert.equal(result.stored_path, join(expectedDir, "job-nexus-root-hello.nsx"));
     assert.equal(await readFile(result.stored_path, "utf8"), "document");
     assert.equal(JSON.parse(calls[1].options.body).stored_path, result.stored_path);
-    assert.equal(await readFile(join(root, "system", "nodes", validConfig.nodeId).replace(/\\/g, "/").concat("/").concat("placeholder").replace(/placeholder$/, "missing").replace(/missing$/, "missing").replace(/missing$/, "missing")).catch?.(() => ""), "");
+    assert.equal((await stat(join(root, "system", "nodes", validConfig.nodeId))).isDirectory(), true);
   } finally {
     await rm(root, { recursive: true, force: true });
   }
