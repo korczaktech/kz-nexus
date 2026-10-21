@@ -3,7 +3,7 @@ import { mkdtemp, readFile, rm, stat } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import assert from "node:assert/strict";
-import { claimAndStoreJob, getUserDocumentsDir, safeStoredFilename, sendHeartbeat, validateConfig } from "../src/agent.js";
+import { claimAndStoreJob, getUserDocumentsDir, readStorageMetrics, safeStoredFilename, sendHeartbeat, validateConfig } from "../src/agent.js";
 
 const validConfig = {
   apiBase: "https://kzdoc.onrender.com/api/v1",
@@ -88,6 +88,20 @@ test("claims a save job, persists its content, and confirms the durable write", 
     assert.equal(JSON.parse(calls[1].options.body).status, "completed");
   } finally {
     await rm(storageDir, { recursive: true, force: true });
+  }
+});
+
+
+test("initializes .Nexus users, system, and node metadata directories", async () => {
+  const root = await mkdtemp(join(tmpdir(), "nexus-layout-test-"));
+  try {
+    const metrics = await readStorageMetrics(root, validConfig.nodeId);
+    assert.ok(metrics.total_bytes > 0);
+    assert.equal((await stat(join(root, "users"))).isDirectory(), true);
+    assert.equal((await stat(join(root, "system"))).isDirectory(), true);
+    assert.equal((await stat(join(root, "system", "nodes", validConfig.nodeId))).isDirectory(), true);
+  } finally {
+    await rm(root, { recursive: true, force: true });
   }
 });
 
