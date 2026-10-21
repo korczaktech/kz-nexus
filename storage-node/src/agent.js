@@ -71,6 +71,8 @@ export function getUserDocumentsDir(userId, nexusRoot = join(SHARED_STORAGE_DIR,
 export async function readStorageMetrics(storageDir) {
   const targetDir = storageDir ?? await resolveNexusRoot();
   await mkdir(targetDir, { recursive: true, mode: 0o700 });
+  await mkdir(join(targetDir, "users"), { recursive: true, mode: 0o700 });
+  await mkdir(join(targetDir, "system"), { recursive: true, mode: 0o700 });
   const fs = await statfs(targetDir);
   return { free_bytes: Number(fs.bavail) * Number(fs.bsize), total_bytes: Number(fs.blocks) * Number(fs.bsize), internet_connected: true };
 }
