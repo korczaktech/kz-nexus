@@ -121,7 +121,10 @@ export async function claimAndStoreJob(config, { fetchImpl = globalThis.fetch, s
   const base = config.apiBase + "/storage/nodes/" + encodeURIComponent(config.nodeId);
   const response = await fetchImpl(base + "/jobs/claim", { method: "POST", headers, signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS) });
   if (response.status === 401 || response.status === 403) { const error = new Error("Credencial do nó inválida ou revogada; o agente será encerrado."); error.permanent = true; throw error; }
-  if (!response.ok) throw new Error("Consulta de tarefas recusada pela API (HTTP " + response.status + ").");
+  if (!response.ok) {
+    const details = typeof response.text === "function" ? await response.text().catch(() => "") : "";
+    throw new Error("Consulta de tarefas recusada pela API (HTTP " + response.status + ")" + (details ? ": " + details.slice(0, 500) : "") + ".");
+  }
   const data = await response.json(); const job = data.job;
   if (!job) return null;
   let status = "failed"; let errorMessage = null; let storedPath = null;
@@ -219,7 +222,7 @@ export async function runAgent(config, {
       recovering = connected;
       failures += 1;
       const backoff = Math.min(maxBackoffMs, 1_000 * (2 ** Math.min(failures - 1, 8)));
-      log.warn?.(`Heartbeat falhou (${error instanceof Error ? error.message : String(error)}); nova tentativa em ${Math.ceil(backoff / 1000)}s.`);
+      log.warn?.(`Ciclo do agente falhou: ${error instanceof Error ? error.message : String(error)}; nova tentativa em ${Math.ceil(backoff / 1000)}s.`);
       await sleep(backoff);
     }
   }
