@@ -108,7 +108,7 @@ export function safeStoredFilename(name) {
   return cleaned || "arquivo";
 }
 
-export async function claimAndStoreJob(config, { fetchImpl = globalThis.fetch, storageDir, log = console } = {}) {
+export async function claimAndStoreJob(config, { fetchImpl = globalThis.fetch, storageDir, nexusRoot: configuredNexusRoot, log = console } = {}) {
   const headers = { Authorization: "Bearer " + config.nodeToken, Accept: "application/json", "Content-Type": "application/json" };
   const base = config.apiBase + "/storage/nodes/" + encodeURIComponent(config.nodeId);
   const response = await fetchImpl(base + "/jobs/claim", { method: "POST", headers, signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS) });
@@ -120,7 +120,7 @@ export async function claimAndStoreJob(config, { fetchImpl = globalThis.fetch, s
   try {
     let targetDir = storageDir;
     if (!targetDir) {
-      const nexusRoot = await resolveNexusRoot();
+      const nexusRoot = configuredNexusRoot ?? await resolveNexusRoot();
       const userId = safePathSegment(job.user_id, "usuário");
       const nodeId = safePathSegment(config.nodeId, "nó");
       targetDir = getUserDocumentsDir(userId, nexusRoot);
