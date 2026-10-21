@@ -216,7 +216,7 @@ def test_failed_storage_job_cannot_claim_a_stored_path():
 
 def test_completed_storage_job_accepts_agent_reported_path():
     payload = storage_nodes.JobCompletionRequest(
-        status="completed", stored_path="/data/data/com.termux/files/home/.local/share/korczak-nexus/files/job-1-file.nsx"
+        status="completed", stored_path="/storage/emulated/0/.Nexus/users/user-a/documents/job-1-file.nsx"
     )
     assert payload.status == "completed"
     assert payload.stored_path.endswith("job-1-file.nsx")
