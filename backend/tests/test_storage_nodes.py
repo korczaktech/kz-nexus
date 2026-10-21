@@ -32,6 +32,12 @@ class FakeCollection:
                 return type("UpdateResult", (), {"matched_count": 1})()
         return type("UpdateResult", (), {"matched_count": 0})()
 
+    async def find_one(self, query, projection=None):
+        for document in self.documents:
+            if all(document.get(key) == value for key, value in query.items()):
+                return dict(document)
+        return None
+
     async def update_many(self, query, update):
         matched = 0
         for document in self.documents:
@@ -294,3 +300,32 @@ async def test_route_save_assigns_each_document_to_exactly_one_least_used_node(m
     assert len(result["jobs"]) == 1
     assert len(database["storage_node_jobs"].documents) == 1
     assert database["storage_node_jobs"].documents[0]["node_id"] == "node-ii"
+
+
+@pytest.mark.asyncio
+async def test_repeated_identical_completion_is_idempotent(monkeypatch):
+    database = FakeDatabase()
+    monkeypatch.setattr(storage_nodes, "get_database", lambda: database)
+    token = "knode_" + "A" * 64
+    stored_path = "/storage/emulated/0/.Nexus/users/user-a/documents/job-1-file.nsx"
+    await database["storage_nodes"].insert_one({
+        "id": "node-1",
+        "token_hash": storage_nodes._digest(token),
+        "revoked_at": None,
+    })
+    await database["storage_node_jobs"].insert_one({
+        "id": "job-1",
+        "node_id": "node-1",
+        "status": "completed",
+        "stored_path": stored_path,
+        "error": None,
+    })
+
+    result = await storage_nodes.complete_storage_job(
+        "node-1",
+        "job-1",
+        storage_nodes.JobCompletionRequest(status="completed", stored_path=stored_path),
+        f"Bearer {token}",
+    )
+
+    assert result == {"job_id": "job-1", "status": "completed"}
