@@ -22,6 +22,7 @@ def test_expected_collections_are_defined() -> None:
         "grupos",
         "storage_nodes",
         "storage_node_pairing_codes",
+        "storage_node_jobs",
     )
 
 
