@@ -124,17 +124,33 @@ async def pair_node(payload: PairNodeRequest) -> dict:
 
 
 @router.get("")
+async def _accessible_node_owner_ids(user_id: str) -> set[str]:
+    """Return the current user's ID plus IDs of admin accounts whose nodes are shared platform storage."""
+    cursor = get_accounts_database()["contas"].find({}, {"_id": 0, "id": 1, "Conta.Role": 1})
+    accounts = await cursor.to_list(length=None)
+    owners = {user_id}
+    for account in accounts:
+        role = account.get("Conta", {}).get("Role", "") if isinstance(account.get("Conta"), dict) else ""
+        account_id = str(account.get("id", "")).strip()
+        if account_id and str(role).casefold() == "admin":
+            owners.add(account_id)
+    return owners
+
+
 async def list_nodes(user: dict = Depends(current_user)) -> dict:
-    """List only the authenticated user's storage nodes."""
+    """List the user's own nodes and shared platform nodes owned by administrators."""
+    owner_ids = await _accessible_node_owner_ids(str(user["id"]))
     cursor = get_database()["storage_nodes"].find(
-        {"user_id": user["id"]},
-        {"_id": 0, "id": 1, "device_name": 1, "created_at": 1, "last_seen_at": 1, "revoked_at": 1, "saving_enabled": 1},
+        {"revoked_at": None},
+        {"_id": 0, "id": 1, "user_id": 1, "device_name": 1, "created_at": 1, "last_seen_at": 1, "revoked_at": 1, "saving_enabled": 1},
     )
-    nodes = await cursor.to_list(length=100)
+    nodes = [node for node in await cursor.to_list(length=500) if node.get("user_id") in owner_ids]
     now = _now()
     for node in nodes:
-        # Serialize MongoDB's naive UTC datetimes as explicitly UTC timestamps
-        # so browsers do not reinterpret them as local wall-clock times.
+        # Shared nodes are visible to regular accounts but remain manageable only by their owner.
+        node["shared"] = node.get("user_id") != user["id"]
+        node["can_manage"] = node.get("user_id") == user["id"]
+        node.pop("user_id", None)
         for field in ("created_at", "last_seen_at", "revoked_at"):
             value = node.get(field)
             if isinstance(value, datetime) and value.tzinfo is None:
@@ -434,10 +450,14 @@ async def route_saved_file(payload: RouteSaveRequest, user: dict = Depends(curre
             "storage_quota_exceeded",
             413,
         )
-    nodes = await database["storage_nodes"].find(
-        {"user_id": user["id"], "revoked_at": None},
+    # Platform storage paired by an administrator is shared with authenticated accounts.
+    # User-owned nodes remain private to their owner; queued jobs retain the saving user's ID.
+    owner_ids = await _accessible_node_owner_ids(str(user["id"]))
+    all_nodes = await database["storage_nodes"].find(
+        {"revoked_at": None},
         {"_id": 0},
-    ).to_list(length=100)
+    ).to_list(length=500)
+    nodes = [node for node in all_nodes if node.get("user_id") in owner_ids]
     by_role = {_node_role(node.get("device_name", "")): node for node in nodes if _node_role(node.get("device_name", ""))}
     eligible = [
         (role, by_role[role])
