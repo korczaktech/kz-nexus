@@ -27,39 +27,41 @@ if ! git merge-base --is-ancestor "$CURRENT" "$TARGET"; then
   exit 1
 fi
 
-# Only the runtime agent and its tests are updated automatically. Local
-# supervisor scripts, lockfiles, and other user files are never reset or stashed.
+# Only the runtime agent and its tests are updated automatically.
+# Other files (including package-lock.json and supervisor customizations) are untouched.
 if [ -f "$APPLIED_FILE" ]; then
   BASELINE="$(cat "$APPLIED_FILE")"
 else
   BASELINE="$CURRENT"
 fi
 
-for path in "$AGENT_PATH" "$TEST_PATH"; do
-  if ! git diff --quiet "$BASELINE" -- "$path"; then
-    echo "UPDATE_ERROR: alteração local em $path; atualização cancelada para preservar o arquivo." >&2
-    exit 1
-  fi
-done
-
-if git diff --quiet "$TARGET" -- "$AGENT_PATH" "$TEST_PATH"; then
-  printf '%s\n' "$TARGET" > "$APPLIED_FILE"
-  chmod 600 "$APPLIED_FILE"
-  echo "UP_TO_DATE"
-  exit 0
-fi
-
 TMP_DIR="$(mktemp -d "$LOG_DIR/update.XXXXXX")"
 cleanup() { rm -rf "$TMP_DIR"; }
 trap cleanup EXIT HUP INT TERM
 
-git show "$TARGET:$AGENT_PATH" > "$TMP_DIR/agent.js.new"
-git show "$TARGET:$TEST_PATH" > "$TMP_DIR/agent.test.js.new"
+# Three-way merge: local working copy + last applied upstream base + newest upstream.
+# Non-conflicting local customizations survive together with upstream changes.
+merge_managed_file() {
+  path="$1"
+  label="$2"
+  git show "$BASELINE:$path" > "$TMP_DIR/$label.base"
+  cp "$path" "$TMP_DIR/$label.local"
+  git show "$TARGET:$path" > "$TMP_DIR/$label.remote"
+  if ! git merge-file -p "$TMP_DIR/$label.local" "$TMP_DIR/$label.base" "$TMP_DIR/$label.remote" > "$TMP_DIR/$label.merged"; then
+    echo "UPDATE_ERROR: conflito de mesclagem em $path; arquivo original preservado para resolução manual." >&2
+    return 1
+  fi
+}
+
+if ! merge_managed_file "$AGENT_PATH" "agent"; then exit 1; fi
+if ! merge_managed_file "$TEST_PATH" "tests"; then exit 1; fi
+
+# Keep rollback copies until the merged files pass the complete agent test suite.
 cp "$AGENT_PATH" "$TMP_DIR/agent.js.old"
 cp "$TEST_PATH" "$TMP_DIR/agent.test.js.old"
 
-mv "$TMP_DIR/agent.js.new" "$AGENT_PATH"
-mv "$TMP_DIR/agent.test.js.new" "$TEST_PATH"
+mv "$TMP_DIR/agent.merged" "$AGENT_PATH"
+mv "$TMP_DIR/tests.merged" "$TEST_PATH"
 
 if ! (cd "$NODE_DIR" && npm test); then
   mv "$TMP_DIR/agent.js.old" "$AGENT_PATH"
@@ -68,7 +70,7 @@ if ! (cd "$NODE_DIR" && npm test); then
   exit 1
 fi
 
-printf '%s\n' "$TARGET" > "$TMP_DIR/agent-source-commit"
+printf '%s\\n' "$TARGET" > "$TMP_DIR/agent-source-commit"
 mv "$TMP_DIR/agent-source-commit" "$APPLIED_FILE"
 chmod 600 "$APPLIED_FILE"
 echo "UPDATED:$TARGET"
