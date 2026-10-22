@@ -113,8 +113,9 @@ function wrapText(text: string, maxWidth: number, fontSize: number, fontFamily: 
     for (const word of words) {
       const candidate = line + word;
       if (line && measure(candidate.trimEnd()) > maxWidth) {
-        const clean = line.trimEnd();
-        result.push({ text: clean, start, end: start + clean.length, width: measure(clean) });
+        // Keep trailing spaces in the logical range so the caret advances
+        // immediately when the user types whitespace at the end of a line.
+        result.push({ text: line, start, end: start + line.length, width: measure(line) });
         start += line.length;
         line = "";
       }
@@ -131,8 +132,9 @@ function wrapText(text: string, maxWidth: number, fontSize: number, fontFamily: 
         line = piece;
       } else line += token;
     }
-    const clean = line.trimEnd();
-    result.push({ text: clean, start, end: start + clean.length, width: measure(clean) });
+    // Preserve trailing whitespace in the line text and offsets. Trimming
+    // here made the rendered caret appear stuck until the next non-space key.
+    result.push({ text: line, start, end: start + line.length, width: measure(line) });
     globalOffset += paragraph.length + 1;
   }
   return result;
@@ -223,12 +225,12 @@ function blockTextLayout(block: Paragraph | Heading, x: number, y: number, width
     const tokens=paragraph.match(/\S+\s*/g)||[paragraph];
     let lineStart=globalOffset,lineEnd=globalOffset,lineText="";
     const pushLine=(start:number,end:number,text:string)=>{
-      const clean=text.trimEnd();
-      const actualEnd=start+clean.length;
-      const runs=buildRuns(start,actualEnd);
+      // Keep the full source range, including trailing spaces. Otherwise the
+      // canvas caret is clamped to the last visible non-whitespace character.
+      const runs=buildRuns(start,end);
       const naturalHeights=runs.map(run=>options.metrics?.lineHeight?.(run.fontSize,run.fontFamily)??run.fontSize*1.2);
       const height=(naturalHeights.length?Math.max(...naturalHeights):((options.metrics?.lineHeight?.(fallbackSize,familyFallback)??fallbackSize*1.2)))*safeNumber(block.lineSpacing,1);
-      wrapped.push({text:clean,start,end:actualEnd,width:measureRange(start,actualEnd),runs,height});
+      wrapped.push({text,start,end,width:measureRange(start,end),runs,height});
     };
     let tokenOffset=globalOffset;
     for(const token of tokens){
