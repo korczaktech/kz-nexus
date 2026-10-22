@@ -74,6 +74,17 @@ def test_api_route_inventory() -> None:
     assert EXPECTED <= routes
 
 
+def test_subscription_endpoints_require_authentication() -> None:
+    client = TestClient(app)
+    assert client.get("/api/v1/subscriptions/me").status_code == 401
+    assert client.post("/api/v1/subscriptions/requests", json={"plan": "Apollo"}).status_code == 401
+    assert client.get("/api/v1/admin/subscription-requests").status_code == 401
+    assert client.patch(
+        "/api/v1/admin/subscription-requests/not-a-real-request",
+        json={"status": "active", "payment_reference": "TX-1234"},
+    ).status_code == 401
+
+
 def test_health_is_available() -> None:
     response = TestClient(app).get("/api/v1/health")
     assert response.status_code == 200
