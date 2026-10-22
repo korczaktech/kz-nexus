@@ -373,13 +373,13 @@ describe("SmartCanvasPreview input integration", () => {
     host = window.document.createElement("div");
     window.document.body.append(host);
     root = createRoot(host);
-    await act(async () => {
-      root?.render(createElement(SmartCanvasPreview, {
-        document: engine!.getDocument(),
-        engine: engine!,
-        onDocumentChange: vi.fn(),
-      }));
+    const renderPreview = () => createElement(SmartCanvasPreview, {
+      document: engine!.getDocument(),
+      engine: engine!,
+      onDocumentChange: vi.fn(),
+      externalSelection: engine!.getSelection() ?? null,
     });
+    await act(async () => { root?.render(renderPreview()); });
     const input = host.querySelector('textarea[aria-label="Entrada de texto do SmartCanvas"]') as HTMLTextAreaElement | null;
     if (!input) throw new Error("SmartCanvas input surface was not mounted");
 
@@ -392,8 +392,11 @@ describe("SmartCanvasPreview input integration", () => {
       anchor: { blockId: "tab_next_paragraph_0001", offset: 2 },
       focus: { blockId: "tab_next_paragraph_0001", offset: 2 },
     }).ok).toBe(true);
+    await act(async () => { root?.render(renderPreview()); });
+    const backwardInput = host.querySelector('textarea[aria-label="Entrada de texto do SmartCanvas"]') as HTMLTextAreaElement | null;
+    if (!backwardInput) throw new Error("SmartCanvas input surface was not mounted after selection change");
     await act(async () => {
-      input.dispatchEvent(new KeyboardEvent("keydown", { key: "Tab", shiftKey: true, bubbles: true, cancelable: true }));
+      backwardInput.dispatchEvent(new KeyboardEvent("keydown", { key: "Tab", shiftKey: true, bubbles: true, cancelable: true }));
     });
     expect(engine.getSelection()?.focus).toEqual({ blockId: "tab_nested_paragraph_0001", offset: 6 });
     const finalTable = engine.getDocument().content.find(block => block.type === "table");
