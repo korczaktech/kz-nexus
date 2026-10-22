@@ -24,6 +24,15 @@ PLAN_PRICES = {
 PLAN_LIMITS = {"Zagryd": 10, "Hermes": 25, "Apollo": 50, "Veles": 100, "Dimitri": 250, "Zeus": 500, "Morok": 1000}
 COLLECTION = "subscription_requests"
 
+
+def _parse_utc(value: str | datetime) -> datetime:
+    """Parse ISO timestamps consistently, including legacy naive timestamps."""
+    parsed = value if isinstance(value, datetime) else datetime.fromisoformat(value)
+    if parsed.tzinfo is None:
+        return parsed.replace(tzinfo=timezone.utc)
+    return parsed.astimezone(timezone.utc)
+
+
 async def require_active_subscription(user_id: str) -> dict:
     """Backend gate for premium operations; pending requests never grant access."""
     item = await get_database()[COLLECTION].find_one(
@@ -34,7 +43,7 @@ async def require_active_subscription(user_id: str) -> dict:
     if not item or not item.get("current_period_end"):
         raise AppError("Este recurso exige uma assinatura paga ativa.", "subscription_required", 403)
     try:
-        period_end = datetime.fromisoformat(item["current_period_end"])
+        period_end = _parse_utc(item["current_period_end"])
     except (TypeError, ValueError):
         raise AppError("A validade da assinatura não pôde ser verificada.", "subscription_status_invalid", 403)
     if period_end <= datetime.now(timezone.utc):
@@ -58,10 +67,13 @@ async def create_subscription_request(payload: dict = Body(...), user=Depends(cu
     plan = str(payload.get("plan") or "").strip()
     if plan not in PLAN_PRICES:
         raise ValidationError("Plano inválido ou não disponível para contratação automática.")
-    try:
-        quantity = int(payload.get("quantity", 1))
-    except (TypeError, ValueError):
+    raw_quantity = payload.get("quantity", 1)
+    if isinstance(raw_quantity, bool) or not (
+        isinstance(raw_quantity, int)
+        or (isinstance(raw_quantity, str) and raw_quantity.isdigit())
+    ):
         raise ValidationError("A quantidade de usuários deve ser um número inteiro.")
+    quantity = int(raw_quantity)
     if quantity < 1 or quantity > PLAN_LIMITS[plan]:
         raise ValidationError(f"A quantidade para o plano {plan} deve estar entre 1 e {PLAN_LIMITS[plan]} usuários.")
 
@@ -74,7 +86,7 @@ async def create_subscription_request(payload: dict = Body(...), user=Depends(cu
         raise AppError("Você já possui uma solicitação pendente. Aguarde a análise administrativa antes de solicitar outro plano.", "subscription_request_pending", 409)
 
     active = await collection.find_one({"user_id": user["id"], "status": "active"})
-    if active and active.get("current_period_end") and datetime.fromisoformat(active["current_period_end"]) > datetime.now(timezone.utc):
+    if active and active.get("current_period_end") and _parse_utc(active["current_period_end"]) > datetime.now(timezone.utc):
         raise AppError("Você já possui uma assinatura ativa. Solicite alteração de plano pelo atendimento.", "subscription_already_active", 409)
 
     now = _now()
@@ -119,7 +131,14 @@ async def my_subscription(user=Depends(current_user)):
     )
     items = await cursor.to_list(length=20)
     now = datetime.now(timezone.utc)
-    active = next((item for item in items if item.get("status") == "active" and item.get("current_period_end") and datetime.fromisoformat(item["current_period_end"]) > now), None)
+    await get_database()[COLLECTION].update_many(
+        {"user_id": user["id"], "status": "active", "current_period_end": {"$lte": now.isoformat()}},
+        {"$set": {"status": "expired", "updated_at": now.isoformat()}},
+    )
+    items = await get_database()[COLLECTION].find(
+        {"user_id": user["id"]}, {"_id": 0}
+    ).sort("created_at", -1).limit(20).to_list(length=20)
+    active = next((item for item in items if item.get("status") == "active" and item.get("current_period_end") and _parse_utc(item["current_period_end"]) > now), None)
     pending = next((item for item in items if item.get("status") == "pending_confirmation"), None)
     return {
         "items": items,
@@ -136,8 +155,14 @@ async def list_subscription_requests(
     user=Depends(current_user),
 ):
     require_role(user, "manager")
+    collection = get_database()[COLLECTION]
+    now = datetime.now(timezone.utc).isoformat()
+    await collection.update_many(
+        {"status": "active", "current_period_end": {"$lte": now}},
+        {"$set": {"status": "expired", "updated_at": now}},
+    )
     query = {} if status_filter == "all" else {"status": status_filter}
-    cursor = get_database()[COLLECTION].find(query, {"_id": 0}).sort("created_at", -1).limit(limit)
+    cursor = collection.find(query, {"_id": 0}).sort("created_at", -1).limit(limit)
     return {"items": await cursor.to_list(length=limit)}
 
 
@@ -163,18 +188,17 @@ async def review_subscription_request(
     item = await collection.find_one({"id": request_id})
     if not item:
         raise AppError("Solicitação de assinatura não encontrada.", "subscription_request_not_found", 404)
+    if item.get("status") != "pending_confirmation":
+        raise AppError("A solicitação já foi analisada e não pode ser alterada novamente.", "subscription_request_already_reviewed", 409)
     if target_status == "active":
         other_active = await collection.find_one({"user_id": item["user_id"], "status": "active", "id": {"$ne": request_id}})
         if other_active and other_active.get("current_period_end"):
             try:
-                period_end = datetime.fromisoformat(other_active["current_period_end"])
+                period_end = _parse_utc(other_active["current_period_end"])
             except (TypeError, ValueError):
                 period_end = datetime.now(timezone.utc) + timedelta(days=1)
             if period_end > datetime.now(timezone.utc):
                 raise AppError("Este usuário já possui uma assinatura ativa.", "subscription_already_active", 409)
-    if item.get("status") != "pending_confirmation":
-        raise AppError("A solicitação já foi analisada e não pode ser alterada novamente.", "subscription_request_already_reviewed", 409)
-
     now = _now()
     changes = {
         "status": target_status,
