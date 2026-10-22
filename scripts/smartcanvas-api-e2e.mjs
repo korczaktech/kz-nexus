@@ -79,7 +79,7 @@ try {
   // Wait for registration to complete before navigating; the guest home also
   // exposes a "Novo documento" action, but that action does not open the modal.
   await page.locator(".auth-card").waitFor({ state: "detached" });
-  await page.locator("nav button").filter({ hasText: "Documentos" }).click();
+  await page.locator("nav button").filter({ hasText: "Documentos" }).first().click();
   const newDocumentButton = page.locator(".page-head button").filter({ hasText: "Novo documento" });
   await newDocumentButton.waitFor();
 
