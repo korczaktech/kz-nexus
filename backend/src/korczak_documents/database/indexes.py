@@ -16,6 +16,7 @@ INDEX_DEFINITIONS = {
     "storage_nodes": [("user_id", ASCENDING), ("created_at", DESCENDING)],
     "storage_node_pairing_codes": [("user_id", ASCENDING), ("expires_at", DESCENDING)],
     "storage_node_jobs": [("node_id", ASCENDING), ("status", ASCENDING), ("created_at", ASCENDING)],
+    "subscription_requests": [("user_id", ASCENDING), ("status", ASCENDING), ("created_at", DESCENDING)],
 }
 
 
