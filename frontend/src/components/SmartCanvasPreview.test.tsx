@@ -325,6 +325,81 @@ describe("SmartCanvasPreview input integration", () => {
     expect(getPlainText(updatedTable.children[0]!.children[0]!.children[0]!)).toBe("vo");
   });
 
+  it("navigates forward and backward from text nested inside a table cell", async () => {
+    const document = createDocument({ title: "SmartCanvas nested table Tab" });
+    const table = {
+      type: "table",
+      id: "tab_table_0001",
+      children: [{
+        type: "tableRow",
+        id: "tab_row_0001",
+        children: [
+          {
+            type: "tableCell",
+            id: "tab_cell_a_0001",
+            children: [{
+              type: "bulletList",
+              id: "tab_list_0001",
+              children: [{
+                type: "listItem",
+                id: "tab_item_0001",
+                children: [{
+                  type: "paragraph",
+                  id: "tab_nested_paragraph_0001",
+                  children: [{ type: "text", id: "tab_nested_run_0001", text: "nested", marks: [] }],
+                }],
+              }],
+            }],
+          },
+          {
+            type: "tableCell",
+            id: "tab_cell_b_0001",
+            children: [{
+              type: "paragraph",
+              id: "tab_next_paragraph_0001",
+              children: [{ type: "text", id: "tab_next_run_0001", text: "next", marks: [] }],
+            }],
+          },
+        ],
+      }],
+    } as NexusDocument["content"][number];
+    document.content.push(table);
+    engine = createEditor({ document });
+    expect(engine.setSelection({
+      anchor: { blockId: "tab_nested_paragraph_0001", offset: 2 },
+      focus: { blockId: "tab_nested_paragraph_0001", offset: 2 },
+    }).ok).toBe(true);
+
+    host = window.document.createElement("div");
+    window.document.body.append(host);
+    root = createRoot(host);
+    await act(async () => {
+      root?.render(createElement(SmartCanvasPreview, {
+        document: engine!.getDocument(),
+        engine: engine!,
+        onDocumentChange: vi.fn(),
+      }));
+    });
+    const input = host.querySelector('textarea[aria-label="Entrada de texto do SmartCanvas"]') as HTMLTextAreaElement | null;
+    if (!input) throw new Error("SmartCanvas input surface was not mounted");
+
+    await act(async () => {
+      input.dispatchEvent(new KeyboardEvent("keydown", { key: "Tab", bubbles: true, cancelable: true }));
+    });
+    expect(engine.getSelection()?.focus).toEqual({ blockId: "tab_next_paragraph_0001", offset: 0 });
+
+    expect(engine.setSelection({
+      anchor: { blockId: "tab_next_paragraph_0001", offset: 2 },
+      focus: { blockId: "tab_next_paragraph_0001", offset: 2 },
+    }).ok).toBe(true);
+    await act(async () => {
+      input.dispatchEvent(new KeyboardEvent("keydown", { key: "Tab", shiftKey: true, bubbles: true, cancelable: true }));
+    });
+    expect(engine.getSelection()?.focus).toEqual({ blockId: "tab_nested_paragraph_0001", offset: 6 });
+    const finalTable = engine.getDocument().content.find(block => block.type === "table");
+    expect(finalTable?.type).toBe("table");
+  });
+
   it("notifies the outer ribbon when the canonical selection changes", async () => {
     const document = createDocument({ title: "SmartCanvas ribbon selection sync" });
     const first = document.content[0];
