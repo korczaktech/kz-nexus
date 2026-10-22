@@ -92,12 +92,12 @@ test("claims a save job, persists its content, and confirms the durable write", 
 });
 
 
-test("initializes .Nexus users, system, and node metadata directories", async () => {
+test("initializes .vault user, system, and node metadata directories", async () => {
   const root = await mkdtemp(join(tmpdir(), "nexus-layout-test-"));
   try {
     const metrics = await readStorageMetrics(root, validConfig.nodeId);
     assert.ok(metrics.total_bytes > 0);
-    assert.equal((await stat(join(root, "users"))).isDirectory(), true);
+    assert.equal((await stat(join(root, "usuarios"))).isDirectory(), true);
     assert.equal((await stat(join(root, "system"))).isDirectory(), true);
     assert.equal((await stat(join(root, "system", "nodes", validConfig.nodeId))).isDirectory(), true);
   } finally {
@@ -106,9 +106,9 @@ test("initializes .Nexus users, system, and node metadata directories", async ()
 });
 
 
-test("routes each user's documents into the shared .Nexus directory", async () => {
+test("routes each user's documents into their .vault product directory", async () => {
   const root = await mkdtemp(join(tmpdir(), "nexus-root-test-"));
-  const expectedDir = join(root, "users", "user-a", "documents");
+  const expectedDir = join(root, "usuarios", "user-a");
   assert.equal(getUserDocumentsDir("user-a", root), expectedDir);
   assert.throws(() => getUserDocumentsDir("../other-user", root), /Identificador inválido/);
 
@@ -121,7 +121,7 @@ test("routes each user's documents into the shared .Nexus directory", async () =
         calls.push({ url, options });
         if (url.endsWith("/jobs/claim")) {
           return { ok: true, status: 200, json: async () => ({ job: {
-            id: "job-nexus-root", user_id: "user-a", name: "hello.nsx", content: "document",
+            id: "job-nexus-root", user_id: "user-a", name: "hello-doc-123.nsx", product: "Nexus", content: "document",
           } }) };
         }
         return { ok: true, status: 200, json: async () => ({ status: "completed" }) };
