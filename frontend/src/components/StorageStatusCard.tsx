@@ -9,7 +9,7 @@ type Props = {
 
 
 
-function StorageIcon({kind}: {kind: 'google' | 'onedrive' | 'vault' | 'device' | 'nexus-cloud'}) {
+function StorageIcon({kind}: {kind: 'google' | 'onedrive' | 'vault' | 'device' | 'vault-cloud'}) {
   if (kind === 'google') {
     return <svg className="storage-status-svg" viewBox="0 0 48 48" role="img" aria-label="Google Drive" focusable="false">
       <path fill="#00832D" d="M16.2 6.5h10.1L10.1 34.2 5 25.5z" />
@@ -28,8 +28,8 @@ function StorageIcon({kind}: {kind: 'google' | 'onedrive' | 'vault' | 'device' |
       <path fill="#1490DF" d="M18.9 34.7 31.8 26l7.2 1.3a7 7 0 0 1-1.1 13.8H14.2z"/>
     </svg>;
   }
-  if (kind === 'nexus-cloud') {
-    return <svg className="storage-status-svg" viewBox="0 0 48 48" role="img" aria-label="Nexus Cloud" focusable="false">
+  if (kind === 'vault-cloud') {
+    return <svg className="storage-status-svg" viewBox="0 0 48 48" role="img" aria-label="Korczak Vault" focusable="false">
       <path d="M13 35h23a8 8 0 0 0 1-16 13 13 0 0 0-25-2 9 9 0 0 0 1 18z" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinejoin="round"/>
       <path d="M17 25h14M17 30h9" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"/>
     </svg>;
@@ -79,7 +79,7 @@ export function StorageStatusCard({guest, selection}: Props) {
   useEffect(() => { void refresh(); }, [refresh]);
 
   const localConfigured = selection?.provider === 'local';
-  const nexusCloudSelected = selection?.provider === 'nexus-cloud';
+  const nexusCloudSelected = selection?.provider === 'vault-cloud';
   const vaultNodes = nodes.filter(node => node.status !== 'revoked');
   const vaultOnline = vaultNodes.some(node => node.status === 'online');
   const vaultSubtitle = guest
@@ -106,7 +106,7 @@ export function StorageStatusCard({guest, selection}: Props) {
         <StatusPill online={selection?.provider === 'google-drive'} />
       </div>
       <div className="storage-status-row">
-        <span className="storage-status-provider"><span className="storage-status-icon nexus-cloud"><StorageIcon kind="nexus-cloud" /></span><span><strong>Nexus Cloud</strong><small>{guest ? 'Entre na conta para usar o Nexus Cloud' : loading ? 'Verificando servidores…' : refreshError ? 'Não foi possível verificar a conexão' : vaultOnline ? (nexusCloudSelected ? 'Selecionado · servidores disponíveis' : 'Servidores disponíveis') : (nexusCloudSelected ? 'Selecionado · nenhum servidor on-line' : 'Nenhum servidor on-line')}</small></span></span>
+        <span className="storage-status-provider"><span className="storage-status-icon vault-cloud"><StorageIcon kind="vault-cloud" /></span><span><strong>Korczak Vault</strong><small>{guest ? 'Entre na conta para usar o Korczak Vault' : loading ? 'Verificando servidores…' : refreshError ? 'Não foi possível verificar a conexão' : vaultOnline ? (nexusCloudSelected ? 'Selecionado · servidores disponíveis' : 'Servidores disponíveis') : (nexusCloudSelected ? 'Selecionado · nenhum servidor on-line' : 'Nenhum servidor on-line')}</small></span></span>
         <StatusPill online={!guest && !loading && !refreshError && vaultOnline && nexusCloudSelected} label={guest ? 'Indisponível' : loading ? 'Verificando' : refreshError ? 'Indisponível' : nexusCloudSelected ? undefined : 'Não selecionado'} />
       </div>
       <div className="storage-status-row">
