@@ -422,7 +422,7 @@ async def test_vault_user_sync_returns_every_account_not_only_first_page(monkeyp
 
     class AccountsCollection:
         def find(self, query, projection=None):
-            assert query == {"Conta.Status": {"$ne": "deleted"}}
+            assert query == {}
             return AccountsCursor()
 
     class AccountsDatabase:
