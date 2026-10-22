@@ -1,4 +1,4 @@
-import { mkdir, readFile, realpath, rename, stat, statfs, writeFile } from "node:fs/promises";
+import { mkdir, readFile, readdir, realpath, rename, stat, statfs, writeFile, copyFile } from "node:fs/promises";
 import { homedir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -115,6 +115,64 @@ export async function sendHeartbeat(config, fetchImpl = globalThis.fetch, metric
   return payload;
 }
 
+export async function provisionVaultUsers(config, { fetchImpl = globalThis.fetch, vaultRoot, log = console } = {}) {
+  const root = vaultRoot || await resolveNexusRoot();
+  const response = await fetchImpl(`${config.apiBase}/storage/nodes/${encodeURIComponent(config.nodeId)}/vault-users`, {
+    method: "GET",
+    headers: { Authorization: "Bearer " + config.nodeToken, Accept: "application/json" },
+    signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
+  });
+  if (response.status === 401 || response.status === 403) {
+    const error = new Error("Credencial do nó inválida ou revogada durante a sincronização de usuários.");
+    error.permanent = true;
+    throw error;
+  }
+  if (!response.ok) throw new Error("Não foi possível sincronizar usuários do Vault (HTTP " + response.status + ").");
+  const payload = await response.json();
+  if (!Array.isArray(payload.user_ids)) throw new Error("Resposta inválida na sincronização de usuários do Vault.");
+  await mkdir(join(root, "usuarios"), { recursive: true, mode: 0o700 });
+  await mkdir(join(root, "system"), { recursive: true, mode: 0o700 });
+  let provisioned = 0;
+  for (const rawId of payload.user_ids) {
+    const userId = safePathSegment(String(rawId), "usuário");
+    const userRoot = join(root, "usuarios", userId);
+    await mkdir(userRoot, { recursive: true, mode: 0o700 });
+    await Promise.all(VAULT_PRODUCTS.map(product => mkdir(join(userRoot, product), { recursive: true, mode: 0o700 })));
+    provisioned += 1;
+  }
+
+  // One-time, non-destructive migration: copy legacy Nexus files into the new Nexus product folder.
+  // Originals are retained so this migration cannot destroy existing user data.
+  const legacyRoot = join(await realpath(SHARED_STORAGE_DIR), ".Nexus", "users");
+  try {
+    const legacyUsers = await readdir(legacyRoot, { withFileTypes: true });
+    for (const entry of legacyUsers) {
+      if (!entry.isDirectory() || !/^[A-Za-z0-9_-]{1,128}$/.test(entry.name)) continue;
+      const oldDocs = join(legacyRoot, entry.name, "documents");
+      const newDocs = join(root, "usuarios", entry.name, "Nexus");
+      await mkdir(newDocs, { recursive: true, mode: 0o700 });
+      let files = [];
+      try { files = await readdir(oldDocs, { withFileTypes: true }); } catch { continue; }
+      for (const file of files) {
+        if (!file.isFile()) continue;
+        const source = join(oldDocs, file.name);
+        let destinationName = safeStoredFilename(file.name);
+        const match = destinationName.match(/^(.*?)-([0-9a-f]{8}-[0-9a-f-]{27})\.nsx$/i);
+        if (!match) {
+          const base = destinationName.replace(/\.nsx$/i, "");
+          destinationName = base + "-legacy-" + Buffer.from(file.name).toString("hex").slice(0, 12) + ".nsx";
+        }
+        const destination = join(newDocs, destinationName);
+        try { await stat(destination); } catch { await copyFile(source, destination); }
+      }
+    }
+  } catch (error) {
+    if (error?.code !== "ENOENT") throw error;
+  }
+  log.info?.(`Vault sincronizado: ${provisioned} usuários, ${VAULT_PRODUCTS.length} pastas por usuário.`);
+  return { users: provisioned, products: VAULT_PRODUCTS.length };
+}
+
 export function normalizeReportedStoragePath(storedPath) {
   return storedPath?.replace(/^\/storage\/self\/primary\//, "/storage/emulated/0/") ?? null;
 }
@@ -205,10 +263,15 @@ export async function runAgent(config, {
   let failures = 0;
   let connected = false;
   let recovering = false;
+  let vaultUsersProvisioned = false;
   while (!signal?.aborted) {
     try {
       const metrics = await readStorageMetrics(undefined, config.nodeId);
       const result = await sendHeartbeat(config, fetchImpl, metrics);
+      if (!vaultUsersProvisioned) {
+        await provisionVaultUsers(config, { fetchImpl, log });
+        vaultUsersProvisioned = true;
+      }
       try { await claimAndStoreJob(config, { fetchImpl, log }); }
       catch (jobError) {
         if (jobError?.permanent) throw jobError;
