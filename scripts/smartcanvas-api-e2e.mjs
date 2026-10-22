@@ -76,13 +76,18 @@ try {
   await page.locator('input[name="acceptTerms"]').check();
   await page.locator('input[name="acceptPrivacy"]').check();
   await page.locator(".auth-card form button.button-primary").click();
-  await page.getByRole("button", { name: /Novo documento/ }).first().waitFor();
+  // Wait for registration to complete before navigating; the guest home also
+  // exposes a "Novo documento" action, but that action does not open the modal.
+  await page.locator(".auth-card").waitFor({ state: "detached" });
+  await page.locator("nav button").filter({ hasText: "Documentos" }).click();
+  const newDocumentButton = page.locator(".page-head button").filter({ hasText: "Novo documento" });
+  await newDocumentButton.waitFor();
 
   const createResponsePromise = page.waitForResponse(response =>
     response.request().method() === "POST" && /\/api\/v1\/documents(?:\?.*)?$/.test(new URL(response.url()).pathname + new URL(response.url()).search),
   );
-  await page.getByRole("button", { name: /Novo documento/ }).first().click();
-  const dialog = page.getByRole("dialog");
+  await newDocumentButton.click();
+  const dialog = page.locator(".modal[role="dialog"]");
   await dialog.getByLabel("Nome").fill("SmartCanvas API E2E " + runId);
   await dialog.getByLabel("Tipo de documento").selectOption("html");
   await dialog.getByLabel("Conteúdo").fill("<p>BASE_CONTENT</p>");
