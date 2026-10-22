@@ -527,8 +527,11 @@ async def list_vault_user_ids(
 
     # The accounts database is the same source of truth used by login/session validation.
     from ..database.connection import get_accounts_database
+    # The Vault layout is provisioned for every account record, including
+    # accounts that are currently inactive; this endpoint must not silently
+    # omit users based on status.
     cursor = get_accounts_database()["contas"].find(
-        {"Conta.Status": {"$ne": "deleted"}},
+        {},
         {"_id": 0, "id": 1},
     )
     users = await cursor.to_list(length=None)
