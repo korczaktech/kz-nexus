@@ -1,4 +1,4 @@
-import { mkdir, readFile, readdir, realpath, rename, stat, statfs, writeFile, copyFile } from "node:fs/promises";
+import { mkdir, readFile, readdir, realpath, rename, stat, statfs, writeFile, copyFile, unlink } from "node:fs/promises";
 import { homedir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -217,6 +217,19 @@ export async function claimAndStoreJob(config, { fetchImpl = globalThis.fetch, s
     const tempPath = storedPath + "." + safeStoredFilename(job.id) + ".tmp";
     await writeFile(tempPath, expectedContent, { encoding: "utf8", mode: 0o600 });
     await rename(tempPath, storedPath);
+    // A rename changes the path, but not the document identity. Remove stale
+    // filenames carrying the same trailing UUID only after the new file exists.
+    const identityMatch = fileName.match(/^(.*?)-([0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12})\\.nsx$/i);
+    if (identityMatch) {
+      const entries = await readdir(targetDir, { withFileTypes: true });
+      for (const entry of entries) {
+        if (!entry.isFile() || entry.name === fileName) continue;
+        const priorMatch = entry.name.match(/^(.*?)-([0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12})\\.nsx$/i);
+        if (priorMatch && priorMatch[2].toLowerCase() === identityMatch[2].toLowerCase()) {
+          await unlink(join(targetDir, entry.name)).catch(() => {});
+        }
+      }
+    }
     status = "completed"; log.info?.("Arquivo armazenado/atualizado no nó: " + fileName);
   } catch (err) { errorMessage = err instanceof Error ? err.message.slice(0, 500) : "Falha ao gravar o arquivo."; storedPath = null; }
   const reportedPath = normalizeReportedStoragePath(storedPath);
