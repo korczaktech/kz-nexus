@@ -440,3 +440,20 @@ async def test_vault_user_sync_returns_every_account_not_only_first_page(monkeyp
     assert result["count"] == 10005
     assert result["user_ids"][0] == "user-00000"
     assert result["user_ids"][-1] == "user-10004"
+
+
+@pytest.mark.parametrize("product", sorted(storage_nodes.VAULT_PRODUCTS))
+def test_route_save_accepts_each_vault_product(product):
+    payload = storage_nodes.RouteSaveRequest(
+        name="Relatorio-12345678-1234-4234-8234-123456789abc.nsx",
+        content="conteúdo",
+        product=product,
+    )
+    assert payload.product == product
+
+
+def test_route_save_rejects_unknown_vault_product():
+    from pydantic import ValidationError
+
+    with pytest.raises(ValidationError, match="Produto inválido"):
+        storage_nodes.RouteSaveRequest(name="arquivo.nsx", content="", product="UnknownProduct")
