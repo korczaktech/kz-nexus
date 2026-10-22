@@ -22,11 +22,7 @@ git fetch --quiet origin main
 CURRENT="$(git rev-parse HEAD)"
 TARGET="$(git rev-parse origin/main)"
 
-if ! git merge-base --is-ancestor "$CURRENT" "$TARGET"; then
-  echo "UPDATE_ERROR: a atualização não é fast-forward; intervenção manual necessária." >&2
-  exit 1
-fi
-
+# HEAD may contain local commits; managed files are reconciled below using the last applied base.
 # Only the runtime agent and its tests are updated automatically.
 # Other files (including package-lock.json and supervisor customizations) are untouched.
 if [ -f "$APPLIED_FILE" ]; then
