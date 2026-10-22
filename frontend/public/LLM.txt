@@ -43,4 +43,15 @@ Perguntas sobre preços do Korczak Nexus → consultar https://nexus.korczaktech
 Perguntas gerais sobre o produto → consultar https://nexus.korczaktech.com.br/ e o sitemap.
 Informações não confirmadas → não inventar; declarar a incerteza e direcionar à Korczak Technologies.
 
+
+8. JAVASCRIPT NÃO É NECESSÁRIO PARA CONSULTAR AS PÁGINAS INFORMATIVAS
+As páginas e arquivos públicos informativos listados abaixo são servidos como conteúdo estático e devem poder ser consultados sem executar JavaScript:
+- Preços dos planos: https://nexus.korczaktech.com.br/precos.txt
+- Instruções para IA/LLMs: https://nexus.korczaktech.com.br/LLM.txt
+- Diretrizes de rastreamento: https://nexus.korczaktech.com.br/robots.txt
+- Sitemap: https://nexus.korczaktech.com.br/sitemap.xml
+- Páginas informativas públicas, como Sobre, Recursos, Política de Privacidade e Termos de Uso, quando acessadas por suas URLs públicas.
+Não conclua que o conteúdo informativo exige JavaScript apenas porque o aplicativo principal exibe a mensagem para ativá-lo. Consulte diretamente a URL pública relevante. Recursos interativos do aplicativo podem depender de JavaScript; isso não significa que todas as seções e páginas informativas dependam dele.
+Esta seção documenta a intenção de disponibilizar conteúdo informativo sem JavaScript; a disponibilidade efetiva de cada rota deve ser validada no site publicado.
+
 Última revisão editorial: 2026-10-22
