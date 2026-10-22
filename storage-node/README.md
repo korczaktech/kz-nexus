@@ -47,25 +47,37 @@ chmod 600 "$HOME/.config/korczak-nexus/node.json"
 
 Não cole nem envie o token em mensagens, issues, logs ou screenshots. O agente recusa arquivos com permissões acessíveis a grupo/outros.
 
-## Armazenamento compartilhado do Android (.Nexus)
+## Armazenamento compartilhado do Android (.vault)
 
-O destino oficial dos documentos é a pasta **Armazenamento interno/.Nexus** do aplicativo Meus Arquivos. Antes de iniciar o agente, execute `termux-setup-storage` e aceite a permissão de arquivos do Android. Isso cria o atalho `$HOME/storage/shared` para o armazenamento interno compartilhado.
+O destino oficial dos documentos é a pasta oculta **Armazenamento interno/.vault** do aplicativo Meus Arquivos. Antes de iniciar o agente, execute `termux-setup-storage` e aceite a permissão de arquivos do Android. Isso cria o atalho `$HOME/storage/shared` para o armazenamento interno compartilhado. O agente sincroniza os IDs das contas registradas no banco de contas e cria as pastas de todos os produtos no início e, depois, a cada 15 minutos.
 
 Estrutura criada pelo agente:
 
 ```text
 Armazenamento interno/
-└── .Nexus/
-    ├── users/
+└── .vault/
+    ├── usuarios/
     │   └── <ID_DO_USUARIO>/
-    │       └── documents/
-    │           └── <ID_DA_TAREFA>-<nome-original>
+    │       ├── Nexus/
+    │       ├── Nexa/
+    │       ├── Veya/
+    │       ├── Korvo/
+    │       ├── Klash/
+    │       ├── Acta/
+    │       ├── Web/
+    │       ├── People/
+    │       ├── Memo/
+    │       ├── Meet/
+    │       ├── Pulse/
+    │       ├── Chrona/
+    │       └── Formly/
+    │           └── <nome-do-documento>-<dID>.nsx
     └── system/
         └── nodes/
             └── <ID_DO_NO>/
 ```
 
-O backend inclui o identificador do proprietário em cada tarefa, para que cada usuário tenha seu próprio diretório. Os documentos são gravados diretamente em `.Nexus/users/<ID_DO_USUARIO>/documents/`; `.Nexus/system/nodes/` reserva a área de metadados do nó. A credencial continua apenas no diretório privado do Termux.
+O backend inclui o ID do proprietário e o produto em cada tarefa. Os documentos são gravados em `.vault/usuarios/<ID_DO_USUARIO>/<PRODUTO>/<nome-do-documento>-<dID>.nsx`; a área `.vault/system/nodes/` reserva os metadados do nó. A credencial continua apenas no diretório privado do Termux. A migração legada copia arquivos de `.Nexus/users/<ID_DO_USUARIO>/documents/` para a pasta `Nexus` correspondente, preservando os originais.
 
 O agente valida que `$HOME/storage/shared` aponta para o armazenamento interno compartilhado real. Se a permissão não foi concedida ou o atalho não existe, ele **não** grava numa pasta alternativa escondida no Termux: a tarefa falha e o erro aparece no log. Se a pasta não aparecer em Meus Arquivos, ative a exibição de arquivos ocultos.
 
@@ -84,7 +96,7 @@ O agente envia um heartbeat imediatamente e depois a cada 15 segundos. Falhas tr
 
 ## Atualização automática do agente Android
 
-O supervisor `storage-node/termux/supervise-node.sh` verifica a branch `main` na inicialização e, enquanto estiver ativo, a cada 30 minutos. Quando encontra uma atualização, aplica apenas um avanço fast-forward, executa `npm test` e só mantém a nova versão se os testes passarem. Se os testes falharem, restaura o commit anterior. A configuração privada em `~/.config/korczak-nexus/node.json` e os documentos em `/storage/emulated/0/.Nexus/` ficam fora do repositório e não são substituídos pela atualização.
+O supervisor `storage-node/termux/supervise-node.sh` verifica a branch `main` na inicialização e, enquanto estiver ativo, a cada 30 minutos. Quando encontra uma atualização, aplica apenas um avanço fast-forward, executa `npm test` e só mantém a nova versão se os testes passarem. Se os testes falharem, restaura o commit anterior. A configuração privada em `~/.config/korczak-nexus/node.json` e os documentos em `/storage/emulated/0/.vault/` ficam fora do repositório e não são substituídos pela atualização.
 
 Se o GitHub estiver indisponível, houver alterações locais no clone ou os testes falharem, o supervisor mantém a versão instalada e registra o resultado em `~/.local/state/korczak-nexus/agent.log`. Atualizações aprovadas reiniciam o agente para carregar o código novo. O supervisor também tenta iniciar novamente o agente se o processo terminar.
 
@@ -164,7 +176,7 @@ Se o pareamento falhar, gere um código novo. Não copie a resposta JSON bruta p
 ## Estado atual e limites
 
 - O backend fornece pareamento temporário, heartbeat com capacidade, fila autenticada de gravação, confirmação do resultado, listagem e revogação.
-- Ao receber uma tarefa, o agente grava o conteúdo diretamente em `/storage/emulated/0/.Nexus/users/<ID_DO_USUARIO>/documents/` e confirma à API o caminho físico da gravação.
+- Ao receber uma tarefa, o agente grava o conteúdo em `/storage/emulated/0/.vault/usuarios/<ID_DO_USUARIO>/<PRODUTO>/<nome-do-documento>-<dID>.nsx` e confirma à API o caminho físico da gravação.
 - O armazenamento é **dividido, sem replicação automática**: cada salvamento é enfileirado em apenas um nó elegível. O backend escolhe o nó com menor proporção de armazenamento ocupado; em empate, prefere o Servidor I. Um nó pausado, offline, sem internet ou sem espaço suficiente é excluído da seleção.
 - Se nenhum nó elegível estiver disponível no momento do salvamento, o navegador tenta o Google Drive conectado; se não conseguir, cria um backup persistente no IndexedDB local. Esse backup de contingência não significa que o documento foi gravado no celular.
 - O agente processa uma tarefa por ciclo de heartbeat; por padrão, o intervalo é de 15 segundos. O site espera até 20 segundos por confirmação e informa quando a gravação física não foi confirmada. A instalação, o pareamento, a execução contínua e a gravação real precisam ser verificados nos dois celulares.
