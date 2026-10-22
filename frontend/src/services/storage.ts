@@ -1,4 +1,4 @@
-export type StorageProvider = 'local' | 'google-drive' | 'nexus-cloud';
+export type StorageProvider = 'local' | 'google-drive' | 'vault';
 
 export interface StorageSelection {
   provider: StorageProvider;
@@ -94,7 +94,7 @@ export function clearStorageSelection(): void {
 
 export function storageLabel(provider: StorageProvider): string {
   if (provider === 'local') return 'Pasta deste dispositivo';
-  if (provider === 'nexus-cloud') return 'Nexus Cloud';
+  if (provider === 'vault') return 'Korczak Vault';
   return 'Google Drive';
 }
 
@@ -182,11 +182,11 @@ export async function connectCloudStorage(provider: 'google-drive') {
   return connectCloud();
 }
 
-/** Select the first-party Nexus Cloud, whose document jobs are routed through the Nexus API to registered storage nodes. */
+/** Select the first-party Korczak Vault, whose document jobs are routed through the Nexus API to registered storage nodes. */
 export function selectNexusCloud(): StorageSelection {
   const selection: StorageSelection = {
-    provider: 'nexus-cloud',
-    label: storageLabel('nexus-cloud'),
+    provider: 'vault',
+    label: storageLabel('vault'),
     connectedAt: new Date().toISOString(),
   };
   saveStorageSelection(selection);
