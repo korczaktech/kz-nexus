@@ -21,6 +21,7 @@ PLAN_PRICES = {
     "Zeus": 150,
     "Morok": 200,
 }
+PLAN_LIMITS = {"Zagryd": 10, "Hermes": 25, "Apollo": 50, "Veles": 100, "Dimitri": 250, "Zeus": 500, "Morok": 1000}
 COLLECTION = "subscription_requests"
 
 
@@ -43,16 +44,20 @@ async def create_subscription_request(payload: dict = Body(...), user=Depends(cu
         quantity = int(payload.get("quantity", 1))
     except (TypeError, ValueError):
         raise ValidationError("A quantidade de usuários deve ser um número inteiro.")
-    if quantity < 1 or quantity > 1000:
-        raise ValidationError("A quantidade deve estar entre 1 e 1.000 usuários.")
+    if quantity < 1 or quantity > PLAN_LIMITS[plan]:
+        raise ValidationError(f"A quantidade para o plano {plan} deve estar entre 1 e {PLAN_LIMITS[plan]} usuários.")
 
     database = get_database()
     collection = database[COLLECTION]
-    existing = await collection.find_one(
-        {"user_id": user["id"], "plan": plan, "status": "pending_confirmation"}
-    )
+    existing = await collection.find_one({"user_id": user["id"], "status": "pending_confirmation"})
     if existing:
-        return _public(existing)
+        if existing.get("plan") == plan and existing.get("quantity") == quantity:
+            return _public(existing)
+        raise AppError("Você já possui uma solicitação pendente. Aguarde a análise administrativa antes de solicitar outro plano.", "subscription_request_pending", 409)
+
+    active = await collection.find_one({"user_id": user["id"], "status": "active"})
+    if active and active.get("current_period_end") and datetime.fromisoformat(active["current_period_end"]) > datetime.now(timezone.utc):
+        raise AppError("Você já possui uma assinatura ativa. Solicite alteração de plano pelo atendimento.", "subscription_already_active", 409)
 
     now = _now()
     item = {
