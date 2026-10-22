@@ -127,6 +127,13 @@ describe("Editor SmartCanvas save integration", () => {
       saveButton.click();
       await Promise.resolve();
     });
+    const vaultSaveButton = [...host.querySelectorAll<HTMLButtonElement>("button")]
+      .find(button => button.textContent?.includes("Salvar no Korczak Vault"));
+    expect(vaultSaveButton).toBeDefined();
+    await act(async () => {
+      vaultSaveButton?.click();
+      await Promise.resolve();
+    });
 
     expect(host.querySelector(".save-state")?.textContent).toContain("Salvando");
     expect(saveButton.disabled).toBe(true);
@@ -155,9 +162,16 @@ describe("Editor SmartCanvas save integration", () => {
     });
     await act(async () => {
       saveButton.click();
+      await Promise.resolve();
+    });
+    const retryVaultButton = [...host.querySelectorAll<HTMLButtonElement>("button")]
+      .find(button => button.textContent?.includes("Salvar no Korczak Vault"));
+    expect(retryVaultButton).toBeDefined();
+    await act(async () => {
+      retryVaultButton?.click();
       await new Promise(resolve => setTimeout(resolve, 0));
     });
-    expect(host.querySelector(".save-state")?.textContent).toContain("Falha ao salvar");
+    expect(host.querySelector(".save-state")?.textContent).toContain("Erro ao salvar");
     expect(recoverDraft(localStorage, document.id)).not.toBeNull();
     expect(recoverNativeDraft(localStorage, document.id)).not.toBeNull();
   });
@@ -230,6 +244,13 @@ describe("Editor SmartCanvas save integration", () => {
     if (!saveButton) throw new Error("Save button was not mounted");
     await act(async () => {
       saveButton.click();
+      await Promise.resolve();
+    });
+    const vaultSaveButton = [...host.querySelectorAll<HTMLButtonElement>("button")]
+      .find(button => button.textContent?.includes("Salvar no Korczak Vault"));
+    expect(vaultSaveButton).toBeDefined();
+    await act(async () => {
+      vaultSaveButton?.click();
       await Promise.resolve();
     });
     expect(onSave).toHaveBeenCalledTimes(1);
