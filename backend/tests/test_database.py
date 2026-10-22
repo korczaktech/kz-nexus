@@ -23,6 +23,7 @@ def test_expected_collections_are_defined() -> None:
         "storage_nodes",
         "storage_node_pairing_codes",
         "storage_node_jobs",
+        "subscription_requests",
     )
 
 
