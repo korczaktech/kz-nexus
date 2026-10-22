@@ -189,7 +189,7 @@ try {
   });
   await page.getByRole("button", { name: "Arquivo", exact: true }).click();
   await page.getByRole("button", { name: "Exportar", exact: true }).click();
-  await page.getByRole("button", { name: /PDF \\(\\.pdf\\)/ }).click();
+  await page.getByRole("button", { name: /PDF \(\.pdf\)/ }).click();
   const blockedPdfAlert = page.getByRole("alert");
   await blockedPdfAlert.waitFor({ state: "visible", timeout: 10000 });
   assert.match(await blockedPdfAlert.innerText(), /bloqueou a janela de impressão|Permita pop-ups/i,
