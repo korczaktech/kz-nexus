@@ -383,6 +383,7 @@ async def test_claim_recovers_a_processing_job_abandoned_for_more_than_five_minu
         "node_id": "node-1",
         "user_id": "user-a",
         "name": "recovery.nsx",
+        "product": "Veya",
         "mime_type": "application/x-korczak-nexus",
         "content": "payload",
         "size_bytes": 7,
@@ -394,6 +395,7 @@ async def test_claim_recovers_a_processing_job_abandoned_for_more_than_five_minu
     result = await storage_nodes.claim_storage_job("node-1", f"Bearer {token}")
 
     assert result["job"]["id"] == "job-stale"
+    assert result["job"]["product"] == "Veya"
     job = database["storage_node_jobs"].documents[0]
     assert job["status"] == "processing"
     assert job["claimed_at"] > now - timedelta(seconds=5)
