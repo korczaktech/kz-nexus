@@ -78,7 +78,7 @@ if ! (cd "$NODE_DIR" && npm test); then
   exit 1
 fi
 
-printf '%s\\n' "$TARGET" > "$TMP_DIR/agent-source-commit"
+printf '%s\n' "$TARGET" > "$TMP_DIR/agent-source-commit"
 mv "$TMP_DIR/agent-source-commit" "$APPLIED_FILE"
 chmod 600 "$APPLIED_FILE"
 echo "UPDATED:$TARGET"
