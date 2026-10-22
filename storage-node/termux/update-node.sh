@@ -8,6 +8,7 @@ LOG_FILE="$LOG_DIR/agent.log"
 APPLIED_FILE="$LOG_DIR/agent-source-commit"
 AGENT_PATH="storage-node/src/agent.js"
 TEST_PATH="storage-node/test/agent.test.js"
+UPDATER_PATH="storage-node/termux/update-node.sh"
 
 mkdir -p "$LOG_DIR"
 chmod 700 "$LOG_DIR"
@@ -23,8 +24,8 @@ CURRENT="$(git rev-parse HEAD)"
 TARGET="$(git rev-parse origin/main)"
 
 # HEAD may contain local commits; managed files are reconciled below using the last applied base.
-# Only the runtime agent and its tests are updated automatically.
-# Other files (including package-lock.json and supervisor customizations) are untouched.
+# The runtime agent, its tests, and this updater are three-way merged.
+# package-lock.json, supervisor scripts, launchers, and other custom files stay untouched.
 if [ -f "$APPLIED_FILE" ]; then
   BASELINE="$(cat "$APPLIED_FILE")"
 else
@@ -56,9 +57,10 @@ merge_managed_file() {
 
 if ! merge_managed_file "$AGENT_PATH" "agent"; then exit 1; fi
 if ! merge_managed_file "$TEST_PATH" "tests"; then exit 1; fi
+if ! merge_managed_file "$UPDATER_PATH" "updater"; then exit 1; fi
 
 # Avoid restarting the agent when the upstream runtime files have not changed.
-if cmp -s "$TMP_DIR/agent.merged" "$AGENT_PATH" && cmp -s "$TMP_DIR/tests.merged" "$TEST_PATH"; then
+if cmp -s "$TMP_DIR/agent.merged" "$AGENT_PATH" && cmp -s "$TMP_DIR/tests.merged" "$TEST_PATH" && cmp -s "$TMP_DIR/updater.merged" "$UPDATER_PATH"; then
   printf '%s\n' "$TARGET" > "$APPLIED_FILE"
   chmod 600 "$APPLIED_FILE"
   echo "UP_TO_DATE"
@@ -68,13 +70,16 @@ fi
 # Keep rollback copies until the merged files pass the complete agent test suite.
 cp "$AGENT_PATH" "$TMP_DIR/agent.js.old"
 cp "$TEST_PATH" "$TMP_DIR/agent.test.js.old"
+cp "$UPDATER_PATH" "$TMP_DIR/update-node.sh.old"
 
 mv "$TMP_DIR/agent.merged" "$AGENT_PATH"
 mv "$TMP_DIR/tests.merged" "$TEST_PATH"
+mv "$TMP_DIR/updater.merged" "$UPDATER_PATH"
 
 if ! (cd "$NODE_DIR" && npm test); then
   mv "$TMP_DIR/agent.js.old" "$AGENT_PATH"
   mv "$TMP_DIR/agent.test.js.old" "$TEST_PATH"
+  mv "$TMP_DIR/update-node.sh.old" "$UPDATER_PATH"
   echo "UPDATE_ERROR: testes falharam; arquivos anteriores restaurados." >&2
   exit 1
 fi
