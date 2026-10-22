@@ -282,6 +282,49 @@ describe("SmartCanvasPreview input integration", () => {
     engine = undefined;
   });
 
+  it("replaces a selection across a table boundary on Enter without flattening containers", async () => {
+    const document = createDocument({ title: "SmartCanvas cross-container Enter" });
+    const first = document.content[0];
+    if (!first || first.type !== "paragraph") throw new Error("Expected initial paragraph");
+    first.children[0]!.text = "alpha";
+    engine = createEditor({ document });
+    const tableResult = engine.exec([insertTable({ afterBlockId: first.id, rows: 1, columns: 1 })]);
+    if (!tableResult.ok) throw tableResult.error;
+    const table = engine.getDocument().content.find(block => block.type === "table");
+    if (!table || table.type !== "table") throw new Error("Expected inserted table");
+    const cellParagraph = table.children[0]!.children[0]!.children[0]!;
+    const cellText = engine.exec([insertText({ blockId: cellParagraph.id, offset: 0, text: "bravo" })]);
+    if (!cellText.ok) throw cellText.error;
+    expect(engine.setSelection({
+      anchor: { blockId: first.id, offset: 2 },
+      focus: { blockId: cellParagraph.id, offset: 3 },
+    }).ok).toBe(true);
+
+    host = window.document.createElement("div");
+    window.document.body.append(host);
+    root = createRoot(host);
+    await act(async () => {
+      root?.render(createElement(SmartCanvasPreview, {
+        document: engine!.getDocument(),
+        engine: engine!,
+        onDocumentChange: vi.fn(),
+      }));
+    });
+    const input = host.querySelector('textarea[aria-label="Entrada de texto do SmartCanvas"]') as HTMLTextAreaElement | null;
+    if (!input) throw new Error("SmartCanvas input surface was not mounted");
+    const enter = new KeyboardEvent("keydown", { key: "Enter", bubbles: true, cancelable: true });
+    await act(async () => { input.dispatchEvent(enter); });
+    expect(enter.defaultPrevented).toBe(true);
+
+    const content = engine.getDocument().content;
+    expect(content.map(block => block.type)).toEqual(["paragraph", "paragraph", "table"]);
+    expect(getPlainText(content[0]!)).toBe("al");
+    expect(getPlainText(content[1]!)).toBe("");
+    const updatedTable = content[2];
+    if (!updatedTable || updatedTable.type !== "table") throw new Error("Table container was not preserved");
+    expect(getPlainText(updatedTable.children[0]!.children[0]!.children[0]!)).toBe("vo");
+  });
+
   it("notifies the outer ribbon when the canonical selection changes", async () => {
     const document = createDocument({ title: "SmartCanvas ribbon selection sync" });
     const first = document.content[0];
