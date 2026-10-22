@@ -399,9 +399,17 @@ describe("SmartCanvasPreview input integration", () => {
             type: "tableCell",
             id: "tab_cell_b_0001",
             children: [{
-              type: "paragraph",
-              id: "tab_next_paragraph_0001",
-              children: [{ type: "text", id: "tab_next_run_0001", text: "next", marks: [] }],
+              type: "bulletList",
+              id: "tab_next_list_0001",
+              children: [{
+                type: "listItem",
+                id: "tab_next_item_0001",
+                children: [{
+                  type: "paragraph",
+                  id: "tab_next_paragraph_0001",
+                  children: [{ type: "text", id: "tab_next_run_0001", text: "next", marks: [] }],
+                }],
+              }],
             }],
           },
         ],
