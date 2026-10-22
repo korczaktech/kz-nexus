@@ -260,16 +260,27 @@ class JobCompletionRequest(BaseModel):
 
 
 def _node_role(name: str) -> str | None:
-    normalized = " ".join(name.strip().lower().replace("-", " ").split())
-    if normalized in {
-        "servidor i", "server i", "servidor 1", "server 1",
-        "note20", "note20 ultra", "note 20 ultra",
-        "samsung note20 ultra", "samsung note 20 ultra",
-        "galaxy note20 ultra", "galaxy note 20 ultra",
-    }:
-        return "server_i"
-    if normalized in {"servidor ii", "server ii", "servidor 2", "server 2", "galaxy j8", "samsung galaxy j8"}:
+    """Recognize server roles in descriptive device names, not only exact labels."""
+    normalized = " ".join(name.strip().casefold().replace("-", " ").replace("_", " ").split())
+    # Check Server II first: its label contains the words "servidor i" as a prefix.
+    if (
+        "servidor ii" in normalized
+        or "server ii" in normalized
+        or "servidor 2" in normalized
+        or "server 2" in normalized
+        or "galaxy j8" in normalized
+        or normalized in {"j8", "samsung j8"}
+    ):
         return "server_ii"
+    if (
+        "servidor i" in normalized
+        or "server i" in normalized
+        or "servidor 1" in normalized
+        or "server 1" in normalized
+        or "note20" in normalized
+        or "note 20" in normalized
+    ):
+        return "server_i"
     return None
 
 
