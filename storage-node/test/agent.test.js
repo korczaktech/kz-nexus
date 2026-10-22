@@ -128,7 +128,7 @@ test("routes each user's documents into their .vault product directory", async (
       },
     });
     assert.equal(result.status, "completed");
-    assert.equal(result.stored_path, join(expectedDir, "job-nexus-root-hello.nsx"));
+    assert.equal(result.stored_path, join(expectedDir, "Nexus", "hello-doc-123.nsx"));
     assert.equal(await readFile(result.stored_path, "utf8"), "document");
     assert.equal(JSON.parse(calls[1].options.body).stored_path, result.stored_path);
     assert.equal((await stat(join(root, "system", "nodes", validConfig.nodeId))).isDirectory(), true);
@@ -205,8 +205,8 @@ test("reports file write conflicts instead of overwriting an existing file", asy
 
 
 test("retries transient completion failures and normalizes Android storage aliases", async () => {
-  assert.equal(normalizeReportedStoragePath("/storage/self/primary/.Nexus/users/user-a/documents/a.nsx"), "/storage/emulated/0/.Nexus/users/user-a/documents/a.nsx");
-  assert.equal(normalizeReportedStoragePath("/tmp/.Nexus/a.nsx"), "/tmp/.Nexus/a.nsx");
+  assert.equal(normalizeReportedStoragePath("/storage/self/primary/.vault/usuarios/user-a/Nexus/a.nsx"), "/storage/emulated/0/.vault/usuarios/user-a/Nexus/a.nsx");
+  assert.equal(normalizeReportedStoragePath("/tmp/.vault/a.nsx"), "/tmp/.vault/a.nsx");
   const root = await mkdtemp(join(tmpdir(), "nexus-node-retry-test-"));
   const calls = [];
   let completionAttempts = 0;
@@ -238,9 +238,9 @@ test("retries transient completion failures and normalizes Android storage alias
 
 test("accepts an identical existing file as a recoverable prior write", async () => {
   const root = await mkdtemp(join(tmpdir(), "nexus-node-recovery-test-"));
-  const target = join(root, "users", "user-a", "documents", "job-recover-sample.nsx");
+  const target = join(root, "usuarios", "user-a", "Nexus", "sample.nsx");
   const { mkdir: makeDir, writeFile: createFile } = await import("node:fs/promises");
-  await makeDir(join(root, "users", "user-a", "documents"), { recursive: true });
+  await makeDir(join(root, "usuarios", "user-a", "Nexus"), { recursive: true });
   await createFile(target, "same payload");
   const calls = [];
   try {
