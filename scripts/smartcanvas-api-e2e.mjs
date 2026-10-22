@@ -204,10 +204,17 @@ try {
   assert.ok(persisted.native_content?.includes(initialSentinel), "failed export must not alter the saved native payload");
 
   // The eight-second editor autosave must persist the native payload through the real API.
+  await page.locator(".kortex-canvas-page").first().click({ position: { x: 120, y: 110 } });
   await input.evaluate(element => element.focus());
   await page.keyboard.type(" " + autosaveSentinel);
-  await page.waitForTimeout(9000);
-  persisted = await apiDocument(created.id, token);
+  await waitForEditorProjection(page, autosaveSentinel);
+  // Autosave is debounced; poll the real API instead of assuming the timer
+  // completes at an exact wall-clock boundary on every browser/CI runner.
+  for (let attempt = 0; attempt < 20; attempt += 1) {
+    persisted = await apiDocument(created.id, token);
+    if (persisted.content?.includes(autosaveSentinel) && persisted.native_content?.includes(autosaveSentinel)) break;
+    await page.waitForTimeout(1000);
+  }
   assert.ok(persisted.content?.includes(autosaveSentinel), "autosave should persist updated HTML through the real API");
   assert.ok(persisted.native_content?.includes(autosaveSentinel), "autosave should persist updated native SmartCanvas content");
 
