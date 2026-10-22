@@ -6,7 +6,7 @@ from uuid import uuid4
 from fastapi import APIRouter, Body, Depends, Header
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
-from ..database.connection import get_database
+from ..database.connection import get_database, get_accounts_database
 from ..dependencies import current_user
 from ..errors import AppError
 
@@ -317,12 +317,107 @@ async def node_heartbeat(
     return {"node_id": node_id, "status": "online", "last_seen_at": now.isoformat()}
 
 
+STORAGE_PLAN_LIMITS = {
+    "free": 5 * 1024**3,
+    "zagryd": 10 * 1024**3,
+    "hermes": 30 * 1024**3,
+    "apollo": 40 * 1024**3,
+    "veles": 50 * 1024**3,
+    "dimitri": 75 * 1024**3,
+    "zeus": 100 * 1024**3,
+    "morok": 512 * 1024**3,
+}
+
+
+def _active_storage_plan(value) -> str | None:
+    """Find an explicitly enabled storage plan in the account's nested Planos document."""
+    if isinstance(value, dict):
+        for key, enabled in value.items():
+            normalized = str(key).strip().casefold()
+            if normalized in {*STORAGE_PLAN_LIMITS.keys(), "marzanna"} and enabled is True:
+                return normalized
+        for child in value.values():
+            found = _active_storage_plan(child)
+            if found:
+                return found
+    return None
+
+
+def _custom_storage_limit(account: dict) -> int | None:
+    """Accept an explicitly configured Marzanna quota, in bytes or GB."""
+    candidates = [
+        account.get("Limites", {}).get("ArmazenamentoBytes") if isinstance(account.get("Limites"), dict) else None,
+        account.get("Limites", {}).get("ArmazenamentoGB") if isinstance(account.get("Limites"), dict) else None,
+        account.get("Planos", {}).get("Marzanna", {}).get("storage_limit_bytes") if isinstance(account.get("Planos", {}).get("Marzanna"), dict) else None,
+        account.get("Planos", {}).get("Marzanna", {}).get("storage_limit_gb") if isinstance(account.get("Planos", {}).get("Marzanna"), dict) else None,
+    ]
+    for index, value in enumerate(candidates):
+        if isinstance(value, (int, float)) and not isinstance(value, bool) and value > 0:
+            return int(value if index in (0, 2) else value * 1024**3)
+    return None
+
+
+async def _storage_quota(user_id: str) -> tuple[int | None, int, str]:
+    """Return (limit_bytes, logical_used_bytes, plan) without double-counting duplicate replicas."""
+    accounts = get_accounts_database()
+    account = await accounts["contas"].find_one({"id": user_id})
+    if not account:
+        # Fail closed: a missing account must not receive unlimited storage.
+        raise AppError("Não foi possível confirmar o plano desta conta.", "storage_plan_unavailable", 503)
+    plan = _active_storage_plan(account.get("Planos", {}))
+    if not plan:
+        # Existing accounts may keep the plan at a top-level field.
+        for field in ("Plano", "plano", "Plan", "plan"):
+            candidate = account.get(field)
+            if isinstance(candidate, str) and candidate.strip().casefold() in {*STORAGE_PLAN_LIMITS, "marzanna"}:
+                plan = candidate.strip().casefold()
+                break
+    if not plan:
+        raise AppError("A conta não possui um plano de armazenamento reconhecido.", "storage_plan_unavailable", 403)
+    limit_bytes = _custom_storage_limit(account) if plan == "marzanna" else STORAGE_PLAN_LIMITS.get(plan)
+    if limit_bytes is None:
+        raise AppError("O plano Marzanna exige um limite de armazenamento personalizado na conta.", "storage_custom_quota_required", 403)
+
+    jobs = await get_database()["storage_node_jobs"].find(
+        {"user_id": user_id},
+        {"_id": 0, "name": 1, "product": 1, "stored_path": 1, "size_bytes": 1, "status": 1, "created_at": 1},
+    ).to_list(length=100000)
+    # Logical document key avoids counting replicas twice. Latest queued/completed
+    # write for a given product + stable filename reserves its new size.
+    latest: dict[tuple[str, str], dict] = {}
+    for job in jobs:
+        if job.get("status") not in {"pending", "processing", "completed"}:
+            continue
+        key = (str(job.get("product") or "Nexus"), str(job.get("name") or job.get("stored_path") or job.get("id") or ""))
+        prior = latest.get(key)
+        if prior is None or (job.get("created_at") or datetime.min.replace(tzinfo=timezone.utc)) >= (prior.get("created_at") or datetime.min.replace(tzinfo=timezone.utc)):
+            latest[key] = job
+    used_bytes = sum(max(0, int(job.get("size_bytes") or 0)) for job in latest.values())
+    return limit_bytes, used_bytes, plan
+
+
 @router.post("/route-save")
 async def route_saved_file(payload: RouteSaveRequest, user: dict = Depends(current_user)) -> dict:
-    """Queue each saved file on one eligible node; report fallback when none qualifies."""
+    """Queue a physical save only when the account's plan quota permits it."""
     database = get_database()
     now = _now()
     size = len(payload.content.encode("utf-8"))
+    limit_bytes, used_bytes, plan = await _storage_quota(str(user["id"]))
+    key = (payload.product, payload.name.strip())
+    prior_jobs = await database["storage_node_jobs"].find(
+        {"user_id": user["id"], "product": payload.product, "name": payload.name.strip()},
+        {"_id": 0, "size_bytes": 1, "status": 1},
+    ).to_list(length=1000)
+    previous_size = max((int(job.get("size_bytes") or 0) for job in prior_jobs if job.get("status") in {"pending", "processing", "completed"}), default=0)
+    projected_usage = max(0, used_bytes - previous_size) + size
+    if projected_usage > limit_bytes:
+        raise AppError(
+            f"Limite de armazenamento do plano {plan.capitalize()} excedido. "
+            f"Uso atual: {used_bytes} bytes; esta gravação levaria a {projected_usage} bytes "
+            f"de um máximo de {limit_bytes} bytes.",
+            "storage_quota_exceeded",
+            413,
+        )
     nodes = await database["storage_nodes"].find(
         {"user_id": user["id"], "revoked_at": None},
         {"_id": 0},
