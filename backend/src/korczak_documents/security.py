@@ -12,7 +12,7 @@ except ImportError:  # pragma: no cover - dependência instalada em produção
 from .errors import AppError, NotFoundError, ValidationError
 
 SESSION_HOURS = 24
-_PASSWORD_MIN_LENGTH = 12
+_PASSWORD_MIN_LENGTH = 8
 _BCRYPT_ROUNDS = 12
 ROLE_LEVELS = {"user": 10, "manager": 20, "admin": 30}
 
@@ -23,7 +23,7 @@ def validate_password_policy(password: str, email: str | None = None, name: str 
     if len(password.encode("utf-8")) > 72:
         raise ValidationError("A senha não pode exceder 72 bytes em UTF-8")
     if len(password) < _PASSWORD_MIN_LENGTH:
-        raise ValidationError("A senha deve possuir pelo menos 12 caracteres")
+        raise ValidationError("A senha deve possuir pelo menos 8 caracteres")
     if not any(c.islower() for c in password):
         raise ValidationError("A senha deve conter letra minúscula")
     if not any(c.isupper() for c in password):
