@@ -144,7 +144,7 @@ export async function provisionVaultUsers(config, { fetchImpl = globalThis.fetch
 
   // One-time, non-destructive migration: copy legacy Nexus files into the new Nexus product folder.
   // Originals are retained so this migration cannot destroy existing user data.
-  const legacyRoot = join(await realpath(SHARED_STORAGE_DIR), ".Nexus", "users");
+  const legacyRoot = join(root, "..", ".Nexus", "users");
   try {
     const legacyUsers = await readdir(legacyRoot, { withFileTypes: true });
     for (const entry of legacyUsers) {
