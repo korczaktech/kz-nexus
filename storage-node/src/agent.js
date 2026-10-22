@@ -8,6 +8,7 @@ const DEFAULT_API_BASE = "https://kzdoc.onrender.com/api/v1";
 const HEARTBEAT_INTERVAL_MS = 15_000;
 const REQUEST_TIMEOUT_MS = 15_000;
 const MAX_BACKOFF_MS = 5 * 60_000;
+const VAULT_SYNC_INTERVAL_MS = 15 * 60_000;
 const SHARED_STORAGE_DIR = join(homedir(), "storage", "shared");
 
 export function validateConfig(config) {
@@ -276,14 +277,19 @@ export async function runAgent(config, {
   let failures = 0;
   let connected = false;
   let recovering = false;
-  let vaultUsersProvisioned = false;
+  let lastVaultSyncAt = 0;
   while (!signal?.aborted) {
     try {
       const metrics = await readStorageMetrics(undefined, config.nodeId);
       const result = await sendHeartbeat(config, fetchImpl, metrics);
-      if (!vaultUsersProvisioned) {
-        await provisionVaultUsers(config, { fetchImpl, log });
-        vaultUsersProvisioned = true;
+      if (Date.now() - lastVaultSyncAt >= VAULT_SYNC_INTERVAL_MS) {
+        try {
+          await provisionVaultUsers(config, { fetchImpl, log });
+          lastVaultSyncAt = Date.now();
+        } catch (syncError) {
+          if (syncError?.permanent) throw syncError;
+          log.warn?.("Falha ao sincronizar diretórios de usuários do Vault; a gravação continuará criando a pasta do usuário quando necessário: " + (syncError instanceof Error ? syncError.message : String(syncError)));
+        }
       }
       try { await claimAndStoreJob(config, { fetchImpl, log }); }
       catch (jobError) {
