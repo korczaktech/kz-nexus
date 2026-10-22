@@ -531,7 +531,7 @@ async def list_vault_user_ids(
         {"Conta.Status": {"$ne": "deleted"}},
         {"_id": 0, "id": 1},
     )
-    users = await cursor.to_list(length=10000)
+    users = await cursor.to_list(length=None)
     user_ids = sorted({str(item.get("id", "")).strip() for item in users if item.get("id")})
     return {"user_ids": user_ids, "count": len(user_ids)}
 
@@ -573,6 +573,7 @@ async def claim_storage_job(
     return {"job": {
         "id": job["id"], "user_id": job["user_id"], "name": job["name"],
         "mime_type": job["mime_type"], "content": job["content"], "size_bytes": job["size_bytes"],
+        "product": job.get("product", "Nexus"),
     }}
 
 
