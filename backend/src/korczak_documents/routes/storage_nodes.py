@@ -330,17 +330,22 @@ STORAGE_PLAN_LIMITS = {
 
 
 def _active_storage_plan(value) -> str | None:
-    """Find an explicitly enabled storage plan in the account's nested Planos document."""
-    if isinstance(value, dict):
-        for key, enabled in value.items():
-            normalized = str(key).strip().casefold()
-            if normalized in {*STORAGE_PLAN_LIMITS.keys(), "marzanna"} and enabled is True:
-                return normalized
-        for child in value.values():
-            found = _active_storage_plan(child)
-            if found:
-                return found
-    return None
+    """Find the highest explicitly enabled storage plan in nested account plan data."""
+    enabled_plans: set[str] = set()
+    def visit(item):
+        if isinstance(item, dict):
+            for key, enabled in item.items():
+                normalized = str(key).strip().casefold()
+                if normalized in {*STORAGE_PLAN_LIMITS.keys(), "marzanna"} and enabled is True:
+                    enabled_plans.add(normalized)
+                else:
+                    visit(enabled)
+        elif isinstance(item, list):
+            for child in item:
+                visit(child)
+    visit(value)
+    priority = ["marzanna", "morok", "zeus", "dimitri", "veles", "apollo", "hermes", "zagryd", "free"]
+    return next((plan for plan in priority if plan in enabled_plans), None)
 
 
 def _custom_storage_limit(account: dict) -> int | None:
