@@ -143,7 +143,10 @@ export async function claimAndStoreJob(config, { fetchImpl = globalThis.fetch, s
       const nexusRoot = configuredNexusRoot ?? await resolveNexusRoot();
       const userId = safePathSegment(job.user_id, "usuário");
       const nodeId = safePathSegment(config.nodeId, "nó");
-      targetDir = join(getUserDocumentsDir(userId, nexusRoot), safeVaultProduct(job.product));
+      const userVaultDir = getUserDocumentsDir(userId, nexusRoot);
+      await mkdir(userVaultDir, { recursive: true, mode: 0o700 });
+      await Promise.all(VAULT_PRODUCTS.map(product => mkdir(join(userVaultDir, product), { recursive: true, mode: 0o700 })));
+      targetDir = join(userVaultDir, safeVaultProduct(job.product));
       await mkdir(join(nexusRoot, "system", "nodes", nodeId), { recursive: true, mode: 0o700 });
     }
     await mkdir(targetDir, { recursive: true, mode: 0o700 });
