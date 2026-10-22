@@ -6,7 +6,7 @@ import {markdownToHtml} from './components/markdown';
 import {ApiError} from './services/api';
 import {StorageStatusCard} from './components/StorageStatusCard';
 import {StorageNodesPanel} from './components/StorageNodesPanel';
-import {chooseLocalFolder, getStorageSelection, saveStorageSelection, storageLabel, connectCloudStorage, selectVault, listLocalFiles, getLocalFile, deleteLocalFile, saveLocalBackup, type StorageProvider} from './services/storage';
+import {chooseLocalFolder, getStorageSelection, saveStorageSelection, storageLabel, connectCloudStorage, selectVault, listLocalFiles, getLocalFile, deleteLocalFile, type StorageProvider} from './services/storage';
 
 import {listIOSFiles, getIOSFile, deleteIOSFile, shareIOSFile} from './services/iosFiles';
 import {isIOS} from './iosPwa';
