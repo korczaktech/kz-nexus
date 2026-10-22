@@ -3,20 +3,8 @@ name: Deploy GitHub Pages
 on:
   push:
     branches: [main]
-    paths:
-      - "frontend/**"
-      - "packages/engine/**"
-      - "packages/engine-preview/**"
-      - "scripts/check-phase1-parity.mjs"
-      - ".github/workflows/pages.yml"
   pull_request:
     branches: [main]
-    paths:
-      - "frontend/**"
-      - "packages/engine/**"
-      - "packages/engine-preview/**"
-      - "scripts/check-phase1-parity.mjs"
-      - ".github/workflows/pages.yml"
   workflow_dispatch:
 
 permissions:
