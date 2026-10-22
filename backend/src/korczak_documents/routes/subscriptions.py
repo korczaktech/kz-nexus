@@ -1,4 +1,4 @@
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 from uuid import uuid4
 
 from fastapi import APIRouter, Body, Depends, Query
@@ -95,7 +95,8 @@ async def my_subscription(user=Depends(current_user)):
         .limit(20)
     )
     items = await cursor.to_list(length=20)
-    active = next((item for item in items if item.get("status") == "active"), None)
+    now = datetime.now(timezone.utc)
+    active = next((item for item in items if item.get("status") == "active" and item.get("current_period_end") and datetime.fromisoformat(item["current_period_end"]) > now), None)
     pending = next((item for item in items if item.get("status") == "pending_confirmation"), None)
     return {
         "items": items,
@@ -150,6 +151,9 @@ async def review_subscription_request(
         "updated_at": now,
         "confirmed_at": now if target_status == "active" else None,
         "confirmed_by": user["id"],
+        "current_period_start": now if target_status == "active" else None,
+        "current_period_end": (datetime.now(timezone.utc) + timedelta(days=30)).isoformat() if target_status == "active" else None,
+        "next_billing_at": (datetime.now(timezone.utc) + timedelta(days=30)).isoformat() if target_status == "active" else None,
     }
     result = await collection.update_one(
         {"id": request_id, "status": "pending_confirmation"},
