@@ -1853,16 +1853,45 @@ export function SmartCanvasPreview({ document, engine, headerText = "", footerTe
       if (!current) return;
       const blocks = collectTextBlocks(engine.getDocument().content);
       if (current.anchor.blockId !== current.focus.blockId) {
-        const anchorIndex = blocks.findIndex(item => item.id === current.anchor.blockId);
-        const focusIndex = blocks.findIndex(item => item.id === current.focus.blockId);
-        if (anchorIndex < 0 || focusIndex < 0) {
+        const documentContent = engine.getDocument().content;
+        const ranges = getSmartCanvasTextSelectionRanges(documentContent, current);
+        if (!ranges?.length) {
           onStatus?.("A seleção atual não corresponde a blocos editáveis.");
           return;
         }
+        const topLevelTextOnly = ranges.every(range =>
+          documentContent.some(block =>
+            (block.type === "paragraph" || block.type === "heading") && block.id === range.block.id
+          )
+        );
+        if (!topLevelTextOnly) {
+          // Across nested containers, delete only the selected text in each
+          // block. Do not merge paragraphs owned by different lists/table cells.
+          const first = ranges[0]!;
+          const commands = ranges
+            .filter(range => range.end > range.start)
+            .map(range => deleteText({ blockId: range.block.id, start: range.start, end: range.end }));
+          if (!commands.length) return;
+          const result = engine.exec(commands, { group: "structural" });
+          if (!result.ok) {
+            onStatus?.("Não foi possível excluir o texto selecionado entre estruturas: " + result.error.message);
+            return;
+          }
+          syncSelection(collapsedAt({ blockId: first.block.id, offset: first.start }));
+          onDocumentChange(result.value.document);
+          return;
+        }
+        const blocks = ranges.map(range => ({ id: range.block.id, text: getPlainText(range.block) }));
+        const anchorIndex = blocks.findIndex(item => item.id === current.anchor.blockId);
+        const focusIndex = blocks.findIndex(item => item.id === current.focus.blockId);
         const firstIndex = Math.min(anchorIndex, focusIndex);
         const lastIndex = Math.max(anchorIndex, focusIndex);
         const first = blocks[firstIndex];
         const last = blocks[lastIndex];
+        if (!first || !last) {
+          onStatus?.("A seleção atual não corresponde a blocos editáveis.");
+          return;
+        }
         const start = anchorIndex < focusIndex ? current.anchor.offset : current.focus.offset;
         const end = anchorIndex < focusIndex ? current.focus.offset : current.anchor.offset;
         const commands = [
