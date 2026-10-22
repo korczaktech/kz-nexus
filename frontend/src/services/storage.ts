@@ -183,7 +183,7 @@ export async function connectCloudStorage(provider: 'google-drive') {
 }
 
 /** Select the first-party Korczak Vault, whose document jobs are routed through the Nexus API to registered storage nodes. */
-export function selectNexusCloud(): StorageSelection {
+export function selectVault(): StorageSelection {
   const selection: StorageSelection = {
     provider: 'vault',
     label: storageLabel('vault'),
