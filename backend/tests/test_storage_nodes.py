@@ -177,6 +177,9 @@ def test_storage_node_roles_match_server_order_without_repairing_credentials():
     assert storage_nodes._node_role("Note 20 Ultra") == "server_i"
     assert storage_nodes._node_role("Servidor II") == "server_ii"
     assert storage_nodes._node_role("Samsung Galaxy J8") == "server_ii"
+    assert storage_nodes._node_role("Servidor I - Samsung Note20 Ultra") == "server_i"
+    assert storage_nodes._node_role("Samsung Galaxy J8 (Servidor II)") == "server_ii"
+    assert storage_nodes._node_role("SERVER_II / Galaxy J8") == "server_ii"
     assert storage_nodes._node_role("Unknown device") is None
 
 
