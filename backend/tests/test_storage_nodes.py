@@ -255,7 +255,7 @@ def test_failed_storage_job_cannot_claim_a_stored_path():
 
 def test_completed_storage_job_accepts_agent_reported_path():
     payload = storage_nodes.JobCompletionRequest(
-        status="completed", stored_path="/storage/emulated/0/.Nexus/users/user-a/documents/job-1-file.nsx"
+        status="completed", stored_path="/storage/emulated/0/.vault/usuarios/user-a/Nexus/job-1-file.nsx"
     )
     assert payload.status == "completed"
     assert payload.stored_path.endswith("job-1-file.nsx")
@@ -263,7 +263,7 @@ def test_completed_storage_job_accepts_agent_reported_path():
 def test_completed_storage_job_rejects_paths_outside_shared_nexus():
     from pydantic import ValidationError
 
-    with pytest.raises(ValidationError, match="pasta compartilhada .Nexus"):
+    with pytest.raises(ValidationError, match="pasta compartilhada .vault"):
         storage_nodes.JobCompletionRequest(
             status="completed", stored_path="/data/data/com.termux/files/home/private/file.nsx"
         )
@@ -272,19 +272,19 @@ def test_completed_storage_job_rejects_paths_outside_shared_nexus():
 def test_completed_storage_job_accepts_android_primary_storage_alias():
     payload = storage_nodes.JobCompletionRequest(
         status="completed",
-        stored_path="/storage/self/primary/.Nexus/users/user-a/documents/job-1-file.nsx",
+        stored_path="/storage/self/primary/.vault/usuarios/user-a/Nexus/job-1-file.nsx",
     )
-    assert payload.stored_path.startswith("/storage/self/primary/.Nexus/")
+    assert payload.stored_path.startswith("/storage/self/primary/.vault/")
 
 
 def test_completed_storage_job_rejects_traversal_and_malformed_nexus_paths():
     from pydantic import ValidationError
 
     invalid_paths = [
-        "/storage/emulated/0/.Nexus/users/user-a/../private.nsx",
-        "/storage/emulated/0/.Nexus/users/user-a/documents/../../private.nsx",
-        "/storage/emulated/0/.Nexus/system/nodes/node-1/file.nsx",
-        "/storage/emulated/0/.Nexus/users/user-a/documents/",
+        "/storage/emulated/0/.vault/usuarios/user-a/../private.nsx",
+        "/storage/emulated/0/.vault/usuarios/user-a/Nexus/../../private.nsx",
+        "/storage/emulated/0/.vault/system/nodes/node-1/file.nsx",
+        "/storage/emulated/0/.vault/usuarios/user-a/Nexus/",
         "/storage/emulated/0/.Nexus/users/user-a/documents\\\\file.nsx",
     ]
     for path in invalid_paths:
@@ -342,7 +342,7 @@ async def test_repeated_identical_completion_is_idempotent(monkeypatch):
     database = FakeDatabase()
     monkeypatch.setattr(storage_nodes, "get_database", lambda: database)
     token = "knode_" + "A" * 64
-    stored_path = "/storage/emulated/0/.Nexus/users/user-a/documents/job-1-file.nsx"
+    stored_path = "/storage/emulated/0/.vault/usuarios/user-a/Nexus/job-1-file.nsx"
     await database["storage_nodes"].insert_one({
         "id": "node-1",
         "token_hash": storage_nodes._digest(token),
