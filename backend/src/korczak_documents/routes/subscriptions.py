@@ -156,12 +156,6 @@ async def review_subscription_request(
     review_note = str(payload.get("review_note") or "").strip()[:1000]
     if target_status == "active" and len(payment_reference) < 4:
         raise ValidationError("Informe a referência verificável da transação antes de ativar a assinatura.")
-    if target_status == "active":
-        other_active = await get_database()[COLLECTION].find_one(
-            {"user_id": (await get_database()[COLLECTION].find_one({"id": request_id}) or {}).get("user_id"), "status": "active"}
-        )
-        if other_active and other_active.get("current_period_end") and datetime.fromisoformat(other_active["current_period_end"]) > datetime.now(timezone.utc):
-            raise AppError("Este usuário já possui uma assinatura ativa.", "subscription_already_active", 409)
     if target_status == "rejected" and not review_note:
         raise ValidationError("Informe o motivo da rejeição.")
 
@@ -169,6 +163,15 @@ async def review_subscription_request(
     item = await collection.find_one({"id": request_id})
     if not item:
         raise AppError("Solicitação de assinatura não encontrada.", "subscription_request_not_found", 404)
+    if target_status == "active":
+        other_active = await collection.find_one({"user_id": item["user_id"], "status": "active", "id": {"$ne": request_id}})
+        if other_active and other_active.get("current_period_end"):
+            try:
+                period_end = datetime.fromisoformat(other_active["current_period_end"])
+            except (TypeError, ValueError):
+                period_end = datetime.now(timezone.utc) + timedelta(days=1)
+            if period_end > datetime.now(timezone.utc):
+                raise AppError("Este usuário já possui uma assinatura ativa.", "subscription_already_active", 409)
     if item.get("status") != "pending_confirmation":
         raise AppError("A solicitação já foi analisada e não pode ser alterada novamente.", "subscription_request_already_reviewed", 409)
 
