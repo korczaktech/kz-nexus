@@ -512,7 +512,7 @@ function AppAuthenticated(){
       setSelected(saved);
       if(data.create_version&&saved.current_version_id!==selected.current_version_id)setVersions(await api.versions(selected.id));
       const nativePayload=data.native_content||data.content;
-      const documentBaseName=data.name.replace(/\\.nsx$/i,'').trim()||'documento';const nativeName=(documentBaseName+'-'+saved.id+'.nsx').replace(/[\\/\\\\]/g,'_');
+      const documentBaseName=data.name.replace(/\.nsx$/i,'').trim()||'documento';const nativeName=(documentBaseName+'-'+saved.id+'.nsx').replace(/[\\/\\\\]/g,'_');
       let route;
       try{
         route=await api.routeSavedFile({name:nativeName,content:nativePayload,mime_type:'application/x-korczak-nexus',product:'Nexus'});
@@ -559,7 +559,7 @@ function AppAuthenticated(){
         'Confirmação física: concluída',
         'Tarefas confirmadas:',
         ...results.map(result=>'- '+(result.device_name||result.destination)+' — '+result.status+' (job '+result.job_id+')')
-      ].join('\\n')};
+      ].join('\n')};
     }catch(error){
       if(error instanceof ApiError&&error.status===409)return 'conflict' as const;
       throw error;
