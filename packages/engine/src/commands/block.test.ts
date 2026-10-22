@@ -64,6 +64,48 @@ describe("nested split/merge", () => {
     expect(validateDocument(merged.value.document).ok).toBe(true);
   });
 
+  it("splits a table-cell paragraph without duplicating or reordering other cell children", () => {
+    const { document, blockId } = setup("");
+    const inserted = insertTable({ afterBlockId: blockId, rows: 1, columns: 1 })(document, ctx());
+    if (!inserted.ok) throw inserted.error;
+    const table = inserted.value.document.content.find(block => block.type === "table");
+    if (!table || table.type !== "table") throw new Error("table fixture missing");
+    const row = table.children[0]!;
+    const cell = row.children[0]!;
+    const firstParagraph = cell.children[0]!;
+    if (firstParagraph.type !== "paragraph") throw new Error("first cell paragraph missing");
+    const makeId = ctx().generateId;
+    const separator: Block = { type: "thematicBreak", id: makeId() };
+    const secondParagraph: Paragraph = {
+      type: "paragraph",
+      id: makeId(),
+      children: [{ type: "text", id: makeId(), text: "second paragraph", marks: [] }],
+    };
+    const withSiblings = {
+      ...inserted.value.document,
+      content: inserted.value.document.content.map(block => block.id !== table.id ? block : ({
+        ...table,
+        children: table.children.map((tableRow, rowIndex) => rowIndex !== 0 ? tableRow : ({
+          ...tableRow,
+          children: tableRow.children.map((tableCell, cellIndex) => cellIndex !== 0 ? tableCell : ({
+            ...tableCell,
+            children: [firstParagraph, separator, secondParagraph],
+          })),
+        })),
+      })),
+    };
+    const split = splitBlock({ blockId: secondParagraph.id, offset: 6 })(withSiblings, ctx());
+    if (!split.ok) throw split.error;
+    const splitTable = split.value.document.content.find(block => block.type === "table");
+    if (!splitTable || splitTable.type !== "table") throw new Error("split table missing");
+    const splitCell = splitTable.children[0]!.children[0]!;
+    expect(splitCell.children.map(child => child.type)).toEqual(["paragraph", "thematicBreak", "paragraph", "paragraph"]);
+    expect(getPlainText(splitCell.children[0]!)).toBe("");
+    expect(getPlainText(splitCell.children[2]!)).toBe("second");
+    expect(getPlainText(splitCell.children[3]!)).toBe(" paragraph");
+    expect(validateDocument(split.value.document).ok).toBe(true);
+  });
+
   it("splits and merges paragraphs inside a blockquote", () => {
     const { document, blockId } = setup("hello world");
     const quoted = convertBlockToBlockquote({ blockId })(document, ctx());
