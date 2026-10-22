@@ -170,38 +170,36 @@ test("reports directory creation failures instead of confirming a physical write
   }
 });
 
-test("reports file write conflicts instead of overwriting an existing file", async () => {
+test("overwrites the stable document file on subsequent saves", async () => {
   const storageDir = await mkdtemp(join(tmpdir(), "nexus-node-write-test-"));
   const { writeFile: createFile } = await import("node:fs/promises");
-  await createFile(join(storageDir, "job-write-fail-sample.nsx"), "existing");
+  await createFile(join(storageDir, "sample-doc-123.nsx"), "existing");
   const calls = [];
   try {
-    await assert.rejects(
-      claimAndStoreJob(validConfig, {
-        storageDir,
-        log: { info() {} },
-        fetchImpl: async (url, options) => {
-          calls.push({ url, options });
-          if (url.endsWith("/jobs/claim")) {
-            return { ok: true, status: 200, json: async () => ({ job: {
-              id: "job-write-fail", user_id: "user-a", name: "sample.nsx", content: "new payload",
-            } }) };
-          }
-          return { ok: true, status: 200, json: async () => ({ status: "failed" }) };
-        },
-      }),
-      /Não foi possível gravar o arquivo no nó/,
-    );
-    assert.equal(await readFile(join(storageDir, "job-write-fail-sample.nsx"), "utf8"), "existing");
+    const result = await claimAndStoreJob(validConfig, {
+      storageDir,
+      log: { info() {} },
+      fetchImpl: async (url, options) => {
+        calls.push({ url, options });
+        if (url.endsWith("/jobs/claim")) {
+          return { ok: true, status: 200, json: async () => ({ job: {
+            id: "job-write-fail", user_id: "user-a", name: "sample-doc-123.nsx", content: "new payload",
+          } }) };
+        }
+        return { ok: true, status: 200, json: async () => ({ status: "completed" }) };
+      },
+    });
+    assert.equal(result.status, "completed");
+    assert.equal(result.stored_path, join(storageDir, "sample-doc-123.nsx"));
+    assert.equal(await readFile(result.stored_path, "utf8"), "new payload");
     const completion = calls.find((call) => call.url.endsWith("/jobs/job-write-fail/complete"));
     assert.ok(completion);
-    assert.equal(JSON.parse(completion.options.body).status, "failed");
-    assert.equal(JSON.parse(completion.options.body).stored_path, null);
+    assert.equal(JSON.parse(completion.options.body).status, "completed");
+    assert.equal(JSON.parse(completion.options.body).stored_path, result.stored_path);
   } finally {
     await rm(storageDir, { recursive: true, force: true });
   }
 });
-
 
 
 test("retries transient completion failures and normalizes Android storage aliases", async () => {
