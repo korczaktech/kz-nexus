@@ -141,7 +141,7 @@ async def list_nodes(user: dict = Depends(current_user)) -> dict:
     """List the user's own nodes and shared platform nodes owned by administrators."""
     owner_ids = await _accessible_node_owner_ids(str(user["id"]))
     cursor = get_database()["storage_nodes"].find(
-        {"revoked_at": None},
+        {},
         {"_id": 0, "id": 1, "user_id": 1, "device_name": 1, "created_at": 1, "last_seen_at": 1, "revoked_at": 1, "saving_enabled": 1},
     )
     nodes = [node for node in await cursor.to_list(length=500) if node.get("user_id") in owner_ids]
