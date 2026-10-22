@@ -10,6 +10,7 @@
 - Aprovação/rejeição exclusiva de gestor/administrador em `PATCH /api/v1/admin/subscription-requests/{request_id}`.
 - Para aprovar, é obrigatória uma referência da transação; para rejeitar, é obrigatório registrar o motivo.
 - A aprovação manual libera um período de 30 dias. Solicitações pendentes não são consideradas acesso premium.
+- Datas são normalizadas para UTC, quantidades fracionárias/booleanas são rejeitadas e solicitações com período vencido são marcadas como `expired` durante consultas do cliente ou do painel administrativo.
 - O frontend de Planos permite solicitar um plano, definir a quantidade de usuários e revisar solicitações na conta administrativa.
 
 ## Segurança e limites atuais
@@ -20,7 +21,7 @@ Não configure o frontend para considerar um comprovante enviado pelo cliente co
 
 A integração com um provedor recorrente e seus webhooks autenticados é uma etapa separada. Ela só deve ativar uma assinatura depois de validar a assinatura/autenticidade do evento e consultar ou verificar o pagamento no provedor. Estornos, contestações, falhas de cobrança e renovação automática ainda precisam ser integrados ao provedor escolhido.
 
-O campo `premium_access` em `GET /api/v1/subscriptions/me` é uma informação de estado para a aplicação, não substitui verificações de autorização em cada endpoint premium. Antes de lançar benefícios pagos, cada operação de custo/valor premium deve validar o estado da assinatura no backend. O acesso básico necessário ao onboarding deve continuar disponível.
+O campo `premium_access` em `GET /api/v1/subscriptions/me` é uma informação de estado para a aplicação, não substitui verificações de autorização em cada endpoint premium. Atualmente, a proteção central foi aplicada às trocas e renovações OAuth do Google; os demais endpoints premium e as chamadas diretas do navegador ao Google ainda precisam de uma camada de autorização mais abrangente. A existência de uma referência de pagamento no painel também não prova, por si só, que a transferência entrou: o administrador precisa conferir a transação no banco.
 
 ## Próxima etapa
 
