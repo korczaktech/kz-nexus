@@ -1,4 +1,4 @@
-export type StorageProvider = 'local' | 'google-drive';
+export type StorageProvider = 'local' | 'google-drive' | 'nexus-cloud';
 
 export interface StorageSelection {
   provider: StorageProvider;
@@ -94,6 +94,7 @@ export function clearStorageSelection(): void {
 
 export function storageLabel(provider: StorageProvider): string {
   if (provider === 'local') return 'Pasta deste dispositivo';
+  if (provider === 'nexus-cloud') return 'Nexus Cloud';
   return 'Google Drive';
 }
 
@@ -179,6 +180,17 @@ export async function chooseLocalFolder(): Promise<StorageSelection | null> {
 export async function connectCloudStorage(provider: 'google-drive') {
   const {connectCloud} = await import('./cloudStorage');
   return connectCloud();
+}
+
+/** Select the first-party Nexus Cloud, whose document jobs are routed through the Nexus API to registered storage nodes. */
+export function selectNexusCloud(): StorageSelection {
+  const selection: StorageSelection = {
+    provider: 'nexus-cloud',
+    label: storageLabel('nexus-cloud'),
+    connectedAt: new Date().toISOString(),
+  };
+  saveStorageSelection(selection);
+  return selection;
 }
 
 
