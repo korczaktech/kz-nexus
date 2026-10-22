@@ -54,7 +54,7 @@ async function resolveNexusRoot() {
   if (sharedRoot !== "/storage/emulated/0" && sharedRoot !== "/storage/self/primary") {
     throw new Error("O caminho de armazenamento compartilhado não aponta para a memória interna do Android.");
   }
-  return join(sharedRoot, ".Nexus");
+  return join(sharedRoot, ".vault");
 }
 
 function safePathSegment(value, label) {
@@ -64,14 +64,23 @@ function safePathSegment(value, label) {
   return value;
 }
 
-export function getUserDocumentsDir(userId, nexusRoot = join(SHARED_STORAGE_DIR, ".Nexus")) {
-  return join(nexusRoot, "users", safePathSegment(userId, "usuário"), "documents");
+export const VAULT_PRODUCTS = Object.freeze(["Nexus", "Nexa", "Veya", "Korvo", "Klash", "Acta", "Web", "People", "Memo", "Meet", "Pulse", "Chrona", "Formly"]);
+
+export function safeVaultProduct(value) {
+  const product = String(value || "Nexus");
+  if (!VAULT_PRODUCTS.includes(product)) throw new Error("Produto inválido para diretório do Vault.");
+  return product;
+}
+
+export function getUserDocumentsDir(userId, vaultRoot = join(SHARED_STORAGE_DIR, ".vault")) {
+  // Kept as a directory helper for callers; the product folder is appended by the write path.
+  return join(vaultRoot, "usuarios", safePathSegment(userId, "usuário"));
 }
 
 export async function readStorageMetrics(storageDir, nodeId) {
   const targetDir = storageDir ?? await resolveNexusRoot();
   await mkdir(targetDir, { recursive: true, mode: 0o700 });
-  await mkdir(join(targetDir, "users"), { recursive: true, mode: 0o700 });
+  await mkdir(join(targetDir, "usuarios"), { recursive: true, mode: 0o700 });
   await mkdir(join(targetDir, "system"), { recursive: true, mode: 0o700 });
   if (nodeId) await mkdir(join(targetDir, "system", "nodes", safePathSegment(nodeId, "nó")), { recursive: true, mode: 0o700 });
   const fs = await statfs(targetDir);
@@ -134,7 +143,7 @@ export async function claimAndStoreJob(config, { fetchImpl = globalThis.fetch, s
       const nexusRoot = configuredNexusRoot ?? await resolveNexusRoot();
       const userId = safePathSegment(job.user_id, "usuário");
       const nodeId = safePathSegment(config.nodeId, "nó");
-      targetDir = getUserDocumentsDir(userId, nexusRoot);
+      targetDir = join(getUserDocumentsDir(userId, nexusRoot), safeVaultProduct(job.product));
       await mkdir(join(nexusRoot, "system", "nodes", nodeId), { recursive: true, mode: 0o700 });
     }
     await mkdir(targetDir, { recursive: true, mode: 0o700 });
