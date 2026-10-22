@@ -147,6 +147,7 @@ try {
     response.request().method() === "POST" && new URL(response.url()).pathname.endsWith("/save"),
   );
   await page.locator("button.editor-save").click({ force: true });
+  await page.getByRole("button", { name: /Salvar no Korczak Vault/ }).click();
   const firstSave = await firstSavePromise;
   if (!firstSave.ok()) throw new Error("SmartCanvas save returned " + firstSave.status() + ": " + await firstSave.text());
 
@@ -283,6 +284,7 @@ try {
   await input.evaluate(element => element.focus());
   await page.keyboard.type(" " + reconnectSentinel);
   await page.locator("button.editor-save").click({ force: true });
+  await page.getByRole("button", { name: /Salvar no Korczak Vault/ }).click();
   let interruptionTimeout;
   try {
     await Promise.race([
@@ -302,6 +304,7 @@ try {
     response.request().method() === "POST" && new URL(response.url()).pathname.endsWith("/save"),
   );
   await page.locator("button.editor-save").click({ force: true });
+  await page.getByRole("button", { name: /Salvar no Korczak Vault/ }).click();
   const recoveredSave = await recoveredSavePromise;
   if (!recoveredSave.ok()) throw new Error("Save after reconnection returned " + recoveredSave.status() + ": " + await recoveredSave.text());
   persisted = await apiDocument(created.id, token);
