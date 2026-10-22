@@ -460,3 +460,49 @@ def test_route_save_rejects_unknown_vault_product():
 
     with pytest.raises(ValidationError, match="Produto inválido"):
         storage_nodes.RouteSaveRequest(name="arquivo.nsx", content="", product="UnknownProduct")
+
+
+@pytest.mark.asyncio
+async def test_regular_account_can_use_admin_shared_node_without_sharing_job_ownership(monkeypatch):
+    database = FakeDatabase()
+    monkeypatch.setattr(storage_nodes, "get_database", lambda: database)
+    monkeypatch.setattr(storage_nodes, "get_accounts_database", lambda: database)
+    await database["contas"].insert_one({"id": "user-common", "Planos": {"free": True}, "Conta": {"Role": "user"}})
+    await database["contas"].insert_one({"id": "admin-owner", "Planos": {"free": True}, "Conta": {"Role": "admin"}})
+    now = datetime.now(timezone.utc)
+    await database["storage_nodes"].insert_one({
+        "id": "admin-node-i", "user_id": "admin-owner", "device_name": "Servidor I - Samsung Note20",
+        "revoked_at": None, "saving_enabled": True, "last_seen_at": now,
+        "internet_connected": True, "free_bytes": 4096, "total_bytes": 8192,
+    })
+
+    result = await storage_nodes.route_saved_file(
+        storage_nodes.RouteSaveRequest(name="documento-comum.nsx", content="conteúdo privado"),
+        {"id": "user-common"},
+    )
+
+    assert result["status"] == "queued"
+    job = database["storage_node_jobs"].documents[0]
+    assert job["node_id"] == "admin-node-i"
+    assert job["user_id"] == "user-common"
+    assert job["content"] == "conteúdo privado"
+
+
+@pytest.mark.asyncio
+async def test_regular_account_can_list_admin_shared_node_but_cannot_manage_it(monkeypatch):
+    database = FakeDatabase()
+    monkeypatch.setattr(storage_nodes, "get_database", lambda: database)
+    monkeypatch.setattr(storage_nodes, "get_accounts_database", lambda: database)
+    await database["contas"].insert_one({"id": "user-common", "Conta": {"Role": "user"}})
+    await database["contas"].insert_one({"id": "admin-owner", "Conta": {"Role": "admin"}})
+    await database["storage_nodes"].insert_one({
+        "id": "admin-node-i", "user_id": "admin-owner", "device_name": "Servidor I",
+        "revoked_at": None, "saving_enabled": True, "last_seen_at": datetime.now(timezone.utc),
+    })
+
+    result = await storage_nodes.list_nodes({"id": "user-common"})
+
+    assert len(result["nodes"]) == 1
+    assert result["nodes"][0]["id"] == "admin-node-i"
+    assert result["nodes"][0]["shared"] is True
+    assert result["nodes"][0]["can_manage"] is False
