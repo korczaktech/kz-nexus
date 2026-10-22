@@ -410,6 +410,32 @@ async def get_storage_job_status(job_id: str, user: dict = Depends(current_user)
     }
 
 
+@router.get("/{node_id}/vault-users")
+async def list_vault_user_ids(
+    node_id: str,
+    authorization: str | None = Header(default=None),
+) -> dict:
+    """Return registered account IDs to a paired storage node for folder provisioning."""
+    token = authorization[7:].strip() if authorization and authorization.lower().startswith("bearer ") else ""
+    if not token.startswith(NODE_TOKEN_PREFIX):
+        raise AppError("Credencial de nó obrigatória.", "node_authentication_required", 401)
+    node = await get_database()["storage_nodes"].find_one({
+        "id": node_id, "token_hash": _digest(token), "revoked_at": None,
+    }, {"_id": 0, "id": 1})
+    if not node:
+        raise AppError("Credencial de nó inválida ou revogada.", "invalid_node_credential", 401)
+
+    # The accounts database is the same source of truth used by login/session validation.
+    from ..database.connection import get_accounts_database
+    cursor = get_accounts_database()["contas"].find(
+        {"Conta.Status": {"$ne": "deleted"}},
+        {"_id": 0, "id": 1},
+    )
+    users = await cursor.to_list(length=10000)
+    user_ids = sorted({str(item.get("id", "")).strip() for item in users if item.get("id")})
+    return {"user_ids": user_ids, "count": len(user_ids)}
+
+
 @router.post("/{node_id}/jobs/claim")
 async def claim_storage_job(
     node_id: str,
