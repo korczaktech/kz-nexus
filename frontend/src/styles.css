@@ -3313,3 +3313,27 @@ html:has(.app-shell.editor-mode),body:has(.app-shell.editor-mode),#root:has(.app
 .subscription-admin article>div:first-child{display:grid;gap:5px;min-width:0}
 .subscription-admin article span,.subscription-admin article small{color:var(--muted);overflow-wrap:anywhere}
 @media(max-width:640px){.plans-quantity,.subscription-admin article{align-items:stretch;flex-direction:column}.plans-quantity input{width:100%}.subscription-admin article .button-row{display:flex;flex-wrap:wrap}}
+
+
+/* Collapsible application sidebar (independent from the editor's own panels). */
+.app-shell{--nexus-sidebar-width:265px}
+.app-shell .sidebar{width:var(--nexus-sidebar-width);transition:width .22s ease,padding .22s ease}
+.app-shell .main-shell{margin-left:var(--nexus-sidebar-width);width:calc(100% - var(--nexus-sidebar-width));transition:margin-left .22s ease,width .22s ease}
+.app-shell .side-brand{position:relative;min-width:0}
+.app-shell .side-brand-copy{min-width:0;overflow:hidden;white-space:nowrap}
+.app-shell .sidebar-toggle{margin-left:auto;flex:none;width:30px;height:30px;display:grid;place-items:center;border:1px solid rgba(255,255,255,.1);border-radius:9px;background:rgba(255,255,255,.045);color:#aab8d0;cursor:pointer}
+.app-shell .sidebar-toggle:hover{background:rgba(139,124,255,.16);color:#fff}
+.app-shell.sidebar-collapsed{--nexus-sidebar-width:78px}
+.app-shell.sidebar-collapsed .sidebar{padding-left:10px;padding-right:10px}
+.app-shell.sidebar-collapsed .side-brand{justify-content:center;padding-left:0!important;padding-right:0!important}
+.app-shell.sidebar-collapsed .side-brand-copy,.app-shell.sidebar-collapsed .nav-item .nav-text,.app-shell.sidebar-collapsed .nav-label,.app-shell.sidebar-collapsed .sidebar-footer{display:none!important}
+.app-shell.sidebar-collapsed .side-brand .brand-logo{flex:none}
+.app-shell.sidebar-collapsed .sidebar-toggle{position:absolute;right:-4px;top:50%;transform:translate(50%,-50%);width:25px;height:25px;background:#111827;z-index:2}
+.app-shell.sidebar-collapsed .nav-item{justify-content:center;padding-left:0;padding-right:0;gap:0}
+.app-shell.sidebar-collapsed .side-nav{gap:5px}
+.app-shell.sidebar-collapsed .sidebar-spacer{min-height:18px}
+.app-shell.sidebar-collapsed .nav-item{position:relative}
+.app-shell.sidebar-collapsed .nav-item[title]{overflow:visible}
+@media(max-width:1100px) and (min-width:761px){.app-shell{--nexus-sidebar-width:220px}.app-shell.sidebar-collapsed{--nexus-sidebar-width:76px}}
+@media(max-width:760px){.app-shell{--nexus-sidebar-width:74px}.app-shell .sidebar{width:74px}.app-shell .main-shell{margin-left:74px;width:calc(100% - 74px)}.app-shell .side-brand-copy,.app-shell .sidebar-toggle{display:none!important}.app-shell .side-brand{justify-content:center}.app-shell .side-brand>div:last-child{display:none}.app-shell .nav-item span,.app-shell .nav-label,.app-shell .sidebar-footer{display:none!important}.app-shell .nav-item{justify-content:center;padding:0}.app-shell.sidebar-collapsed{--nexus-sidebar-width:74px}}
+@media(prefers-reduced-motion:reduce){.app-shell .sidebar,.app-shell .main-shell{transition:none}}
