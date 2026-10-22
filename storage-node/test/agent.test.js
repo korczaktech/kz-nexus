@@ -106,7 +106,7 @@ test("initializes .vault user, system, and node metadata directories", async () 
 });
 
 
-test("routes each user's documents into their .vault product directory", async () => {
+test("routes each user's documents into the product-specific .vault directory", async () => {
   const root = await mkdtemp(join(tmpdir(), "nexus-root-test-"));
   const expectedDir = join(root, "usuarios", "user-a");
   assert.equal(getUserDocumentsDir("user-a", root), expectedDir);
@@ -121,14 +121,14 @@ test("routes each user's documents into their .vault product directory", async (
         calls.push({ url, options });
         if (url.endsWith("/jobs/claim")) {
           return { ok: true, status: 200, json: async () => ({ job: {
-            id: "job-nexus-root", user_id: "user-a", name: "hello-doc-123.nsx", product: "Nexus", content: "document",
+            id: "job-nexa-root", user_id: "user-a", name: "hello-doc-123.nsx", product: "Nexa", content: "document",
           } }) };
         }
         return { ok: true, status: 200, json: async () => ({ status: "completed" }) };
       },
     });
     assert.equal(result.status, "completed");
-    assert.equal(result.stored_path, join(expectedDir, "Nexus", "hello-doc-123.nsx"));
+    assert.equal(result.stored_path, join(expectedDir, "Nexa", "hello-doc-123.nsx"));
     assert.equal(await readFile(result.stored_path, "utf8"), "document");
     assert.equal(JSON.parse(calls[1].options.body).stored_path, result.stored_path);
     assert.equal((await stat(join(root, "system", "nodes", validConfig.nodeId))).isDirectory(), true);
