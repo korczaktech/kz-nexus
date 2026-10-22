@@ -1888,11 +1888,37 @@ export function SmartCanvasPreview({ document, engine, headerText = "", footerTe
     if (event.key === "Enter") {
       event.preventDefault();
       const current = engine.getSelection();
-      if (!current || current.anchor.blockId !== current.focus.blockId) {
-        onStatus?.("Enter exige uma seleção dentro de um único parágrafo no SmartCanvas.");
+      if (!current) {
+        onStatus?.("Selecione um ponto de inserção antes de criar um parágrafo.");
         return;
       }
-      const block = findBlock(engine.getDocument().content, current.focus.blockId);
+      const documentContent = engine.getDocument().content;
+      if (current.anchor.blockId !== current.focus.blockId) {
+        // A cross-block selection can span independent containers (for example
+        // a list and a table cell). Delete only the selected text in each
+        // logical block, preserve the owning containers, then split at the
+        // start of the selection. This avoids flattening or merging unrelated
+        // structures just to insert a paragraph.
+        const ranges = getSmartCanvasTextSelectionRanges(documentContent, current);
+        if (!ranges?.length) {
+          onStatus?.("A seleção entre blocos não pode ser editada com segurança.");
+          return;
+        }
+        const first = ranges[0]!;
+        const commands = ranges
+          .filter(range => range.end > range.start)
+          .map(range => deleteText({ blockId: range.block.id, start: range.start, end: range.end }));
+        commands.push(splitBlock({ blockId: first.block.id, offset: first.start }));
+        const result = engine.exec(commands, { group: "structural" });
+        if (!result.ok) {
+          onStatus?.("Não foi possível substituir a seleção estrutural por um parágrafo: " + result.error.message);
+          return;
+        }
+        setSelection(engine.getSelection() ?? null);
+        onDocumentChange(result.value.document);
+        return;
+      }
+      const block = findBlock(documentContent, current.focus.blockId);
       if (!block) return;
       const start = Math.min(current.anchor.offset, current.focus.offset);
       const end = Math.max(current.anchor.offset, current.focus.offset);
