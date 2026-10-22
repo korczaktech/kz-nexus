@@ -515,7 +515,7 @@ function AppAuthenticated(){
       const documentBaseName=data.name.replace(/\\.nsx$/i,'').trim()||'documento';const nativeName=(documentBaseName+'-'+saved.id+'.nsx').replace(/[\\/\\\\]/g,'_');
       let route;
       try{
-        route=await api.routeSavedFile({name:nativeName,content:nativePayload,mime_type:'application/x-korczak-nexus'});
+        route=await api.routeSavedFile({name:nativeName,content:nativePayload,mime_type:'application/x-korczak-nexus',product:'Nexus'});
       }catch(routeError){
         throw new Error('O documento foi atualizado na conta, mas o Korczak Vault não confirmou a gravação física. Falha ao solicitar a gravação: '+(routeError instanceof Error?routeError.message:String(routeError)));
       }
