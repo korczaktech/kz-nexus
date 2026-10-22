@@ -1,9 +1,9 @@
 import test from "node:test";
-import { mkdtemp, readFile, rm, stat } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, rm, stat, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import assert from "node:assert/strict";
-import { claimAndStoreJob, getUserDocumentsDir, normalizeReportedStoragePath, readStorageMetrics, safeStoredFilename, sendHeartbeat, validateConfig } from "../src/agent.js";
+import { claimAndStoreJob, getUserDocumentsDir, normalizeReportedStoragePath, provisionVaultUsers, readStorageMetrics, safeStoredFilename, sendHeartbeat, validateConfig, VAULT_PRODUCTS } from "../src/agent.js";
 
 const validConfig = {
   apiBase: "https://kzdoc.onrender.com/api/v1",
@@ -260,5 +260,36 @@ test("accepts an identical existing file as a recoverable prior write", async ()
     assert.equal(JSON.parse(calls.at(-1).options.body).status, "completed");
   } finally {
     await rm(root, { recursive: true, force: true });
+  }
+});
+
+
+test("provisions every product directory for every account and copies legacy files without deleting them", async () => {
+  const parent = await mkdtemp(join(tmpdir(), "vault-provision-test-"));
+  const root = join(parent, ".vault");
+  const legacyFile = join(parent, ".Nexus", "users", "user-a", "documents", "Relatorio-12345678-1234-4234-8234-123456789abc.nsx");
+  try {
+    await mkdir(join(parent, ".Nexus", "users", "user-a", "documents"), { recursive: true });
+    await writeFile(legacyFile, "legacy-content", "utf8");
+    const result = await provisionVaultUsers(validConfig, {
+      vaultRoot: root,
+      log: { info() {} },
+      fetchImpl: async (url, options) => {
+        assert.ok(url.endsWith("/storage/nodes/" + validConfig.nodeId + "/vault-users"));
+        assert.equal(options.headers.Authorization, "Bearer " + validConfig.nodeToken);
+        return { ok: true, status: 200, json: async () => ({ user_ids: ["user-a", "user-b"], count: 2 }) };
+      },
+    });
+    assert.deepEqual(result, { users: 2, products: VAULT_PRODUCTS.length });
+    for (const userId of ["user-a", "user-b"]) {
+      for (const product of VAULT_PRODUCTS) {
+        assert.equal((await stat(join(root, "usuarios", userId, product))).isDirectory(), true);
+      }
+    }
+    const migrated = join(root, "usuarios", "user-a", "Nexus", "Relatorio-12345678-1234-4234-8234-123456789abc.nsx");
+    assert.equal(await readFile(migrated, "utf8"), "legacy-content");
+    assert.equal(await readFile(legacyFile, "utf8"), "legacy-content");
+  } finally {
+    await rm(parent, { recursive: true, force: true });
   }
 });
