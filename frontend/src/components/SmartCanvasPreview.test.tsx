@@ -362,7 +362,7 @@ describe("SmartCanvasPreview input integration", () => {
           },
         ],
       }],
-    } as NexusDocument["content"][number];
+    } as unknown as NexusDocument["content"][number];
     document.content.push(table);
     engine = createEditor({ document });
     expect(engine.setSelection({
