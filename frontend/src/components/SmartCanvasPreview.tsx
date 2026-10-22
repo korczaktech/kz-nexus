@@ -232,6 +232,43 @@ function collectTableCells(nodes: readonly unknown[]): EditableCell[] {
   return cells;
 }
 
+/** Finds the innermost table cell containing a logical text block. */
+function findContainingTableCell(nodes: readonly unknown[], blockId: string): EditableCell | undefined {
+  const containsId = (values: readonly unknown[]): boolean => values.some(value => {
+    if (!value || typeof value !== "object") return false;
+    const node = value as { id?: unknown; children?: unknown };
+    if (node.id === blockId) return true;
+    return Array.isArray(node.children) && containsId(node.children);
+  });
+  for (const value of nodes) {
+    if (!value || typeof value !== "object") continue;
+    const node = value as { id?: unknown; type?: unknown; children?: unknown };
+    if (node.type === "table" && typeof node.id === "string" && Array.isArray(node.children)) {
+      for (const rowValue of node.children) {
+        if (!rowValue || typeof rowValue !== "object") continue;
+        const row = rowValue as { id?: unknown; children?: unknown };
+        if (typeof row.id !== "string" || !Array.isArray(row.children)) continue;
+        for (const cellValue of row.children) {
+          if (!cellValue || typeof cellValue !== "object") continue;
+          const cell = cellValue as { id?: unknown; children?: unknown };
+          if (typeof cell.id !== "string" || !Array.isArray(cell.children)) continue;
+          const nested = findContainingTableCell(cell.children, blockId);
+          if (nested) return nested;
+          if (containsId(cell.children)) {
+            const text = collectParagraphTextBlocks(cell.children).map(paragraph => paragraph.text).join("\n");
+            return { tableId: node.id, rowId: row.id, cellId: cell.id, text };
+          }
+        }
+      }
+    }
+    if (Array.isArray(node.children)) {
+      const nested = findContainingTableCell(node.children, blockId);
+      if (nested) return nested;
+    }
+  }
+  return undefined;
+}
+
 type DocumentNodeLike = { id?: string; type?: string; alt?: string; width?: number; height?: number; indent?: number; spacingAfter?: number; lineSpacing?: number; editorObject?: { kind: "note" | "textBox" | "shape"; label?: string; shape?: "rectangle" | "ellipse" | "triangle"; fill?: string; stroke?: string; width?: number; height?: number }; children?: unknown };
 
 function findDocumentNode(nodes: readonly unknown[], id: string): DocumentNodeLike | undefined {
@@ -1933,7 +1970,47 @@ export function SmartCanvasPreview({ document, engine, headerText = "", footerTe
     }
     if (event.key === "Tab") {
       event.preventDefault();
-      onStatus?.("Para navegar em uma tabela, selecione uma célula e use Tab ou Shift+Tab.");
+      const current = engine.getSelection();
+      const documentContent = engine.getDocument().content;
+      const currentCell = current ? findContainingTableCell(documentContent, current.focus.blockId) : undefined;
+      if (!currentCell) {
+        onStatus?.("Tab navega entre células quando o cursor está dentro de uma tabela.");
+        return;
+      }
+      const cells = collectTableCells(documentContent).filter(cell => cell.tableId === currentCell.tableId);
+      const index = cells.findIndex(cell => cell.cellId === currentCell.cellId);
+      if (index < 0 || !cells.length) {
+        onStatus?.("Não foi possível localizar a célula atual na tabela.");
+        return;
+      }
+      if (!event.shiftKey && index === cells.length - 1) {
+        const existingRowIds = new Set(cells.map(cell => cell.rowId));
+        const result = engine.exec([addTableRow({ tableId: currentCell.tableId, afterRowId: currentCell.rowId })], { group: "structural" });
+        if (!result.ok) {
+          onStatus?.(result.error.message);
+          return;
+        }
+        const addedCell = collectTableCells(result.value.document.content).find(cell =>
+          cell.tableId === currentCell.tableId && !existingRowIds.has(cell.rowId)
+        );
+        const position = addedCell ? cellOffsetToPosition(result.value.document.content, addedCell, 0) : undefined;
+        if (position) syncSelection(collapsedAt(position));
+        setActiveCell(null);
+        setActiveCellStoredMarks(null);
+        onDocumentChange(result.value.document);
+        onStatus?.("Nova linha adicionada à tabela; cursor movido para a primeira célula.");
+        return;
+      }
+      const nextIndex = event.shiftKey ? Math.max(0, index - 1) : Math.min(cells.length - 1, index + 1);
+      const nextCell = cells[nextIndex];
+      const nextOffset = event.shiftKey ? nextCell?.text.length ?? 0 : 0;
+      const position = nextCell ? cellOffsetToPosition(documentContent, nextCell, nextOffset) : undefined;
+      if (position) {
+        setActiveCell(null);
+        setActiveCellStoredMarks(null);
+        syncSelection(collapsedAt(position));
+        inputRef.current?.focus({ preventScroll: true });
+      }
     }
   };
   return <section className="kz-smartcanvas-experiment" aria-label="Prévia experimental SmartCanvas" style={{ margin: "0 0 16px", padding: 16, border: "1px solid #93c5fd", borderRadius: 12, background: "rgba(59,130,246,.04)", position: "relative", outline: trackChangesActive ? "2px dashed #d97706" : undefined, outlineOffset: trackChangesActive ? 3 : undefined }} onPointerDownCapture={event => { if ((event.target as HTMLElement).closest("input, button, textarea, select")) return; inputRef.current?.focus({ preventScroll: true }); }}>
