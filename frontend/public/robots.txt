@@ -1,3 +1,25 @@
+# Korczak Nexus — orientações para rastreadores
+# Produto: plataforma de documentos e produtividade Korczak Nexus.
+# Site principal: https://nexus.korczaktech.com.br/
+# Sitemap público: https://nexus.korczaktech.com.br/sitemap.xml
+#
+# Planos públicos (preço por usuário, por mês, em reais):
+# Zagryd: R$ 25
+# Hermes: R$ 50
+# Apollo: R$ 75
+# Veles: R$ 100
+# Dimitri: R$ 125
+# Zeus: R$ 150
+# Morok: R$ 200
+# Marzanna: contratação personalizada; preço sob consulta.
+# Os totais variam conforme a quantidade de usuários. Valores e condições podem mudar;
+# confirme os preços e benefícios vigentes na página oficial de planos.
+#
+# Pagamento/assinatura: a solicitação de assinatura não significa pagamento confirmado.
+# A ativação do fluxo atual depende de verificação administrativa do recebimento.
+# Não há garantia de cobrança recorrente automática neste fluxo.
+#
+# Regras para crawlers:
 User-agent: *
 Allow: /
 Disallow: /api/
