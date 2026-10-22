@@ -3222,3 +3222,13 @@ html:has(.app-shell.editor-mode),body:has(.app-shell.editor-mode),#root:has(.app
 /* Keep the server actions popover above page cards and outside their stacking contexts. */
 .storage-node-menu-backdrop{z-index:9998}
 .storage-node-menu{z-index:9999;max-height:calc(100dvh - 24px);overflow-y:auto;overscroll-behavior:contain}
+
+
+/* Save result dialog: readable multiline logs and consistently aligned actions. */
+.app-shell.editor-mode .nexus-save-result-dialog{width:min(560px,calc(100vw - 32px));max-height:min(82vh,680px);display:flex;flex-direction:column;box-sizing:border-box}
+.app-shell.editor-mode .nexus-save-result-dialog>header{flex:0 0 auto;align-items:flex-start}
+.app-shell.editor-mode .nexus-save-result-dialog>pre{box-sizing:border-box;width:calc(100% - 32px);max-width:calc(100% - 32px);margin:16px;flex:0 1 auto;min-width:0;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;line-height:1.55;overflow-wrap:anywhere;word-break:break-word}
+.app-shell.editor-mode .nexus-save-result-actions{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;padding:0 16px 16px;margin-top:0}
+.app-shell.editor-mode .nexus-save-result-actions button{box-sizing:border-box;min-height:40px;margin:0;display:inline-flex;align-items:center;justify-content:center;white-space:nowrap}
+.app-shell.editor-mode .nexus-save-result-actions .nexus-dialog-primary{margin:0 0 0 auto}
+@media(max-width:480px){.app-shell.editor-mode .nexus-save-result-dialog{width:calc(100vw - 24px)}.app-shell.editor-mode .nexus-save-result-dialog>header{padding:16px}.app-shell.editor-mode .nexus-save-result-dialog>pre{width:calc(100% - 24px);max-width:calc(100% - 24px);margin:12px}.app-shell.editor-mode .nexus-save-result-actions{padding:0 12px 12px;gap:8px}}
