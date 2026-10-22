@@ -306,10 +306,12 @@ export function splitBlock(params: { blockId: string; offset: number }): Command
             const target = cell.children[childIndex];
             if (!target || target.type !== "paragraph") continue;
             try {
-              const paragraphs = cell.children.filter((child): child is Paragraph => child.type === "paragraph");
-              const paragraphIndex = paragraphs.findIndex(child => child.id === params.blockId);
-              const split = splitParagraph(target, paragraphs, paragraphIndex);
-              const nestedChildren = cell.children.flatMap((child, index) => index === childIndex ? split.children : [child]);
+              // Split only the targeted child in the original cell sequence. Using
+              // a filtered paragraph list here duplicates sibling paragraphs and
+              // can reorder/drop non-paragraph siblings such as nested tables.
+              const split = splitNestedTextBlock(target, params.offset, ctx.generateId);
+              const nestedChildren = cell.children.slice();
+              nestedChildren.splice(childIndex, 1, split.first as Paragraph, split.second);
               const rows = [...top.children];
               const cells = [...row.children];
               cells[cellIndex] = { ...cell, children: nestedChildren };
