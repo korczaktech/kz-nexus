@@ -5,29 +5,9 @@ on:
   push:
     branches:
       - main
-    paths:
-      - ".github/workflows/smartcanvas-api-integration.yml"
-      - "backend/**"
-      - "frontend/src/components/Editor.tsx"
-      - "frontend/src/components/SmartCanvasPreview.tsx"
-      - "frontend/src/components/SmartCanvasPreview.test.tsx"
-      - "frontend/src/components/CanvasDocumentRenderer.tsx"
-      - "frontend/src/components/CanvasDocumentRenderer.test.tsx"
-      - "frontend/src/components/editorSmartCanvas.ts"
-      - "frontend/src/services/nexusEngineAdapter.ts"
-      - "packages/engine/src/commands/**"
-      - "packages/engine/src/model/**"
-      - "packages/engine/src/nsx/**"
-      - "packages/engine/src/layout/**"
-      - "packages/engine/src/importers/**"
-      - "packages/engine/src/exporters/**"
-      - "frontend/src/services/nexusDocumentPersistence.ts"
-      - "frontend/src/components/EditorSmartCanvasSave.integration.test.tsx"
-      - "frontend/src/components/editorDocxRoundtrip.test.ts"
-      - "frontend/src/services/cloudStorage.ts"
-      - "scripts/smartcanvas-api-e2e.mjs"
-      - "docs/nexus-engine/SMARTCANVAS-PHASE-3-LEGACY-REMOVAL.md"
-      - "frontend/package.json"
+  pull_request:
+    branches:
+      - main
 
 permissions:
   contents: read
