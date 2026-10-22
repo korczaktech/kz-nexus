@@ -9,13 +9,15 @@ from ..repositories import api as repo
 from ..security import create_session, token_hash, hash_password, require_role, role_allows
 from ..services import api as service
 from ..database.connection import get_database, get_accounts_database
+from .subscriptions import require_active_subscription
 
 router = APIRouter()
 
 
 @router.post("/oauth/google/token")
-async def exchange_google_oauth_code(payload: dict = Body(...)):
+async def exchange_google_oauth_code(payload: dict = Body(...), user=Depends(current_user)):
     """Troca o código OAuth no servidor, mantendo o client secret privado."""
+    await require_active_subscription(user["id"])
     from ..config.settings import get_settings
     settings = get_settings()
     client_id = settings.google_client_id.strip()
@@ -49,8 +51,9 @@ async def exchange_google_oauth_code(payload: dict = Body(...)):
 
 
 @router.post("/oauth/google/refresh")
-async def refresh_google_oauth_token(payload: dict = Body(...)):
+async def refresh_google_oauth_token(payload: dict = Body(...), user=Depends(current_user)):
     """Renova tokens do Google Drive sem expor o client secret."""
+    await require_active_subscription(user["id"])
     from ..config.settings import get_settings
     settings = get_settings()
     client_id = settings.google_client_id.strip()
