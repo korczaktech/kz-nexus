@@ -325,6 +325,50 @@ describe("SmartCanvasPreview input integration", () => {
     expect(getPlainText(updatedTable.children[0]!.children[0]!.children[0]!)).toBe("vo");
   });
 
+  it("deletes a cross-container selection without merging table and document paragraphs", async () => {
+    const document = createDocument({ title: "SmartCanvas cross-container deletion" });
+    const first = document.content[0];
+    if (!first || first.type !== "paragraph") throw new Error("Expected initial paragraph");
+    first.children[0]!.text = "alpha";
+    engine = createEditor({ document });
+    const tableResult = engine.exec([insertTable({ afterBlockId: first.id, rows: 1, columns: 1 })]);
+    if (!tableResult.ok) throw tableResult.error;
+    const table = engine.getDocument().content.find(block => block.type === "table");
+    if (!table || table.type !== "table") throw new Error("Expected inserted table");
+    const cellParagraph = table.children[0]!.children[0]!.children[0]!;
+    const cellText = engine.exec([insertText({ blockId: cellParagraph.id, offset: 0, text: "bravo" })]);
+    if (!cellText.ok) throw cellText.error;
+    expect(engine.setSelection({
+      anchor: { blockId: first.id, offset: 2 },
+      focus: { blockId: cellParagraph.id, offset: 3 },
+    }).ok).toBe(true);
+
+    host = window.document.createElement("div");
+    window.document.body.append(host);
+    root = createRoot(host);
+    await act(async () => {
+      root?.render(createElement(SmartCanvasPreview, {
+        document: engine!.getDocument(),
+        engine: engine!,
+        externalSelection: engine!.getSelection() ?? null,
+        onDocumentChange: vi.fn(),
+      }));
+    });
+    const input = host.querySelector('textarea[aria-label="Entrada de texto do SmartCanvas"]') as HTMLTextAreaElement | null;
+    if (!input) throw new Error("SmartCanvas input surface was not mounted");
+    await act(async () => {
+      input.dispatchEvent(new KeyboardEvent("keydown", { key: "Backspace", bubbles: true, cancelable: true }));
+    });
+
+    const content = engine.getDocument().content;
+    expect(content.map(block => block.type)).toEqual(["paragraph", "table"]);
+    expect(getPlainText(content[0]!)).toBe("al");
+    const updatedTable = content[1];
+    if (!updatedTable || updatedTable.type !== "table") throw new Error("Table container was not preserved");
+    expect(getPlainText(updatedTable.children[0]!.children[0]!.children[0]!)).toBe("vo");
+    expect(engine.getSelection()?.focus).toEqual({ blockId: first.id, offset: 2 });
+  });
+
   it("navigates forward and backward from text nested inside a table cell", async () => {
     const document = createDocument({ title: "SmartCanvas nested table Tab" });
     const table = {
