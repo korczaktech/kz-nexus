@@ -585,7 +585,7 @@ function AppAuthenticated(){
         const details=failed.map(result=>(result.device_name||result.destination)+' [job '+result.job_id+']: '+(result.status==='failed'?(result.error||'gravação recusada'):result.error||'sem confirmação após 60 segundos')).join('; ');
         throw new Error('O documento foi atualizado na conta, mas o Korczak Vault não confirmou todas as gravações físicas. Detalhes: '+details);
       }
-      return {status:'saved' as const,log:[
+      return {status:'saved' as const,current_version_id:saved.current_version_id,log:[
         'Resultado: sucesso',
         'Destino: Korczak Vault',
         'Documento: '+nativeName,
