@@ -192,11 +192,22 @@ class NodeHeartbeatMetrics(BaseModel):
     internet_connected: bool = False
 
 
+VAULT_PRODUCTS = {"Nexus", "Nexa", "Veya", "Korvo", "Klash", "Acta", "Web", "People", "Memo", "Meet", "Pulse", "Chrona", "Formly"}
+
+
 class RouteSaveRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
     name: str = Field(min_length=1, max_length=240)
     content: str = Field(max_length=3_000_000)
     mime_type: str = Field(default="text/html", max_length=120)
+    product: str = Field(default="Nexus", min_length=1, max_length=32)
+
+    @field_validator("product")
+    @classmethod
+    def validate_product(cls, value: str) -> str:
+        if value not in VAULT_PRODUCTS:
+            raise ValueError("Produto inválido para o Korczak Vault")
+        return value
 
 
 class JobCompletionRequest(BaseModel):
@@ -216,22 +227,22 @@ class JobCompletionRequest(BaseModel):
         if not value.startswith("/"):
             raise ValueError("stored_path deve ser um caminho absoluto do dispositivo")
         allowed_prefixes = (
-            "/storage/emulated/0/.Nexus/",
-            "/storage/self/primary/.Nexus/",
+            "/storage/emulated/0/.vault/",
+            "/storage/self/primary/.vault/",
         )
         prefix = next((candidate for candidate in allowed_prefixes if value.startswith(candidate)), None)
         if prefix is None:
-            raise ValueError("stored_path deve apontar para a pasta compartilhada .Nexus")
+            raise ValueError("stored_path deve apontar para a pasta compartilhada .vault")
         if "\x00" in value or "\\" in value:
             raise ValueError("stored_path contém caracteres inválidos")
         parts = value[len(prefix):].split("/")
         if (
             len(parts) != 4
-            or parts[0] != "users"
+            or parts[0] != "usuarios"
             or not parts[1]
             or parts[1] in {".", ".."}
             or not all(char.isascii() and (char.isalnum() or char in "_-") for char in parts[1])
-            or parts[2] != "documents"
+            or parts[2] not in VAULT_PRODUCTS
             or not parts[3]
             or parts[3] in {".", ".."}
             or any(part in {"", ".", ".."} for part in parts)
@@ -354,6 +365,7 @@ async def route_saved_file(payload: RouteSaveRequest, user: dict = Depends(curre
             "node_id": node["id"],
             "destination": role,
             "name": payload.name.strip(),
+            "product": payload.product,
             "mime_type": payload.mime_type,
             "content": payload.content,
             "size_bytes": size,
