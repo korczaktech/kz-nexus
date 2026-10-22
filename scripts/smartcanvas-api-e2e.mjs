@@ -150,6 +150,8 @@ try {
   await page.getByRole("button", { name: /Salvar no Korczak Vault/ }).click();
   const firstSave = await firstSavePromise;
   if (!firstSave.ok()) throw new Error("SmartCanvas save returned " + firstSave.status() + ": " + await firstSave.text());
+  // A successful save opens a result dialog; dismiss it before interacting with ribbon controls.
+  await page.locator(".nexus-save-result-dialog .nexus-dialog-close").click();
 
   let persisted = await apiDocument(created.id, token);
   assert.ok(persisted.content?.includes(initialSentinel), "real API should persist the SmartCanvas HTML projection");
@@ -299,6 +301,8 @@ try {
     if (interruptionTimeout) clearTimeout(interruptionTimeout);
   }
   assert.equal(interruptedSave, true, "the network interruption must hit the actual save request");
+  // Failed saves also open a modal; close it so the retry can reach the editor controls.
+  await page.locator(".nexus-save-result-dialog .nexus-dialog-close").click();
   await page.unroute(saveRoutePattern);
   const recoveredSavePromise = page.waitForResponse(response =>
     response.request().method() === "POST" && new URL(response.url()).pathname.endsWith("/save"),
@@ -307,6 +311,7 @@ try {
   await page.getByRole("button", { name: /Salvar no Korczak Vault/ }).click();
   const recoveredSave = await recoveredSavePromise;
   if (!recoveredSave.ok()) throw new Error("Save after reconnection returned " + recoveredSave.status() + ": " + await recoveredSave.text());
+  await page.locator(".nexus-save-result-dialog .nexus-dialog-close").click();
   persisted = await apiDocument(created.id, token);
   assert.ok(persisted.content?.includes(reconnectSentinel), "reconnected save must persist the draft text in HTML");
   assert.ok(persisted.native_content?.includes(reconnectSentinel), "reconnected save must persist the same canonical native draft");
