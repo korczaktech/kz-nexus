@@ -247,7 +247,7 @@ class JobCompletionRequest(BaseModel):
             or parts[3] in {".", ".."}
             or any(part in {"", ".", ".."} for part in parts)
         ):
-            raise ValueError("stored_path deve apontar para um arquivo de usuário dentro de .Nexus")
+            raise ValueError("stored_path deve apontar para um arquivo de usuário dentro de .vault")
         return value
 
     @model_validator(mode="after")
