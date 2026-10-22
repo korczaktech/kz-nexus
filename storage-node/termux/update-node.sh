@@ -56,6 +56,14 @@ merge_managed_file() {
 if ! merge_managed_file "$AGENT_PATH" "agent"; then exit 1; fi
 if ! merge_managed_file "$TEST_PATH" "tests"; then exit 1; fi
 
+# Avoid restarting the agent when the upstream runtime files have not changed.
+if cmp -s "$TMP_DIR/agent.merged" "$AGENT_PATH" && cmp -s "$TMP_DIR/tests.merged" "$TEST_PATH"; then
+  printf '%s\n' "$TARGET" > "$APPLIED_FILE"
+  chmod 600 "$APPLIED_FILE"
+  echo "UP_TO_DATE"
+  exit 0
+fi
+
 # Keep rollback copies until the merged files pass the complete agent test suite.
 cp "$AGENT_PATH" "$TMP_DIR/agent.js.old"
 cp "$TEST_PATH" "$TMP_DIR/agent.test.js.old"
