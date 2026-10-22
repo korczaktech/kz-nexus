@@ -28,8 +28,11 @@ TARGET="$(git rev-parse origin/main)"
 if [ -f "$APPLIED_FILE" ]; then
   BASELINE="$(cat "$APPLIED_FILE")"
 else
-  # On first run, use the common ancestor so committed local customizations
-  # are treated as local changes instead of being mistaken for the base.
+  BASELINE=""
+fi
+if [ -z "$BASELINE" ] || ! git cat-file -e "${BASELINE}^{commit}" 2>/dev/null; then
+  # On first run or after a stale/corrupt marker, use the common ancestor so
+  # committed local customizations are treated as local changes.
   BASELINE="$(git merge-base "$CURRENT" "$TARGET")"
 fi
 
