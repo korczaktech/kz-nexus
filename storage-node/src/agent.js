@@ -220,12 +220,12 @@ export async function claimAndStoreJob(config, { fetchImpl = globalThis.fetch, s
     await rename(tempPath, storedPath);
     // A rename changes the path, but not the document identity. Remove stale
     // filenames carrying the same trailing UUID only after the new file exists.
-    const identityMatch = fileName.match(/^(.*?)-([0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12})\\.nsx$/i);
+    const identityMatch = fileName.match(/^(.*?)-([0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12})\.nsx$/i);
     if (identityMatch) {
       const entries = await readdir(targetDir, { withFileTypes: true });
       for (const entry of entries) {
         if (!entry.isFile() || entry.name === fileName) continue;
-        const priorMatch = entry.name.match(/^(.*?)-([0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12})\\.nsx$/i);
+        const priorMatch = entry.name.match(/^(.*?)-([0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12})\.nsx$/i);
         if (priorMatch && priorMatch[2].toLowerCase() === identityMatch[2].toLowerCase()) {
           await unlink(join(targetDir, entry.name)).catch(() => {});
         }
@@ -288,6 +288,7 @@ export async function runAgent(config, {
           lastVaultSyncAt = Date.now();
         } catch (syncError) {
           if (syncError?.permanent) throw syncError;
+          lastVaultSyncAt = Date.now();
           log.warn?.("Falha ao sincronizar diretórios de usuários do Vault; a gravação continuará criando a pasta do usuário quando necessário: " + (syncError instanceof Error ? syncError.message : String(syncError)));
         }
       }
