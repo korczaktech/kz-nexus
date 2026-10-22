@@ -1,4 +1,4 @@
-import { mkdir, readFile, realpath, stat, statfs, writeFile } from "node:fs/promises";
+import { mkdir, readFile, realpath, rename, stat, statfs, writeFile } from "node:fs/promises";
 import { homedir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -138,21 +138,16 @@ export async function claimAndStoreJob(config, { fetchImpl = globalThis.fetch, s
       await mkdir(join(nexusRoot, "system", "nodes", nodeId), { recursive: true, mode: 0o700 });
     }
     await mkdir(targetDir, { recursive: true, mode: 0o700 });
-    const fileName = String(job.id) + "-" + safeStoredFilename(job.name);
+    // The requested name is the stable document filename (name + dID), not a transient job ID.
+    const fileName = safeStoredFilename(job.name);
     storedPath = join(targetDir, fileName);
     const expectedContent = String(job.content ?? "");
-    try {
-      await writeFile(storedPath, expectedContent, { encoding: "utf8", mode: 0o600, flag: "wx" });
-    } catch (writeError) {
-      // Recover safely if the process wrote the file but died before the API confirmation.
-      if (writeError?.code !== "EEXIST") throw writeError;
-      const existingContent = await readFile(storedPath, "utf8");
-      if (existingContent !== expectedContent) {
-        throw new Error("Já existe um arquivo com o mesmo identificador, mas o conteúdo é diferente.");
-      }
-      log.info?.("Arquivo já existente com conteúdo idêntico; retomando confirmação da gravação.");
-    }
-    status = "completed"; log.info?.("Arquivo armazenado no nó: " + safeStoredFilename(job.name));
+    // Write to a per-job temporary file, then atomically replace the stable document file.
+    // A retry of the same job and later saves of the same document both converge on one path.
+    const tempPath = storedPath + "." + safeStoredFilename(job.id) + ".tmp";
+    await writeFile(tempPath, expectedContent, { encoding: "utf8", mode: 0o600 });
+    await rename(tempPath, storedPath);
+    status = "completed"; log.info?.("Arquivo armazenado/atualizado no nó: " + fileName);
   } catch (err) { errorMessage = err instanceof Error ? err.message.slice(0, 500) : "Falha ao gravar o arquivo."; storedPath = null; }
   const reportedPath = normalizeReportedStoragePath(storedPath);
   let completed;
