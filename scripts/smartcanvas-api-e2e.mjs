@@ -204,10 +204,20 @@ try {
   assert.ok(persisted.native_content?.includes(initialSentinel), "failed export must not alter the saved native payload");
 
   // The eight-second editor autosave must persist the native payload through the real API.
+  // Observe the actual API response as well as the durable document: this distinguishes
+  // a missing debounce trigger from a rejected/conflicting save.
+  const autosaveResponsePromise = page.waitForResponse(response =>
+    response.request().method() === "POST" && new URL(response.url()).pathname.endsWith("/save"),
+    { timeout: 30000 },
+  );
   await page.locator(".kortex-canvas-page").first().click({ position: { x: 120, y: 110 } });
   await input.evaluate(element => element.focus());
   await page.keyboard.type(" " + autosaveSentinel);
   await waitForEditorProjection(page, autosaveSentinel);
+  const autosaveResponse = await autosaveResponsePromise;
+  if (!autosaveResponse.ok()) {
+    throw new Error("SmartCanvas autosave API returned " + autosaveResponse.status() + ": " + await autosaveResponse.text());
+  }
   // Autosave is debounced; poll the real API instead of assuming the timer
   // completes at an exact wall-clock boundary on every browser/CI runner.
   for (let attempt = 0; attempt < 20; attempt += 1) {
