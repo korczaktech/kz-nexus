@@ -399,3 +399,41 @@ async def test_claim_recovers_a_processing_job_abandoned_for_more_than_five_minu
     job = database["storage_node_jobs"].documents[0]
     assert job["status"] == "processing"
     assert job["claimed_at"] > now - timedelta(seconds=5)
+
+
+@pytest.mark.asyncio
+async def test_vault_user_sync_returns_every_account_not_only_first_page(monkeypatch):
+    from korczak_documents.database import connection
+
+    database = FakeDatabase()
+    token = "knode_" + "A" * 64
+    await database["storage_nodes"].insert_one({
+        "id": "node-vault",
+        "token_hash": storage_nodes._digest(token),
+        "revoked_at": None,
+    })
+    monkeypatch.setattr(storage_nodes, "get_database", lambda: database)
+
+    account_ids = [f"user-{index:05d}" for index in range(10005)]
+
+    class AccountsCursor:
+        async def to_list(self, length=None):
+            return [{"id": user_id} for user_id in account_ids[:length]]
+
+    class AccountsCollection:
+        def find(self, query, projection=None):
+            assert query == {"Conta.Status": {"$ne": "deleted"}}
+            return AccountsCursor()
+
+    class AccountsDatabase:
+        def __getitem__(self, name):
+            assert name == "contas"
+            return AccountsCollection()
+
+    monkeypatch.setattr(connection, "get_accounts_database", lambda: AccountsDatabase())
+
+    result = await storage_nodes.list_vault_user_ids("node-vault", f"Bearer {token}")
+
+    assert result["count"] == 10005
+    assert result["user_ids"][0] == "user-00000"
+    assert result["user_ids"][-1] == "user-10004"
