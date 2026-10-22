@@ -506,70 +506,60 @@ function AppAuthenticated(){
   async function showVersions(v:View){if(!selected)return;setVersions(await api.versions(selected.id));setView(v)}
   async function showHistory(){if(!selected)return;setHistory((await api.audit({document_id:selected.id})).items);setView('history')}
   async function saveEditor(data:{name:string;document_type:string;content:string;native_content:string;base_version_id:string|null;create_version?:boolean}){if(guest)throw new Error('Entre na sua conta para editar documentos.');
-    if(!selected)return 'conflict' as const;
+    if(!selected)throw new Error('Documento não selecionado.');
     try{
       const saved=await api.saveDocument(selected.id,data);
       setSelected(saved);
       if(data.create_version&&saved.current_version_id!==selected.current_version_id)setVersions(await api.versions(selected.id));
-      let source:CloudFile|null=null;
-      try{const raw=localStorage.getItem('kz_nexus_drive_source_'+selected.id);if(raw)source=JSON.parse(raw) as CloudFile}catch{}
       const nativePayload=data.native_content||data.content;
       const nativeName=data.name.toLowerCase().endsWith('.nsx')?data.name:data.name+'.nsx';
-      let storageWarning='';
+      let route;
       try{
-        const route=await api.routeSavedFile({name:nativeName,content:nativePayload,mime_type:'application/x-korczak-nexus'});
-        let shouldFallback=route.status==='fallback_required';
-        let failureReason=route.status==='fallback_required'?(route.reason||'Nenhum servidor elegível recebeu o arquivo.'):'';
-        const jobs=route.jobs?.length?route.jobs:(route.job_id?[{job_id:route.job_id,destination:route.destination||'server_ii' as const,device_name:route.device_name}]:[]);
-        const results=await Promise.all(jobs.map(async job=>{
-          let jobStatus:'pending'|'processing'|'completed'|'failed'='pending';
-          let jobError='';
-          const deadline=Date.now()+60000;
-          while(Date.now()<deadline){
-            try{
-              const status=await api.storageJobStatus(job.job_id);
-              jobStatus=status.status;
-              jobError=status.error||'';
-              if(jobStatus==='completed'||jobStatus==='failed')break;
-            }catch{break}
-            await new Promise(resolve=>window.setTimeout(resolve,1500));
-          }
-          return {destination:job.destination,device_name:job.device_name,status:jobStatus,error:jobError};
-        }));
-        const failed=results.filter(result=>result.status!=='completed');
-        shouldFallback=shouldFallback||failed.length>0||jobs.length===0;
-        if(shouldFallback&&route.status!=='fallback_required'){
-          failureReason=failed.map(result=>(result.device_name||result.destination)+': '+(result.status==='failed'?(result.error||'gravação recusada'):'sem confirmação após 60 segundos')).join('; ')||'A API não retornou tarefas de gravação.';
-        }
-        if(shouldFallback){
-          const completed=results.filter(result=>result.status==='completed');
-          const completedLabels=completed.map(result=>result.device_name||result.destination);
-          if(source){
-            storageWarning='Documento salvo no Nexus. '+(completed.length?'Gravação confirmada em: '+completedLabels.join(', ')+'. ':'')+'Falha ou ausência de confirmação nos demais servidores: '+failureReason+'. A sincronização existente com o Google Drive será tentada separadamente.';
-          }else{
-            const cloud=await import('./services/cloudStorage');
-            if(cloud.getCloudSession('google-drive')){
-              try{await cloud.createCloudBackup(nativeName,nativePayload)}
-              catch{await saveLocalBackup(nativeName,nativePayload,'application/x-korczak-nexus')}
-            }else{
-              await saveLocalBackup(nativeName,nativePayload,'application/x-korczak-nexus');
-            }
-            storageWarning='Documento salvo no Nexus. '+(completed.length?'Gravação confirmada em: '+completedLabels.join(', ')+'. ':'')+'A gravação NÃO foi confirmada em todos os servidores solicitados. Cópia de contingência local/Google Drive tentada. Motivo: '+failureReason;
-          }
-        }
+        route=await api.routeSavedFile({name:nativeName,content:nativePayload,mime_type:'application/x-korczak-nexus'});
       }catch(routeError){
-        try{await saveLocalBackup(nativeName,nativePayload,'application/x-korczak-nexus')}catch{}
-        storageWarning='Documento salvo no Nexus, mas a gravação no servidor físico falhou. Uma cópia local de contingência foi tentada. Motivo: '+(routeError instanceof Error?routeError.message:'erro desconhecido');
+        throw new Error('O documento foi atualizado na conta, mas o Korczak Vault não confirmou a gravação física. Falha ao solicitar a gravação: '+(routeError instanceof Error?routeError.message:String(routeError)));
       }
-      if(storageWarning)setError(storageWarning);
-      if(source){
-        try{const {saveCloudFile}=await import('./services/cloudStorage');await saveCloudFile(source,data.content)}
-        catch(syncError){
-          try{await saveLocalBackup(nativeName,nativePayload,'application/x-korczak-nexus')}catch{}
-          setError('Documento salvo no Nexus, mas a sincronização com o Google Drive falhou; uma cópia local foi tentada. '+(syncError instanceof Error?syncError.message:'erro desconhecido'))
+      const jobs=route.jobs?.length?route.jobs:(route.job_id?[{job_id:route.job_id,destination:route.destination||'server_ii' as const,device_name:route.device_name}]:[]);
+      if(route.status==='fallback_required'){
+        throw new Error('O documento foi atualizado na conta, mas o Korczak Vault não confirmou a gravação física. Motivo informado pela API: '+(route.reason||'Nenhum servidor elegível recebeu o arquivo.'));
+      }
+      if(!jobs.length){
+        throw new Error('O documento foi atualizado na conta, mas o Korczak Vault não retornou nenhuma tarefa de gravação. Nenhuma confirmação física foi recebida.');
+      }
+      const results=await Promise.all(jobs.map(async job=>{
+        let jobStatus:'pending'|'processing'|'completed'|'failed'='pending';
+        let jobError='';
+        const deadline=Date.now()+60000;
+        while(Date.now()<deadline){
+          try{
+            const status=await api.storageJobStatus(job.job_id);
+            jobStatus=status.status;
+            jobError=status.error||'';
+            if(jobStatus==='completed'||jobStatus==='failed')break;
+          }catch(error){
+            jobError=error instanceof Error?error.message:String(error);
+            break;
+          }
+          await new Promise(resolve=>window.setTimeout(resolve,1500));
         }
+        return {job_id:job.job_id,destination:job.destination,device_name:job.device_name,status:jobStatus,error:jobError};
+      }));
+      const failed=results.filter(result=>result.status!=='completed');
+      if(failed.length){
+        const details=failed.map(result=>(result.device_name||result.destination)+' [job '+result.job_id+']: '+(result.status==='failed'?(result.error||'gravação recusada'):result.error||'sem confirmação após 60 segundos')).join('; ');
+        throw new Error('O documento foi atualizado na conta, mas o Korczak Vault não confirmou todas as gravações físicas. Detalhes: '+details);
       }
-      return 'saved' as const;
+      return {status:'saved' as const,log:[
+        'Resultado: sucesso',
+        'Destino: Korczak Vault',
+        'Documento: '+nativeName,
+        'ID do documento: '+saved.id,
+        'Data: '+new Date().toISOString(),
+        'API: documento atualizado',
+        'Confirmação física: concluída',
+        'Tarefas confirmadas:',
+        ...results.map(result=>'- '+(result.device_name||result.destination)+' — '+result.status+' (job '+result.job_id+')')
+      ].join('\\n')};
     }catch(error){
       if(error instanceof ApiError&&error.status===409)return 'conflict' as const;
       throw error;
