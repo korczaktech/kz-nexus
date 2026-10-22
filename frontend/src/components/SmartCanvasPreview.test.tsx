@@ -439,20 +439,79 @@ describe("SmartCanvasPreview input integration", () => {
       input.dispatchEvent(new KeyboardEvent("keydown", { key: "Tab", bubbles: true, cancelable: true }));
     });
     expect(engine.getSelection()?.focus).toEqual({ blockId: "tab_next_paragraph_0001", offset: 0 });
-
-    expect(engine.setSelection({
-      anchor: { blockId: "tab_next_paragraph_0001", offset: 2 },
-      focus: { blockId: "tab_next_paragraph_0001", offset: 2 },
-    }).ok).toBe(true);
-    await act(async () => { root?.render(renderPreview()); });
-    const backwardInput = host.querySelector('textarea[aria-label="Entrada de texto do SmartCanvas"]') as HTMLTextAreaElement | null;
-    if (!backwardInput) throw new Error("SmartCanvas input surface was not mounted after selection change");
-    await act(async () => {
-      backwardInput.dispatchEvent(new KeyboardEvent("keydown", { key: "Tab", shiftKey: true, bubbles: true, cancelable: true }));
-    });
-    expect(engine.getSelection()?.focus).toEqual({ blockId: "tab_nested_paragraph_0001", offset: 6 });
     const finalTable = engine.getDocument().content.find(block => block.type === "table");
     expect(finalTable?.type).toBe("table");
+  });
+
+  it("supports Shift+Tab from a nested table cell to the previous cell", async () => {
+    const document = createDocument({ title: "SmartCanvas nested reverse Tab" });
+    document.content.push({
+      type: "table",
+      id: "reverse_tab_table_0001",
+      children: [{
+        type: "tableRow",
+        id: "reverse_tab_row_0001",
+        children: [
+          {
+            type: "tableCell",
+            id: "reverse_tab_cell_a_0001",
+            children: [{
+              type: "bulletList",
+              id: "reverse_tab_list_a_0001",
+              children: [{
+                type: "listItem",
+                id: "reverse_tab_item_a_0001",
+                children: [{
+                  type: "paragraph",
+                  id: "reverse_tab_paragraph_a_0001",
+                  children: [{ type: "text", id: "reverse_tab_run_a_0001", text: "nested", marks: [] }],
+                }],
+              }],
+            }],
+          },
+          {
+            type: "tableCell",
+            id: "reverse_tab_cell_b_0001",
+            children: [{
+              type: "bulletList",
+              id: "reverse_tab_list_b_0001",
+              children: [{
+                type: "listItem",
+                id: "reverse_tab_item_b_0001",
+                children: [{
+                  type: "paragraph",
+                  id: "reverse_tab_paragraph_b_0001",
+                  children: [{ type: "text", id: "reverse_tab_run_b_0001", text: "next", marks: [] }],
+                }],
+              }],
+            }],
+          },
+        ],
+      }],
+    } as unknown as NexusDocument["content"][number]);
+    engine = createEditor({ document });
+    expect(engine.setSelection({
+      anchor: { blockId: "reverse_tab_paragraph_b_0001", offset: 2 },
+      focus: { blockId: "reverse_tab_paragraph_b_0001", offset: 2 },
+    }).ok).toBe(true);
+
+    host = window.document.createElement("div");
+    window.document.body.append(host);
+    root = createRoot(host);
+    await act(async () => {
+      root?.render(createElement(SmartCanvasPreview, {
+        document: engine!.getDocument(),
+        engine: engine!,
+        externalSelection: engine!.getSelection() ?? null,
+        onDocumentChange: vi.fn(),
+      }));
+    });
+    const input = host.querySelector('textarea[aria-label="Entrada de texto do SmartCanvas"]') as HTMLTextAreaElement | null;
+    if (!input) throw new Error("SmartCanvas input surface was not mounted");
+    const shiftTab = new KeyboardEvent("keydown", { key: "Tab", shiftKey: true, bubbles: true, cancelable: true });
+    await act(async () => { input.dispatchEvent(shiftTab); });
+    expect(shiftTab.defaultPrevented).toBe(true);
+    expect(engine.getSelection()?.focus).toEqual({ blockId: "reverse_tab_paragraph_a_0001", offset: 6 });
   });
 
   it("notifies the outer ribbon when the canonical selection changes", async () => {
