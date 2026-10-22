@@ -79,7 +79,7 @@ export function StorageStatusCard({guest, selection}: Props) {
   useEffect(() => { void refresh(); }, [refresh]);
 
   const localConfigured = selection?.provider === 'local';
-  const vaultSelected = selection?.provider === 'vault-cloud';
+  const vaultSelected = selection?.provider === 'vault';
   const vaultNodes = nodes.filter(node => node.status !== 'revoked');
   const vaultOnline = vaultNodes.some(node => node.status === 'online');
   const vaultSubtitle = guest
@@ -104,10 +104,6 @@ export function StorageStatusCard({guest, selection}: Props) {
       <div className="storage-status-row">
         <span className="storage-status-provider"><span className="storage-status-icon google"><StorageIcon kind="google" /></span><span><strong>Google Drive</strong><small>{selection?.provider === 'google-drive' ? 'Selecionado neste navegador' : 'Não conectado neste navegador'}</small></span></span>
         <StatusPill online={selection?.provider === 'google-drive'} />
-      </div>
-      <div className="storage-status-row">
-        <span className="storage-status-provider"><span className="storage-status-icon vault-cloud"><StorageIcon kind="vault-cloud" /></span><span><strong>Korczak Vault</strong><small>{guest ? 'Entre na conta para usar o Korczak Vault' : loading ? 'Verificando servidores…' : refreshError ? 'Não foi possível verificar a conexão' : vaultOnline ? (vaultSelected ? 'Selecionado · servidores disponíveis' : 'Servidores disponíveis') : (vaultSelected ? 'Selecionado · nenhum servidor on-line' : 'Nenhum servidor on-line')}</small></span></span>
-        <StatusPill online={!guest && !loading && !refreshError && vaultOnline && vaultSelected} label={guest ? 'Indisponível' : loading ? 'Verificando' : refreshError ? 'Indisponível' : vaultSelected ? undefined : 'Não selecionado'} />
       </div>
       <div className="storage-status-row">
         <span className="storage-status-provider"><span className="storage-status-icon microsoft"><StorageIcon kind="onedrive" /></span><span><strong>Microsoft OneDrive</strong><small>Integração não configurada</small></span></span>
