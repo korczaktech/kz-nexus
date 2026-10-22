@@ -224,7 +224,7 @@ try {
       saveDestination: localStorage.getItem("korczak_nexus_save_destination:" + id),
       htmlDraftContainsSentinel: localStorage.getItem("kzdoc:draft:" + id)?.includes("SMARTCANVAS_AUTOSAVE_E2E_") ?? false,
       nativeDraftContainsSentinel: localStorage.getItem("kzdoc:native-draft:" + id)?.includes("SMARTCANVAS_AUTOSAVE_E2E_") ?? false,
-      saveButtonDisabled: (document.querySelector("button.editor-save") as HTMLButtonElement | null)?.disabled ?? null,
+      saveButtonDisabled: document.querySelector("button.editor-save")?.disabled ?? null,
     }), created.id);
     throw new Error("No autosave API response within 30 seconds. Diagnostics: " + JSON.stringify(diagnostic) + ". " + String(error));
   }
