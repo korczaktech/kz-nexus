@@ -24,6 +24,24 @@ PLAN_PRICES = {
 PLAN_LIMITS = {"Zagryd": 10, "Hermes": 25, "Apollo": 50, "Veles": 100, "Dimitri": 250, "Zeus": 500, "Morok": 1000}
 COLLECTION = "subscription_requests"
 
+async def require_active_subscription(user_id: str) -> dict:
+    """Backend gate for premium operations; pending requests never grant access."""
+    item = await get_database()[COLLECTION].find_one(
+        {"user_id": user_id, "status": "active"},
+        {"_id": 0},
+        sort=[("confirmed_at", -1)],
+    )
+    if not item or not item.get("current_period_end"):
+        raise AppError("Este recurso exige uma assinatura paga ativa.", "subscription_required", 403)
+    try:
+        period_end = datetime.fromisoformat(item["current_period_end"])
+    except (TypeError, ValueError):
+        raise AppError("A validade da assinatura não pôde ser verificada.", "subscription_status_invalid", 403)
+    if period_end <= datetime.now(timezone.utc):
+        raise AppError("Sua assinatura expirou. Renove o plano para continuar.", "subscription_expired", 403)
+    return item
+
+
 
 def _now() -> str:
     return datetime.now(timezone.utc).isoformat()
@@ -138,6 +156,12 @@ async def review_subscription_request(
     review_note = str(payload.get("review_note") or "").strip()[:1000]
     if target_status == "active" and len(payment_reference) < 4:
         raise ValidationError("Informe a referência verificável da transação antes de ativar a assinatura.")
+    if target_status == "active":
+        other_active = await get_database()[COLLECTION].find_one(
+            {"user_id": (await get_database()[COLLECTION].find_one({"id": request_id}) or {}).get("user_id"), "status": "active"}
+        )
+        if other_active and other_active.get("current_period_end") and datetime.fromisoformat(other_active["current_period_end"]) > datetime.now(timezone.utc):
+            raise AppError("Este usuário já possui uma assinatura ativa.", "subscription_already_active", 409)
     if target_status == "rejected" and not review_note:
         raise ValidationError("Informe o motivo da rejeição.")
 
