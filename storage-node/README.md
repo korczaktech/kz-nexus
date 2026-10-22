@@ -71,11 +71,13 @@ Armazenamento interno/
     │       ├── Pulse/
     │       ├── Chrona/
     │       └── Formly/
-    │           └── <nome-do-documento>-<dID>.nsx
+
     └── system/
         └── nodes/
             └── <ID_DO_NO>/
 ```
+
+Dentro de cada uma das 13 pastas de produto, cada documento segue o padrão `<nome-do-documento>-<dID>.nsx`.
 
 O backend inclui o ID do proprietário e o produto em cada tarefa. Os documentos são gravados em `.vault/usuarios/<ID_DO_USUARIO>/<PRODUTO>/<nome-do-documento>-<dID>.nsx`; a área `.vault/system/nodes/` reserva os metadados do nó. A credencial continua apenas no diretório privado do Termux. A migração legada copia arquivos de `.Nexus/users/<ID_DO_USUARIO>/documents/` para a pasta `Nexus` correspondente, preservando os originais.
 
