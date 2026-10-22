@@ -512,7 +512,7 @@ function AppAuthenticated(){
       setSelected(saved);
       if(data.create_version&&saved.current_version_id!==selected.current_version_id)setVersions(await api.versions(selected.id));
       const nativePayload=data.native_content||data.content;
-      const nativeName=data.name.toLowerCase().endsWith('.nsx')?data.name:data.name+'.nsx';
+      const documentBaseName=data.name.replace(/\\.nsx$/i,'').trim()||'documento';const nativeName=(documentBaseName+'-'+saved.id+'.nsx').replace(/[\\/\\\\]/g,'_');
       let route;
       try{
         route=await api.routeSavedFile({name:nativeName,content:nativePayload,mime_type:'application/x-korczak-nexus'});
