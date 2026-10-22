@@ -87,7 +87,7 @@ try {
     response.request().method() === "POST" && /\/api\/v1\/documents(?:\?.*)?$/.test(new URL(response.url()).pathname + new URL(response.url()).search),
   );
   await newDocumentButton.click();
-  const dialog = page.locator(".modal[role="dialog"]");
+  const dialog = page.locator('.modal[role="dialog"]');
   await dialog.getByLabel("Nome").fill("SmartCanvas API E2E " + runId);
   await dialog.getByLabel("Tipo de documento").selectOption("html");
   await dialog.getByLabel("Conteúdo").fill("<p>BASE_CONTENT</p>");
