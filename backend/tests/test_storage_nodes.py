@@ -86,6 +86,7 @@ class FakeDatabase:
             "storage_node_pairing_codes": FakeCollection(),
             "storage_nodes": FakeCollection(),
             "storage_node_jobs": FakeCollection(),
+            "contas": FakeCollection(),
         }
 
     def __getitem__(self, name):
@@ -307,6 +308,8 @@ def test_completed_storage_job_rejects_relative_or_blank_paths():
 async def test_route_save_assigns_each_document_to_exactly_one_least_used_node(monkeypatch):
     database = FakeDatabase()
     monkeypatch.setattr(storage_nodes, "get_database", lambda: database)
+    monkeypatch.setattr(storage_nodes, "get_accounts_database", lambda: database)
+    await database["contas"].insert_one({"id": "user-a", "Planos": {"free": True}})
     now = datetime.now(timezone.utc)
     common = {
         "user_id": "user-a",
