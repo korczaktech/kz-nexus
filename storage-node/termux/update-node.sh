@@ -28,7 +28,9 @@ TARGET="$(git rev-parse origin/main)"
 if [ -f "$APPLIED_FILE" ]; then
   BASELINE="$(cat "$APPLIED_FILE")"
 else
-  BASELINE="$CURRENT"
+  # On first run, use the common ancestor so committed local customizations
+  # are treated as local changes instead of being mistaken for the base.
+  BASELINE="$(git merge-base "$CURRENT" "$TARGET")"
 fi
 
 TMP_DIR="$(mktemp -d "$LOG_DIR/update.XXXXXX")"
