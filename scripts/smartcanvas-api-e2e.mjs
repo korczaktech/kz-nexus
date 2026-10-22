@@ -214,7 +214,20 @@ try {
   await input.evaluate(element => element.focus());
   await page.keyboard.type(" " + autosaveSentinel);
   await waitForEditorProjection(page, autosaveSentinel);
-  const autosaveResponse = await autosaveResponsePromise;
+  let autosaveResponse;
+  try {
+    autosaveResponse = await autosaveResponsePromise;
+  } catch (error) {
+    const diagnostic = await page.evaluate(id => ({
+      status: document.querySelector(".editor-status, [role=status]")?.textContent ?? null,
+      bodyText: document.body.innerText.slice(-1800),
+      saveDestination: localStorage.getItem("korczak_nexus_save_destination:" + id),
+      htmlDraftContainsSentinel: localStorage.getItem("kzdoc:draft:" + id)?.includes("SMARTCANVAS_AUTOSAVE_E2E_") ?? false,
+      nativeDraftContainsSentinel: localStorage.getItem("kzdoc:native-draft:" + id)?.includes("SMARTCANVAS_AUTOSAVE_E2E_") ?? false,
+      saveButtonDisabled: (document.querySelector("button.editor-save") as HTMLButtonElement | null)?.disabled ?? null,
+    }), created.id);
+    throw new Error("No autosave API response within 30 seconds. Diagnostics: " + JSON.stringify(diagnostic) + ". " + String(error));
+  }
   if (!autosaveResponse.ok()) {
     throw new Error("SmartCanvas autosave API returned " + autosaveResponse.status() + ": " + await autosaveResponse.text());
   }
