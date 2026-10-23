@@ -61,6 +61,44 @@ describe("SmartCanvas selection geometry", () => {
     ]);
   });
 
+  it("places the caret on the next visual line at a soft-wrap boundary", () => {
+    const wrappedLayout = {
+      pages: [{
+        index: 0, width: 600, height: 800,
+        content: { x: 20, y: 20, width: 560, height: 760 },
+        blocks: [{
+          blockId: "wrapped",
+          type: "paragraph",
+          pageIndex: 0,
+          rect: { x: 10, y: 18, width: 100, height: 32 },
+          lines: [
+            {
+              text: "hello", x: 10, y: 20, width: 50, height: 12, startOffset: 0, endOffset: 6,
+              runs: [{ text: "hello ", startOffset: 0, endOffset: 6, fontSize: 12, fontFamily: "Arial", marks: [], width: 60 }],
+            },
+            {
+              text: "world", x: 10, y: 40, width: 50, height: 12, startOffset: 6, endOffset: 11,
+              runs: [{ text: "world", startOffset: 6, endOffset: 11, fontSize: 12, fontFamily: "Arial", marks: [], width: 50 }],
+            },
+          ],
+        }],
+      }],
+      pageCount: 1, diagnostics: [],
+    } as unknown as LayoutResult;
+
+    expect(getSelectionGeometry(wrappedLayout, 0, selection(6, 6, "wrapped"), text => text.length * 10)).toEqual({
+      caret: { x: 10, y: 40, height: 12 },
+      selectionRects: [],
+    });
+  });
+
+  it("keeps the caret on the final line when the offset is at the document-line end", () => {
+    expect(getSelectionGeometry(layout, 0, selection(5, 5), text => text.length * 10)).toEqual({
+      caret: { x: 60, y: 20, height: 12 },
+      selectionRects: [],
+    });
+  });
+
   it("returns empty geometry for absent or unavailable selections", () => {
     expect(getSelectionGeometry(layout, 0, undefined)).toEqual({ selectionRects: [] });
     expect(getSelectionGeometry(layout, 0, selection(1, 2, "missing"))).toEqual({ selectionRects: [] });
