@@ -1,4 +1,4 @@
-const CACHE = "kz-nexus-custom-domain-v9";
+const CACHE = "kz-nexus-custom-domain-v10";
 const BASE = new URL("./", self.registration.scope).pathname;
 const SHELL = [
   BASE,
@@ -9,7 +9,18 @@ const SHELL = [
 ];
 
 self.addEventListener("install", event => {
-  event.waitUntil(caches.open(CACHE).then(cache => cache.addAll(SHELL)).then(() => self.skipWaiting()));
+  event.waitUntil(
+    caches.open(CACHE)
+      .then(async cache => {
+        // Bypass the browser HTTP cache while priming the new app shell.
+        await Promise.all(SHELL.map(async path => {
+          const response = await fetch(new Request(path, { cache: "reload" }));
+          if (!response.ok) throw new Error(`Não foi possível atualizar o shell: ${path}`);
+          await cache.put(path, response);
+        }));
+      })
+      .then(() => self.skipWaiting())
+  );
 });
 self.addEventListener("activate", event => {
   event.waitUntil(
