@@ -604,6 +604,24 @@ export function SmartCanvasPreview({ document, engine, headerText = "", footerTe
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const canvasScrollRef = useRef<HTMLDivElement>(null);
   const canvasScrollTop = useRef(0);
+  const scrollSnapshotRef = useRef<{ elements: Array<{ element: HTMLElement; top: number; left: number }> } | null>(null);
+  const captureScrollSnapshot = () => {
+    const elements: Array<{ element: HTMLElement; top: number; left: number }> = [];
+    let element: HTMLElement | null = canvasScrollRef.current;
+    while (element) {
+      elements.push({ element, top: element.scrollTop, left: element.scrollLeft });
+      element = element.parentElement;
+    }
+    const root = window.document.documentElement;
+    const body = window.document.body;
+    for (const candidate of [root, body]) {
+      if (candidate && !elements.some(item => item.element === candidate)) {
+        elements.push({ element: candidate, top: candidate.scrollTop, left: candidate.scrollLeft });
+      }
+    }
+    scrollSnapshotRef.current = { elements };
+    if (canvasScrollRef.current) canvasScrollTop.current = canvasScrollRef.current.scrollTop;
+  };
   const imageFileInputRef = useRef<HTMLInputElement>(null);
   const composing = useRef(false);
   const lastCompositionValue = useRef<string | null>(null);
@@ -626,12 +644,27 @@ export function SmartCanvasPreview({ document, engine, headerText = "", footerTe
     }
   }, [document]);
 
-  // Keep the current page viewport stable while each keystroke recalculates layout.
+  // Keep both the page viewport and any scrolling editor ancestors stable while
+  // each keystroke recalculates layout. The browser may move an outer scroller
+  // when the focused hidden textarea is updated, so preserving only this div
+  // is not sufficient.
   useLayoutEffect(() => {
-    const viewport = canvasScrollRef.current;
-    if (viewport && viewport.scrollTop !== canvasScrollTop.current) {
-      viewport.scrollTop = canvasScrollTop.current;
+    const snapshot = scrollSnapshotRef.current;
+    if (!snapshot) {
+      const viewport = canvasScrollRef.current;
+      if (viewport && viewport.scrollTop !== canvasScrollTop.current) {
+        viewport.scrollTop = canvasScrollTop.current;
+      }
+      return;
     }
+    for (const item of snapshot.elements) {
+      if (!item.element.isConnected) continue;
+      if (item.element.scrollTop !== item.top) item.element.scrollTop = item.top;
+      if (item.element.scrollLeft !== item.left) item.element.scrollLeft = item.left;
+    }
+    scrollSnapshotRef.current = null;
+    const viewport = canvasScrollRef.current;
+    if (viewport) canvasScrollTop.current = viewport.scrollTop;
   }, [document, layout]);
 
   // Give the engine a valid insertion point as soon as SmartCanvas mounts.
@@ -1454,10 +1487,9 @@ export function SmartCanvasPreview({ document, engine, headerText = "", footerTe
     onDocumentChange(result.value.document);
   };
   const handleInput = (value: string) => {
-    // Snapshot the viewport synchronously before changing the document. Waiting for
-    // a scroll event can be too late: React/browser layout may already have reset it.
-    const viewport = canvasScrollRef.current;
-    if (viewport) canvasScrollTop.current = viewport.scrollTop;
+    // Snapshot every scroll container synchronously before changing the document.
+    // Restoring only the canvas viewport misses jumps in the editor/page ancestors.
+    captureScrollSnapshot();
     preferredVerticalX.current = null;
     preferredCellColumn.current = null;
     if (value && activeCell) {
