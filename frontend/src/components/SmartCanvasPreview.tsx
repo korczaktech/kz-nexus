@@ -650,6 +650,13 @@ export function SmartCanvasPreview({ document, engine, headerText = "", footerTe
   // is not sufficient.
   useLayoutEffect(() => {
     const snapshot = scrollSnapshotRef.current;
+    const restore = (items: typeof snapshot extends infer T ? NonNullable<T>["elements"] : never) => {
+      for (const item of items) {
+        if (!item.element.isConnected) continue;
+        if (item.element.scrollTop !== item.top) item.element.scrollTop = item.top;
+        if (item.element.scrollLeft !== item.left) item.element.scrollLeft = item.left;
+      }
+    };
     if (!snapshot) {
       const viewport = canvasScrollRef.current;
       if (viewport && viewport.scrollTop !== canvasScrollTop.current) {
@@ -657,14 +664,18 @@ export function SmartCanvasPreview({ document, engine, headerText = "", footerTe
       }
       return;
     }
-    for (const item of snapshot.elements) {
-      if (!item.element.isConnected) continue;
-      if (item.element.scrollTop !== item.top) item.element.scrollTop = item.top;
-      if (item.element.scrollLeft !== item.left) item.element.scrollLeft = item.left;
-    }
-    scrollSnapshotRef.current = null;
-    const viewport = canvasScrollRef.current;
-    if (viewport) canvasScrollTop.current = viewport.scrollTop;
+
+    // Restore before paint, then once more on the next frame. Chromium can
+    // apply focus/scroll anchoring after React's layout effects, which made
+    // the viewport jump back to page 1 even after the synchronous restore.
+    restore(snapshot.elements);
+    requestAnimationFrame(() => {
+      if (scrollSnapshotRef.current !== snapshot) return;
+      restore(snapshot.elements);
+      scrollSnapshotRef.current = null;
+      const viewport = canvasScrollRef.current;
+      if (viewport) canvasScrollTop.current = viewport.scrollTop;
+    });
   }, [document, layout]);
 
   // Give the engine a valid insertion point as soon as SmartCanvas mounts.
