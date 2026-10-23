@@ -2162,4 +2162,62 @@ describe("SmartCanvasPreview input integration", () => {
     expect(blocks.current.content.map(block => block.type)).toEqual(["paragraph", "blockquote", "bulletList", "table"]);
   });
 
+  it("preserves the real editor viewport across a document layout update", async () => {
+    const document = createDocument({ title: "SmartCanvas scroll restoration" });
+    const first = document.content[0];
+    if (!first || first.type !== "paragraph") throw new Error("Expected initial paragraph");
+    first.children[0]!.text = "Viewport anchor";
+    engine = createEditor({ document });
+    host = window.document.createElement("div");
+    host.className = "editor-body rich-editor-body";
+    host.style.overflow = "auto";
+    window.document.body.append(host);
+    host.scrollTop = 275;
+    host.scrollLeft = 9;
+    root = createRoot(host);
+    await act(async () => {
+      root?.render(createElement(SmartCanvasPreview, {
+        document: engine!.getDocument(),
+        engine: engine!,
+        onDocumentChange: vi.fn(),
+      }));
+    });
+
+    const input = host.querySelector('textarea[aria-label="Entrada de texto do SmartCanvas"]') as HTMLTextAreaElement | null;
+    if (!input) throw new Error("SmartCanvas input surface was not mounted");
+    await act(async () => {
+      input.dispatchEvent(new Event("beforeinput", { bubbles: true, cancelable: true }));
+      const inserted = engine!.exec([insertText({ blockId: first.id, offset: getPlainText(first).length, text: " updated" })]);
+      if (!inserted.ok) throw inserted.error;
+      root?.render(createElement(SmartCanvasPreview, {
+        document: engine!.getDocument(),
+        engine: engine!,
+        onDocumentChange: vi.fn(),
+      }));
+    });
+
+    expect(host.scrollTop).toBe(275);
+    expect(host.scrollLeft).toBe(9);
+  });
+
+  it("keeps the keyboard input sink clipped inside the viewport instead of off-screen", async () => {
+    engine = createEditor({ document: createDocument({ title: "SmartCanvas focus sink" }) });
+    host = window.document.createElement("div");
+    window.document.body.append(host);
+    root = createRoot(host);
+    await act(async () => {
+      root?.render(createElement(SmartCanvasPreview, {
+        document: engine!.getDocument(),
+        engine: engine!,
+        onDocumentChange: vi.fn(),
+      }));
+    });
+    const input = host.querySelector('textarea[aria-label="Entrada de texto do SmartCanvas"]') as HTMLTextAreaElement | null;
+    if (!input) throw new Error("SmartCanvas input surface was not mounted");
+    expect(input.style.position).toBe("fixed");
+    expect(input.style.left).toBe("0px");
+    expect(input.style.top).toBe("0px");
+    expect(input.style.clipPath).toBe("inset(50%)");
+  });
+
 });
