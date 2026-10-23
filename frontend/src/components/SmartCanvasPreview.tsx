@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { addTableColumn, addTableRow, collapsedAt, convertBlockToBlockquote, convertBlockToList, deleteBlock, deleteText, insertImportedBlocksAtSelection, insertImageResource, insertPageBreak, insertTable as insertTableCommand, insertTableCellImageResource, insertTableCellBlocksAfterParagraph, insertTableIntoCell, insertText, insertThematicBreak, moveBlock, removeImage, removeMark, updateEditorObject, updateImage, getLineXAtOffset, getOffsetAtLineX, getPlainText, exportHtml, layoutDocument, mergeBlockWithPrevious, mergeListItemWithPrevious, outdentListItem, replaceRange, removeTableColumn, removeTableRow, replaceTableCellContent, setAlign, setCellText, setHeadingLevel, setIndent, setParagraphStyle, splitBlock, toggleMark as toggleMarkCommand, type Block, type Editor as NexusEngineSession, type Mark, type NexusDocument, type Selection, type TextRun, type SmartCanvasHitTarget } from "../../../packages/engine/src/index";
 import { CanvasDocumentRenderer } from "./CanvasDocumentRenderer";
 import { nexusDocumentFromHtml } from "../services/nexusEngineAdapter";
@@ -602,6 +602,8 @@ export function SmartCanvasPreview({ document, engine, headerText = "", footerTe
   const [spacingAfterDraft, setSpacingAfterDraft] = useState("8");
   const [headingLevelDraft, setHeadingLevelDraft] = useState("paragraph");
   const inputRef = useRef<HTMLTextAreaElement>(null);
+  const canvasScrollRef = useRef<HTMLDivElement>(null);
+  const canvasScrollTop = useRef(0);
   const imageFileInputRef = useRef<HTMLInputElement>(null);
   const composing = useRef(false);
   const lastCompositionValue = useRef<string | null>(null);
@@ -623,6 +625,14 @@ export function SmartCanvasPreview({ document, engine, headerText = "", footerTe
       return null;
     }
   }, [document]);
+
+  // Keep the current page viewport stable while each keystroke recalculates layout.
+  useLayoutEffect(() => {
+    const viewport = canvasScrollRef.current;
+    if (viewport && viewport.scrollTop !== canvasScrollTop.current) {
+      viewport.scrollTop = canvasScrollTop.current;
+    }
+  }, [document, layout]);
 
   // Give the engine a valid insertion point as soon as SmartCanvas mounts.
   // Keyboard input must not depend on a prior click on a text glyph.
@@ -2433,7 +2443,7 @@ export function SmartCanvasPreview({ document, engine, headerText = "", footerTe
       }
       handleInput(event.clipboardData.getData("text/plain"));
     }} onCompositionStart={() => { composing.current = true; lastCompositionValue.current = null; }} onCompositionEnd={event => { const value = event.currentTarget.value; composing.current = false; lastCompositionValue.current = value || null; if (readOnly) { event.currentTarget.value = ""; lastCompositionValue.current = null; return; } handleInput(value); }} style={{ position: "absolute", width: 1, height: 1, opacity: 0, padding: 0, border: 0, overflow: "hidden", left: 0, bottom: 0, resize: "none" }} />
-    {layout ? <div style={{ maxHeight: 560, overflow: "auto", background: "#e5e7eb", borderRadius: 8, zoom: `${Math.max(25, Math.min(300, zoom))}%` }}>
+    {layout ? <div ref={canvasScrollRef} onScroll={event => { canvasScrollTop.current = event.currentTarget.scrollTop; }} style={{ maxHeight: 560, overflow: "auto", background: "#e5e7eb", borderRadius: 8, zoom: `${Math.max(25, Math.min(300, zoom))}%` }}>
       <CanvasDocumentRenderer layout={layout} document={document} headerText={headerText} footerText={footerText} headerAlign={headerAlign} footerAlign={footerAlign} showPageNumbers={showPageNumbers} showFormattingMarks={showFormattingMarks} selection={selection || undefined} showCaret={!!selection && !activeCell} activeCellId={activeCell?.cellId} activeCellSelection={activeCell || undefined} activeBlockId={activeBlockId || undefined} onHitTest={handleHit} />
     </div> : <p role="status">Aguardando documento/layout do motor.</p>}
   </section>;
