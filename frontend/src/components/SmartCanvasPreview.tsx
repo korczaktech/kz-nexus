@@ -622,10 +622,15 @@ export function SmartCanvasPreview({ document, engine, headerText = "", footerTe
   };
   const captureScrollSnapshot = () => {
     const element = getScrollOwner();
-    const previous = lastViewportPositionRef.current;
-    const top = element ? (previous.element === element ? previous.top : element.scrollTop) : window.scrollY;
-    const left = element ? (previous.element === element ? previous.left : element.scrollLeft) : window.scrollX;
-    scrollSnapshotRef.current = { element, top, left, windowX: window.scrollX, windowY: window.scrollY };
+    // Read the live scroll offsets synchronously. A cached offset can lag behind
+    // a wheel event and incorrectly rewind the viewport to an older position.
+    scrollSnapshotRef.current = {
+      element,
+      top: element ? element.scrollTop : window.scrollY,
+      left: element ? element.scrollLeft : window.scrollX,
+      windowX: window.scrollX,
+      windowY: window.scrollY,
+    };
   };
   const stabilizeScrollAfterInput = (snapshot: NonNullable<typeof scrollSnapshotRef.current>) => {
     requestAnimationFrame(() => {
