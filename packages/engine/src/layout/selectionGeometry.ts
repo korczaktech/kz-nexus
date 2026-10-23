@@ -73,7 +73,13 @@ export function getSelectionGeometry(
     const block = blocks[anchorIndex].block;
     if (blocks[anchorIndex].pageIndex !== pageIndex) return empty;
     const offset = selection.focus.offset;
-    const line = block.lines.find(item => offset >= item.startOffset && offset <= item.endOffset);
+    // At a soft-wrap boundary, the previous line's endOffset equals the next
+    // line's startOffset. Prefer the line that starts at the caret offset so
+    // typing spaces (or continuing after a wrap) moves the visible caret
+    // immediately instead of leaving it on the previous line until the next
+    // non-whitespace character.
+    const line = block.lines.find(item => item.startOffset === offset && item.endOffset > item.startOffset)
+      ?? [...block.lines].reverse().find(item => offset >= item.startOffset && offset <= item.endOffset);
     if (!line) return empty;
     return {
       caret: { x: xAtOffset(line, offset, measureText), y: line.y, height: line.height },
