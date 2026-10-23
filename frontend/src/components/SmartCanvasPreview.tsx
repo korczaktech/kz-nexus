@@ -603,52 +603,54 @@ export function SmartCanvasPreview({ document, engine, headerText = "", footerTe
   const [headingLevelDraft, setHeadingLevelDraft] = useState("paragraph");
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const canvasScrollRef = useRef<HTMLDivElement>(null);
-  const scrollSnapshotRef = useRef<{ elements: Array<{ element: HTMLElement; top: number; left: number }>; windowX: number; windowY: number } | null>(null);
-  const captureScrollSnapshot = () => {
-    const elements: Array<{ element: HTMLElement; top: number; left: number }> = [];
-    let element: HTMLElement | null = canvasScrollRef.current;
-    while (element) {
-      elements.push({ element, top: element.scrollTop, left: element.scrollLeft });
-      element = element.parentElement;
+  type ScrollSnapshot = { element: HTMLElement | null; top: number; left: number; windowX: number; windowY: number };
+  const scrollSnapshotRef = useRef<ScrollSnapshot | null>(null);
+  // SmartCanvas has exactly one scroll owner: the editor body's viewport.
+  // Do not snapshot every ancestor: restoring stale ancestor positions after
+  // pagination changes can undo the user's scroll and jump back to page one.
+  const getScrollOwner = (): HTMLElement | null => {
+    const canvas = canvasScrollRef.current;
+    const editorViewport = canvas?.closest<HTMLElement>(".editor-body.rich-editor-body");
+    if (editorViewport) return editorViewport;
+    let ancestor = canvas?.parentElement ?? inputRef.current?.parentElement ?? null;
+    while (ancestor) {
+      const overflowY = window.getComputedStyle(ancestor).overflowY;
+      if (/(auto|scroll|overlay)/.test(overflowY) && ancestor.scrollHeight > ancestor.clientHeight) return ancestor;
+      ancestor = ancestor.parentElement;
     }
-    const root = window.document.documentElement;
-    const body = window.document.body;
-    for (const candidate of [root, body]) {
-      if (candidate && !elements.some(item => item.element === candidate)) {
-        elements.push({ element: candidate, top: candidate.scrollTop, left: candidate.scrollLeft });
-      }
-    }
-    scrollSnapshotRef.current = { elements, windowX: window.scrollX, windowY: window.scrollY };
+    return null;
   };
-  // Input events happen after the browser's default focus/scroll processing.
-  // Keep a stable baseline while typing and correct late browser scroll changes
-  // for several frames after the React layout update, not just the first one.
-  const stabilizeScrollAfterInput = (snapshot: NonNullable<typeof scrollSnapshotRef.current>) => {
-    let frames = 0;
-    const restoreFrame = () => {
-      if (scrollSnapshotRef.current !== snapshot || frames++ >= 6) return;
-      restoreScrollSnapshot(snapshot);
-      requestAnimationFrame(restoreFrame);
-      if (frames >= 6) {
-        scrollSnapshotRef.current = null;
-      }
+  const captureScrollSnapshot = () => {
+    const element = getScrollOwner();
+    scrollSnapshotRef.current = {
+      element,
+      top: element?.scrollTop ?? window.scrollY,
+      left: element?.scrollLeft ?? window.scrollX,
+      windowX: window.scrollX,
+      windowY: window.scrollY,
     };
-    requestAnimationFrame(restoreFrame);
+  };
+  // Restore once after React has committed the new layout. Repeated multi-frame
+  // restoration was racing subsequent keystrokes and replaying an old position.
+  const stabilizeScrollAfterInput = (snapshot: NonNullable<typeof scrollSnapshotRef.current>) => {
+    requestAnimationFrame(() => {
+      if (scrollSnapshotRef.current !== snapshot) return;
+      restoreScrollSnapshot(snapshot);
+      scrollSnapshotRef.current = null;
+    });
   };
   const restoreScrollSnapshot = (snapshot: NonNullable<typeof scrollSnapshotRef.current>) => {
-    for (const item of snapshot.elements) {
-      if (!item.element.isConnected) continue;
-      if (item.element.scrollTop !== item.top) item.element.scrollTop = item.top;
-      if (item.element.scrollLeft !== item.left) item.element.scrollLeft = item.left;
+    if (snapshot.element?.isConnected) {
+      if (snapshot.element.scrollTop !== snapshot.top) snapshot.element.scrollTop = snapshot.top;
+      if (snapshot.element.scrollLeft !== snapshot.left) snapshot.element.scrollLeft = snapshot.left;
+      return;
     }
-    // Chromium's window scroll can differ from documentElement/body.scrollTop.
+    // Window scrolling is only a fallback when no editor viewport exists.
     if (window.scrollX !== snapshot.windowX || window.scrollY !== snapshot.windowY) {
       window.scrollTo({ left: snapshot.windowX, top: snapshot.windowY, behavior: "instant" as ScrollBehavior });
     }
   };
-  // Focusing the off-screen keyboard sink can move a Chromium scroll ancestor,
-  // especially when the canvas is inside a zoomed/transformed layout. Preserve
-  // the actual scroll positions around focus itself, not only around typing.
+  // Focus the keyboard sink without scrolling; preserve only the actual viewport.
   const focusInputPreservingScroll = () => {
     captureScrollSnapshot();
     const snapshot = scrollSnapshotRef.current;
@@ -679,17 +681,11 @@ export function SmartCanvasPreview({ document, engine, headerText = "", footerTe
     }
   }, [document]);
 
-  // Keep both the page viewport and any scrolling editor ancestors stable while
-  // each keystroke recalculates layout. The browser may move an outer scroller
-  // when the focused hidden textarea is updated, so preserving only this div
-  // is not sufficient.
+  // Pagination/layout is recalculated after edits. Restore the single real
+  // scroll owner before paint, then allow one post-layout correction only.
   useLayoutEffect(() => {
     const snapshot = scrollSnapshotRef.current;
     if (!snapshot) return;
-
-    // Restore before paint, then once more on the next frame. Chromium can
-    // apply focus/scroll anchoring after React's layout effects, which made
-    // the viewport jump back to page 1 even after the synchronous restore.
     restoreScrollSnapshot(snapshot);
     stabilizeScrollAfterInput(snapshot);
   }, [document, layout]);
@@ -2507,7 +2503,7 @@ export function SmartCanvasPreview({ document, engine, headerText = "", footerTe
         }
       }
       handleInput(event.clipboardData.getData("text/plain"));
-    }} onCompositionStart={() => { composing.current = true; lastCompositionValue.current = null; }} onCompositionEnd={event => { const value = event.currentTarget.value; composing.current = false; lastCompositionValue.current = value || null; if (readOnly) { event.currentTarget.value = ""; lastCompositionValue.current = null; return; } handleInput(value); }} style={{ position: "fixed", width: 1, height: 1, opacity: 0, padding: 0, border: 0, overflow: "hidden", left: -10000, top: -10000, resize: "none", pointerEvents: "none", contain: "strict" }} />
+    }} onCompositionStart={() => { composing.current = true; lastCompositionValue.current = null; }} onCompositionEnd={event => { const value = event.currentTarget.value; composing.current = false; lastCompositionValue.current = value || null; if (readOnly) { event.currentTarget.value = ""; lastCompositionValue.current = null; return; } handleInput(value); }} style={{ position: "fixed", width: 1, height: 1, minWidth: 1, minHeight: 1, opacity: 0, padding: 0, border: 0, overflow: "hidden", left: 0, top: 0, clipPath: "inset(50%)", resize: "none", pointerEvents: "none", contain: "strict", scrollMargin: 0 }} />
     {layout ? <div ref={canvasScrollRef} style={{ maxHeight: "none", overflow: "visible", overflowAnchor: "none", background: "#e5e7eb", borderRadius: 8, zoom: `${Math.max(25, Math.min(300, zoom))}%` }}>
       <CanvasDocumentRenderer layout={layout} document={document} headerText={headerText} footerText={footerText} headerAlign={headerAlign} footerAlign={footerAlign} showPageNumbers={showPageNumbers} showFormattingMarks={showFormattingMarks} selection={selection || undefined} showCaret={!!selection && !activeCell} activeCellId={activeCell?.cellId} activeCellSelection={activeCell || undefined} activeBlockId={activeBlockId || undefined} onHitTest={handleHit} />
     </div> : <p role="status">Aguardando documento/layout do motor.</p>}
