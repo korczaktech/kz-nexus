@@ -3369,3 +3369,8 @@ html:has(.app-shell.editor-mode),body:has(.app-shell.editor-mode),#root:has(.app
   .nexus-splash.is-compact .splash-mark{margin-bottom:18px}
   .nexus-splash.is-compact .splash-message{max-width:290px;font-size:13px}
 }
+
+
+/* SmartCanvas uses the editor canvas as its only scroll owner; prevent Chromium scroll anchoring from jumping on each layout recompute. */
+.app-shell.editor-mode .editor-canvas{overflow-anchor:none!important;scroll-behavior:auto!important}
+.app-shell.editor-mode .editor-canvas>section{overflow-anchor:none}
