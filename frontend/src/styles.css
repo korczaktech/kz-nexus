@@ -3628,3 +3628,19 @@ body:has(.app-shell.editor-mode),
     min-height:120px!important;
   }
 }
+
+
+/* Constrain the editor body to the visible workspace so .editor-canvas can actually scroll. */
+.app-shell.editor-mode .editor-workspace>.editor-body.rich-editor-body{
+  height:calc(100dvh - 285px)!important;
+  min-height:320px!important;
+  max-height:calc(100dvh - 285px)!important;
+  flex:0 0 auto!important;
+}
+@media(max-width:900px){
+  .app-shell.editor-mode .editor-workspace>.editor-body.rich-editor-body{
+    height:calc(100dvh - 310px)!important;
+    min-height:260px!important;
+    max-height:calc(100dvh - 310px)!important;
+  }
+}
