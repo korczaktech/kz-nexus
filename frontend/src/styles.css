@@ -3351,10 +3351,11 @@ html:has(.app-shell.editor-mode),body:has(.app-shell.editor-mode),#root:has(.app
 .plan-card-current-action span{color:inherit!important}
 
 
-/* Keep the editor loading frame aligned with the editor workspace, not the full viewport. */
+/* The editor-opening splash fills the available browser height instead of stopping at a fixed cap. */
 .nexus-splash.is-compact{
-  min-height:480px;
-  height:clamp(480px,calc(100vh - 170px),720px);
+  min-height:max(420px,calc(100dvh - 94px));
+  height:calc(100dvh - 94px);
+  max-height:none;
   width:100%;
   max-width:100%;
   margin:0;
@@ -3364,7 +3365,7 @@ html:has(.app-shell.editor-mode),body:has(.app-shell.editor-mode),#root:has(.app
 .nexus-splash.is-compact .splash-content{width:min(92%,520px);padding:24px 16px}
 .nexus-splash.is-compact .splash-footer{margin-top:28px}
 @media(max-width:760px){
-  .nexus-splash.is-compact{height:clamp(460px,calc(100vh - 130px),620px);min-height:460px}
+  .nexus-splash.is-compact{height:calc(100dvh - 86px);min-height:max(420px,calc(100dvh - 86px))}
   .nexus-splash.is-compact .splash-mark{margin-bottom:18px}
   .nexus-splash.is-compact .splash-message{max-width:290px;font-size:13px}
 }
