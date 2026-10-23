@@ -3349,3 +3349,22 @@ html:has(.app-shell.editor-mode),body:has(.app-shell.editor-mode),#root:has(.app
 .plan-current-label{display:inline-flex;align-items:center;gap:6px;align-self:flex-start;margin:0 0 10px;padding:6px 9px;border:1px solid rgba(130,151,255,.55);border-radius:5px;background:rgba(73,91,220,.18);color:#bfcaff;font-size:9px;font-weight:800;letter-spacing:1px}
 .plan-card-current-action{border-color:rgba(130,151,255,.55)!important;background:rgba(73,91,220,.16)!important;color:#c9d2ff!important;font-weight:750}
 .plan-card-current-action span{color:inherit!important}
+
+
+/* Keep the editor loading frame aligned with the editor workspace, not the full viewport. */
+.nexus-splash.is-compact{
+  min-height:480px;
+  height:clamp(480px,calc(100vh - 170px),720px);
+  width:100%;
+  max-width:100%;
+  margin:0;
+  border-radius:10px;
+}
+.nexus-splash.is-compact .splash-orbit{top:50%}
+.nexus-splash.is-compact .splash-content{width:min(92%,520px);padding:24px 16px}
+.nexus-splash.is-compact .splash-footer{margin-top:28px}
+@media(max-width:760px){
+  .nexus-splash.is-compact{height:clamp(460px,calc(100vh - 130px),620px);min-height:460px}
+  .nexus-splash.is-compact .splash-mark{margin-bottom:18px}
+  .nexus-splash.is-compact .splash-message{max-width:290px;font-size:13px}
+}
