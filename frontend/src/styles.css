@@ -3376,12 +3376,14 @@ html:has(.app-shell.editor-mode),body:has(.app-shell.editor-mode),#root:has(.app
 .app-shell.editor-mode .editor-canvas>section{overflow-anchor:none}
 
 
-/* Keep the editor workspace bounded to the browser viewport so only the canvas scrolls. */
+/* SmartCanvas is rendered directly inside .editor-body, not the legacy .editor-canvas.
+   Make the real SmartCanvas host the single scrolling viewport; the legacy canvas
+   selector remains only for the fallback editor. */
 .app-shell.editor-mode{height:100dvh!important;min-height:100dvh!important;overflow:hidden!important}
 .app-shell.editor-mode .main-shell{display:flex!important;flex:1 1 auto!important;flex-direction:column!important;height:100dvh!important;min-height:0!important;overflow:hidden!important}
 .app-shell.editor-mode .content{display:flex!important;flex:1 1 auto!important;flex-direction:column!important;height:auto!important;min-height:0!important;overflow:hidden!important;padding:0!important;margin:0!important}
-.app-shell.editor-mode .content>.editor-workspace{flex:1 1 auto!important;min-height:0!important;height:100%!important}
-.app-shell.editor-mode .editor-workspace .editor-layout{flex:1 1 auto!important;min-height:0!important;height:100%!important}
-.app-shell.editor-mode .editor-body.rich-editor-body{flex:1 1 auto!important;min-height:0!important;height:100%!important;overflow:hidden!important}
-.app-shell.editor-mode .editor-canvas{min-height:0!important;height:100%!important;overflow:auto!important;overflow-anchor:none!important;scroll-behavior:auto!important}
-.app-shell.editor-mode .editor-canvas>section{overflow-anchor:none!important}
+.app-shell.editor-mode .content>.editor-workspace{display:flex!important;flex:1 1 auto!important;flex-direction:column!important;min-height:0!important;height:100%!important;overflow:hidden!important}
+.app-shell.editor-mode .editor-workspace .editor-body.rich-editor-body{display:block!important;flex:1 1 auto!important;min-height:0!important;height:0!important;max-height:100%!important;overflow:auto!important;overflow-anchor:none!important;overscroll-behavior:contain!important;scroll-behavior:auto!important}
+.app-shell.editor-mode .editor-body.rich-editor-body>.kz-smartcanvas-experiment{min-height:max-content!important;overflow:visible!important;overflow-anchor:none!important}
+.app-shell.editor-mode .editor-body.rich-editor-body .editor-canvas{min-height:0!important;height:100%!important;overflow:auto!important;overflow-anchor:none!important;scroll-behavior:auto!important}
+.app-shell.editor-mode .editor-body.rich-editor-body>.kz-smartcanvas-experiment>div[style*="zoom"]{overflow-anchor:none!important}
