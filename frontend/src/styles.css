@@ -3711,3 +3711,29 @@ body:has(.app-shell.editor-mode),
   }
 }
 
+/* Correct the SmartCanvas grid item sizing: the preview is a GRID item,
+   so height:0 collapses the entire preview before its inner flex viewport can scroll. */
+.app-shell.editor-mode .editor-workspace .editor-layout>.editor-body.rich-editor-body>.kz-smartcanvas-experiment{
+  height:100%!important;
+  min-height:0!important;
+  max-height:100%!important;
+  align-self:stretch!important;
+  overflow:hidden!important;
+}
+.app-shell.editor-mode .editor-workspace .editor-layout>.editor-body.rich-editor-body>.kz-smartcanvas-experiment>.editor-canvas.kz-smartcanvas-pages-viewport{
+  height:100%!important;
+  min-height:0!important;
+  max-height:100%!important;
+  flex:1 1 auto!important;
+  overflow-y:auto!important;
+  overflow-x:auto!important;
+  overscroll-behavior:contain!important;
+  touch-action:pan-x pan-y;
+}
+.app-shell.editor-mode .editor-workspace .editor-layout>.editor-body.rich-editor-body>.kz-smartcanvas-experiment>.editor-canvas.kz-smartcanvas-pages-viewport>div[style*="zoom"]{
+  height:max-content!important;
+  min-height:100%!important;
+  max-height:none!important;
+  overflow:visible!important;
+}
+
