@@ -605,13 +605,13 @@ export function SmartCanvasPreview({ document, engine, headerText = "", footerTe
   const canvasScrollRef = useRef<HTMLDivElement>(null);
   type ScrollSnapshot = { element: HTMLElement | null; top: number; left: number; windowX: number; windowY: number };
   const scrollSnapshotRef = useRef<ScrollSnapshot | null>(null);
-  // SmartCanvas has exactly one scroll owner: the editor body's viewport.
-  // Do not snapshot every ancestor: restoring stale ancestor positions after
-  // pagination changes can undo the user's scroll and jump back to page one.
+  const lastViewportPositionRef = useRef<{ element: HTMLElement | null; top: number; left: number }>({ element: null, top: 0, left: 0 });
+  // The page preview itself owns vertical scrolling; the editor body is only
+  // the two-column frame that places the preview beside the properties sidebar.
   const getScrollOwner = (): HTMLElement | null => {
     const canvas = canvasScrollRef.current;
-    const editorViewport = canvas?.closest<HTMLElement>(".editor-body.rich-editor-body");
-    if (editorViewport) return editorViewport;
+    const preview = canvas?.closest<HTMLElement>(".kz-smartcanvas-experiment");
+    if (preview) return preview;
     let ancestor = canvas?.parentElement ?? inputRef.current?.parentElement ?? null;
     while (ancestor) {
       const overflowY = window.getComputedStyle(ancestor).overflowY;
@@ -622,21 +622,18 @@ export function SmartCanvasPreview({ document, engine, headerText = "", footerTe
   };
   const captureScrollSnapshot = () => {
     const element = getScrollOwner();
-    scrollSnapshotRef.current = {
-      element,
-      top: element?.scrollTop ?? window.scrollY,
-      left: element?.scrollLeft ?? window.scrollX,
-      windowX: window.scrollX,
-      windowY: window.scrollY,
-    };
+    const previous = lastViewportPositionRef.current;
+    const top = element ? (previous.element === element ? previous.top : element.scrollTop) : window.scrollY;
+    const left = element ? (previous.element === element ? previous.left : element.scrollLeft) : window.scrollX;
+    scrollSnapshotRef.current = { element, top, left, windowX: window.scrollX, windowY: window.scrollY };
   };
-  // Restore once after React has committed the new layout. Repeated multi-frame
-  // restoration was racing subsequent keystrokes and replaying an old position.
   const stabilizeScrollAfterInput = (snapshot: NonNullable<typeof scrollSnapshotRef.current>) => {
     requestAnimationFrame(() => {
       if (scrollSnapshotRef.current !== snapshot) return;
       restoreScrollSnapshot(snapshot);
       scrollSnapshotRef.current = null;
+      const element = snapshot.element;
+      if (element?.isConnected) lastViewportPositionRef.current = { element, top: element.scrollTop, left: element.scrollLeft };
     });
   };
   const restoreScrollSnapshot = (snapshot: NonNullable<typeof scrollSnapshotRef.current>) => {
@@ -645,7 +642,6 @@ export function SmartCanvasPreview({ document, engine, headerText = "", footerTe
       if (snapshot.element.scrollLeft !== snapshot.left) snapshot.element.scrollLeft = snapshot.left;
       return;
     }
-    // Window scrolling is only a fallback when no editor viewport exists.
     if (window.scrollX !== snapshot.windowX || window.scrollY !== snapshot.windowY) {
       window.scrollTo({ left: snapshot.windowX, top: snapshot.windowY, behavior: "instant" as ScrollBehavior });
     }
@@ -681,8 +677,18 @@ export function SmartCanvasPreview({ document, engine, headerText = "", footerTe
     }
   }, [document]);
 
-  // Pagination/layout is recalculated after edits. Restore the single real
-  // scroll owner before paint, then allow one post-layout correction only.
+  // Track actual user scrolling independently of React render cycles, then
+  // preserve the preview's own viewport while the page layout is recalculated.
+  useEffect(() => {
+    const element = getScrollOwner();
+    if (!element) return;
+    const remember = () => {
+      lastViewportPositionRef.current = { element, top: element.scrollTop, left: element.scrollLeft };
+    };
+    remember();
+    element.addEventListener("scroll", remember, { passive: true });
+    return () => element.removeEventListener("scroll", remember);
+  });
   useLayoutEffect(() => {
     const snapshot = scrollSnapshotRef.current;
     if (!snapshot) return;
