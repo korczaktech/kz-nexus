@@ -3545,3 +3545,48 @@ body:has(.app-shell.editor-mode),
     border-top:1px solid var(--line,#17263b)!important;
   }
 }
+
+/* SmartCanvas: a rolagem pertence à área das páginas, não ao painel inteiro. */
+.app-shell.editor-mode .editor-body.rich-editor-body>.kz-smartcanvas-experiment{
+  display:flex!important;
+  flex-direction:column!important;
+  height:100%!important;
+  min-height:0!important;
+  overflow:hidden!important;
+  overscroll-behavior:none!important;
+}
+.app-shell.editor-mode .editor-body.rich-editor-body>.kz-smartcanvas-experiment>.kz-smartcanvas-pages-viewport{
+  display:block!important;
+  position:relative!important;
+  flex:1 1 0%!important;
+  width:100%!important;
+  height:0!important;
+  min-height:0!important;
+  max-height:none!important;
+  box-sizing:border-box!important;
+  overflow-x:auto!important;
+  overflow-y:auto!important;
+  overscroll-behavior:contain!important;
+  scroll-behavior:auto!important;
+  scrollbar-gutter:stable;
+  overflow-anchor:none!important;
+  -webkit-overflow-scrolling:touch;
+  border-radius:8px;
+}
+.app-shell.editor-mode .editor-body.rich-editor-body>.kz-smartcanvas-experiment>.kz-smartcanvas-pages-viewport>div[style*="zoom"]{
+  display:block!important;
+  width:max-content!important;
+  min-width:100%!important;
+  max-width:none!important;
+  height:auto!important;
+  max-height:none!important;
+  overflow:visible!important;
+  overflow-anchor:none!important;
+}
+@media(max-width:900px){
+  .app-shell.editor-mode .editor-body.rich-editor-body>.kz-smartcanvas-experiment>.kz-smartcanvas-pages-viewport{
+    flex:1 1 0%!important;
+    height:0!important;
+    min-height:120px!important;
+  }
+}
