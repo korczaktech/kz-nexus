@@ -622,6 +622,23 @@ export function SmartCanvasPreview({ document, engine, headerText = "", footerTe
     scrollSnapshotRef.current = { elements, windowX: window.scrollX, windowY: window.scrollY };
     if (canvasScrollRef.current) canvasScrollTop.current = canvasScrollRef.current.scrollTop;
   };
+  // Input events happen after the browser's default focus/scroll processing.
+  // Keep a stable baseline while typing and correct late browser scroll changes
+  // for several frames after the React layout update, not just the first one.
+  const stabilizeScrollAfterInput = (snapshot: NonNullable<typeof scrollSnapshotRef.current>) => {
+    let frames = 0;
+    const restoreFrame = () => {
+      if (scrollSnapshotRef.current !== snapshot || frames++ >= 6) return;
+      restoreScrollSnapshot(snapshot);
+      requestAnimationFrame(restoreFrame);
+      if (frames >= 6) {
+        scrollSnapshotRef.current = null;
+        const viewport = canvasScrollRef.current;
+        if (viewport) canvasScrollTop.current = viewport.scrollTop;
+      }
+    };
+    requestAnimationFrame(restoreFrame);
+  };
   const restoreScrollSnapshot = (snapshot: NonNullable<typeof scrollSnapshotRef.current>) => {
     for (const item of snapshot.elements) {
       if (!item.element.isConnected) continue;
@@ -642,13 +659,7 @@ export function SmartCanvasPreview({ document, engine, headerText = "", footerTe
     inputRef.current?.focus({ preventScroll: true });
     if (!snapshot) return;
     restoreScrollSnapshot(snapshot);
-    requestAnimationFrame(() => {
-      if (scrollSnapshotRef.current !== snapshot) return;
-      restoreScrollSnapshot(snapshot);
-      scrollSnapshotRef.current = null;
-      const viewport = canvasScrollRef.current;
-      if (viewport) canvasScrollTop.current = viewport.scrollTop;
-    });
+    stabilizeScrollAfterInput(snapshot);
   };
   const imageFileInputRef = useRef<HTMLInputElement>(null);
   const composing = useRef(false);
@@ -690,13 +701,7 @@ export function SmartCanvasPreview({ document, engine, headerText = "", footerTe
     // apply focus/scroll anchoring after React's layout effects, which made
     // the viewport jump back to page 1 even after the synchronous restore.
     restoreScrollSnapshot(snapshot);
-    requestAnimationFrame(() => {
-      if (scrollSnapshotRef.current !== snapshot) return;
-      restoreScrollSnapshot(snapshot);
-      scrollSnapshotRef.current = null;
-      const viewport = canvasScrollRef.current;
-      if (viewport) canvasScrollTop.current = viewport.scrollTop;
-    });
+    stabilizeScrollAfterInput(snapshot);
   }, [document, layout]);
 
   // Give the engine a valid insertion point as soon as SmartCanvas mounts.
