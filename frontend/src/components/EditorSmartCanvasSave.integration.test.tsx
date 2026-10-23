@@ -103,7 +103,9 @@ describe("Editor SmartCanvas save integration", () => {
       }));
     });
 
-    expect(host.querySelector(".editor-canvas")).toBeNull();
+    const scrollCanvas = host.querySelector(".editor-canvas.kz-smartcanvas-pages-viewport");
+    expect(scrollCanvas).not.toBeNull();
+    expect(scrollCanvas?.classList.contains("kz-smartcanvas-pages-viewport")).toBe(true);
     expect(host.querySelector(".editor-canvas-legacy-fallback")).toBeNull();
     expect(host.querySelector('.editor-workspace [contenteditable="true"]')).toBeNull();
     // Production SmartCanvas must not mount a hidden native editor projection.
@@ -216,7 +218,9 @@ describe("Editor SmartCanvas save integration", () => {
         onConflict: vi.fn(async () => document),
       }));
     });
-    expect(host.querySelector(".editor-canvas")).toBeNull();
+    const scrollCanvas = host.querySelector(".editor-canvas.kz-smartcanvas-pages-viewport");
+    expect(scrollCanvas).not.toBeNull();
+    expect(scrollCanvas?.classList.contains("kz-smartcanvas-pages-viewport")).toBe(true);
     expect(host.querySelector(".editor-pages-stack")).toBeNull();
     expect(host.querySelector('.editor-workspace [contenteditable="true"]')).toBeNull();
     const editTab = [...host.querySelectorAll<HTMLButtonElement>('nav[aria-label="Guias do editor"] button')]
