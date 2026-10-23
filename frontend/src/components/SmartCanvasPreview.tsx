@@ -650,7 +650,7 @@ export function SmartCanvasPreview({ document, engine, headerText = "", footerTe
   // is not sufficient.
   useLayoutEffect(() => {
     const snapshot = scrollSnapshotRef.current;
-    const restore = (items: typeof snapshot extends infer T ? NonNullable<T>["elements"] : never) => {
+    const restore = (items: Array<{ element: HTMLElement; top: number; left: number }>) => {
       for (const item of items) {
         if (!item.element.isConnected) continue;
         if (item.element.scrollTop !== item.top) item.element.scrollTop = item.top;
