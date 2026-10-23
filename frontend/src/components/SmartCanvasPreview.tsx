@@ -603,62 +603,25 @@ export function SmartCanvasPreview({ document, engine, headerText = "", footerTe
   const [headingLevelDraft, setHeadingLevelDraft] = useState("paragraph");
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const canvasScrollRef = useRef<HTMLDivElement>(null);
-  type ScrollSnapshot = { element: HTMLElement | null; top: number; left: number; windowX: number; windowY: number };
-  const scrollSnapshotRef = useRef<ScrollSnapshot | null>(null);
-  const lastViewportPositionRef = useRef<{ element: HTMLElement | null; top: number; left: number }>({ element: null, top: 0, left: 0 });
-  // The page preview itself owns vertical scrolling; the editor body is only
-  // the two-column frame that places the preview beside the properties sidebar.
+  // The preview section is the single scroll owner. Never restore a cached
+  // scrollTop after typing: that can overwrite wheel scrolling with a stale
+  // position and makes the viewport jump on every keystroke.
   const getScrollOwner = (): HTMLElement | null => {
     const canvas = canvasScrollRef.current;
-    const preview = canvas?.closest<HTMLElement>(".kz-smartcanvas-experiment");
-    if (preview) return preview;
-    let ancestor = canvas?.parentElement ?? inputRef.current?.parentElement ?? null;
-    while (ancestor) {
-      const overflowY = window.getComputedStyle(ancestor).overflowY;
-      if (/(auto|scroll|overlay)/.test(overflowY) && ancestor.scrollHeight > ancestor.clientHeight) return ancestor;
-      ancestor = ancestor.parentElement;
-    }
-    return null;
+    return canvas?.closest<HTMLElement>(".kz-smartcanvas-experiment") ?? null;
   };
   const captureScrollSnapshot = () => {
-    const element = getScrollOwner();
-    // Read the live scroll offsets synchronously. A cached offset can lag behind
-    // a wheel event and incorrectly rewind the viewport to an older position.
-    scrollSnapshotRef.current = {
-      element,
-      top: element ? element.scrollTop : window.scrollY,
-      left: element ? element.scrollLeft : window.scrollX,
-      windowX: window.scrollX,
-      windowY: window.scrollY,
-    };
+    // Kept as a no-op compatibility hook for focus/input handlers. Native
+    // scrolling remains authoritative; text edits must not move the viewport.
   };
-  const stabilizeScrollAfterInput = (snapshot: NonNullable<typeof scrollSnapshotRef.current>) => {
-    requestAnimationFrame(() => {
-      if (scrollSnapshotRef.current !== snapshot) return;
-      restoreScrollSnapshot(snapshot);
-      scrollSnapshotRef.current = null;
-      const element = snapshot.element;
-      if (element?.isConnected) lastViewportPositionRef.current = { element, top: element.scrollTop, left: element.scrollLeft };
-    });
+  const stabilizeScrollAfterInput = (_snapshot?: unknown) => {
+    // Intentionally do not set scrollTop/scrollLeft here.
   };
-  const restoreScrollSnapshot = (snapshot: NonNullable<typeof scrollSnapshotRef.current>) => {
-    if (snapshot.element?.isConnected) {
-      if (snapshot.element.scrollTop !== snapshot.top) snapshot.element.scrollTop = snapshot.top;
-      if (snapshot.element.scrollLeft !== snapshot.left) snapshot.element.scrollLeft = snapshot.left;
-      return;
-    }
-    if (window.scrollX !== snapshot.windowX || window.scrollY !== snapshot.windowY) {
-      window.scrollTo({ left: snapshot.windowX, top: snapshot.windowY, behavior: "instant" as ScrollBehavior });
-    }
+  const restoreScrollSnapshot = (_snapshot?: unknown) => {
+    // Intentionally do not restore stale offsets after React layout changes.
   };
-  // Focus the keyboard sink without scrolling; preserve only the actual viewport.
   const focusInputPreservingScroll = () => {
-    captureScrollSnapshot();
-    const snapshot = scrollSnapshotRef.current;
     inputRef.current?.focus({ preventScroll: true });
-    if (!snapshot) return;
-    restoreScrollSnapshot(snapshot);
-    stabilizeScrollAfterInput(snapshot);
   };
   const imageFileInputRef = useRef<HTMLInputElement>(null);
   const composing = useRef(false);
@@ -682,24 +645,8 @@ export function SmartCanvasPreview({ document, engine, headerText = "", footerTe
     }
   }, [document]);
 
-  // Track actual user scrolling independently of React render cycles, then
-  // preserve the preview's own viewport while the page layout is recalculated.
-  useEffect(() => {
-    const element = getScrollOwner();
-    if (!element) return;
-    const remember = () => {
-      lastViewportPositionRef.current = { element, top: element.scrollTop, left: element.scrollLeft };
-    };
-    remember();
-    element.addEventListener("scroll", remember, { passive: true });
-    return () => element.removeEventListener("scroll", remember);
-  });
-  useLayoutEffect(() => {
-    const snapshot = scrollSnapshotRef.current;
-    if (!snapshot) return;
-    restoreScrollSnapshot(snapshot);
-    stabilizeScrollAfterInput(snapshot);
-  }, [document, layout]);
+  // Do not restore scroll offsets after renders: native wheel scrolling must
+  // remain independent from document edits and pagination/layout recalculation.
 
   // Give the engine a valid insertion point as soon as SmartCanvas mounts.
   // Keyboard input must not depend on a prior click on a text glyph.
