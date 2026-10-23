@@ -2451,8 +2451,10 @@ export function SmartCanvasPreview({ document, engine, headerText = "", footerTe
       }
       handleInput(event.clipboardData.getData("text/plain"));
     }} onCompositionStart={() => { composing.current = true; lastCompositionValue.current = null; }} onCompositionEnd={event => { const value = event.currentTarget.value; composing.current = false; lastCompositionValue.current = value || null; if (readOnly) { event.currentTarget.value = ""; lastCompositionValue.current = null; return; } handleInput(value); }} style={{ position: "fixed", width: 1, height: 1, minWidth: 1, minHeight: 1, opacity: 0, padding: 0, border: 0, overflow: "hidden", left: 0, top: 0, clipPath: "inset(50%)", resize: "none", pointerEvents: "none", contain: "strict", scrollMargin: 0 }} />
-    {layout ? <div ref={canvasScrollRef} style={{ maxHeight: "none", overflow: "visible", overflowAnchor: "none", background: "#e5e7eb", borderRadius: 8, zoom: `${Math.max(25, Math.min(300, zoom))}%` }}>
-      <CanvasDocumentRenderer layout={layout} document={document} headerText={headerText} footerText={footerText} headerAlign={headerAlign} footerAlign={footerAlign} showPageNumbers={showPageNumbers} showFormattingMarks={showFormattingMarks} selection={selection || undefined} showCaret={!!selection && !activeCell} activeCellId={activeCell?.cellId} activeCellSelection={activeCell || undefined} activeBlockId={activeBlockId || undefined} onHitTest={handleHit} />
-    </div> : <p role="status">Aguardando documento/layout do motor.</p>}
+    <div className="kz-smartcanvas-pages-viewport" aria-label="Área de rolagem das páginas do documento">
+      {layout ? <div ref={canvasScrollRef} style={{ maxHeight: "none", overflow: "visible", overflowAnchor: "none", background: "#e5e7eb", borderRadius: 8, zoom: `${Math.max(25, Math.min(300, zoom))}%` }}>
+        <CanvasDocumentRenderer layout={layout} document={document} headerText={headerText} footerText={footerText} headerAlign={headerAlign} footerAlign={footerAlign} showPageNumbers={showPageNumbers} showFormattingMarks={showFormattingMarks} selection={selection || undefined} showCaret={!!selection && !activeCell} activeCellId={activeCell?.cellId} activeCellSelection={activeCell || undefined} activeBlockId={activeBlockId || undefined} onHitTest={handleHit} />
+      </div> : <p role="status">Aguardando documento/layout do motor.</p>}
+    </div>
   </section>;
 }
