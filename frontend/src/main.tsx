@@ -22,7 +22,7 @@ if ("serviceWorker" in navigator) {
     try {
       const registration = await navigator.serviceWorker.register(
         `${import.meta.env.BASE_URL}sw.js`,
-        { scope: import.meta.env.BASE_URL }
+        { scope: import.meta.env.BASE_URL, updateViaCache: "none" }
       );
 
       // Safari/Chrome manage the PWA update lifecycle automatically.
