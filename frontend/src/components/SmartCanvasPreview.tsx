@@ -1454,6 +1454,10 @@ export function SmartCanvasPreview({ document, engine, headerText = "", footerTe
     onDocumentChange(result.value.document);
   };
   const handleInput = (value: string) => {
+    // Snapshot the viewport synchronously before changing the document. Waiting for
+    // a scroll event can be too late: React/browser layout may already have reset it.
+    const viewport = canvasScrollRef.current;
+    if (viewport) canvasScrollTop.current = viewport.scrollTop;
     preferredVerticalX.current = null;
     preferredCellColumn.current = null;
     if (value && activeCell) {
@@ -2442,8 +2446,8 @@ export function SmartCanvasPreview({ document, engine, headerText = "", footerTe
         }
       }
       handleInput(event.clipboardData.getData("text/plain"));
-    }} onCompositionStart={() => { composing.current = true; lastCompositionValue.current = null; }} onCompositionEnd={event => { const value = event.currentTarget.value; composing.current = false; lastCompositionValue.current = value || null; if (readOnly) { event.currentTarget.value = ""; lastCompositionValue.current = null; return; } handleInput(value); }} style={{ position: "absolute", width: 1, height: 1, opacity: 0, padding: 0, border: 0, overflow: "hidden", left: 0, bottom: 0, resize: "none" }} />
-    {layout ? <div ref={canvasScrollRef} onScroll={event => { canvasScrollTop.current = event.currentTarget.scrollTop; }} style={{ maxHeight: 560, overflow: "auto", background: "#e5e7eb", borderRadius: 8, zoom: `${Math.max(25, Math.min(300, zoom))}%` }}>
+    }} onCompositionStart={() => { composing.current = true; lastCompositionValue.current = null; }} onCompositionEnd={event => { const value = event.currentTarget.value; composing.current = false; lastCompositionValue.current = value || null; if (readOnly) { event.currentTarget.value = ""; lastCompositionValue.current = null; return; } handleInput(value); }} style={{ position: "fixed", width: 1, height: 1, opacity: 0, padding: 0, border: 0, overflow: "hidden", left: 0, top: 0, resize: "none", pointerEvents: "none" }} />
+    {layout ? <div ref={canvasScrollRef} onScroll={event => { canvasScrollTop.current = event.currentTarget.scrollTop; }} style={{ maxHeight: 560, overflow: "auto", overflowAnchor: "none", background: "#e5e7eb", borderRadius: 8, zoom: `${Math.max(25, Math.min(300, zoom))}%` }}>
       <CanvasDocumentRenderer layout={layout} document={document} headerText={headerText} footerText={footerText} headerAlign={headerAlign} footerAlign={footerAlign} showPageNumbers={showPageNumbers} showFormattingMarks={showFormattingMarks} selection={selection || undefined} showCaret={!!selection && !activeCell} activeCellId={activeCell?.cellId} activeCellSelection={activeCell || undefined} activeBlockId={activeBlockId || undefined} onHitTest={handleHit} />
     </div> : <p role="status">Aguardando documento/layout do motor.</p>}
   </section>;
