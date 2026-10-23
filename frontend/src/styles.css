@@ -3440,29 +3440,38 @@ body:has(.app-shell.editor-mode),
   overflow:hidden!important;
 }
 .app-shell.editor-mode .editor-workspace .editor-body.rich-editor-body{
-  display:block!important;
+  display:grid!important;
   flex:1 1 0%!important;
+  grid-template-columns:minmax(0,1fr) minmax(320px,340px)!important;
+  grid-template-rows:minmax(0,1fr)!important;
+  align-items:stretch!important;
+  gap:0!important;
   width:100%!important;
   height:auto!important;
   min-height:0!important;
   max-height:none!important;
-  overflow:auto!important;
-  overflow-x:auto!important;
-  overflow-y:auto!important;
+  overflow:hidden!important;
   overflow-anchor:none!important;
-  overscroll-behavior:contain!important;
-  scroll-behavior:auto!important;
-  scrollbar-gutter:stable;
-  align-items:stretch!important;
 }
 .app-shell.editor-mode .editor-body.rich-editor-body>.kz-smartcanvas-experiment{
   display:block!important;
+  position:relative!important;
   box-sizing:border-box!important;
+  grid-column:1!important;
+  grid-row:1!important;
   width:100%!important;
+  height:100%!important;
   min-width:0!important;
-  min-height:max-content!important;
+  min-height:0!important;
+  max-height:100%!important;
   margin:0!important;
-  overflow:visible!important;
+  padding:16px!important;
+  overflow:auto!important;
+  overflow-x:auto!important;
+  overflow-y:auto!important;
+  overscroll-behavior:contain!important;
+  scroll-behavior:auto!important;
+  scrollbar-gutter:stable;
   overflow-anchor:none!important;
 }
 .app-shell.editor-mode .editor-body.rich-editor-body>.kz-smartcanvas-experiment>div[style*="zoom"]{
@@ -3473,6 +3482,22 @@ body:has(.app-shell.editor-mode),
   max-height:none!important;
   overflow:visible!important;
   overflow-anchor:none!important;
+}
+.app-shell.editor-mode .editor-body.rich-editor-body>.editor-side{
+  position:relative!important;
+  grid-column:2!important;
+  grid-row:1!important;
+  align-self:stretch!important;
+  width:auto!important;
+  min-width:0!important;
+  min-height:0!important;
+  height:100%!important;
+  max-height:100%!important;
+  overflow-x:hidden!important;
+  overflow-y:auto!important;
+  overscroll-behavior:contain!important;
+  border-left:1px solid var(--line,#17263b)!important;
+  border-top:0!important;
 }
 .app-shell.editor-mode .editor-body.rich-editor-body .editor-canvas{
   height:auto!important;
@@ -3499,7 +3524,21 @@ body:has(.app-shell.editor-mode),
 }
 @media(max-width:900px){
   .app-shell.editor-mode .editor-body.rich-editor-body{
-    display:block!important;
-    overflow:auto!important;
+    grid-template-columns:minmax(0,1fr)!important;
+    grid-template-rows:minmax(0,1fr) auto!important;
+  }
+  .app-shell.editor-mode .editor-body.rich-editor-body>.kz-smartcanvas-experiment{
+    grid-column:1!important;
+    grid-row:1!important;
+    height:100%!important;
+    max-height:100%!important;
+  }
+  .app-shell.editor-mode .editor-body.rich-editor-body>.editor-side{
+    grid-column:1!important;
+    grid-row:2!important;
+    height:auto!important;
+    max-height:30dvh!important;
+    border-left:0!important;
+    border-top:1px solid var(--line,#17263b)!important;
   }
 }
