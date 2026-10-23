@@ -2172,8 +2172,6 @@ describe("SmartCanvasPreview input integration", () => {
     host.className = "editor-body rich-editor-body";
     host.style.overflow = "auto";
     window.document.body.append(host);
-    host.scrollTop = 275;
-    host.scrollLeft = 9;
     root = createRoot(host);
     await act(async () => {
       root?.render(createElement(SmartCanvasPreview, {
@@ -2182,6 +2180,10 @@ describe("SmartCanvasPreview input integration", () => {
         onDocumentChange: vi.fn(),
       }));
     });
+    const viewport = host.querySelector(".kz-smartcanvas-experiment") as HTMLElement | null;
+    if (!viewport) throw new Error("SmartCanvas viewport was not mounted");
+    viewport.scrollTop = 275;
+    viewport.scrollLeft = 9;
 
     const input = host.querySelector('textarea[aria-label="Entrada de texto do SmartCanvas"]') as HTMLTextAreaElement | null;
     if (!input) throw new Error("SmartCanvas input surface was not mounted");
@@ -2196,8 +2198,8 @@ describe("SmartCanvasPreview input integration", () => {
       }));
     });
 
-    expect(host.scrollTop).toBe(275);
-    expect(host.scrollLeft).toBe(9);
+    expect(viewport.scrollTop).toBe(275);
+    expect(viewport.scrollLeft).toBe(9);
   });
 
   it("keeps the keyboard input sink clipped inside the viewport instead of off-screen", async () => {
