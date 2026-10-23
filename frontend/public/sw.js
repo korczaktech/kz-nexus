@@ -1,4 +1,4 @@
-const CACHE = "kz-nexus-custom-domain-v8";
+const CACHE = "kz-nexus-custom-domain-v9";
 const BASE = new URL("./", self.registration.scope).pathname;
 const SHELL = [
   BASE,
@@ -37,13 +37,15 @@ self.addEventListener("fetch", event => {
     );
     return;
   }
+  // Network-first: when online, never let an old cached JS/CSS bundle win over
+  // the deployment. Keep a cached copy only as an offline fallback.
   event.respondWith(
-    caches.match(event.request).then(cached => cached || fetch(event.request).then(response => {
-      if (response.ok) {
+    fetch(event.request).then(response => {
+      if (response.ok && response.type !== "opaque") {
         const cachedResponse = response.clone();
         event.waitUntil(caches.open(CACHE).then(cache => cache.put(event.request, cachedResponse)));
       }
       return response;
-    }))
+    }).catch(() => caches.match(event.request))
   );
 });
