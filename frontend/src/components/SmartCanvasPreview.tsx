@@ -622,6 +622,30 @@ export function SmartCanvasPreview({ document, engine, headerText = "", footerTe
     scrollSnapshotRef.current = { elements };
     if (canvasScrollRef.current) canvasScrollTop.current = canvasScrollRef.current.scrollTop;
   };
+  // Focusing the off-screen keyboard sink can move a Chromium scroll ancestor,
+  // especially when the canvas is inside a zoomed/transformed layout. Preserve
+  // the actual scroll positions around focus itself, not only around typing.
+  const focusInputPreservingScroll = () => {
+    captureScrollSnapshot();
+    const snapshot = scrollSnapshotRef.current;
+    inputRef.current?.focus({ preventScroll: true });
+    if (!snapshot) return;
+    const restore = () => {
+      for (const item of snapshot.elements) {
+        if (!item.element.isConnected) continue;
+        if (item.element.scrollTop !== item.top) item.element.scrollTop = item.top;
+        if (item.element.scrollLeft !== item.left) item.element.scrollLeft = item.left;
+      }
+    };
+    restore();
+    requestAnimationFrame(() => {
+      if (scrollSnapshotRef.current !== snapshot) return;
+      restore();
+      scrollSnapshotRef.current = null;
+      const viewport = canvasScrollRef.current;
+      if (viewport) canvasScrollTop.current = viewport.scrollTop;
+    });
+  };
   const imageFileInputRef = useRef<HTMLInputElement>(null);
   const composing = useRef(false);
   const lastCompositionValue = useRef<string | null>(null);
@@ -777,7 +801,7 @@ export function SmartCanvasPreview({ document, engine, headerText = "", footerTe
         setActiveBlockId(null);
         setActiveCell(null);
         syncSelection({ anchor: dragSelectionAnchor.current, focus });
-        inputRef.current?.focus({ preventScroll: true });
+        focusInputPreservingScroll();
       }
       if (phase === "end") {
         if (target.kind === "table-cell" && dragSelectionCellAnchor.current && dragSelectionCellAnchor.current !== target.cellId) {
@@ -813,7 +837,7 @@ export function SmartCanvasPreview({ document, engine, headerText = "", footerTe
       } else {
         syncSelection(collapsedAt({ blockId: target.blockId, offset: targetOffset }));
       }
-      inputRef.current?.focus({ preventScroll: true });
+      focusInputPreservingScroll();
       onStatus?.(clickCount >= 3 ? "Parágrafo selecionado." : clickCount >= 2 ? "Palavra selecionada." : "SmartCanvas: cursor no bloco " + target.blockId + ", posição " + target.position.offset + ".");
     } else if (target.kind === "table-cell") {
       setActiveBlockId(null);
@@ -840,7 +864,7 @@ export function SmartCanvasPreview({ document, engine, headerText = "", footerTe
           return;
         }
         syncSelection(collapsedAt(position));
-        inputRef.current?.focus({ preventScroll: true });
+        focusInputPreservingScroll();
         onStatus?.("Célula estrutural: edição direcionada ao primeiro bloco de texto para preservar listas e tabelas aninhadas.");
         return;
       }
@@ -848,7 +872,7 @@ export function SmartCanvasPreview({ document, engine, headerText = "", footerTe
       const range = clickCount >= 3 ? { start: 0, end: cell.text.length } : clickCount >= 2 ? wordRangeAt(cell.text, boundedOffset) : { start: boundedOffset, end: boundedOffset };
       setActiveCell({ ...cell, anchorOffset: range.start, offset: range.end });
       setActiveCellStoredMarks(null);
-      inputRef.current?.focus({ preventScroll: true });
+      focusInputPreservingScroll();
       onStatus?.(clickCount >= 3 ? "Texto da célula selecionado." : clickCount >= 2 ? "Palavra da célula selecionada." : "Editando célula da tabela. Use Tab para avançar entre células.");
     } else {
       setActiveBlockId(target.blockId);
@@ -867,7 +891,7 @@ export function SmartCanvasPreview({ document, engine, headerText = "", footerTe
       }
       setSelection(null);
       engine.setSelection(undefined);
-      inputRef.current?.focus({ preventScroll: true });
+      focusInputPreservingScroll();
       onStatus?.(selectedBlock?.type === "image"
         ? "Imagem selecionada. Edite o texto alternativo e as dimensões nos controles do SmartCanvas."
         : "Bloco " + target.blockId + " selecionado no SmartCanvas. Use os comandos de objeto disponíveis para operar este bloco.");
@@ -1000,7 +1024,7 @@ export function SmartCanvasPreview({ document, engine, headerText = "", footerTe
     }
     onDocumentChange(result.value.document);
     onStatus?.(message);
-    inputRef.current?.focus({ preventScroll: true });
+    focusInputPreservingScroll();
   };
   const getSelectedTextBlock = () => {
     const currentDocument = engine.getDocument();
@@ -1113,7 +1137,7 @@ export function SmartCanvasPreview({ document, engine, headerText = "", footerTe
     setSelection(engine.getSelection() ?? null);
     onDocumentChange(result.value.document);
     onStatus?.(ordered ? "Lista numerada criada pelo SmartCanvas." : "Lista com marcadores criada pelo SmartCanvas.");
-    inputRef.current?.focus({ preventScroll: true });
+    focusInputPreservingScroll();
   };
   const insertSmartCanvasTable = () => {
     if (readOnly) return;
@@ -1166,7 +1190,7 @@ export function SmartCanvasPreview({ document, engine, headerText = "", footerTe
     }
     onDocumentChange(result.value.document);
     onStatus?.("Tabela 3×3 inserida pelo motor. Use Tab para navegar e criar novas linhas.");
-    inputRef.current?.focus({ preventScroll: true });
+    focusInputPreservingScroll();
   };
   const applySmartCanvasIndent = (direction: "increase" | "decrease") => {
     if (readOnly) return;
@@ -2097,11 +2121,11 @@ export function SmartCanvasPreview({ document, engine, headerText = "", footerTe
         setActiveCell(null);
         setActiveCellStoredMarks(null);
         syncSelection(collapsedAt(position));
-        inputRef.current?.focus({ preventScroll: true });
+        focusInputPreservingScroll();
       }
     }
   };
-  return <section className="kz-smartcanvas-experiment" aria-label="Prévia experimental SmartCanvas" style={{ margin: "0 0 16px", padding: 16, border: "1px solid #93c5fd", borderRadius: 12, background: "rgba(59,130,246,.04)", position: "relative", outline: trackChangesActive ? "2px dashed #d97706" : undefined, outlineOffset: trackChangesActive ? 3 : undefined }} onPointerDownCapture={event => { if ((event.target as HTMLElement).closest("input, button, textarea, select")) return; inputRef.current?.focus({ preventScroll: true }); }}>
+  return <section className="kz-smartcanvas-experiment" aria-label="Prévia experimental SmartCanvas" style={{ margin: "0 0 16px", padding: 16, border: "1px solid #93c5fd", borderRadius: 12, background: "rgba(59,130,246,.04)", position: "relative", outline: trackChangesActive ? "2px dashed #d97706" : undefined, outlineOffset: trackChangesActive ? 3 : undefined }} onPointerDownCapture={event => { if ((event.target as HTMLElement).closest("input, button, textarea, select")) return; focusInputPreservingScroll(); }}>
     <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, flexWrap: "wrap", marginBottom: 8 }}>
       <div><strong>SmartCanvas — prévia experimental</strong><div style={{ fontSize: 12, opacity: .75 }}>Edição por comandos do motor: texto, seleção lógica, tabelas e objetos. O editor legado permanece disponível durante a validação.</div></div>
       <span style={{ fontSize: 12 }}>{layout ? layout.pageCount + " página(s)" : "Layout indisponível"}</span>
