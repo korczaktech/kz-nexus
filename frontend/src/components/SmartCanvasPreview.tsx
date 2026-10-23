@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { addTableColumn, addTableRow, collapsedAt, convertBlockToBlockquote, convertBlockToList, deleteBlock, deleteText, insertImportedBlocksAtSelection, insertImageResource, insertPageBreak, insertTable as insertTableCommand, insertTableCellImageResource, insertTableCellBlocksAfterParagraph, insertTableIntoCell, insertText, insertThematicBreak, moveBlock, removeImage, removeMark, updateEditorObject, updateImage, getLineXAtOffset, getOffsetAtLineX, getPlainText, exportHtml, layoutDocument, mergeBlockWithPrevious, mergeListItemWithPrevious, outdentListItem, replaceRange, removeTableColumn, removeTableRow, replaceTableCellContent, setAlign, setCellText, setHeadingLevel, setIndent, setParagraphStyle, splitBlock, toggleMark as toggleMarkCommand, type Block, type Editor as NexusEngineSession, type Mark, type NexusDocument, type Selection, type TextRun, type SmartCanvasHitTarget } from "../../../packages/engine/src/index";
 import { CanvasDocumentRenderer } from "./CanvasDocumentRenderer";
 import { nexusDocumentFromHtml } from "../services/nexusEngineAdapter";
@@ -606,19 +606,8 @@ export function SmartCanvasPreview({ document, engine, headerText = "", footerTe
   // The preview section is the single scroll owner. Never restore a cached
   // scrollTop after typing: that can overwrite wheel scrolling with a stale
   // position and makes the viewport jump on every keystroke.
-  const getScrollOwner = (): HTMLElement | null => {
-    const canvas = canvasScrollRef.current;
-    return canvas?.closest<HTMLElement>(".kz-smartcanvas-experiment") ?? null;
-  };
   const captureScrollSnapshot = () => {
-    // Kept as a no-op compatibility hook for focus/input handlers. Native
-    // scrolling remains authoritative; text edits must not move the viewport.
-  };
-  const stabilizeScrollAfterInput = (_snapshot?: unknown) => {
-    // Intentionally do not set scrollTop/scrollLeft here.
-  };
-  const restoreScrollSnapshot = (_snapshot?: unknown) => {
-    // Intentionally do not restore stale offsets after React layout changes.
+    // Native scrolling remains authoritative; text edits must not move viewport.
   };
   const focusInputPreservingScroll = () => {
     inputRef.current?.focus({ preventScroll: true });
@@ -1472,7 +1461,7 @@ export function SmartCanvasPreview({ document, engine, headerText = "", footerTe
     // Restoring only the canvas viewport misses jumps in the editor/page ancestors.
     // Preserve the pre-keystroke viewport captured by beforeinput; do not overwrite it
     // with a scroll position the browser may already have changed during input dispatch.
-    if (!scrollSnapshotRef.current) captureScrollSnapshot();
+    captureScrollSnapshot();
     preferredVerticalX.current = null;
     preferredCellColumn.current = null;
     if (value && activeCell) {
