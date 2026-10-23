@@ -3342,3 +3342,10 @@ html:has(.app-shell.editor-mode),body:has(.app-shell.editor-mode),#root:has(.app
 /* Hide the application sidebar scrollbar visually while preserving scrolling. */
 .app-shell .sidebar{scrollbar-width:none!important;-ms-overflow-style:none!important}
 .app-shell .sidebar::-webkit-scrollbar{display:none!important;width:0!important;height:0!important}
+
+
+/* Destaque visual do plano atualmente ativo na página de planos. */
+.plan-card-current{position:relative;border:1px solid #7185ff!important;box-shadow:0 0 0 1px rgba(113,133,255,.28),0 16px 42px rgba(72,91,230,.2),inset 0 0 28px rgba(81,101,255,.06);transform:translateY(-3px)}
+.plan-current-label{display:inline-flex;align-items:center;gap:6px;align-self:flex-start;margin:0 0 10px;padding:6px 9px;border:1px solid rgba(130,151,255,.55);border-radius:5px;background:rgba(73,91,220,.18);color:#bfcaff;font-size:9px;font-weight:800;letter-spacing:1px}
+.plan-card-current-action{border-color:rgba(130,151,255,.55)!important;background:rgba(73,91,220,.16)!important;color:#c9d2ff!important;font-weight:750}
+.plan-card-current-action span{color:inherit!important}
