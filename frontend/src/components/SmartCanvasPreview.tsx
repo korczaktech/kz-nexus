@@ -604,7 +604,7 @@ export function SmartCanvasPreview({ document, engine, headerText = "", footerTe
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const canvasScrollRef = useRef<HTMLDivElement>(null);
   const canvasScrollTop = useRef(0);
-  const scrollSnapshotRef = useRef<{ elements: Array<{ element: HTMLElement; top: number; left: number }> } | null>(null);
+  const scrollSnapshotRef = useRef<{ elements: Array<{ element: HTMLElement; top: number; left: number }>; windowX: number; windowY: number } | null>(null);
   const captureScrollSnapshot = () => {
     const elements: Array<{ element: HTMLElement; top: number; left: number }> = [];
     let element: HTMLElement | null = canvasScrollRef.current;
@@ -619,8 +619,19 @@ export function SmartCanvasPreview({ document, engine, headerText = "", footerTe
         elements.push({ element: candidate, top: candidate.scrollTop, left: candidate.scrollLeft });
       }
     }
-    scrollSnapshotRef.current = { elements };
+    scrollSnapshotRef.current = { elements, windowX: window.scrollX, windowY: window.scrollY };
     if (canvasScrollRef.current) canvasScrollTop.current = canvasScrollRef.current.scrollTop;
+  };
+  const restoreScrollSnapshot = (snapshot: NonNullable<typeof scrollSnapshotRef.current>) => {
+    for (const item of snapshot.elements) {
+      if (!item.element.isConnected) continue;
+      if (item.element.scrollTop !== item.top) item.element.scrollTop = item.top;
+      if (item.element.scrollLeft !== item.left) item.element.scrollLeft = item.left;
+    }
+    // Chromium's window scroll can differ from documentElement/body.scrollTop.
+    if (window.scrollX !== snapshot.windowX || window.scrollY !== snapshot.windowY) {
+      window.scrollTo({ left: snapshot.windowX, top: snapshot.windowY, behavior: "instant" as ScrollBehavior });
+    }
   };
   // Focusing the off-screen keyboard sink can move a Chromium scroll ancestor,
   // especially when the canvas is inside a zoomed/transformed layout. Preserve
@@ -630,17 +641,10 @@ export function SmartCanvasPreview({ document, engine, headerText = "", footerTe
     const snapshot = scrollSnapshotRef.current;
     inputRef.current?.focus({ preventScroll: true });
     if (!snapshot) return;
-    const restore = () => {
-      for (const item of snapshot.elements) {
-        if (!item.element.isConnected) continue;
-        if (item.element.scrollTop !== item.top) item.element.scrollTop = item.top;
-        if (item.element.scrollLeft !== item.left) item.element.scrollLeft = item.left;
-      }
-    };
-    restore();
+    restoreScrollSnapshot(snapshot);
     requestAnimationFrame(() => {
       if (scrollSnapshotRef.current !== snapshot) return;
-      restore();
+      restoreScrollSnapshot(snapshot);
       scrollSnapshotRef.current = null;
       const viewport = canvasScrollRef.current;
       if (viewport) canvasScrollTop.current = viewport.scrollTop;
@@ -674,13 +678,6 @@ export function SmartCanvasPreview({ document, engine, headerText = "", footerTe
   // is not sufficient.
   useLayoutEffect(() => {
     const snapshot = scrollSnapshotRef.current;
-    const restore = (items: Array<{ element: HTMLElement; top: number; left: number }>) => {
-      for (const item of items) {
-        if (!item.element.isConnected) continue;
-        if (item.element.scrollTop !== item.top) item.element.scrollTop = item.top;
-        if (item.element.scrollLeft !== item.left) item.element.scrollLeft = item.left;
-      }
-    };
     if (!snapshot) {
       const viewport = canvasScrollRef.current;
       if (viewport && viewport.scrollTop !== canvasScrollTop.current) {
@@ -692,10 +689,10 @@ export function SmartCanvasPreview({ document, engine, headerText = "", footerTe
     // Restore before paint, then once more on the next frame. Chromium can
     // apply focus/scroll anchoring after React's layout effects, which made
     // the viewport jump back to page 1 even after the synchronous restore.
-    restore(snapshot.elements);
+    restoreScrollSnapshot(snapshot);
     requestAnimationFrame(() => {
       if (scrollSnapshotRef.current !== snapshot) return;
-      restore(snapshot.elements);
+      restoreScrollSnapshot(snapshot);
       scrollSnapshotRef.current = null;
       const viewport = canvasScrollRef.current;
       if (viewport) canvasScrollTop.current = viewport.scrollTop;
