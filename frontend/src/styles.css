@@ -3590,3 +3590,41 @@ body:has(.app-shell.editor-mode),
     min-height:120px!important;
   }
 }
+
+
+/* O elemento .editor-canvas é o dono real da rolagem do documento SmartCanvas. */
+.app-shell.editor-mode .editor-body.rich-editor-body>.kz-smartcanvas-experiment>.editor-canvas.kz-smartcanvas-pages-viewport{
+  display:block!important;
+  position:relative!important;
+  flex:1 1 0%!important;
+  width:100%!important;
+  height:0!important;
+  min-width:0!important;
+  min-height:0!important;
+  max-height:none!important;
+  box-sizing:border-box!important;
+  overflow-x:auto!important;
+  overflow-y:scroll!important;
+  overscroll-behavior:contain!important;
+  scroll-behavior:auto!important;
+  scrollbar-gutter:stable;
+  overflow-anchor:none!important;
+  -webkit-overflow-scrolling:touch;
+  touch-action:pan-x pan-y;
+}
+.app-shell.editor-mode .editor-body.rich-editor-body>.kz-smartcanvas-experiment>.editor-canvas.kz-smartcanvas-pages-viewport>div[style*="zoom"]{
+  display:block!important;
+  width:max-content!important;
+  min-width:100%!important;
+  max-width:none!important;
+  height:auto!important;
+  max-height:none!important;
+  overflow:visible!important;
+}
+@media(max-width:900px){
+  .app-shell.editor-mode .editor-body.rich-editor-body>.kz-smartcanvas-experiment>.editor-canvas.kz-smartcanvas-pages-viewport{
+    flex:1 1 0%!important;
+    height:0!important;
+    min-height:120px!important;
+  }
+}
