@@ -3767,3 +3767,315 @@ body:has(.app-shell.editor-mode),
     inset: 8px !important;
   }
 }
+
+
+/* Nexus editor visual refresh — visual-only overrides.
+   Deliberately leaves editor state, page geometry, scrolling, and event behavior untouched. */
+.app-shell.editor-mode .editor-workspace {
+  --editor-ink: #172033;
+  --editor-muted: #667085;
+  --editor-line: #dce3ed;
+  --editor-surface: #ffffff;
+  --editor-surface-soft: #f6f8fb;
+  --editor-accent: #4263eb;
+  --editor-accent-soft: #edf1ff;
+  color: var(--editor-ink) !important;
+  background: #f3f5f9 !important;
+  font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif !important;
+  color-scheme: light;
+}
+.app-shell.editor-mode .editor-head {
+  background: var(--editor-surface) !important;
+  color: var(--editor-ink) !important;
+  border-bottom: 1px solid var(--editor-line) !important;
+  box-shadow: 0 2px 10px rgb(25 42 70 / 4%) !important;
+}
+.app-shell.editor-mode .editor-breadcrumb {
+  color: #73809a !important;
+  font-size: 10px !important;
+  font-weight: 750 !important;
+  letter-spacing: .13em !important;
+}
+.app-shell.editor-mode .editor-title {
+  color: #172033 !important;
+  font-size: 21px !important;
+  font-weight: 720 !important;
+  letter-spacing: -.035em !important;
+  background: transparent !important;
+  border-color: transparent !important;
+  border-radius: 8px !important;
+  transition: background-color .16s ease, border-color .16s ease, box-shadow .16s ease !important;
+}
+.app-shell.editor-mode .editor-title:hover {
+  background: #f7f8fc !important;
+  border-color: #e3e8f1 !important;
+}
+.app-shell.editor-mode .editor-title:focus {
+  background: #fff !important;
+  border-color: #a9b9ff !important;
+  box-shadow: 0 0 0 3px rgb(66 99 235 / 12%) !important;
+  outline: none !important;
+}
+.app-shell.editor-mode .save-state {
+  color: var(--editor-muted) !important;
+  font-size: 11px !important;
+  font-weight: 550 !important;
+}
+.app-shell.editor-mode .save-dot {
+  box-shadow: 0 0 0 3px rgb(102 112 133 / 12%) !important;
+}
+.app-shell.editor-mode .save-state.saved .save-dot { background: #16a36a !important; box-shadow: 0 0 0 3px rgb(22 163 106 / 13%) !important; }
+.app-shell.editor-mode .save-state.dirty .save-dot,
+.app-shell.editor-mode .save-state.saving .save-dot { background: #e5a11a !important; box-shadow: 0 0 0 3px rgb(229 161 26 / 14%) !important; }
+.app-shell.editor-mode .save-state.error .save-dot,
+.app-shell.editor-mode .save-state.conflict .save-dot { background: #dc4545 !important; box-shadow: 0 0 0 3px rgb(220 69 69 / 13%) !important; }
+
+.app-shell.editor-mode .editor-actions button,
+.app-shell.editor-mode .editor-ribbon-tabs button,
+.app-shell.editor-mode .editor-toolbar button,
+.app-shell.editor-mode .editor-view-tools button,
+.app-shell.editor-mode .kz-view-tools .kz-view-tool {
+  font-family: inherit !important;
+  font-weight: 600 !important;
+  transition: background-color .14s ease, color .14s ease, border-color .14s ease, box-shadow .14s ease, transform .14s ease !important;
+}
+.app-shell.editor-mode .editor-secondary {
+  color: #344054 !important;
+  background: #fff !important;
+  border: 1px solid #dce3ed !important;
+  border-radius: 9px !important;
+  box-shadow: 0 1px 1px rgb(16 24 40 / 3%) !important;
+}
+.app-shell.editor-mode .editor-secondary:hover {
+  color: #243b8a !important;
+  background: #f7f8ff !important;
+  border-color: #bdc9ff !important;
+}
+.app-shell.editor-mode .editor-save {
+  color: #fff !important;
+  background: #4263eb !important;
+  border: 1px solid #4263eb !important;
+  border-radius: 9px !important;
+  box-shadow: 0 3px 8px rgb(66 99 235 / 20%) !important;
+}
+.app-shell.editor-mode .editor-save:hover:not(:disabled) {
+  background: #3451d1 !important;
+  border-color: #3451d1 !important;
+  box-shadow: 0 5px 12px rgb(66 99 235 / 25%) !important;
+}
+.app-shell.editor-mode .editor-save:disabled {
+  opacity: .52 !important;
+  box-shadow: none !important;
+}
+.app-shell.editor-mode .editor-ribbon-tabs {
+  background: #fff !important;
+  border-bottom: 1px solid var(--editor-line) !important;
+  box-shadow: 0 2px 6px rgb(25 42 70 / 3%) !important;
+}
+.app-shell.editor-mode .editor-ribbon-tabs button {
+  position: relative !important;
+  color: #68758b !important;
+  background: transparent !important;
+  border: 0 !important;
+  border-radius: 8px 8px 0 0 !important;
+}
+.app-shell.editor-mode .editor-ribbon-tabs button:hover {
+  color: #2946b8 !important;
+  background: #f4f6ff !important;
+}
+.app-shell.editor-mode .editor-ribbon-tabs button.active {
+  color: #3451d1 !important;
+  background: #f0f3ff !important;
+  box-shadow: inset 0 -2px 0 #4263eb !important;
+}
+.app-shell.editor-mode .editor-toolbar {
+  color: #344054 !important;
+  background: #fbfcfe !important;
+  border-bottom: 1px solid var(--editor-line) !important;
+  box-shadow: 0 3px 8px rgb(25 42 70 / 3%) !important;
+}
+.app-shell.editor-mode .editor-toolbar-group-label,
+.app-shell.editor-mode .editor-tool-label,
+.app-shell.editor-mode .editor-zoom-label {
+  color: #7a8598 !important;
+}
+.app-shell.editor-mode .editor-select,
+.app-shell.editor-mode .editor-toolbar select,
+.app-shell.editor-mode .editor-side select,
+.app-shell.editor-mode .editor-side input,
+.app-shell.editor-mode .editor-side textarea {
+  color: #253149 !important;
+  background-color: #fff !important;
+  border: 1px solid #d8e0eb !important;
+  border-radius: 8px !important;
+  box-shadow: inset 0 1px 2px rgb(16 24 40 / 3%) !important;
+}
+.app-shell.editor-mode .editor-select:hover,
+.app-shell.editor-mode .editor-toolbar select:hover,
+.app-shell.editor-mode .editor-side select:hover {
+  border-color: #aab8d0 !important;
+}
+.app-shell.editor-mode .editor-select:focus,
+.app-shell.editor-mode .editor-toolbar select:focus,
+.app-shell.editor-mode .editor-side select:focus,
+.app-shell.editor-mode .editor-side input:focus,
+.app-shell.editor-mode .editor-side textarea:focus {
+  border-color: #8fa4ff !important;
+  outline: none !important;
+  box-shadow: 0 0 0 3px rgb(66 99 235 / 12%) !important;
+}
+.app-shell.editor-mode .editor-tool {
+  color: #4b5870 !important;
+  background: transparent !important;
+  border: 1px solid transparent !important;
+  border-radius: 8px !important;
+}
+.app-shell.editor-mode .editor-tool:hover {
+  color: #2e49bc !important;
+  background: #edf1ff !important;
+  border-color: #dce4ff !important;
+}
+.app-shell.editor-mode .editor-tool.active,
+.app-shell.editor-mode .editor-tool[aria-pressed="true"] {
+  color: #2f49bd !important;
+  background: #e9eeff !important;
+  border-color: #cbd6ff !important;
+  box-shadow: inset 0 0 0 1px rgb(66 99 235 / 4%) !important;
+}
+.app-shell.editor-mode .toolbar-separator {
+  background: #e1e6ef !important;
+}
+.app-shell.editor-mode .editor-body.rich-editor-body {
+  background: #e9edf4 !important;
+}
+.app-shell.editor-mode .editor-workspace .editor-body.rich-editor-body > .kz-smartcanvas-experiment {
+  background: #e9edf4 !important;
+}
+.app-shell.editor-mode .kz-smartcanvas-pages-viewport {
+  background: #e9edf4 !important;
+  scrollbar-color: #b8c3d4 #e9edf4 !important;
+  scrollbar-width: thin !important;
+}
+.app-shell.editor-mode .kz-smartcanvas-pages-viewport::-webkit-scrollbar {
+  width: 10px !important;
+  height: 10px !important;
+}
+.app-shell.editor-mode .kz-smartcanvas-pages-viewport::-webkit-scrollbar-track {
+  background: #e9edf4 !important;
+}
+.app-shell.editor-mode .kz-smartcanvas-pages-viewport::-webkit-scrollbar-thumb {
+  background: #b8c3d4 !important;
+  border: 2px solid #e9edf4 !important;
+  border-radius: 999px !important;
+}
+.app-shell.editor-mode .kz-smartcanvas-pages-viewport::-webkit-scrollbar-thumb:hover {
+  background: #8d9bb1 !important;
+}
+.app-shell.editor-mode .kortex-canvas-page {
+  background: #fff !important;
+  border: 1px solid #d9e0ea !important;
+  border-radius: 2px !important;
+  box-shadow: 0 2px 4px rgb(23 32 51 / 6%), 0 14px 34px rgb(23 32 51 / 10%) !important;
+}
+.app-shell.editor-mode .editor-side {
+  color: #344054 !important;
+  background: #fff !important;
+  border-left: 1px solid #dce3ed !important;
+  box-shadow: -5px 0 18px rgb(25 42 70 / 3%) !important;
+}
+.app-shell.editor-mode .editor-side > strong,
+.app-shell.editor-mode .editor-files-head > strong {
+  color: #202b40 !important;
+  font-size: 12px !important;
+  font-weight: 750 !important;
+  letter-spacing: .025em !important;
+}
+.app-shell.editor-mode .editor-side label {
+  color: #667085 !important;
+  font-size: 11px !important;
+  font-weight: 650 !important;
+}
+.app-shell.editor-mode .editor-side-divider {
+  background: #e7ebf2 !important;
+}
+.app-shell.editor-mode .editor-file-action {
+  color: #3e56bf !important;
+  background: #f2f5ff !important;
+  border: 1px solid #dbe3ff !important;
+  border-radius: 8px !important;
+}
+.app-shell.editor-mode .editor-file-action:hover {
+  background: #e8edff !important;
+  border-color: #c5d1ff !important;
+}
+.app-shell.editor-mode .editor-folder-name,
+.app-shell.editor-mode .editor-file-item {
+  color: #344054 !important;
+  background: #f8faff !important;
+  border: 1px solid #e4eaf3 !important;
+  border-radius: 8px !important;
+}
+.app-shell.editor-mode .editor-file-item:hover,
+.app-shell.editor-mode .editor-file-item.active {
+  color: #2e49bc !important;
+  background: #edf1ff !important;
+  border-color: #cbd6ff !important;
+}
+.app-shell.editor-mode .editor-files-empty {
+  color: #7b879b !important;
+  background: #f8faff !important;
+  border: 1px dashed #d4dce8 !important;
+  border-radius: 10px !important;
+}
+.app-shell.editor-mode .editor-file-error {
+  color: #a12d36 !important;
+  background: #fff1f2 !important;
+  border: 1px solid #fecdd3 !important;
+  border-radius: 8px !important;
+}
+.app-shell.editor-mode .kz-navigation-panel {
+  color: #344054 !important;
+  background: #fff !important;
+  border: 1px solid #dce3ed !important;
+  border-radius: 12px !important;
+  box-shadow: 0 10px 30px rgb(25 42 70 / 8%) !important;
+}
+.app-shell.editor-mode .kz-navigation-panel button {
+  color: #526079 !important;
+  border-radius: 7px !important;
+}
+.app-shell.editor-mode .kz-navigation-panel button:hover {
+  color: #2e49bc !important;
+  background: #edf1ff !important;
+}
+.app-shell.editor-mode .editor-file-error,
+.app-shell.editor-mode .editor-info {
+  font-size: 12px !important;
+}
+.app-shell.editor-mode .editor-workspace button:focus-visible,
+.app-shell.editor-mode .editor-workspace [role="button"]:focus-visible,
+.app-shell.editor-mode .editor-workspace input:focus-visible,
+.app-shell.editor-mode .editor-workspace select:focus-visible,
+.app-shell.editor-mode .editor-workspace textarea:focus-visible {
+  outline: 2px solid #8097ff !important;
+  outline-offset: 2px !important;
+}
+.app-shell.editor-mode .editor-workspace button:active:not(:disabled) {
+  transform: translateY(1px) !important;
+}
+@media (prefers-reduced-motion: reduce) {
+  .app-shell.editor-mode .editor-workspace button,
+  .app-shell.editor-mode .editor-workspace input,
+  .app-shell.editor-mode .editor-workspace select {
+    transition: none !important;
+  }
+}
+@media (max-width: 900px) {
+  .app-shell.editor-mode .editor-head {
+    box-shadow: 0 1px 6px rgb(25 42 70 / 4%) !important;
+  }
+  .app-shell.editor-mode .editor-side {
+    border-top: 1px solid #dce3ed !important;
+    box-shadow: 0 -5px 18px rgb(25 42 70 / 3%) !important;
+  }
+}
