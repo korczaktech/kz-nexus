@@ -90,7 +90,7 @@ try {
   const dialog = page.locator('.modal[role="dialog"]');
   await dialog.getByLabel("Nome").fill("SmartCanvas API E2E " + runId);
   await dialog.getByLabel("Tipo de documento").selectOption("html");
-  await dialog.getByLabel("Conteúdo").fill("<p>BASE_CONTENT</p>");
+  await dialog.getByLabel("Conteúdo").fill("<p>BASE_CONTENT</p>" + Array.from({ length: 60 }, (_, index) => "<p>SCROLL_TEST_PAGE_" + index + "</p>").join(""));
   await dialog.getByRole("button", { name: "Salvar", exact: true }).click();
   const createResponse = await createResponsePromise;
   if (!createResponse.ok()) throw new Error("Create document API returned " + createResponse.status() + ": " + await createResponse.text());
@@ -108,6 +108,37 @@ try {
   // SmartCanvas deliberately clears its hidden keyboard-capture textarea after
   // each input event; assert the canvas accessibility projection, not that transient buffer.
   await waitForEditorProjection(page, initialSentinel);
+
+  // Verify real vertical wheel scrolling in the browser, using enough content
+  // to force a genuine multi-page overflow rather than mocked scroll dimensions.
+  const pageViewport = page.locator(".kz-smartcanvas-pages-viewport");
+  await pageViewport.waitFor({ state: "visible" });
+  const initialScrollMetrics = await pageViewport.evaluate(element => ({
+    clientHeight: element.clientHeight,
+    scrollHeight: element.scrollHeight,
+    scrollTop: element.scrollTop,
+    rectHeight: element.getBoundingClientRect().height,
+  }));
+  assert.ok(initialScrollMetrics.clientHeight > 0 && initialScrollMetrics.rectHeight > 0,
+    "SmartCanvas page viewport must have a real, non-zero rendered height: " + JSON.stringify(initialScrollMetrics));
+  assert.ok(initialScrollMetrics.scrollHeight > initialScrollMetrics.clientHeight,
+    "SmartCanvas page viewport must have vertical overflow for multi-page content: " + JSON.stringify(initialScrollMetrics));
+  const viewportBox = await pageViewport.boundingBox();
+  assert.ok(viewportBox, "SmartCanvas page viewport must have a visible browser box");
+  await page.mouse.move(viewportBox.x + viewportBox.width / 2, viewportBox.y + viewportBox.height / 2);
+  await page.mouse.wheel(0, 700);
+  await page.waitForFunction(
+    previous => {
+      const viewport = document.querySelector(".kz-smartcanvas-pages-viewport");
+      return viewport instanceof HTMLElement && viewport.scrollTop > previous;
+    },
+    initialScrollMetrics.scrollTop,
+    { timeout: 3000 },
+  );
+  const afterWheelScrollTop = await pageViewport.evaluate(element => element.scrollTop);
+  assert.ok(afterWheelScrollTop > initialScrollMetrics.scrollTop,
+    "mouse wheel must increase the actual SmartCanvas viewport scrollTop");
+  await pageViewport.evaluate(element => { element.scrollTop = 0; });
 
   // Exercise real browser keyboard events against the canonical engine selection:
   // Backspace at the end must delete one grapheme and typing must restore the exact text.
