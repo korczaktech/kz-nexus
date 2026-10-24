@@ -2480,8 +2480,24 @@ export function SmartCanvasPreview({ document, engine, headerText = "", footerTe
         const viewport = event.currentTarget;
         viewportPositionRef.current = { top: viewport.scrollTop, left: viewport.scrollLeft };
       }}
-
-      style={{ overflowY: "scroll", overflowX: "auto", overscrollBehavior: "contain", minHeight: 0 }}
+      onWheel={event => {
+        // Route wheel input to the actual page viewport. This remains necessary
+        // when the editor canvas is nested inside the constrained workspace.
+        const viewport = event.currentTarget;
+        const scale = event.deltaMode === 1 ? 16 : event.deltaMode === 2 ? Math.max(1, viewport.clientHeight) : 1;
+        const vertical = event.shiftKey && event.deltaX === 0 ? 0 : event.deltaY * scale;
+        const horizontal = (event.shiftKey && event.deltaX === 0 ? event.deltaY : event.deltaX) * scale;
+        if (vertical && viewport.scrollHeight > viewport.clientHeight) {
+          event.preventDefault();
+          viewport.scrollTop = Math.max(0, Math.min(viewport.scrollHeight - viewport.clientHeight, viewport.scrollTop + vertical));
+        }
+        if (horizontal && viewport.scrollWidth > viewport.clientWidth) {
+          event.preventDefault();
+          viewport.scrollLeft = Math.max(0, Math.min(viewport.scrollWidth - viewport.clientWidth, viewport.scrollLeft + horizontal));
+        }
+        viewportPositionRef.current = { top: viewport.scrollTop, left: viewport.scrollLeft };
+      }}
+      style={{ overflowY: "auto", overflowX: "auto", overscrollBehavior: "contain", minHeight: 0, minWidth: 0 }}
     >
       {layout ? <div ref={canvasScrollRef} style={{ maxHeight: "none", overflow: "visible", overflowAnchor: "none", background: "#e5e7eb", borderRadius: 8, zoom: `${Math.max(25, Math.min(300, zoom))}%` }}>
         <CanvasDocumentRenderer layout={layout} document={document} headerText={headerText} footerText={footerText} headerAlign={headerAlign} footerAlign={footerAlign} showPageNumbers={showPageNumbers} showFormattingMarks={showFormattingMarks} selection={selection || undefined} showCaret={!!selection && !activeCell} activeCellId={activeCell?.cellId} activeCellSelection={activeCell || undefined} activeBlockId={activeBlockId || undefined} onHitTest={handleHit} />
