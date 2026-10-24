@@ -293,11 +293,19 @@ export function CanvasPage({ page, pageCount, document, headerText, footerText, 
   const lastHitTargetRef = useRef<SmartCanvasHitTarget | null>(null);
   const cssWidth = page.width * PT_TO_CSS_PX;
   const cssHeight = page.height * PT_TO_CSS_PX;
+  // A physical page must never participate in flex/grid stretching. Its size
+  // comes only from the document's page configuration (points -> CSS pixels).
   const style: CSSProperties = {
     display: "block",
+    boxSizing: "border-box",
     flex: "0 0 auto",
+    alignSelf: "flex-start",
     width: cssWidth,
+    minWidth: cssWidth,
+    maxWidth: cssWidth,
     height: cssHeight,
+    minHeight: cssHeight,
+    maxHeight: cssHeight,
     background: "#ffffff",
     boxShadow: PAGE_SHADOW,
   };
@@ -571,7 +579,23 @@ export function CanvasPage({ page, pageCount, document, headerText, footerText, 
     if (event.currentTarget.hasPointerCapture?.(event.pointerId)) event.currentTarget.releasePointerCapture?.(event.pointerId);
   };
 
-  return <div style={{ position: "relative", flex: "0 0 auto", width: cssWidth, height: cssHeight }}>
+  return <div
+    data-page-frame={page.index}
+    style={{
+      position: "relative",
+      display: "block",
+      boxSizing: "border-box",
+      flex: "0 0 auto",
+      alignSelf: "flex-start",
+      width: cssWidth,
+      minWidth: cssWidth,
+      maxWidth: cssWidth,
+      height: cssHeight,
+      minHeight: cssHeight,
+      maxHeight: cssHeight,
+      overflow: "hidden",
+    }}
+  >
     <canvas
       ref={canvasRef}
       onPointerDown={onHitTest ? handlePointerDown : undefined}
@@ -614,9 +638,14 @@ export function CanvasDocumentRenderer({ layout, document, headerText = "", foot
     display: "flex",
     flexDirection: "column",
     alignItems: "center",
+    alignContent: "flex-start",
     gap: PAGE_GAP,
     padding: "24px 16px 48px",
     minWidth: 0,
+    width: "max-content",
+    height: "max-content",
+    flex: "0 0 auto",
+    boxSizing: "border-box",
   }}>
     {layout.pages.map(page => <CanvasPage
       key={page.index}
