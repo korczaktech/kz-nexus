@@ -4317,3 +4317,37 @@ body:has(.app-shell.editor-mode),
   flex: 0 0 auto !important;
 }
 
+
+
+/* SmartCanvas vertical-scroll root fix:
+   Constrain the editor body's implicit grid row. An auto-sized grid row can
+   expand to the page stack's min-content height, leaving the nested viewport
+   without a bounded clientHeight; wheel input then has no real scroll range. */
+.app-shell.editor-mode .editor-workspace .editor-body.rich-editor-body {
+  grid-template-rows: minmax(0, 1fr) !important;
+  grid-auto-rows: minmax(0, 1fr) !important;
+  min-height: 0 !important;
+  height: 0 !important;
+  align-items: stretch !important;
+}
+.app-shell.editor-mode .editor-workspace .editor-body.rich-editor-body > .kz-smartcanvas-experiment {
+  grid-row: 1 !important;
+  align-self: stretch !important;
+  height: 100% !important;
+  min-height: 0 !important;
+  max-height: 100% !important;
+}
+.app-shell.editor-mode .editor-workspace .editor-body.rich-editor-body > .editor-side {
+  grid-row: 1 !important;
+  align-self: stretch !important;
+  min-height: 0 !important;
+  max-height: 100% !important;
+}
+.app-shell.editor-mode .editor-workspace .editor-body.rich-editor-body > .kz-smartcanvas-experiment > .editor-canvas.kz-smartcanvas-pages-viewport {
+  flex: 1 1 0% !important;
+  height: 0 !important;
+  min-height: 0 !important;
+  max-height: 100% !important;
+  overflow-y: scroll !important;
+  overflow-x: auto !important;
+}
