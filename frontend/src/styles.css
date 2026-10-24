@@ -3592,157 +3592,8 @@ body:has(.app-shell.editor-mode),
 }
 
 
-/* O elemento .editor-canvas é o dono real da rolagem do documento SmartCanvas. */
-.app-shell.editor-mode .editor-body.rich-editor-body>.kz-smartcanvas-experiment>.editor-canvas.kz-smartcanvas-pages-viewport{
-  display:block!important;
-  position:relative!important;
-  flex:1 1 0%!important;
-  width:100%!important;
-  height:0!important;
-  min-width:0!important;
-  min-height:0!important;
-  max-height:none!important;
-  box-sizing:border-box!important;
-  overflow-x:auto!important;
-  overflow-y:scroll!important;
-  overscroll-behavior:contain!important;
-  scroll-behavior:auto!important;
-  scrollbar-gutter:stable;
-  overflow-anchor:none!important;
-  -webkit-overflow-scrolling:touch;
-  touch-action:pan-x pan-y;
-}
-.app-shell.editor-mode .editor-body.rich-editor-body>.kz-smartcanvas-experiment>.editor-canvas.kz-smartcanvas-pages-viewport>div[style*="zoom"]{
-  display:block!important;
-  width:max-content!important;
-  min-width:100%!important;
-  max-width:none!important;
-  height:auto!important;
-  max-height:none!important;
-  overflow:visible!important;
-}
-@media(max-width:900px){
-  .app-shell.editor-mode .editor-body.rich-editor-body>.kz-smartcanvas-experiment>.editor-canvas.kz-smartcanvas-pages-viewport{
-    flex:1 1 0%!important;
-    height:0!important;
-    min-height:120px!important;
-  }
-}
-
-
-/* Constrain the editor body to the visible workspace so .editor-canvas can actually scroll. */
-.app-shell.editor-mode .editor-workspace>.editor-body.rich-editor-body{
-  height:calc(100dvh - 285px)!important;
-  min-height:320px!important;
-  max-height:calc(100dvh - 285px)!important;
-  flex:0 0 auto!important;
-}
-@media(max-width:900px){
-  .app-shell.editor-mode .editor-workspace>.editor-body.rich-editor-body{
-    height:calc(100dvh - 310px)!important;
-    min-height:260px!important;
-    max-height:calc(100dvh - 310px)!important;
-  }
-}
-
-/* SmartCanvas scroll-chain fix: .editor-body is nested inside .editor-layout,
-   not directly inside .editor-workspace. Constrain every flex/grid ancestor so
-   the page viewport has a finite height and can own vertical scrolling. */
-.app-shell.editor-mode .content>.editor-workspace>.editor-layout{
-  display:flex!important;
-  flex:1 1 0%!important;
-  flex-direction:column!important;
-  height:0!important;
-  min-height:0!important;
-  max-height:100%!important;
-  overflow:hidden!important;
-}
-.app-shell.editor-mode .editor-workspace .editor-layout>.editor-body.rich-editor-body{
-  display:grid!important;
-  flex:1 1 0%!important;
-  grid-template-columns:minmax(0,1fr) minmax(0,340px)!important;
-  grid-template-rows:minmax(0,1fr)!important;
-  width:100%!important;
-  height:0!important;
-  min-width:0!important;
-  min-height:0!important;
-  max-height:100%!important;
-  overflow:hidden!important;
-  align-items:stretch!important;
-}
-.app-shell.editor-mode .editor-workspace .editor-layout>.editor-body.rich-editor-body>.kz-smartcanvas-experiment{
-  display:flex!important;
-  flex-direction:column!important;
-  flex:1 1 0%!important;
-  width:100%!important;
-  height:0!important;
-  min-width:0!important;
-  min-height:0!important;
-  max-height:100%!important;
-  overflow:hidden!important;
-}
-.app-shell.editor-mode .editor-workspace .editor-layout>.editor-body.rich-editor-body>.kz-smartcanvas-experiment>.editor-canvas.kz-smartcanvas-pages-viewport{
-  display:block!important;
-  flex:1 1 0%!important;
-  width:100%!important;
-  height:0!important;
-  min-width:0!important;
-  min-height:0!important;
-  max-height:none!important;
-  box-sizing:border-box!important;
-  overflow-x:auto!important;
-  overflow-y:auto!important;
-  overscroll-behavior:contain!important;
-  overflow-anchor:none!important;
-  -webkit-overflow-scrolling:touch;
-}
-@media(max-width:900px){
-  .app-shell.editor-mode .editor-workspace .editor-layout>.editor-body.rich-editor-body{
-    grid-template-columns:minmax(0,1fr)!important;
-    grid-template-rows:minmax(0,1fr) auto!important;
-  }
-  .app-shell.editor-mode .editor-workspace .editor-layout>.editor-body.rich-editor-body>.kz-smartcanvas-experiment{
-    grid-column:1!important;
-    grid-row:1!important;
-  }
-  .app-shell.editor-mode .editor-workspace .editor-layout>.editor-body.rich-editor-body>.editor-side{
-    grid-column:1!important;
-    grid-row:2!important;
-  }
-}
-
-/* Correct the SmartCanvas grid item sizing: the preview is a GRID item,
-   so height:0 collapses the entire preview before its inner flex viewport can scroll. */
-.app-shell.editor-mode .editor-workspace .editor-layout>.editor-body.rich-editor-body>.kz-smartcanvas-experiment{
-  height:100%!important;
-  min-height:0!important;
-  max-height:100%!important;
-  align-self:stretch!important;
-  overflow:hidden!important;
-}
-.app-shell.editor-mode .editor-workspace .editor-layout>.editor-body.rich-editor-body>.kz-smartcanvas-experiment>.editor-canvas.kz-smartcanvas-pages-viewport{
-  height:100%!important;
-  min-height:0!important;
-  max-height:100%!important;
-  flex:1 1 auto!important;
-  overflow-y:auto!important;
-  overflow-x:auto!important;
-  overscroll-behavior:contain!important;
-  touch-action:pan-x pan-y;
-}
-.app-shell.editor-mode .editor-workspace .editor-layout>.editor-body.rich-editor-body>.kz-smartcanvas-experiment>.editor-canvas.kz-smartcanvas-pages-viewport>div[style*="zoom"]{
-  height:max-content!important;
-  min-height:100%!important;
-  max-height:none!important;
-  overflow:visible!important;
-}
-
-
-
-/* Definitive SmartCanvas layout chain.
-   Editor.tsx renders .editor-body directly inside .editor-workspace; there is no
-   .editor-layout wrapper in that component. Older rules targeting that wrapper
-   cannot constrain the real scroll viewport and some leave it at height:0. */
+/* SmartCanvas: cadeia única de layout e rolagem.
+   O viewport .editor-canvas é o único elemento que rola as páginas. */
 .app-shell.editor-mode .editor-workspace{
   display:flex!important;
   flex-direction:column!important;
@@ -3753,11 +3604,11 @@ body:has(.app-shell.editor-mode),
 }
 .app-shell.editor-mode .editor-workspace>.editor-body.rich-editor-body{
   display:grid!important;
-  flex:1 1 0!important;
   grid-template-columns:minmax(0,1fr) minmax(0,340px)!important;
   grid-template-rows:minmax(0,1fr)!important;
+  flex:1 1 0!important;
   width:100%!important;
-  height:0!important;
+  height:auto!important;
   min-width:0!important;
   min-height:0!important;
   max-height:none!important;
@@ -3770,16 +3621,18 @@ body:has(.app-shell.editor-mode),
   grid-column:1!important;
   grid-row:1!important;
   align-self:stretch!important;
+  flex:1 1 0!important;
   width:100%!important;
-  height:auto!important;
+  height:100%!important;
   min-width:0!important;
   min-height:0!important;
-  max-height:none!important;
+  max-height:100%!important;
   margin:0!important;
   overflow:hidden!important;
 }
 .app-shell.editor-mode .editor-workspace>.editor-body.rich-editor-body>.kz-smartcanvas-experiment>.editor-canvas.kz-smartcanvas-pages-viewport{
   display:block!important;
+  position:relative!important;
   flex:1 1 0!important;
   width:100%!important;
   height:0!important;
@@ -3792,8 +3645,9 @@ body:has(.app-shell.editor-mode),
   overscroll-behavior:contain!important;
   overflow-anchor:none!important;
   scroll-behavior:auto!important;
-  -webkit-overflow-scrolling:touch;
-  touch-action:pan-x pan-y;
+  scrollbar-gutter:stable!important;
+  -webkit-overflow-scrolling:touch!important;
+  touch-action:pan-x pan-y!important;
 }
 .app-shell.editor-mode .editor-workspace>.editor-body.rich-editor-body>.kz-smartcanvas-experiment>.editor-canvas.kz-smartcanvas-pages-viewport>div[style*="zoom"]{
   display:block!important;
@@ -3837,39 +3691,5 @@ body:has(.app-shell.editor-mode),
     max-height:30dvh!important;
     border-left:0!important;
     border-top:1px solid var(--line,#17263b)!important;
-  }
-}
-
-
-/* SmartCanvas final scroll viewport sizing: give the actual pages viewport a
-   finite block-size independent of flex/grid ancestor sizing. This prevents
-   the page stack from expanding its parent instead of becoming scrollable. */
-.app-shell.editor-mode .editor-workspace .kz-smartcanvas-experiment > .editor-canvas.kz-smartcanvas-pages-viewport{
-  display:block!important;
-  position:relative!important;
-  flex:0 1 auto!important;
-  height:clamp(180px,calc(100dvh - 330px),900px)!important;
-  min-height:180px!important;
-  max-height:calc(100dvh - 180px)!important;
-  overflow-x:auto!important;
-  overflow-y:scroll!important;
-  overscroll-behavior-y:contain!important;
-  -webkit-overflow-scrolling:touch!important;
-  touch-action:pan-x pan-y!important;
-  scrollbar-gutter:stable!important;
-  overflow-anchor:none!important;
-}
-.app-shell.editor-mode .editor-workspace .kz-smartcanvas-experiment > .editor-canvas.kz-smartcanvas-pages-viewport > div[style*="zoom"]{
-  display:block!important;
-  height:max-content!important;
-  min-height:100%!important;
-  max-height:none!important;
-  overflow:visible!important;
-}
-@media(max-width:900px){
-  .app-shell.editor-mode .editor-workspace .kz-smartcanvas-experiment > .editor-canvas.kz-smartcanvas-pages-viewport{
-    height:clamp(160px,calc(100dvh - 420px),600px)!important;
-    min-height:160px!important;
-    max-height:calc(100dvh - 160px)!important;
   }
 }
