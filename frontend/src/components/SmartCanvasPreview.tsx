@@ -612,28 +612,29 @@ export function SmartCanvasPreview({ document, engine, headerText = "", footerTe
     const viewport = viewportRef.current;
     if (viewport) viewportPositionRef.current = { top: viewport.scrollTop, left: viewport.scrollLeft };
   };
-  // Capture wheel gestures at the window level so canvas layers cannot swallow them.
-  // The actual scrolling is always applied to the visible SmartCanvas viewport.
+  // Route wheel gestures by pointer position, not event.target: canvas overlays,
+  // text layers, and browser retargeting can make event.target unreliable.
   useEffect(() => {
     const handleWheel = (event: WheelEvent) => {
-      const target = event.target;
-      if (!(target instanceof Element)) return;
-      const viewport = target.closest<HTMLElement>(".kz-smartcanvas-pages-viewport");
-      if (!viewport || !viewportRef.current || viewport !== viewportRef.current) return;
+      const viewport = viewportRef.current;
+      if (!viewport) return;
+      const rect = viewport.getBoundingClientRect();
+      if (event.clientX < rect.left || event.clientX > rect.right ||
+          event.clientY < rect.top || event.clientY > rect.bottom) return;
 
-      const scale = event.deltaMode === 1 ? 16 : event.deltaMode === 2 ? viewport.clientHeight : 1;
+      const scale = event.deltaMode === 1 ? 16 : event.deltaMode === 2 ? Math.max(1, viewport.clientHeight) : 1;
       const vertical = event.shiftKey && event.deltaX === 0 ? 0 : event.deltaY * scale;
       const horizontal = (event.shiftKey && event.deltaX === 0 ? event.deltaY : event.deltaX) * scale;
 
-      // Prevent the page/browser from taking over the gesture inside the editor.
+      // Keep the browser from scrolling an outer page while the pointer is over SmartCanvas.
       event.preventDefault();
-      if (vertical !== 0) viewport.scrollTop += vertical;
-      if (horizontal !== 0) viewport.scrollLeft += horizontal;
+      if (vertical) viewport.scrollTop = Math.max(0, Math.min(viewport.scrollHeight - viewport.clientHeight, viewport.scrollTop + vertical));
+      if (horizontal) viewport.scrollLeft = Math.max(0, Math.min(viewport.scrollWidth - viewport.clientWidth, viewport.scrollLeft + horizontal));
       viewportPositionRef.current = { top: viewport.scrollTop, left: viewport.scrollLeft };
     };
 
-    window.addEventListener("wheel", handleWheel, { passive: false, capture: true });
-    return () => window.removeEventListener("wheel", handleWheel, true);
+    document.addEventListener("wheel", handleWheel, { passive: false, capture: true });
+    return () => document.removeEventListener("wheel", handleWheel, true);
   }, []);
   const focusInputPreservingScroll = () => {
     captureScrollSnapshot();
