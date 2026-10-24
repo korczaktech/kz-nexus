@@ -4269,3 +4269,51 @@ body:has(.app-shell.editor-mode),
   overflow-y: auto !important;
   overscroll-behavior: contain !important;
 }
+
+/* SmartCanvas wheel-scroll fix: keep the viewport in normal flex layout.
+   The previous absolute inset covered the section's heading/details and sized
+   the scrollport against the whole section instead of the remaining page area. */
+.app-shell.editor-mode .editor-workspace .editor-body.rich-editor-body > .kz-smartcanvas-experiment {
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: stretch !important;
+  min-width: 0 !important;
+  min-height: 0 !important;
+  height: 100% !important;
+  max-height: none !important;
+  overflow: hidden !important;
+}
+.app-shell.editor-mode .editor-workspace .editor-body.rich-editor-body > .kz-smartcanvas-experiment > :not(.kz-smartcanvas-pages-viewport) {
+  position: relative !important;
+  flex: 0 0 auto !important;
+}
+.app-shell.editor-mode .editor-workspace .editor-body.rich-editor-body > .kz-smartcanvas-experiment > .editor-canvas.kz-smartcanvas-pages-viewport {
+  position: relative !important;
+  inset: auto !important;
+  display: block !important;
+  flex: 1 1 0% !important;
+  width: 100% !important;
+  height: auto !important;
+  min-width: 0 !important;
+  min-height: 0 !important;
+  max-width: none !important;
+  max-height: none !important;
+  overflow-x: auto !important;
+  overflow-y: auto !important;
+  overscroll-behavior: contain !important;
+  touch-action: pan-x pan-y !important;
+  scroll-behavior: auto !important;
+}
+.app-shell.editor-mode .editor-workspace .editor-body.rich-editor-body > .kz-smartcanvas-experiment > .editor-canvas.kz-smartcanvas-pages-viewport > div[style*="zoom"] {
+  display: block !important;
+  position: relative !important;
+  width: max-content !important;
+  min-width: 100% !important;
+  max-width: none !important;
+  height: max-content !important;
+  min-height: 0 !important;
+  max-height: none !important;
+  overflow: visible !important;
+  flex: 0 0 auto !important;
+}
+
