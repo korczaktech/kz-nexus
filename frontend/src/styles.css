@@ -3592,36 +3592,13 @@ body:has(.app-shell.editor-mode),
 }
 
 
-/* SmartCanvas: cadeia única de layout e rolagem.
-   O viewport .editor-canvas é o único elemento que rola as páginas. */
-.app-shell.editor-mode .editor-workspace{
+/* SmartCanvas: rolagem real das páginas no viewport do editor.
+   Use a cadeia estrutural do editor, sem presumir que .editor-body seja filho
+   direto de .editor-workspace (há layouts intermediários em algumas rotas). */
+.app-shell.editor-mode .editor-body.rich-editor-body>.kz-smartcanvas-experiment{
   display:flex!important;
-  flex-direction:column!important;
-  height:100dvh!important;
-  min-height:0!important;
-  max-height:100dvh!important;
-  overflow:hidden!important;
-}
-.app-shell.editor-mode .editor-workspace>.editor-body.rich-editor-body{
-  display:grid!important;
-  grid-template-columns:minmax(0,1fr) minmax(0,340px)!important;
-  grid-template-rows:minmax(0,1fr)!important;
-  flex:1 1 0!important;
-  width:100%!important;
-  height:auto!important;
-  min-width:0!important;
-  min-height:0!important;
-  max-height:none!important;
-  align-items:stretch!important;
-  overflow:hidden!important;
-}
-.app-shell.editor-mode .editor-workspace>.editor-body.rich-editor-body>.kz-smartcanvas-experiment{
-  display:block!important;
   position:relative!important;
-  grid-column:1!important;
-  grid-row:1!important;
-  align-self:stretch!important;
-  flex:none!important;
+  flex-direction:column!important;
   box-sizing:border-box!important;
   width:100%!important;
   height:100%!important;
@@ -3631,28 +3608,30 @@ body:has(.app-shell.editor-mode),
   margin:0!important;
   overflow:hidden!important;
 }
-.app-shell.editor-mode .editor-workspace>.editor-body.rich-editor-body>.kz-smartcanvas-experiment>.editor-canvas.kz-smartcanvas-pages-viewport{
+.app-shell.editor-mode .editor-body.rich-editor-body>.kz-smartcanvas-experiment>.editor-canvas.kz-smartcanvas-pages-viewport{
   display:block!important;
-  position:absolute!important;
-  inset:16px!important;
-  flex:none!important;
-  width:auto!important;
-  height:auto!important;
+  position:relative!important;
+  inset:auto!important;
+  flex:1 1 0%!important;
+  width:100%!important;
+  height:0!important;
   min-width:0!important;
   min-height:0!important;
   max-height:none!important;
   box-sizing:border-box!important;
   overflow-x:auto!important;
-  overflow-y:auto!important;
+  overflow-y:scroll!important;
   overscroll-behavior:contain!important;
   overflow-anchor:none!important;
   scroll-behavior:auto!important;
   scrollbar-gutter:stable!important;
   -webkit-overflow-scrolling:touch!important;
   touch-action:pan-x pan-y!important;
+  contain:layout paint!important;
 }
-.app-shell.editor-mode .editor-workspace>.editor-body.rich-editor-body>.kz-smartcanvas-experiment>.editor-canvas.kz-smartcanvas-pages-viewport>div[style*="zoom"]{
+.app-shell.editor-mode .editor-body.rich-editor-body>.kz-smartcanvas-experiment>.editor-canvas.kz-smartcanvas-pages-viewport>div[style*="zoom"]{
   display:block!important;
+  position:relative!important;
   width:max-content!important;
   min-width:100%!important;
   max-width:none!important;
@@ -3660,38 +3639,15 @@ body:has(.app-shell.editor-mode),
   min-height:100%!important;
   max-height:none!important;
   overflow:visible!important;
+  overflow-anchor:none!important;
 }
-.app-shell.editor-mode .editor-workspace>.editor-body.rich-editor-body>.editor-side{
-  grid-column:2!important;
-  grid-row:1!important;
-  min-width:0!important;
-  min-height:0!important;
-  height:100%!important;
-  max-height:100%!important;
-  overflow-x:hidden!important;
-  overflow-y:auto!important;
-  scrollbar-width:none!important;
-}
-.app-shell.editor-mode .editor-workspace>.editor-body.rich-editor-body>.editor-side::-webkit-scrollbar{
-  display:none!important;
-  width:0!important;
-  height:0!important;
+.app-shell.editor-mode .editor-body.rich-editor-body>.kz-smartcanvas-experiment>.editor-canvas.kz-smartcanvas-pages-viewport .kortex-canvas-pages{
+  flex-shrink:0!important;
 }
 @media(max-width:900px){
-  .app-shell.editor-mode .editor-workspace>.editor-body.rich-editor-body{
-    grid-template-columns:minmax(0,1fr)!important;
-    grid-template-rows:minmax(0,1fr) auto!important;
-  }
-  .app-shell.editor-mode .editor-workspace>.editor-body.rich-editor-body>.kz-smartcanvas-experiment{
-    grid-column:1!important;
-    grid-row:1!important;
-  }
-  .app-shell.editor-mode .editor-workspace>.editor-body.rich-editor-body>.editor-side{
-    grid-column:1!important;
-    grid-row:2!important;
-    height:auto!important;
-    max-height:30dvh!important;
-    border-left:0!important;
-    border-top:1px solid var(--line,#17263b)!important;
+  .app-shell.editor-mode .editor-body.rich-editor-body>.kz-smartcanvas-experiment>.editor-canvas.kz-smartcanvas-pages-viewport{
+    flex:1 1 0%!important;
+    height:0!important;
+    min-height:120px!important;
   }
 }
