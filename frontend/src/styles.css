@@ -3839,3 +3839,37 @@ body:has(.app-shell.editor-mode),
     border-top:1px solid var(--line,#17263b)!important;
   }
 }
+
+
+/* SmartCanvas final scroll viewport sizing: give the actual pages viewport a
+   finite block-size independent of flex/grid ancestor sizing. This prevents
+   the page stack from expanding its parent instead of becoming scrollable. */
+.app-shell.editor-mode .editor-workspace .kz-smartcanvas-experiment > .editor-canvas.kz-smartcanvas-pages-viewport{
+  display:block!important;
+  position:relative!important;
+  flex:0 1 auto!important;
+  height:clamp(180px,calc(100dvh - 330px),900px)!important;
+  min-height:180px!important;
+  max-height:calc(100dvh - 180px)!important;
+  overflow-x:auto!important;
+  overflow-y:scroll!important;
+  overscroll-behavior-y:contain!important;
+  -webkit-overflow-scrolling:touch!important;
+  touch-action:pan-x pan-y!important;
+  scrollbar-gutter:stable!important;
+  overflow-anchor:none!important;
+}
+.app-shell.editor-mode .editor-workspace .kz-smartcanvas-experiment > .editor-canvas.kz-smartcanvas-pages-viewport > div[style*="zoom"]{
+  display:block!important;
+  height:max-content!important;
+  min-height:100%!important;
+  max-height:none!important;
+  overflow:visible!important;
+}
+@media(max-width:900px){
+  .app-shell.editor-mode .editor-workspace .kz-smartcanvas-experiment > .editor-canvas.kz-smartcanvas-pages-viewport{
+    height:clamp(160px,calc(100dvh - 420px),600px)!important;
+    min-height:160px!important;
+    max-height:calc(100dvh - 160px)!important;
+  }
+}
