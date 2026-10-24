@@ -4079,3 +4079,102 @@ body:has(.app-shell.editor-mode),
     box-shadow: 0 -5px 18px rgb(25 42 70 / 3%) !important;
   }
 }
+
+
+/* Nexus editor visual correction: restore the dark workspace; only the paper stays white.
+   Visual-only CSS override. No editor logic, layout geometry, or interaction changes. */
+.app-shell.editor-mode .editor-workspace {
+  --editor-ink: #e5edf9;
+  --editor-muted: #93a4bd;
+  --editor-line: #27364d;
+  --editor-surface: #0c1626;
+  --editor-surface-soft: #111e31;
+  --editor-accent: #8291ff;
+  --editor-accent-soft: #1b2850;
+  color: #e5edf9 !important;
+  background: #07101d !important;
+  color-scheme: dark !important;
+}
+.app-shell.editor-mode .editor-head {
+  background: linear-gradient(180deg, #101c2d, #0b1524) !important;
+  color: #e5edf9 !important;
+  border-bottom-color: #27364d !important;
+  box-shadow: 0 2px 14px rgb(0 0 0 / 18%) !important;
+}
+.app-shell.editor-mode .editor-breadcrumb { color: #8799b5 !important; }
+.app-shell.editor-mode .editor-title { color: #f0f5ff !important; }
+.app-shell.editor-mode .editor-title:hover { background: #132139 !important; border-color: #2b3b56 !important; }
+.app-shell.editor-mode .editor-title:focus { background: #0c1728 !important; border-color: #687cf2 !important; box-shadow: 0 0 0 3px rgb(104 124 242 / 18%) !important; }
+.app-shell.editor-mode .save-state { color: #93a4bd !important; }
+.app-shell.editor-mode .editor-secondary {
+  color: #c4d0e2 !important; background: #111e31 !important; border-color: #30415c !important;
+  box-shadow: none !important;
+}
+.app-shell.editor-mode .editor-secondary:hover { color: #fff !important; background: #1a2a44 !important; border-color: #5368b8 !important; }
+.app-shell.editor-mode .editor-save { background: #5368e8 !important; border-color: #6b7cff !important; color: #fff !important; }
+.app-shell.editor-mode .editor-ribbon-tabs { background: #0c1727 !important; border-bottom-color: #27364d !important; box-shadow: none !important; }
+.app-shell.editor-mode .editor-ribbon-tabs button { color: #9aaac1 !important; }
+.app-shell.editor-mode .editor-ribbon-tabs button:hover { color: #e7edff !important; background: #17253d !important; }
+.app-shell.editor-mode .editor-ribbon-tabs button.active { color: #cbd4ff !important; background: #1a2850 !important; box-shadow: inset 0 -2px 0 #8291ff !important; }
+.app-shell.editor-mode .editor-toolbar { color: #d4deed !important; background: #101c2d !important; border-bottom-color: #27364d !important; box-shadow: none !important; }
+.app-shell.editor-mode .editor-toolbar-group-label,
+.app-shell.editor-mode .editor-tool-label,
+.app-shell.editor-mode .editor-zoom-label { color: #91a2bb !important; }
+.app-shell.editor-mode .editor-select,
+.app-shell.editor-mode .editor-toolbar select,
+.app-shell.editor-mode .editor-side select,
+.app-shell.editor-mode .editor-side input,
+.app-shell.editor-mode .editor-side textarea {
+  color: #e0e9f7 !important; background-color: #0a1525 !important; border-color: #30415c !important;
+  box-shadow: none !important; color-scheme: dark !important;
+}
+.app-shell.editor-mode .editor-select:focus,
+.app-shell.editor-mode .editor-toolbar select:focus,
+.app-shell.editor-mode .editor-side select:focus,
+.app-shell.editor-mode .editor-side input:focus,
+.app-shell.editor-mode .editor-side textarea:focus {
+  border-color: #8291ff !important; box-shadow: 0 0 0 3px rgb(130 145 255 / 15%) !important;
+}
+.app-shell.editor-mode .editor-tool { color: #b0bfd4 !important; }
+.app-shell.editor-mode .editor-tool:hover { color: #e9edff !important; background: #1a2a45 !important; border-color: #34486a !important; }
+.app-shell.editor-mode .editor-tool.active,
+.app-shell.editor-mode .editor-tool[aria-pressed="true"] { color: #d4dbff !important; background: #202e5c !important; border-color: #485ba8 !important; box-shadow: none !important; }
+.app-shell.editor-mode .toolbar-separator { background: #30415a !important; }
+.app-shell.editor-mode .editor-body.rich-editor-body,
+.app-shell.editor-mode .editor-workspace .editor-body.rich-editor-body > .kz-smartcanvas-experiment {
+  background: #111c2d !important;
+}
+.app-shell.editor-mode .kz-smartcanvas-pages-viewport {
+  background: #111c2d !important;
+  scrollbar-color: #53647e #111c2d !important;
+}
+.app-shell.editor-mode .kz-smartcanvas-pages-viewport::-webkit-scrollbar-track { background: #111c2d !important; }
+.app-shell.editor-mode .kz-smartcanvas-pages-viewport::-webkit-scrollbar-thumb { background: #53647e !important; border-color: #111c2d !important; }
+.app-shell.editor-mode .kz-smartcanvas-pages-viewport::-webkit-scrollbar-thumb:hover { background: #7184a3 !important; }
+/* The document page intentionally remains white for a paper-like writing surface. */
+.app-shell.editor-mode .kortex-canvas-page {
+  background: #fff !important; color: #202633 !important; border-color: #d6dce7 !important;
+  box-shadow: 0 2px 5px rgb(0 0 0 / 22%), 0 16px 36px rgb(0 0 0 / 26%) !important;
+}
+.app-shell.editor-mode .editor-side {
+  color: #c1cee0 !important; background: #0c1727 !important; border-left-color: #27364d !important;
+  box-shadow: -5px 0 20px rgb(0 0 0 / 12%) !important;
+}
+.app-shell.editor-mode .editor-side > strong,
+.app-shell.editor-mode .editor-files-head > strong { color: #e6edf8 !important; }
+.app-shell.editor-mode .editor-side label { color: #9eafc6 !important; }
+.app-shell.editor-mode .editor-side-divider { background: #27364d !important; }
+.app-shell.editor-mode .editor-file-action { color: #cbd4ff !important; background: #1a2850 !important; border-color: #344779 !important; }
+.app-shell.editor-mode .editor-file-action:hover { background: #243565 !important; border-color: #5268b9 !important; }
+.app-shell.editor-mode .editor-folder-name,
+.app-shell.editor-mode .editor-file-item { color: #cbd6e8 !important; background: #111e31 !important; border-color: #2a3a53 !important; }
+.app-shell.editor-mode .editor-file-item:hover,
+.app-shell.editor-mode .editor-file-item.active { color: #e1e6ff !important; background: #202e56 !important; border-color: #485ba8 !important; }
+.app-shell.editor-mode .editor-files-empty { color: #91a2bb !important; background: #101c2d !important; border-color: #34445e !important; }
+.app-shell.editor-mode .editor-file-error { color: #ffc6cd !important; background: #351d2a !important; border-color: #70404c !important; }
+.app-shell.editor-mode .kz-navigation-panel { color: #d4deed !important; background: #0d192a !important; border-color: #30415c !important; box-shadow: 0 10px 30px rgb(0 0 0 / 30%) !important; }
+.app-shell.editor-mode .kz-navigation-panel button { color: #b2c0d5 !important; }
+.app-shell.editor-mode .kz-navigation-panel button:hover { color: #e7edff !important; background: #1a2a45 !important; }
+.app-shell.editor-mode .editor-info { color: #8598b3 !important; background: #091321 !important; border-bottom-color: #1f2d42 !important; }
+.app-shell.editor-mode .editor-info span:last-child { color: #a2b2c8 !important; }
+.app-shell.editor-mode .editor-foot { color: #8598b3 !important; background: #0b1524 !important; border-top-color: #27364d !important; }
