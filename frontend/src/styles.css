@@ -4351,3 +4351,38 @@ body:has(.app-shell.editor-mode),
   overflow-y: scroll !important;
   overflow-x: auto !important;
 }
+
+
+/* Final correction: never collapse the grid scroll host itself to zero height.
+   The grid/flex parents already constrain this row; height:0 on the host collapses
+   its grid area and therefore also collapses the SmartCanvas viewport. */
+.app-shell.editor-mode .editor-workspace .editor-body.rich-editor-body {
+  height: auto !important;
+  flex: 1 1 0% !important;
+  min-height: 0 !important;
+  grid-template-rows: minmax(0, 1fr) !important;
+  grid-auto-rows: minmax(0, 1fr) !important;
+  align-items: stretch !important;
+  overflow: hidden !important;
+}
+.app-shell.editor-mode .editor-workspace .editor-body.rich-editor-body > .kz-smartcanvas-experiment {
+  grid-row: 1 !important;
+  min-height: 0 !important;
+  height: 100% !important;
+  max-height: 100% !important;
+  display: flex !important;
+  flex-direction: column !important;
+  overflow: hidden !important;
+}
+.app-shell.editor-mode .editor-workspace .editor-body.rich-editor-body > .kz-smartcanvas-experiment > .editor-canvas.kz-smartcanvas-pages-viewport {
+  position: relative !important;
+  inset: auto !important;
+  flex: 1 1 0% !important;
+  width: 100% !important;
+  height: 0 !important;
+  min-height: 0 !important;
+  max-height: 100% !important;
+  overflow-x: auto !important;
+  overflow-y: auto !important;
+  overscroll-behavior: contain !important;
+}
