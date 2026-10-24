@@ -602,14 +602,29 @@ export function SmartCanvasPreview({ document, engine, headerText = "", footerTe
   const [spacingAfterDraft, setSpacingAfterDraft] = useState("8");
   const [headingLevelDraft, setHeadingLevelDraft] = useState("paragraph");
   const inputRef = useRef<HTMLTextAreaElement>(null);
+  const viewportRef = useRef<HTMLDivElement>(null);
   const canvasScrollRef = useRef<HTMLDivElement>(null);
-  // The preview section is the single scroll owner. Never restore a cached
-  // scrollTop after typing: that can overwrite wheel scrolling with a stale
-  // position and makes the viewport jump on every keystroke.
+  const viewportPositionRef = useRef({ top: 0, left: 0 });
+  // Scrolling is owned by the visible viewport, not the zoomed document node.
+  // Save its position as the document is edited/re-paginated and restore it
+  // after React replaces the rendered page tree.
   const captureScrollSnapshot = () => {
-    // Native scrolling remains authoritative; text edits must not move viewport.
+    const viewport = viewportRef.current;
+    if (viewport) viewportPositionRef.current = { top: viewport.scrollTop, left: viewport.scrollLeft };
+  };
+  const handleViewportWheel = (event: React.WheelEvent<HTMLDivElement>) => {
+    const viewport = viewportRef.current;
+    if (!viewport) return;
+    // Explicit wheel handling makes the SmartCanvas viewport scrollable even
+    // when ancestor editor styles or the hidden input interfere with native chaining.
+    event.preventDefault();
+    const scale = event.deltaMode === 1 ? 16 : event.deltaMode === 2 ? viewport.clientHeight : 1;
+    viewport.scrollTop += event.deltaY * scale;
+    viewport.scrollLeft += event.deltaX * scale;
+    viewportPositionRef.current = { top: viewport.scrollTop, left: viewport.scrollLeft };
   };
   const focusInputPreservingScroll = () => {
+    captureScrollSnapshot();
     inputRef.current?.focus({ preventScroll: true });
   };
   const imageFileInputRef = useRef<HTMLInputElement>(null);
@@ -634,8 +649,15 @@ export function SmartCanvasPreview({ document, engine, headerText = "", footerTe
     }
   }, [document]);
 
-  // Do not restore scroll offsets after renders: native wheel scrolling must
-  // remain independent from document edits and pagination/layout recalculation.
+  // Keep the user's viewport stable when typing causes a new document layout.
+  // The snapshot is updated by wheel/scroll interaction and immediately before
+  // input commands, so a new page tree cannot reset the viewport to page one.
+  useEffect(() => {
+    const viewport = viewportRef.current;
+    if (!viewport) return;
+    viewport.scrollTop = viewportPositionRef.current.top;
+    viewport.scrollLeft = viewportPositionRef.current.left;
+  }, [layout]);
 
   // Give the engine a valid insertion point as soon as SmartCanvas mounts.
   // Keyboard input must not depend on a prior click on a text glyph.
@@ -2451,7 +2473,18 @@ export function SmartCanvasPreview({ document, engine, headerText = "", footerTe
       }
       handleInput(event.clipboardData.getData("text/plain"));
     }} onCompositionStart={() => { composing.current = true; lastCompositionValue.current = null; }} onCompositionEnd={event => { const value = event.currentTarget.value; composing.current = false; lastCompositionValue.current = value || null; if (readOnly) { event.currentTarget.value = ""; lastCompositionValue.current = null; return; } handleInput(value); }} style={{ position: "fixed", width: 1, height: 1, minWidth: 1, minHeight: 1, opacity: 0, padding: 0, border: 0, overflow: "hidden", left: 0, top: 0, clipPath: "inset(50%)", resize: "none", pointerEvents: "none", contain: "strict", scrollMargin: 0 }} />
-    <div className="editor-canvas kz-smartcanvas-pages-viewport" aria-label="Área de rolagem das páginas do documento">
+    <div
+      ref={viewportRef}
+      className="editor-canvas kz-smartcanvas-pages-viewport"
+      aria-label="Área de rolagem das páginas do documento"
+      tabIndex={0}
+      onWheel={handleViewportWheel}
+      onScroll={event => {
+        const viewport = event.currentTarget;
+        viewportPositionRef.current = { top: viewport.scrollTop, left: viewport.scrollLeft };
+      }}
+      style={{ overflowY: "auto", overflowX: "auto", overscrollBehavior: "contain" }}
+    >
       {layout ? <div ref={canvasScrollRef} style={{ maxHeight: "none", overflow: "visible", overflowAnchor: "none", background: "#e5e7eb", borderRadius: 8, zoom: `${Math.max(25, Math.min(300, zoom))}%` }}>
         <CanvasDocumentRenderer layout={layout} document={document} headerText={headerText} footerText={footerText} headerAlign={headerAlign} footerAlign={footerAlign} showPageNumbers={showPageNumbers} showFormattingMarks={showFormattingMarks} selection={selection || undefined} showCaret={!!selection && !activeCell} activeCellId={activeCell?.cellId} activeCellSelection={activeCell || undefined} activeBlockId={activeBlockId || undefined} onHitTest={handleHit} />
       </div> : <p role="status">Aguardando documento/layout do motor.</p>}
