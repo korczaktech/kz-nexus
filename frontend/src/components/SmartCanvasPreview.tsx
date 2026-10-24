@@ -612,29 +612,26 @@ export function SmartCanvasPreview({ document, engine, headerText = "", footerTe
     const viewport = viewportRef.current;
     if (viewport) viewportPositionRef.current = { top: viewport.scrollTop, left: viewport.scrollLeft };
   };
-  // Route wheel gestures by pointer position, not event.target: canvas overlays,
-  // text layers, and browser retargeting can make event.target unreliable.
+  // Listen directly on the scroll viewport. This avoids relying on document-level
+  // event plumbing (which is also absent in lightweight test DOMs) and keeps
+  // wheel gestures local to the editor instead of the outer page.
   useEffect(() => {
-    const handleWheel = (event: WheelEvent) => {
-      const viewport = viewportRef.current;
-      if (!viewport) return;
-      const rect = viewport.getBoundingClientRect();
-      if (event.clientX < rect.left || event.clientX > rect.right ||
-          event.clientY < rect.top || event.clientY > rect.bottom) return;
+    const viewport = viewportRef.current;
+    if (!viewport) return;
 
+    const handleWheel = (event: WheelEvent) => {
       const scale = event.deltaMode === 1 ? 16 : event.deltaMode === 2 ? Math.max(1, viewport.clientHeight) : 1;
       const vertical = event.shiftKey && event.deltaX === 0 ? 0 : event.deltaY * scale;
       const horizontal = (event.shiftKey && event.deltaX === 0 ? event.deltaY : event.deltaX) * scale;
 
-      // Keep the browser from scrolling an outer page while the pointer is over SmartCanvas.
       event.preventDefault();
       if (vertical) viewport.scrollTop = Math.max(0, Math.min(viewport.scrollHeight - viewport.clientHeight, viewport.scrollTop + vertical));
       if (horizontal) viewport.scrollLeft = Math.max(0, Math.min(viewport.scrollWidth - viewport.clientWidth, viewport.scrollLeft + horizontal));
       viewportPositionRef.current = { top: viewport.scrollTop, left: viewport.scrollLeft };
     };
 
-    document.addEventListener("wheel", handleWheel, { passive: false, capture: true });
-    return () => document.removeEventListener("wheel", handleWheel, true);
+    viewport.addEventListener("wheel", handleWheel, { passive: false, capture: true });
+    return () => viewport.removeEventListener("wheel", handleWheel, true);
   }, []);
   const focusInputPreservingScroll = () => {
     captureScrollSnapshot();
