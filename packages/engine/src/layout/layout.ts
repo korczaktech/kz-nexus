@@ -438,7 +438,7 @@ export function layoutDocument(document: NexusDocument, options: LayoutOptions =
                 pageConfig: {
                   unit: "pt",
                   width: Math.max(20, colWidth - 8),
-                  height: 100000,
+                  height: 1900,
                   orientation: "portrait",
                   margins: { top: 0, right: 0, bottom: 0, left: 0 },
                 },
