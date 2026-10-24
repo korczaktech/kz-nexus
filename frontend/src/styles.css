@@ -4211,3 +4211,61 @@ body:has(.app-shell.editor-mode),
   max-width: none !important;
   max-height: none !important;
 }
+
+
+/* Editor viewport contract: the shell, header, backdrop and side panel stay put.
+   The page stack viewport is the only element that scrolls through document pages. */
+html:has(.app-shell.editor-mode),
+body:has(.app-shell.editor-mode),
+#root:has(.app-shell.editor-mode) {
+  background: #07101d !important;
+}
+.app-shell.editor-mode {
+  position: relative !important;
+  isolation: isolate !important;
+  background: transparent !important;
+}
+.app-shell.editor-mode::before {
+  content: "" !important;
+  position: fixed !important;
+  inset: 0 !important;
+  z-index: -1 !important;
+  pointer-events: none !important;
+  background: #07101d !important;
+}
+.app-shell.editor-mode .editor-workspace,
+.app-shell.editor-mode .editor-workspace .editor-layout {
+  position: relative !important;
+  flex-shrink: 0 !important;
+}
+.app-shell.editor-mode .editor-workspace .editor-head,
+.app-shell.editor-mode .editor-workspace .editor-ribbon-tabs,
+.app-shell.editor-mode .editor-workspace .editor-toolbar,
+.app-shell.editor-mode .editor-workspace .editor-info {
+  position: relative !important;
+  z-index: 3 !important;
+  flex: 0 0 auto !important;
+}
+.app-shell.editor-mode .editor-workspace .editor-body.rich-editor-body {
+  position: relative !important;
+  flex: 1 1 0 !important;
+  min-height: 0 !important;
+  overflow: hidden !important;
+}
+.app-shell.editor-mode .editor-workspace .editor-body.rich-editor-body > .editor-side {
+  position: sticky !important;
+  top: 0 !important;
+  align-self: stretch !important;
+  height: 100% !important;
+  max-height: 100% !important;
+  overflow-x: hidden !important;
+  overflow-y: auto !important;
+  z-index: 2 !important;
+}
+.app-shell.editor-mode .editor-workspace .editor-body.rich-editor-body > .kz-smartcanvas-experiment > .editor-canvas.kz-smartcanvas-pages-viewport {
+  position: absolute !important;
+  inset: 16px !important;
+  overflow-x: auto !important;
+  overflow-y: auto !important;
+  overscroll-behavior: contain !important;
+}
