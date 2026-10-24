@@ -2222,4 +2222,40 @@ describe("SmartCanvasPreview input integration", () => {
     expect(input.style.clipPath).toBe("inset(50%)");
   });
 
+
+  it("scrolls the page viewport with the mouse wheel", async () => {
+    engine = createEditor({ document: createDocument({ title: "SmartCanvas mouse wheel" }) });
+    host = window.document.createElement("div");
+    window.document.body.append(host);
+    root = createRoot(host);
+    await act(async () => {
+      root?.render(createElement(SmartCanvasPreview, {
+        document: engine!.getDocument(),
+        engine: engine!,
+        onDocumentChange: vi.fn(),
+      }));
+    });
+
+    const viewport = host.querySelector(".editor-canvas.kz-smartcanvas-pages-viewport") as HTMLElement | null;
+    if (!viewport) throw new Error("SmartCanvas scroll viewport was not mounted");
+    Object.defineProperty(viewport, "clientHeight", { configurable: true, value: 400 });
+    Object.defineProperty(viewport, "scrollHeight", { configurable: true, value: 1600 });
+    Object.defineProperty(viewport, "clientWidth", { configurable: true, value: 600 });
+    Object.defineProperty(viewport, "scrollWidth", { configurable: true, value: 600 });
+    viewport.scrollTop = 0;
+
+    const wheel = new WheelEvent("wheel", {
+      bubbles: true,
+      cancelable: true,
+      deltaY: 120,
+      deltaMode: 0,
+    });
+    await act(async () => {
+      viewport.dispatchEvent(wheel);
+    });
+
+    expect(wheel.defaultPrevented).toBe(true);
+    expect(viewport.scrollTop).toBe(120);
+  });
+
 });
