@@ -2480,23 +2480,7 @@ export function SmartCanvasPreview({ document, engine, headerText = "", footerTe
         const viewport = event.currentTarget;
         viewportPositionRef.current = { top: viewport.scrollTop, left: viewport.scrollLeft };
       }}
-      onWheel={event => {
-        // Keep scrolling in the frontend's visible document viewport.
-        // Native overflow handles touch/trackpad; this explicitly routes mouse wheels.
-        const viewport = event.currentTarget;
-        const scale = event.deltaMode === 1 ? 16 : event.deltaMode === 2 ? Math.max(1, viewport.clientHeight) : 1;
-        const vertical = event.shiftKey && event.deltaX === 0 ? 0 : event.deltaY * scale;
-        const horizontal = (event.shiftKey && event.deltaX === 0 ? event.deltaY : event.deltaX) * scale;
-        if (vertical && viewport.scrollHeight > viewport.clientHeight) {
-          event.preventDefault();
-          viewport.scrollTop = Math.max(0, Math.min(viewport.scrollHeight - viewport.clientHeight, viewport.scrollTop + vertical));
-        }
-        if (horizontal && viewport.scrollWidth > viewport.clientWidth) {
-          event.preventDefault();
-          viewport.scrollLeft = Math.max(0, Math.min(viewport.scrollWidth - viewport.clientWidth, viewport.scrollLeft + horizontal));
-        }
-        viewportPositionRef.current = { top: viewport.scrollTop, left: viewport.scrollLeft };
-      }}
+
       style={{ overflowY: "scroll", overflowX: "auto", overscrollBehavior: "contain", minHeight: 0 }}
     >
       {layout ? <div ref={canvasScrollRef} style={{ maxHeight: "none", overflow: "visible", overflowAnchor: "none", background: "#e5e7eb", borderRadius: 8, zoom: `${Math.max(25, Math.min(300, zoom))}%` }}>
