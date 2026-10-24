@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState, type WheelEvent } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState, type WheelEvent } from "react";
 import { addTableColumn, addTableRow, collapsedAt, convertBlockToBlockquote, convertBlockToList, deleteBlock, deleteText, insertImportedBlocksAtSelection, insertImageResource, insertPageBreak, insertTable as insertTableCommand, insertTableCellImageResource, insertTableCellBlocksAfterParagraph, insertTableIntoCell, insertText, insertThematicBreak, moveBlock, removeImage, removeMark, updateEditorObject, updateImage, getLineXAtOffset, getOffsetAtLineX, getPlainText, exportHtml, layoutDocument, mergeBlockWithPrevious, mergeListItemWithPrevious, outdentListItem, replaceRange, removeTableColumn, removeTableRow, replaceTableCellContent, setAlign, setCellText, setHeadingLevel, setIndent, setParagraphStyle, splitBlock, toggleMark as toggleMarkCommand, type Block, type Editor as NexusEngineSession, type Mark, type NexusDocument, type Selection, type TextRun, type SmartCanvasHitTarget } from "../../../packages/engine/src/index";
 import { CanvasDocumentRenderer } from "./CanvasDocumentRenderer";
 import { nexusDocumentFromHtml } from "../services/nexusEngineAdapter";
@@ -649,14 +649,22 @@ export function SmartCanvasPreview({ document, engine, headerText = "", footerTe
     }
   }, [document]);
 
-  // Keep the user's viewport stable when typing causes a new document layout.
-  // The snapshot is updated by wheel/scroll interaction and immediately before
-  // input commands, so a new page tree cannot reset the viewport to page one.
-  useEffect(() => {
+  // Restore the visible scroll position synchronously after SmartCanvas
+  // repaginates. A normal effect runs after paint and can expose a jump to page
+  // one; a second frame restore handles browsers that clamp scrollTop while the
+  // page stack is being resized.
+  useLayoutEffect(() => {
     const viewport = viewportRef.current;
     if (!viewport) return;
-    viewport.scrollTop = viewportPositionRef.current.top;
-    viewport.scrollLeft = viewportPositionRef.current.left;
+    const restore = () => {
+      const maxTop = Math.max(0, viewport.scrollHeight - viewport.clientHeight);
+      const maxLeft = Math.max(0, viewport.scrollWidth - viewport.clientWidth);
+      viewport.scrollTop = Math.min(viewportPositionRef.current.top, maxTop);
+      viewport.scrollLeft = Math.min(viewportPositionRef.current.left, maxLeft);
+    };
+    restore();
+    const frame = window.requestAnimationFrame(restore);
+    return () => window.cancelAnimationFrame(frame);
   }, [layout]);
 
   // Give the engine a valid insertion point as soon as SmartCanvas mounts.
