@@ -20,6 +20,19 @@ describe("native layout engine", () => {
     expect(result.pages[0].blocks[0].lines[0].text).toBe("Hello");
   });
 
+  it("falls back to physical paper dimensions when a stored page height is unbounded", () => {
+    const text = Array.from({ length: 180 }, (_, index) => "word" + index).join(" ");
+    const invalidPage = {
+      unit: "pt" as const, width: 612, height: 100000, orientation: "portrait" as const,
+      margins: { top: 72, right: 72, bottom: 72, left: 72 }
+    };
+    const result = layoutDocument(documentWith([paragraph("long-unbounded", text)], invalidPage), { metrics, fontSize: 12 });
+    expect(result.diagnostics.some(item => item.code === "INVALID_PAGE_CONFIG")).toBe(true);
+    expect(result.pages[0]!.height).toBe(792);
+    expect(result.pageCount).toBeGreaterThan(1);
+    expect(result.pages.every(page => page.height === 792)).toBe(true);
+  });
+
   it("assigns header and footer geometry to the engine page layout", () => {
     const result = layoutDocument(documentWith([paragraph("furniture", "Page content")]), { metrics });
     expect(result.pages[0]!.furniture.header).toEqual({ x: 10, y: 8, width: 140, height: 14 });
