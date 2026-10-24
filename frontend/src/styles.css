@@ -4178,3 +4178,36 @@ body:has(.app-shell.editor-mode),
 .app-shell.editor-mode .editor-info { color: #8598b3 !important; background: #091321 !important; border-bottom-color: #1f2d42 !important; }
 .app-shell.editor-mode .editor-info span:last-child { color: #a2b2c8 !important; }
 .app-shell.editor-mode .editor-foot { color: #8598b3 !important; background: #0b1524 !important; border-top-color: #27364d !important; }
+
+
+/* SmartCanvas pagination invariant: every engine page is a separate physical sheet.
+   Do not let legacy side-by-side view rules or flex sizing merge/stretch the page stack. */
+.app-shell.editor-mode .editor-workspace .editor-body.rich-editor-body > .kz-smartcanvas-experiment > .editor-canvas.kz-smartcanvas-pages-viewport > div[style*="zoom"] > .kortex-canvas-pages {
+  display: flex !important;
+  flex-direction: column !important;
+  flex-wrap: nowrap !important;
+  align-items: center !important;
+  align-content: flex-start !important;
+  justify-content: flex-start !important;
+  gap: 24px !important;
+  width: max-content !important;
+  height: max-content !important;
+  min-height: 0 !important;
+  max-height: none !important;
+  flex: 0 0 auto !important;
+}
+.app-shell.editor-mode .editor-workspace .editor-body.rich-editor-body > .kz-smartcanvas-experiment > .editor-canvas.kz-smartcanvas-pages-viewport > div[style*="zoom"] > .kortex-canvas-pages > [data-page-frame] {
+  display: block !important;
+  position: relative !important;
+  flex: 0 0 auto !important;
+  align-self: center !important;
+  min-height: 0 !important;
+  max-height: none !important;
+  overflow: hidden !important;
+}
+.app-shell.editor-mode .editor-workspace .editor-body.rich-editor-body > .kz-smartcanvas-experiment > .editor-canvas.kz-smartcanvas-pages-viewport > div[style*="zoom"] > .kortex-canvas-pages > [data-page-frame] > canvas.kortex-canvas-page {
+  display: block !important;
+  flex: 0 0 auto !important;
+  max-width: none !important;
+  max-height: none !important;
+}
