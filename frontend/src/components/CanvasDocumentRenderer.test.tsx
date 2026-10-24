@@ -194,6 +194,15 @@ describe("CanvasDocumentRenderer visual regression contract", () => {
     const canvases = Array.from(host.querySelectorAll<HTMLCanvasElement>("canvas.kortex-canvas-page"));
     const pageHeight = layout.pages[0]!.height * 96 / 72;
     const pageWidth = layout.pages[0]!.width * 96 / 72;
+    expect(canvases).toHaveLength(layout.pageCount);
+    canvases.forEach((canvas, index) => {
+      const expectedPage = layout.pages[index]!;
+      expect(canvas.style.width).toBe(`${expectedPage.width * 96 / 72}px`);
+      expect(canvas.style.height).toBe(`${expectedPage.height * 96 / 72}px`);
+      expect(canvas.style.minHeight).toBe(canvas.style.height);
+      expect(canvas.style.maxHeight).toBe(canvas.style.height);
+      expect(canvas.parentElement?.getAttribute("data-page-frame")).toBe(String(index));
+    });
     canvases.forEach((canvas, index) => {
       vi.spyOn(canvas, "getBoundingClientRect").mockReturnValue({
         x: 0, y: index * (pageHeight + 24), left: 0, right: pageWidth,
