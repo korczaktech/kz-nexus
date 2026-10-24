@@ -139,9 +139,15 @@ function wrapText(text: string, maxWidth: number, fontSize: number, fontFamily: 
   }
   return result;
 }
+// The editor supports physical paper sizes (A3 and smaller). A corrupted or
+// legacy pageConfig with an enormous finite height would otherwise make the
+// entire document render as one infinitely tall page and disable pagination.
+const MAX_PHYSICAL_PAGE_DIMENSION_PT = 2000;
 function validPage(page: PageConfig): boolean {
   const m = page.margins;
   return [page.width,page.height,m.top,m.right,m.bottom,m.left].every(n => Number.isFinite(n) && n >= 0)
+    && page.width <= MAX_PHYSICAL_PAGE_DIMENSION_PT
+    && page.height <= MAX_PHYSICAL_PAGE_DIMENSION_PT
     && page.width > m.left + m.right && page.height > m.top + m.bottom;
 }
 
