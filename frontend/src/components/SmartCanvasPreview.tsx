@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useMemo, useRef, useState, type WheelEvent } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { addTableColumn, addTableRow, collapsedAt, convertBlockToBlockquote, convertBlockToList, deleteBlock, deleteText, insertImportedBlocksAtSelection, insertImageResource, insertPageBreak, insertTable as insertTableCommand, insertTableCellImageResource, insertTableCellBlocksAfterParagraph, insertTableIntoCell, insertText, insertThematicBreak, moveBlock, removeImage, removeMark, updateEditorObject, updateImage, getLineXAtOffset, getOffsetAtLineX, getPlainText, exportHtml, layoutDocument, mergeBlockWithPrevious, mergeListItemWithPrevious, outdentListItem, replaceRange, removeTableColumn, removeTableRow, replaceTableCellContent, setAlign, setCellText, setHeadingLevel, setIndent, setParagraphStyle, splitBlock, toggleMark as toggleMarkCommand, type Block, type Editor as NexusEngineSession, type Mark, type NexusDocument, type Selection, type TextRun, type SmartCanvasHitTarget } from "../../../packages/engine/src/index";
 import { CanvasDocumentRenderer } from "./CanvasDocumentRenderer";
 import { nexusDocumentFromHtml } from "../services/nexusEngineAdapter";
@@ -612,17 +612,30 @@ export function SmartCanvasPreview({ document, engine, headerText = "", footerTe
     const viewport = viewportRef.current;
     if (viewport) viewportPositionRef.current = { top: viewport.scrollTop, left: viewport.scrollLeft };
   };
-  const handleViewportWheel = (event: WheelEvent<HTMLDivElement>) => {
+  // Use a native capture-phase wheel listener so wheel input is handled even
+  // when a page canvas or another editor layer intercepts React bubbling.
+  useEffect(() => {
     const viewport = viewportRef.current;
     if (!viewport) return;
-    // Explicit wheel handling makes the SmartCanvas viewport scrollable even
-    // when ancestor editor styles or the hidden input interfere with native chaining.
-    event.preventDefault();
-    const scale = event.deltaMode === 1 ? 16 : event.deltaMode === 2 ? viewport.clientHeight : 1;
-    viewport.scrollTop += event.deltaY * scale;
-    viewport.scrollLeft += event.deltaX * scale;
-    viewportPositionRef.current = { top: viewport.scrollTop, left: viewport.scrollLeft };
-  };
+    const handleWheel = (event: WheelEvent) => {
+      // Do not steal wheel gestures that start outside the visible page viewport.
+      if (!(event.target instanceof Node) || !viewport.contains(event.target)) return;
+      const maxTop = Math.max(0, viewport.scrollHeight - viewport.clientHeight);
+      const maxLeft = Math.max(0, viewport.scrollWidth - viewport.clientWidth);
+      const scale = event.deltaMode === 1 ? 16 : event.deltaMode === 2 ? viewport.clientHeight : 1;
+      const deltaX = event.shiftKey && event.deltaX === 0 ? event.deltaY : event.deltaX;
+      const nextTop = Math.max(0, Math.min(maxTop, viewport.scrollTop + (event.shiftKey && event.deltaX === 0 ? 0 : event.deltaY * scale)));
+      const nextLeft = Math.max(0, Math.min(maxLeft, viewport.scrollLeft + deltaX * scale));
+      if (nextTop !== viewport.scrollTop || nextLeft !== viewport.scrollLeft) {
+        event.preventDefault();
+        viewport.scrollTop = nextTop;
+        viewport.scrollLeft = nextLeft;
+        viewportPositionRef.current = { top: nextTop, left: nextLeft };
+      }
+    };
+    viewport.addEventListener("wheel", handleWheel, { passive: false, capture: true });
+    return () => viewport.removeEventListener("wheel", handleWheel, true);
+  }, []);
   const focusInputPreservingScroll = () => {
     captureScrollSnapshot();
     inputRef.current?.focus({ preventScroll: true });
@@ -2486,7 +2499,6 @@ export function SmartCanvasPreview({ document, engine, headerText = "", footerTe
       className="editor-canvas kz-smartcanvas-pages-viewport"
       aria-label="Área de rolagem das páginas do documento"
       tabIndex={0}
-      onWheel={handleViewportWheel}
       onScroll={event => {
         const viewport = event.currentTarget;
         viewportPositionRef.current = { top: viewport.scrollTop, left: viewport.scrollLeft };
