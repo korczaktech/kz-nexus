@@ -140,6 +140,44 @@ try {
     "mouse wheel must increase the actual SmartCanvas viewport scrollTop");
   await pageViewport.evaluate(element => { element.scrollTop = 0; });
 
+  // Exercise the touch gesture used on phones/tablets. Dispatch real DOM TouchEvents
+  // through the rendered viewport so this verifies the production React touch handlers,
+  // not a direct assignment to scrollTop.
+  if (browserName === "chromium") {
+    const touchScrollTop = await pageViewport.evaluate(element => {
+      const startY = Math.max(100, Math.min(element.clientHeight - 20, 500));
+      const target = element;
+      const makeTouch = (y) => new Touch({
+        identifier: 7,
+        target,
+        clientX: Math.min(100, Math.max(10, element.clientWidth / 2)),
+        clientY: y,
+      });
+      target.dispatchEvent(new TouchEvent("touchstart", {
+        bubbles: true,
+        cancelable: true,
+        touches: [makeTouch(startY)],
+        changedTouches: [makeTouch(startY)],
+      }));
+      target.dispatchEvent(new TouchEvent("touchmove", {
+        bubbles: true,
+        cancelable: true,
+        touches: [makeTouch(startY - 160)],
+        changedTouches: [makeTouch(startY - 160)],
+      }));
+      target.dispatchEvent(new TouchEvent("touchend", {
+        bubbles: true,
+        cancelable: true,
+        touches: [],
+        changedTouches: [makeTouch(startY - 160)],
+      }));
+      return element.scrollTop;
+    });
+    assert.ok(touchScrollTop > 0,
+      "touch swipe must increase the actual SmartCanvas viewport scrollTop");
+  }
+  await pageViewport.evaluate(element => { element.scrollTop = 0; });
+
   // Exercise real browser keyboard events against the canonical engine selection:
   // Backspace at the end must delete one grapheme and typing must restore the exact text.
   const finalCharacter = initialSentinel.slice(-1);
