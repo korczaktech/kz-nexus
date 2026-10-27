@@ -605,6 +605,8 @@ export function SmartCanvasPreview({ document, engine, headerText = "", footerTe
   const viewportRef = useRef<HTMLDivElement>(null);
   const canvasScrollRef = useRef<HTMLDivElement>(null);
   const viewportPositionRef = useRef({ top: 0, left: 0 });
+  const touchScrollStartRef = useRef<{ x: number; y: number; scrollTop: number; scrollLeft: number } | null>(null);
+  const touchPointerStartRef = useRef<{ x: number; y: number } | null>(null);
   // Scrolling is owned by the visible viewport, not the zoomed document node.
   // Save its position as the document is edited/re-paginated and restore it
   // after React replaces the rendered page tree.
@@ -2080,7 +2082,19 @@ export function SmartCanvasPreview({ document, engine, headerText = "", footerTe
       }
     }
   };
-  return <section className="kz-smartcanvas-experiment" aria-label="Prévia experimental SmartCanvas" style={{ margin: "0 0 16px", padding: 16, border: "1px solid #93c5fd", borderRadius: 12, background: "rgba(59,130,246,.04)", position: "relative", outline: trackChangesActive ? "2px dashed #d97706" : undefined, outlineOffset: trackChangesActive ? 3 : undefined }} onPointerDownCapture={event => { if ((event.target as HTMLElement).closest("input, button, textarea, select")) return; focusInputPreservingScroll(); }}>
+  return <section className="kz-smartcanvas-experiment" aria-label="Prévia experimental SmartCanvas" style={{ margin: "0 0 16px", padding: 16, border: "1px solid #93c5fd", borderRadius: 12, background: "rgba(59,130,246,.04)", position: "relative", outline: trackChangesActive ? "2px dashed #d97706" : undefined, outlineOffset: trackChangesActive ? 3 : undefined }} onPointerDownCapture={event => {
+    if ((event.target as HTMLElement).closest("input, button, textarea, select")) return;
+    if (event.pointerType === "touch") {
+      touchPointerStartRef.current = { x: event.clientX, y: event.clientY };
+      return;
+    }
+    focusInputPreservingScroll();
+  }} onPointerUpCapture={event => {
+    if (event.pointerType !== "touch") return;
+    const start = touchPointerStartRef.current;
+    touchPointerStartRef.current = null;
+    if (start && Math.hypot(event.clientX - start.x, event.clientY - start.y) < 8) focusInputPreservingScroll();
+  }}>
     <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, flexWrap: "wrap", marginBottom: 8 }}>
       <div><strong>SmartCanvas — prévia experimental</strong><div style={{ fontSize: 12, opacity: .75 }}>Edição por comandos do motor: texto, seleção lógica, tabelas e objetos. O editor legado permanece disponível durante a validação.</div></div>
       <span style={{ fontSize: 12 }}>{layout ? layout.pageCount + " página(s)" : "Layout indisponível"}</span>
@@ -2480,6 +2494,42 @@ export function SmartCanvasPreview({ document, engine, headerText = "", footerTe
         const viewport = event.currentTarget;
         viewportPositionRef.current = { top: viewport.scrollTop, left: viewport.scrollLeft };
       }}
+      onTouchStart={event => {
+        const viewport = event.currentTarget;
+        const touch = event.touches[0];
+        if (!touch) return;
+        touchScrollStartRef.current = {
+          x: touch.clientX,
+          y: touch.clientY,
+          scrollTop: viewport.scrollTop,
+          scrollLeft: viewport.scrollLeft,
+        };
+      }}
+      onTouchMove={event => {
+        const viewport = event.currentTarget;
+        const start = touchScrollStartRef.current;
+        const touch = event.touches[0];
+        if (!start || !touch) return;
+        const deltaX = start.x - touch.clientX;
+        const deltaY = start.y - touch.clientY;
+        if (Math.abs(deltaX) < 4 && Math.abs(deltaY) < 4) return;
+        if (Math.abs(deltaY) >= Math.abs(deltaX) && viewport.scrollHeight > viewport.clientHeight) {
+          event.preventDefault();
+          viewport.scrollTop = Math.max(0, Math.min(
+            viewport.scrollHeight - viewport.clientHeight,
+            start.scrollTop + deltaY,
+          ));
+        } else if (viewport.scrollWidth > viewport.clientWidth) {
+          event.preventDefault();
+          viewport.scrollLeft = Math.max(0, Math.min(
+            viewport.scrollWidth - viewport.clientWidth,
+            start.scrollLeft + deltaX,
+          ));
+        }
+        viewportPositionRef.current = { top: viewport.scrollTop, left: viewport.scrollLeft };
+      }}
+      onTouchEnd={() => { touchScrollStartRef.current = null; }}
+      onTouchCancel={() => { touchScrollStartRef.current = null; }}
       onWheel={event => {
         // Route wheel input to the actual page viewport. This remains necessary
         // when the editor canvas is nested inside the constrained workspace.
@@ -2497,7 +2547,7 @@ export function SmartCanvasPreview({ document, engine, headerText = "", footerTe
         }
         viewportPositionRef.current = { top: viewport.scrollTop, left: viewport.scrollLeft };
       }}
-      style={{ overflowY: "auto", overflowX: "auto", overscrollBehavior: "contain", minHeight: 0, minWidth: 0 }}
+      style={{ overflowY: "auto", overflowX: "auto", overscrollBehavior: "contain", touchAction: "none", minHeight: 0, minWidth: 0 }}
     >
       {layout ? <div ref={canvasScrollRef} style={{ maxHeight: "none", overflow: "visible", overflowAnchor: "none", background: "#e5e7eb", borderRadius: 8, zoom: `${Math.max(25, Math.min(300, zoom))}%` }}>
         <CanvasDocumentRenderer layout={layout} document={document} headerText={headerText} footerText={footerText} headerAlign={headerAlign} footerAlign={footerAlign} showPageNumbers={showPageNumbers} showFormattingMarks={showFormattingMarks} selection={selection || undefined} showCaret={!!selection && !activeCell} activeCellId={activeCell?.cellId} activeCellSelection={activeCell || undefined} activeBlockId={activeBlockId || undefined} onHitTest={handleHit} />
