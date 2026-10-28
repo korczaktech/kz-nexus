@@ -2188,6 +2188,10 @@ describe("SmartCanvasPreview input integration", () => {
     Object.defineProperty(viewport, "scrollWidth", { configurable: true, value: 900 });
     viewport.scrollTop = 275;
     viewport.scrollLeft = 9;
+    // Match a real user scroll: the viewport records its position on scroll.
+    await act(async () => {
+      viewport.dispatchEvent(new Event("scroll", { bubbles: true }));
+    });
 
     const input = host.querySelector('textarea[aria-label="Entrada de texto do SmartCanvas"]') as HTMLTextAreaElement | null;
     if (!input) throw new Error("SmartCanvas input surface was not mounted");
