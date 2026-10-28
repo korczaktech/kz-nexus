@@ -4393,3 +4393,85 @@ body:has(.app-shell.editor-mode),
     min-height: 120px !important;
   }
 }
+
+
+/* Editor scroll fix — constrain the real, default (legacy) editor viewport.
+   The old canvas had overflow:auto but inherited no definite height because
+   editor-workspace was not a flex column. As a result it could grow with pages
+   and never acquire a scrollable range. Keep toolbars/sidebar fixed while the
+   page stack owns vertical and horizontal scrolling. */
+.app-shell.editor-mode .editor-workspace {
+  display: flex !important;
+  flex-direction: column !important;
+  min-height: 0 !important;
+  height: calc(100vh - 112px) !important;
+  max-height: calc(100vh - 112px) !important;
+  box-sizing: border-box !important;
+}
+.app-shell.editor-mode .editor-workspace .editor-body.rich-editor-body {
+  display: grid !important;
+  grid-template-columns: minmax(0, 1fr) minmax(220px, 280px) !important;
+  grid-template-rows: minmax(0, 1fr) !important;
+  flex: 1 1 0 !important;
+  min-width: 0 !important;
+  min-height: 0 !important;
+  height: auto !important;
+  overflow: hidden !important;
+}
+.app-shell.editor-mode .editor-workspace .editor-body.rich-editor-body > .editor-canvas {
+  grid-column: 1 !important;
+  grid-row: 1 !important;
+  position: relative !important;
+  align-self: stretch !important;
+  width: 100% !important;
+  height: auto !important;
+  min-width: 0 !important;
+  min-height: 0 !important;
+  max-height: 100% !important;
+  overflow: auto !important;
+  overscroll-behavior: contain !important;
+  -webkit-overflow-scrolling: touch !important;
+  touch-action: pan-x pan-y !important;
+}
+.app-shell.editor-mode .editor-workspace .editor-body.rich-editor-body > .editor-canvas > .editor-pages-stack {
+  width: max-content !important;
+  min-width: 100% !important;
+  height: max-content !important;
+  min-height: 0 !important;
+  margin: 0 auto !important;
+  padding-bottom: 24px !important;
+}
+.app-shell.editor-mode .editor-workspace .editor-body.rich-editor-body > .editor-side {
+  grid-column: 2 !important;
+  grid-row: 1 !important;
+  min-width: 0 !important;
+  min-height: 0 !important;
+  max-height: 100% !important;
+  overflow-x: hidden !important;
+  overflow-y: auto !important;
+}
+@media (max-height: 640px) {
+  .app-shell.editor-mode .editor-workspace {
+    height: calc(100vh - 76px) !important;
+    max-height: calc(100vh - 76px) !important;
+  }
+}
+@media (max-width: 850px) {
+  .app-shell.editor-mode .editor-workspace {
+    height: calc(100vh - 96px) !important;
+    max-height: calc(100vh - 96px) !important;
+  }
+  .app-shell.editor-mode .editor-workspace .editor-body.rich-editor-body {
+    grid-template-columns: minmax(0, 1fr) !important;
+    grid-template-rows: minmax(0, 1fr) auto !important;
+  }
+  .app-shell.editor-mode .editor-workspace .editor-body.rich-editor-body > .editor-canvas {
+    grid-column: 1 !important;
+    grid-row: 1 !important;
+  }
+  .app-shell.editor-mode .editor-workspace .editor-body.rich-editor-body > .editor-side {
+    grid-column: 1 !important;
+    grid-row: 2 !important;
+    max-height: 28vh !important;
+  }
+}
