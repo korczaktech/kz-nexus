@@ -2125,8 +2125,20 @@ export function SmartCanvasPreview({ document, engine, headerText = "", footerTe
       }
     }
   };
-  return <section ref={experimentRef} className="kz-smartcanvas-experiment" aria-label="Prévia experimental SmartCanvas" style={{ margin: "0 0 16px", padding: 16, border: "1px solid #93c5fd", borderRadius: 12, background: "rgba(59,130,246,.04)", position: "relative", outline: trackChangesActive ? "2px dashed #d97706" : undefined, outlineOffset: trackChangesActive ? 3 : undefined }} onPointerDownCapture={event => {
-    if ((event.target as HTMLElement).closest("input, button, textarea, select")) return;
+  return <section ref={experimentRef} className="kz-smartcanvas-experiment" aria-label="Prévia experimental SmartCanvas" style={{ margin: "0 0 16px", padding: 16, boxSizing: "border-box", minHeight: 0, minWidth: 0, border: "1px solid #93c5fd", borderRadius: 12, background: "rgba(59,130,246,.04)", position: "relative", outline: trackChangesActive ? "2px dashed #d97706" : undefined, outlineOffset: trackChangesActive ? 3 : undefined }} onPointerDownCapture={event => {
+    const target = event.target as HTMLElement;
+    if (target.closest("input, button, textarea, select")) return;
+    // Do not steal focus from the browser's native scrollbar: pointer capture
+    // here can interrupt thumb dragging in some Chromium builds.
+    const viewport = viewportRef.current;
+    if (viewport && target === viewport) {
+      const rect = viewport.getBoundingClientRect();
+      const scrollbarWidth = Math.max(14, viewport.offsetWidth - viewport.clientWidth);
+      const scrollbarHeight = Math.max(14, viewport.offsetHeight - viewport.clientHeight);
+      const onVerticalScrollbar = event.clientX >= rect.right - scrollbarWidth;
+      const onHorizontalScrollbar = event.clientY >= rect.bottom - scrollbarHeight;
+      if (onVerticalScrollbar || onHorizontalScrollbar) return;
+    }
     if (event.pointerType === "touch") {
       touchPointerStartRef.current = { x: event.clientX, y: event.clientY };
       return;
@@ -2608,7 +2620,7 @@ export function SmartCanvasPreview({ document, engine, headerText = "", footerTe
         viewport.scrollLeft = nextLeft;
         viewportPositionRef.current = { top: nextTop, left: nextLeft };
       }}
-      style={{ overflowY: "auto", overflowX: "auto", overscrollBehavior: "contain", touchAction: "pan-x pan-y", minHeight: 0, minWidth: 0 }}
+      style={{ display: "block", flex: "1 1 auto", height: "auto", boxSizing: "border-box", overflowY: "auto", overflowX: "auto", overscrollBehavior: "contain", touchAction: "pan-x pan-y", minHeight: 0, minWidth: 0, WebkitOverflowScrolling: "touch" }}
     >
       {layout ? <div ref={canvasScrollRef} style={{ maxHeight: "none", overflow: "visible", overflowAnchor: "none", background: "#e5e7eb", borderRadius: 8, zoom: `${Math.max(25, Math.min(300, zoom))}%` }}>
         <CanvasDocumentRenderer layout={layout} document={document} headerText={headerText} footerText={footerText} headerAlign={headerAlign} footerAlign={footerAlign} showPageNumbers={showPageNumbers} showFormattingMarks={showFormattingMarks} selection={selection || undefined} showCaret={!!selection && !activeCell} activeCellId={activeCell?.cellId} activeCellSelection={activeCell || undefined} activeBlockId={activeBlockId || undefined} onHitTest={handleHit} />
