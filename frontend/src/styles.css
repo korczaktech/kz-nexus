@@ -4270,18 +4270,37 @@ body:has(.app-shell.editor-mode),
   overscroll-behavior: contain !important;
 }
 
-/* SmartCanvas wheel-scroll fix: keep the viewport in normal flex layout.
-   The previous absolute inset covered the section's heading/details and sized
-   the scrollport against the whole section instead of the remaining page area. */
+/* SmartCanvas scrolling contract: one scroll owner (the page viewport).
+   The outer workspace is constrained; only .kz-smartcanvas-pages-viewport scrolls. */
+.app-shell.editor-mode .editor-workspace .editor-body.rich-editor-body {
+  display: grid !important;
+  grid-template-rows: minmax(0, 1fr) !important;
+  grid-auto-rows: minmax(0, 1fr) !important;
+  flex: 1 1 0% !important;
+  height: auto !important;
+  min-height: 0 !important;
+  align-items: stretch !important;
+  overflow: hidden !important;
+}
 .app-shell.editor-mode .editor-workspace .editor-body.rich-editor-body > .kz-smartcanvas-experiment {
+  position: relative !important;
   display: flex !important;
+  grid-row: 1 !important;
   flex-direction: column !important;
   align-items: stretch !important;
+  width: 100% !important;
+  height: 100% !important;
   min-width: 0 !important;
   min-height: 0 !important;
-  height: 100% !important;
-  max-height: none !important;
+  max-height: 100% !important;
+  margin: 0 !important;
   overflow: hidden !important;
+}
+.app-shell.editor-mode .editor-workspace .editor-body.rich-editor-body > .editor-side {
+  grid-row: 1 !important;
+  align-self: stretch !important;
+  min-height: 0 !important;
+  max-height: 100% !important;
 }
 .app-shell.editor-mode .editor-workspace .editor-body.rich-editor-body > .kz-smartcanvas-experiment > :not(.kz-smartcanvas-pages-viewport) {
   position: relative !important;
@@ -4293,113 +4312,63 @@ body:has(.app-shell.editor-mode),
   display: block !important;
   flex: 1 1 0% !important;
   width: 100% !important;
-  height: auto !important;
+  height: 0 !important;
   min-width: 0 !important;
   min-height: 0 !important;
   max-width: none !important;
   max-height: none !important;
-  overflow-x: auto !important;
-  overflow-y: auto !important;
+  box-sizing: border-box !important;
+  overflow: auto !important;
   overscroll-behavior: contain !important;
-  touch-action: pan-x pan-y !important;
+  overflow-anchor: none !important;
   scroll-behavior: auto !important;
+  scrollbar-gutter: stable !important;
+  scrollbar-width: auto !important;
+  scrollbar-color: #8193ad #172438 !important;
+  touch-action: pan-x pan-y !important;
+  -webkit-overflow-scrolling: touch !important;
+  contain: layout paint !important;
 }
 .app-shell.editor-mode .editor-workspace .editor-body.rich-editor-body > .kz-smartcanvas-experiment > .editor-canvas.kz-smartcanvas-pages-viewport > div[style*="zoom"] {
-  display: block !important;
   position: relative !important;
+  display: block !important;
   width: max-content !important;
   min-width: 100% !important;
   max-width: none !important;
   height: max-content !important;
-  min-height: 0 !important;
+  min-height: 100% !important;
   max-height: none !important;
   overflow: visible !important;
+  overflow-anchor: none !important;
   flex: 0 0 auto !important;
 }
-
-
-
-/* SmartCanvas vertical-scroll root fix:
-   Constrain the editor body's implicit grid row. An auto-sized grid row can
-   expand to the page stack's min-content height, leaving the nested viewport
-   without a bounded clientHeight; wheel input then has no real scroll range. */
-.app-shell.editor-mode .editor-workspace .editor-body.rich-editor-body {
-  grid-template-rows: minmax(0, 1fr) !important;
-  grid-auto-rows: minmax(0, 1fr) !important;
-  min-height: 0 !important;
-  height: 0 !important;
-  align-items: stretch !important;
-}
-.app-shell.editor-mode .editor-workspace .editor-body.rich-editor-body > .kz-smartcanvas-experiment {
-  grid-row: 1 !important;
-  align-self: stretch !important;
-  height: 100% !important;
-  min-height: 0 !important;
-  max-height: 100% !important;
-}
-.app-shell.editor-mode .editor-workspace .editor-body.rich-editor-body > .editor-side {
-  grid-row: 1 !important;
-  align-self: stretch !important;
-  min-height: 0 !important;
-  max-height: 100% !important;
-}
-.app-shell.editor-mode .editor-workspace .editor-body.rich-editor-body > .kz-smartcanvas-experiment > .editor-canvas.kz-smartcanvas-pages-viewport {
-  flex: 1 1 0% !important;
-  height: 0 !important;
-  min-height: 0 !important;
-  max-height: 100% !important;
-  overflow-y: scroll !important;
-  overflow-x: auto !important;
-}
-
-
-/* Final correction: never collapse the grid scroll host itself to zero height.
-   The grid/flex parents already constrain this row; height:0 on the host collapses
-   its grid area and therefore also collapses the SmartCanvas viewport. */
-.app-shell.editor-mode .editor-workspace .editor-body.rich-editor-body {
-  height: auto !important;
-  flex: 1 1 0% !important;
-  min-height: 0 !important;
-  grid-template-rows: minmax(0, 1fr) !important;
-  grid-auto-rows: minmax(0, 1fr) !important;
-  align-items: stretch !important;
-  overflow: hidden !important;
-}
-.app-shell.editor-mode .editor-workspace .editor-body.rich-editor-body > .kz-smartcanvas-experiment {
-  grid-row: 1 !important;
-  min-height: 0 !important;
-  height: 100% !important;
-  max-height: 100% !important;
+.app-shell.editor-mode .editor-workspace .editor-body.rich-editor-body > .kz-smartcanvas-experiment > .editor-canvas.kz-smartcanvas-pages-viewport > div[style*="zoom"] > .kortex-canvas-pages {
   display: flex !important;
   flex-direction: column !important;
-  overflow: hidden !important;
-}
-.app-shell.editor-mode .editor-workspace .editor-body.rich-editor-body > .kz-smartcanvas-experiment > .editor-canvas.kz-smartcanvas-pages-viewport {
-  position: relative !important;
-  inset: auto !important;
-  flex: 1 1 0% !important;
-  width: 100% !important;
-  height: 0 !important;
+  flex-wrap: nowrap !important;
+  align-items: center !important;
+  align-content: flex-start !important;
+  justify-content: flex-start !important;
+  gap: 24px !important;
+  width: max-content !important;
+  height: max-content !important;
   min-height: 0 !important;
-  max-height: 100% !important;
-  overflow-x: auto !important;
-  overflow-y: auto !important;
-  overscroll-behavior: contain !important;
+  max-height: none !important;
+  flex: 0 0 auto !important;
 }
-
-
-/* Keep native touch panning enabled; SmartCanvas handles touch gestures when needed. */
-.app-shell.editor-mode .editor-workspace .editor-body.rich-editor-body > .kz-smartcanvas-experiment > .editor-canvas.kz-smartcanvas-pages-viewport {
-  touch-action: pan-x pan-y !important;
+.app-shell.editor-mode .editor-workspace .editor-body.rich-editor-body > .kz-smartcanvas-experiment > .editor-canvas.kz-smartcanvas-pages-viewport > div[style*="zoom"] > .kortex-canvas-pages > [data-page-frame] {
+  display: block !important;
+  position: relative !important;
+  flex: 0 0 auto !important;
+  align-self: center !important;
+  min-height: 0 !important;
+  max-height: none !important;
 }
-
-
-/* Visible SmartCanvas page navigation scrollbar: do not hide this scroll control. */
-.app-shell.editor-mode .editor-workspace .editor-body.rich-editor-body > .kz-smartcanvas-experiment > .editor-canvas.kz-smartcanvas-pages-viewport {
-  overflow-y: scroll !important;
-  scrollbar-width: auto !important;
-  scrollbar-color: #8193ad #172438 !important;
-  scrollbar-gutter: stable !important;
+.app-shell.editor-mode .editor-workspace .editor-body.rich-editor-body > .kz-smartcanvas-experiment > .editor-canvas.kz-smartcanvas-pages-viewport > div[style*="zoom"] > .kortex-canvas-pages > [data-page-frame] > canvas.kortex-canvas-page {
+  display: block !important;
+  flex: 0 0 auto !important;
+  max-width: none !important;
+  max-height: none !important;
 }
 .app-shell.editor-mode .editor-workspace .editor-body.rich-editor-body > .kz-smartcanvas-experiment > .editor-canvas.kz-smartcanvas-pages-viewport::-webkit-scrollbar {
   display: block !important;
@@ -4418,4 +4387,9 @@ body:has(.app-shell.editor-mode),
 }
 .app-shell.editor-mode .editor-workspace .editor-body.rich-editor-body > .kz-smartcanvas-experiment > .editor-canvas.kz-smartcanvas-pages-viewport::-webkit-scrollbar-thumb:hover {
   background: #b0bfd3 !important;
+}
+@media (max-width: 900px) {
+  .app-shell.editor-mode .editor-workspace .editor-body.rich-editor-body > .kz-smartcanvas-experiment > .editor-canvas.kz-smartcanvas-pages-viewport {
+    min-height: 120px !important;
+  }
 }
