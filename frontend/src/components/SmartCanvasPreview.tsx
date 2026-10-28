@@ -618,12 +618,18 @@ export function SmartCanvasPreview({ document, engine, headerText = "", footerTe
     const ratio = viewport.clientHeight > 0 && viewport.scrollHeight > 0
       ? Math.min(1, viewport.clientHeight / viewport.scrollHeight)
       : 1;
+    const thumb = Math.max(8, ratio * 100);
     setScrollbarMetrics({
-      top: maxScroll > 0 ? (viewport.scrollTop / maxScroll) * (100 - Math.max(8, ratio * 100)) : 0,
-      thumb: Math.max(8, ratio * 100),
+      top: maxScroll > 0 ? (viewport.scrollTop / maxScroll) * (100 - thumb) : 0,
+      thumb,
       scrollable: maxScroll > 1,
     });
   };
+  useEffect(() => {
+    syncScrollbarMetrics();
+    const frame = requestAnimationFrame(syncScrollbarMetrics);
+    return () => cancelAnimationFrame(frame);
+  }, [document, layout, zoom]);
   const captureScrollSnapshot = () => {
     const viewport = viewportRef.current;
     if (viewport) viewportPositionRef.current = { top: viewport.scrollTop, left: viewport.scrollLeft };
@@ -2618,7 +2624,7 @@ export function SmartCanvasPreview({ document, engine, headerText = "", footerTe
         viewportPositionRef.current = { top: viewport.scrollTop, left: viewport.scrollLeft };
         syncScrollbarMetrics();
       }}
-      style={{ position: "absolute", top: 16, right: 2, bottom: 16, width: 14, zIndex: 20, borderRadius: 8, background: "#172438", border: "1px solid #52647c", cursor: scrollbarMetrics.scrollable ? "pointer" : "default", touchAction: "none", display: "flex", alignItems: "flex-start", justifyContent: "center", boxSizing: "border-box" }}
+      style={{ position: "absolute", top: 16, right: 16, bottom: 16, width: 14, zIndex: 20, borderRadius: 8, background: "#172438", border: "1px solid #52647c", cursor: scrollbarMetrics.scrollable ? "pointer" : "default", touchAction: "none", display: "flex", alignItems: "flex-start", justifyContent: "center", boxSizing: "border-box" }}
     >
       <div
         aria-hidden="true"
