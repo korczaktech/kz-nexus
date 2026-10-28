@@ -581,7 +581,7 @@ export function SmartCanvasPreview({ document, engine, headerText = "", footerTe
   externalSelection?: Selection | null;
 }) {
   const [selection, setSelection] = useState<Selection | null>(engine.getSelection() ?? null);
-  const [scrollbarMetrics, setScrollbarMetrics] = useState({ top: 0, thumb: 24, scrollable: false });
+  const [scrollbarMetrics, setScrollbarMetrics] = useState({ top: 0, thumb: 24, scrollable: false, trackTop: 0, trackHeight: 0 });
   const selectionRef = useRef<Selection | null>(engine.getSelection() ?? null);
   const [activeCell, setActiveCell] = useState<(EditableCell & { anchorOffset: number; offset: number }) | null>(null);
   const [activeCellStoredMarks, setActiveCellStoredMarks] = useState<Mark[] | null>(null);
@@ -604,6 +604,7 @@ export function SmartCanvasPreview({ document, engine, headerText = "", footerTe
   const [headingLevelDraft, setHeadingLevelDraft] = useState("paragraph");
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const viewportRef = useRef<HTMLDivElement>(null);
+  const experimentRef = useRef<HTMLElement>(null);
   const canvasScrollRef = useRef<HTMLDivElement>(null);
   const viewportPositionRef = useRef({ top: 0, left: 0 });
   const touchScrollStartRef = useRef<{ x: number; y: number; scrollTop: number; scrollLeft: number } | null>(null);
@@ -619,16 +620,28 @@ export function SmartCanvasPreview({ document, engine, headerText = "", footerTe
       ? Math.min(1, viewport.clientHeight / viewport.scrollHeight)
       : 1;
     const thumb = Math.max(8, ratio * 100);
+    const section = experimentRef.current;
+    const viewportRect = viewport.getBoundingClientRect();
+    const sectionRect = section?.getBoundingClientRect();
+    const trackTop = sectionRect ? Math.max(0, viewportRect.top - sectionRect.top) : 0;
+    const trackHeight = Math.max(0, viewport.clientHeight);
     setScrollbarMetrics({
       top: maxScroll > 0 ? (viewport.scrollTop / maxScroll) * (100 - thumb) : 0,
       thumb,
       scrollable: maxScroll > 1,
+      trackTop,
+      trackHeight,
     });
   };
   useEffect(() => {
     syncScrollbarMetrics();
     const frame = requestAnimationFrame(syncScrollbarMetrics);
-    return () => cancelAnimationFrame(frame);
+    const handleResize = () => syncScrollbarMetrics();
+    window.addEventListener("resize", handleResize);
+    return () => {
+      cancelAnimationFrame(frame);
+      window.removeEventListener("resize", handleResize);
+    };
   }, [document, zoom]);
   const captureScrollSnapshot = () => {
     const viewport = viewportRef.current;
@@ -2139,7 +2152,7 @@ export function SmartCanvasPreview({ document, engine, headerText = "", footerTe
       }
     }
   };
-  return <section className="kz-smartcanvas-experiment" aria-label="Prévia experimental SmartCanvas" style={{ margin: "0 0 16px", padding: 16, border: "1px solid #93c5fd", borderRadius: 12, background: "rgba(59,130,246,.04)", position: "relative", outline: trackChangesActive ? "2px dashed #d97706" : undefined, outlineOffset: trackChangesActive ? 3 : undefined }} onPointerDownCapture={event => {
+  return <section ref={experimentRef} className="kz-smartcanvas-experiment" aria-label="Prévia experimental SmartCanvas" style={{ margin: "0 0 16px", padding: 16, border: "1px solid #93c5fd", borderRadius: 12, background: "rgba(59,130,246,.04)", position: "relative", outline: trackChangesActive ? "2px dashed #d97706" : undefined, outlineOffset: trackChangesActive ? 3 : undefined }} onPointerDownCapture={event => {
     if ((event.target as HTMLElement).closest("input, button, textarea, select")) return;
     if (event.pointerType === "touch") {
       touchPointerStartRef.current = { x: event.clientX, y: event.clientY };
@@ -2661,7 +2674,7 @@ export function SmartCanvasPreview({ document, engine, headerText = "", footerTe
         viewportPositionRef.current = { top: viewport.scrollTop, left: viewport.scrollLeft };
         syncScrollbarMetrics();
       }}
-      style={{ position: "absolute", top: 16, right: 16, bottom: 16, width: 14, zIndex: 20, borderRadius: 8, background: "#172438", border: "1px solid #52647c", cursor: scrollbarMetrics.scrollable ? "pointer" : "default", touchAction: "none", display: "flex", alignItems: "flex-start", justifyContent: "center", boxSizing: "border-box" }}
+      style={{ position: "absolute", top: scrollbarMetrics.trackTop, height: scrollbarMetrics.trackHeight, right: 16, width: 14, zIndex: 20, borderRadius: 8, background: "#172438", border: "1px solid #52647c", cursor: scrollbarMetrics.scrollable ? "pointer" : "default", touchAction: "none", display: "flex", alignItems: "flex-start", justifyContent: "center", boxSizing: "border-box" }}
     >
       <div
         aria-hidden="true"
