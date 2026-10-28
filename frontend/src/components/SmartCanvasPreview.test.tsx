@@ -2180,8 +2180,12 @@ describe("SmartCanvasPreview input integration", () => {
         onDocumentChange: vi.fn(),
       }));
     });
-    const viewport = host.querySelector(".kz-smartcanvas-experiment") as HTMLElement | null;
-    if (!viewport) throw new Error("SmartCanvas viewport was not mounted");
+    const viewport = host.querySelector(".editor-canvas.kz-smartcanvas-pages-viewport") as HTMLElement | null;
+    if (!viewport) throw new Error("SmartCanvas page viewport was not mounted");
+    Object.defineProperty(viewport, "clientHeight", { configurable: true, value: 400 });
+    Object.defineProperty(viewport, "scrollHeight", { configurable: true, value: 1600 });
+    Object.defineProperty(viewport, "clientWidth", { configurable: true, value: 600 });
+    Object.defineProperty(viewport, "scrollWidth", { configurable: true, value: 900 });
     viewport.scrollTop = 275;
     viewport.scrollLeft = 9;
 
@@ -2256,6 +2260,25 @@ describe("SmartCanvasPreview input integration", () => {
 
     expect(wheel.defaultPrevented).toBe(true);
     expect(viewport.scrollTop).toBe(120);
+  });
+
+  it("uses one native scrollbar on the page viewport instead of an overlapping custom track", async () => {
+    engine = createEditor({ document: createDocument({ title: "SmartCanvas single scrollbar" }) });
+    host = window.document.createElement("div");
+    window.document.body.append(host);
+    root = createRoot(host);
+    await act(async () => {
+      root?.render(createElement(SmartCanvasPreview, {
+        document: engine!.getDocument(),
+        engine: engine!,
+        onDocumentChange: vi.fn(),
+      }));
+    });
+
+    const viewport = host.querySelector(".editor-canvas.kz-smartcanvas-pages-viewport") as HTMLElement | null;
+    if (!viewport) throw new Error("SmartCanvas page viewport was not mounted");
+    expect(viewport.style.overflowY).toBe("auto");
+    expect(host.querySelector(".kz-smartcanvas-visible-scrollbar")).toBeNull();
   });
 
 });
