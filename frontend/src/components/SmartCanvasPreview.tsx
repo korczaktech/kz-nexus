@@ -2094,6 +2094,23 @@ export function SmartCanvasPreview({ document, engine, headerText = "", footerTe
     const start = touchPointerStartRef.current;
     touchPointerStartRef.current = null;
     if (start && Math.hypot(event.clientX - start.x, event.clientY - start.y) < 8) focusInputPreservingScroll();
+  }} onWheelCapture={event => {
+    // The outer section also receives wheel input over padding/metadata; route
+    // that input into the page viewport instead of leaving the document stuck.
+    const viewport = viewportRef.current;
+    if (!viewport || viewport.contains(event.target as Node)) return;
+    const scale = event.deltaMode === 1 ? 16 : event.deltaMode === 2 ? Math.max(1, viewport.clientHeight) : 1;
+    const deltaY = event.deltaY * scale;
+    const deltaX = (event.shiftKey && event.deltaX === 0 ? event.deltaY : event.deltaX) * scale;
+    if (deltaY && viewport.scrollHeight > viewport.clientHeight) {
+      event.preventDefault();
+      viewport.scrollTop = Math.max(0, Math.min(viewport.scrollHeight - viewport.clientHeight, viewport.scrollTop + deltaY));
+    }
+    if (deltaX && viewport.scrollWidth > viewport.clientWidth) {
+      event.preventDefault();
+      viewport.scrollLeft = Math.max(0, Math.min(viewport.scrollWidth - viewport.clientWidth, viewport.scrollLeft + deltaX));
+    }
+    viewportPositionRef.current = { top: viewport.scrollTop, left: viewport.scrollLeft };
   }}>
     <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, flexWrap: "wrap", marginBottom: 8 }}>
       <div><strong>SmartCanvas — prévia experimental</strong><div style={{ fontSize: 12, opacity: .75 }}>Edição por comandos do motor: texto, seleção lógica, tabelas e objetos. O editor legado permanece disponível durante a validação.</div></div>
@@ -2547,7 +2564,7 @@ export function SmartCanvasPreview({ document, engine, headerText = "", footerTe
         }
         viewportPositionRef.current = { top: viewport.scrollTop, left: viewport.scrollLeft };
       }}
-      style={{ overflowY: "auto", overflowX: "auto", overscrollBehavior: "contain", touchAction: "none", minHeight: 0, minWidth: 0 }}
+      style={{ overflowY: "auto", overflowX: "auto", overscrollBehavior: "contain", touchAction: "pan-x pan-y", minHeight: 0, minWidth: 0 }}
     >
       {layout ? <div ref={canvasScrollRef} style={{ maxHeight: "none", overflow: "visible", overflowAnchor: "none", background: "#e5e7eb", borderRadius: 8, zoom: `${Math.max(25, Math.min(300, zoom))}%` }}>
         <CanvasDocumentRenderer layout={layout} document={document} headerText={headerText} footerText={footerText} headerAlign={headerAlign} footerAlign={footerAlign} showPageNumbers={showPageNumbers} showFormattingMarks={showFormattingMarks} selection={selection || undefined} showCaret={!!selection && !activeCell} activeCellId={activeCell?.cellId} activeCellSelection={activeCell || undefined} activeBlockId={activeBlockId || undefined} onHitTest={handleHit} />
