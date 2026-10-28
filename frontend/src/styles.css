@@ -4388,7 +4388,7 @@ body:has(.app-shell.editor-mode),
 }
 
 
-/* Touch scrolling is driven by SmartCanvas so gestures never scroll the outer editor shell. */
+/* Keep native touch panning enabled; SmartCanvas handles touch gestures when needed. */
 .app-shell.editor-mode .editor-workspace .editor-body.rich-editor-body > .kz-smartcanvas-experiment > .editor-canvas.kz-smartcanvas-pages-viewport {
-  touch-action: none !important;
+  touch-action: pan-x pan-y !important;
 }
