@@ -679,6 +679,43 @@ export function SmartCanvasPreview({ document, engine, headerText = "", footerTe
     return () => window.cancelAnimationFrame(frame);
   }, [layout]);
 
+  // Keep the logical caret visible in the actual scroll owner after edits/navigation.
+  // Layout lines are in points; convert them using the same CSS-pixel scale as the page renderer,
+  // then apply the current visual zoom and scroll only the SmartCanvas viewport.
+  useLayoutEffect(() => {
+    if (!selection || activeCell) return;
+    const viewport = viewportRef.current;
+    if (!viewport || !layout) return;
+    const focus = selection.focus;
+    const frame = window.requestAnimationFrame(() => {
+      const currentViewport = viewportRef.current;
+      if (!currentViewport) return;
+      const lines: Array<{ pageIndex: number; blockId: string; line: import("../../../packages/engine/src/layout/layout").LayoutLine }> = [];
+      layout.pages.forEach(page => collectLayoutLines(page.blocks, null, lines, page.index));
+      const candidates = lines.filter(item => item.blockId === focus.blockId);
+      if (!candidates.length) return;
+      const line = candidates.find(item => focus.offset >= item.line.startOffset && focus.offset <= item.line.endOffset)?.line
+        ?? candidates[candidates.length - 1].line;
+      const pageIndex = candidates.find(item => item.line === line)?.pageIndex ?? candidates[0].pageIndex;
+      const pageFrame = currentViewport.querySelectorAll<HTMLElement>("[data-page-frame]")[pageIndex];
+      if (!pageFrame) return;
+      const viewportRect = currentViewport.getBoundingClientRect();
+      const pageRect = pageFrame.getBoundingClientRect();
+      const scale = Math.max(0.25, Math.min(3, zoom / 100)) * (96 / 72);
+      const caretTop = pageRect.top + line.y * scale;
+      const caretBottom = caretTop + Math.max(2, line.height * scale);
+      const margin = Math.min(36, currentViewport.clientHeight / 4);
+      if (caretTop < viewportRect.top + margin) {
+        currentViewport.scrollTop -= viewportRect.top + margin - caretTop;
+      } else if (caretBottom > viewportRect.bottom - margin) {
+        currentViewport.scrollTop += caretBottom - (viewportRect.bottom - margin);
+      }
+      viewportPositionRef.current = { top: currentViewport.scrollTop, left: currentViewport.scrollLeft };
+      syncScrollbarMetrics();
+    });
+    return () => window.cancelAnimationFrame(frame);
+  }, [selection, layout, zoom, activeCell]);
+
   // Give the engine a valid insertion point as soon as SmartCanvas mounts.
   // Keyboard input must not depend on a prior click on a text glyph.
   useEffect(() => {
