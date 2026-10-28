@@ -629,7 +629,7 @@ export function SmartCanvasPreview({ document, engine, headerText = "", footerTe
     syncScrollbarMetrics();
     const frame = requestAnimationFrame(syncScrollbarMetrics);
     return () => cancelAnimationFrame(frame);
-  }, [document, layout, zoom]);
+  }, [document, zoom]);
   const captureScrollSnapshot = () => {
     const viewport = viewportRef.current;
     if (viewport) viewportPositionRef.current = { top: viewport.scrollTop, left: viewport.scrollLeft };
