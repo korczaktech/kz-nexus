@@ -581,6 +581,7 @@ export function SmartCanvasPreview({ document, engine, headerText = "", footerTe
   externalSelection?: Selection | null;
 }) {
   const [selection, setSelection] = useState<Selection | null>(engine.getSelection() ?? null);
+  const [scrollbarMetrics, setScrollbarMetrics] = useState({ top: 0, thumb: 24, scrollable: false });
   const selectionRef = useRef<Selection | null>(engine.getSelection() ?? null);
   const [activeCell, setActiveCell] = useState<(EditableCell & { anchorOffset: number; offset: number }) | null>(null);
   const [activeCellStoredMarks, setActiveCellStoredMarks] = useState<Mark[] | null>(null);
@@ -610,6 +611,19 @@ export function SmartCanvasPreview({ document, engine, headerText = "", footerTe
   // Scrolling is owned by the visible viewport, not the zoomed document node.
   // Save its position as the document is edited/re-paginated and restore it
   // after React replaces the rendered page tree.
+  const syncScrollbarMetrics = () => {
+    const viewport = viewportRef.current;
+    if (!viewport) return;
+    const maxScroll = Math.max(0, viewport.scrollHeight - viewport.clientHeight);
+    const ratio = viewport.clientHeight > 0 && viewport.scrollHeight > 0
+      ? Math.min(1, viewport.clientHeight / viewport.scrollHeight)
+      : 1;
+    setScrollbarMetrics({
+      top: maxScroll > 0 ? (viewport.scrollTop / maxScroll) * (100 - Math.max(8, ratio * 100)) : 0,
+      thumb: Math.max(8, ratio * 100),
+      scrollable: maxScroll > 1,
+    });
+  };
   const captureScrollSnapshot = () => {
     const viewport = viewportRef.current;
     if (viewport) viewportPositionRef.current = { top: viewport.scrollTop, left: viewport.scrollLeft };
@@ -2510,6 +2524,7 @@ export function SmartCanvasPreview({ document, engine, headerText = "", footerTe
       onScroll={event => {
         const viewport = event.currentTarget;
         viewportPositionRef.current = { top: viewport.scrollTop, left: viewport.scrollLeft };
+        syncScrollbarMetrics();
       }}
       onTouchStart={event => {
         const viewport = event.currentTarget;
@@ -2569,6 +2584,46 @@ export function SmartCanvasPreview({ document, engine, headerText = "", footerTe
       {layout ? <div ref={canvasScrollRef} style={{ maxHeight: "none", overflow: "visible", overflowAnchor: "none", background: "#e5e7eb", borderRadius: 8, zoom: `${Math.max(25, Math.min(300, zoom))}%` }}>
         <CanvasDocumentRenderer layout={layout} document={document} headerText={headerText} footerText={footerText} headerAlign={headerAlign} footerAlign={footerAlign} showPageNumbers={showPageNumbers} showFormattingMarks={showFormattingMarks} selection={selection || undefined} showCaret={!!selection && !activeCell} activeCellId={activeCell?.cellId} activeCellSelection={activeCell || undefined} activeBlockId={activeBlockId || undefined} onHitTest={handleHit} />
       </div> : <p role="status">Aguardando documento/layout do motor.</p>}
+    </div>
+    <div
+      className="kz-smartcanvas-visible-scrollbar"
+      role="scrollbar"
+      aria-label="Rolagem vertical das páginas"
+      aria-orientation="vertical"
+      aria-valuemin={0}
+      aria-valuemax={Math.max(0, (viewportRef.current?.scrollHeight ?? 0) - (viewportRef.current?.clientHeight ?? 0))}
+      aria-valuenow={Math.round(viewportRef.current?.scrollTop ?? 0)}
+      onPointerDown={event => {
+        const viewport = viewportRef.current;
+        if (!viewport) return;
+        event.preventDefault();
+        event.currentTarget.setPointerCapture(event.pointerId);
+        const bounds = event.currentTarget.getBoundingClientRect();
+        const thumbHeight = bounds.height * scrollbarMetrics.thumb / 100;
+        const available = Math.max(1, bounds.height - thumbHeight);
+        const y = Math.max(0, Math.min(bounds.height - thumbHeight, event.clientY - bounds.top - thumbHeight / 2));
+        viewport.scrollTop = (y / available) * Math.max(0, viewport.scrollHeight - viewport.clientHeight);
+        viewportPositionRef.current = { top: viewport.scrollTop, left: viewport.scrollLeft };
+        syncScrollbarMetrics();
+      }}
+      onPointerMove={event => {
+        if (event.buttons !== 1) return;
+        const viewport = viewportRef.current;
+        if (!viewport) return;
+        const bounds = event.currentTarget.getBoundingClientRect();
+        const thumbHeight = bounds.height * scrollbarMetrics.thumb / 100;
+        const available = Math.max(1, bounds.height - thumbHeight);
+        const y = Math.max(0, Math.min(available, event.clientY - bounds.top - thumbHeight / 2));
+        viewport.scrollTop = (y / available) * Math.max(0, viewport.scrollHeight - viewport.clientHeight);
+        viewportPositionRef.current = { top: viewport.scrollTop, left: viewport.scrollLeft };
+        syncScrollbarMetrics();
+      }}
+      style={{ position: "absolute", top: 16, right: 2, bottom: 16, width: 14, zIndex: 20, borderRadius: 8, background: "#172438", border: "1px solid #52647c", cursor: scrollbarMetrics.scrollable ? "pointer" : "default", touchAction: "none", display: "flex", alignItems: "flex-start", justifyContent: "center", boxSizing: "border-box" }}
+    >
+      <div
+        aria-hidden="true"
+        style={{ position: "absolute", top: `${scrollbarMetrics.top}%`, height: `${scrollbarMetrics.thumb}%`, minHeight: 18, width: 10, borderRadius: 7, background: scrollbarMetrics.scrollable ? "#a9bad0" : "#52647c", border: "2px solid #172438", boxSizing: "border-box", left: 1 }}
+      />
     </div>
   </section>;
 }
