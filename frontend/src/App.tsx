@@ -95,7 +95,8 @@ function Auth({done,onGuest,initialRegister=false}:{done:(u:User)=>void;onGuest:
   const[form,setForm]=useState({name:'',email:'',password:'',confirmPassword:''}),[error,setError]=useState(''),[message,setMessage]=useState('');
   async function submit(e:FormEvent){e.preventDefault();setError('');setMessage('');
     try{
-      if(resetToken){if(form.password!==form.confirmPassword){setError('As senhas não coincidem.');return}const r=await api.resetPassword(resetToken,form.password);setMessage(r.message);setResetToken('');setRecovery(false);setRegister(false);setForm({name:'',email:form.email,password:'',confirmPassword:''});window.history.replaceState(null,'',window.location.pathname+window.location.search);return}\n      if(recovery){const r=await api.recovery(form.email);setMessage(r.message);return}
+      if(resetToken){if(form.password!==form.confirmPassword){setError('As senhas não coincidem.');return}const r=await api.resetPassword(resetToken,form.password);setMessage(r.message);setResetToken('');setRecovery(false);setRegister(false);setForm({name:'',email:form.email,password:'',confirmPassword:''});window.history.replaceState(null,'',window.location.pathname+window.location.search);return}
+      if(recovery){const r=await api.recovery(form.email);setMessage(r.message);return}
       if(register&&form.password!==form.confirmPassword){setError('As senhas não coincidem.');return}
       const s=register?await api.register({name:form.name,email:form.email,password:form.password}):await api.login({email:form.email,password:form.password});
       saveSession(s);done(s.user);
@@ -107,7 +108,7 @@ function Auth({done,onGuest,initialRegister=false}:{done:(u:User)=>void;onGuest:
     <p className="auth-subtitle">{resetToken?'Escolha uma nova senha para sua conta.':recovery?'Informe seu e-mail para receber as instruções.':'Gerencie seus documentos com organização, segurança e praticidade.'}</p>
     {error&&<div className="alert alert-error">{error}</div>}{message&&<div className="alert">{message}</div>}
     <form onSubmit={submit}>
-      {!recovery&&!resetToken&&register&&<label>Nome<input> value={form.name} onChange={e=>setForm({...form,name:e.target.value})} required/></label>}
+      {!recovery&&!resetToken&&register&&<label>Nome<input value={form.name} onChange={e=>setForm({...form,name:e.target.value})} required/></label>}
       {!recovery&&!resetToken&&register&&<div className="legal-consent">
         <label><input type="checkbox" name="acceptTerms" required/> <span>Li e aceito os <a href="/terms" target="_blank" rel="noreferrer">Termos de Uso</a>.</span></label>
         <label><input type="checkbox" name="acceptPrivacy" required/> <span>Li e estou ciente da <a href="/privacy" target="_blank" rel="noreferrer">Política de Privacidade</a>.</span></label>
