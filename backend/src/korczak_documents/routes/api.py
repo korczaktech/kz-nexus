@@ -119,6 +119,11 @@ async def recovery(payload: RecoveryRequest):
     return await service.request_recovery(payload.email)
 
 
+@router.post("/auth/recovery/confirm")
+async def recovery_confirm(payload: RecoveryConfirmRequest):
+    return await service.confirm_recovery(payload.token, payload.password)
+
+
 @router.post("/feedback", status_code=status.HTTP_201_CREATED)
 async def submit_feedback(payload: FeedbackRequest, user=Depends(current_user)):
     feedback = {
