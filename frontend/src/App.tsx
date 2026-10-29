@@ -91,11 +91,11 @@ function StoragePicker({onComplete,allowClose=false}:{onComplete:(provider:Stora
 function PasswordStrength({password}:{password:string}){const score=[password.length>=8,password.length>=16,/[a-z]/.test(password),/[A-Z]/.test(password),/[0-9]/.test(password),/[^A-Za-z0-9]/.test(password)].filter(Boolean).length;const level=score<=2?'Fraca':score<=4?'Média':'Forte';return <div className="password-strength"><div className="password-strength-bar"><span style={{width:Math.max(8,Math.round(score/6*100))+'%'}}/></div><small>Senha <strong>{level}</strong></small></div>}
 
 function Auth({done,onGuest,initialRegister=false}:{done:(u:User)=>void;onGuest:()=>void;initialRegister?:boolean}){
-  const[register,setRegister]=useState(initialRegister),[recovery,setRecovery]=useState(false);
+  const[register,setRegister]=useState(initialRegister),[recovery,setRecovery]=useState(false),[resetToken,setResetToken]=useState(()=>{try{return new URLSearchParams(window.location.hash.split('?')[1]||'').get('token')||''}catch{return ''}});
   const[form,setForm]=useState({name:'',email:'',password:'',confirmPassword:''}),[error,setError]=useState(''),[message,setMessage]=useState('');
   async function submit(e:FormEvent){e.preventDefault();setError('');setMessage('');
     try{
-      if(recovery){const r=await api.recovery(form.email);setMessage(r.message);return}
+      if(resetToken){if(form.password!==form.confirmPassword){setError('As senhas não coincidem.');return}const r=await api.resetPassword(resetToken,form.password);setMessage(r.message);setResetToken('');setRecovery(false);setRegister(false);setForm({name:'',email:form.email,password:'',confirmPassword:''});window.history.replaceState(null,'',window.location.pathname+window.location.search);return}\n      if(recovery){const r=await api.recovery(form.email);setMessage(r.message);return}
       if(register&&form.password!==form.confirmPassword){setError('As senhas não coincidem.');return}
       const s=register?await api.register({name:form.name,email:form.email,password:form.password}):await api.login({email:form.email,password:form.password});
       saveSession(s);done(s.user);
@@ -103,20 +103,20 @@ function Auth({done,onGuest,initialRegister=false}:{done:(u:User)=>void;onGuest:
   }
   return <main className="auth-shell"><section className="auth-card">
     <div className="brand-lockup"><div className="brand-logo image-brand"><img src={nexusLogo} alt="" /></div><div><strong>KORCZAK</strong><span>NEXUS</span></div></div>
-    <p className="eyebrow">KORCZAK TECHNOLOGIES</p><h1>{recovery?'Recupere seu acesso':register?'Crie sua conta':'Bem-vindo de volta'}</h1>
-    <p className="auth-subtitle">{recovery?'Informe seu e-mail para receber as instruções.':'Gerencie seus documentos com organização, segurança e praticidade.'}</p>
+    <p className="eyebrow">KORCZAK TECHNOLOGIES</p><h1>{resetToken?'Defina uma nova senha':recovery?'Recupere seu acesso':register?'Crie sua conta':'Bem-vindo de volta'}</h1>
+    <p className="auth-subtitle">{resetToken?'Escolha uma nova senha para sua conta.':recovery?'Informe seu e-mail para receber as instruções.':'Gerencie seus documentos com organização, segurança e praticidade.'}</p>
     {error&&<div className="alert alert-error">{error}</div>}{message&&<div className="alert">{message}</div>}
     <form onSubmit={submit}>
-      {!recovery&&register&&<label>Nome<input value={form.name} onChange={e=>setForm({...form,name:e.target.value})} required/></label>}
-      {!recovery&&register&&<div className="legal-consent">
+      {!recovery&&!resetToken&&register&&<label>Nome<input> value={form.name} onChange={e=>setForm({...form,name:e.target.value})} required/></label>}
+      {!recovery&&!resetToken&&register&&<div className="legal-consent">
         <label><input type="checkbox" name="acceptTerms" required/> <span>Li e aceito os <a href="/terms" target="_blank" rel="noreferrer">Termos de Uso</a>.</span></label>
         <label><input type="checkbox" name="acceptPrivacy" required/> <span>Li e estou ciente da <a href="/privacy" target="_blank" rel="noreferrer">Política de Privacidade</a>.</span></label>
       </div>}
-      <label>E-mail<input type="email" value={form.email} onChange={e=>setForm({...form,email:e.target.value})} required/></label>
-      {!recovery&&<label>Senha<input type="password" value={form.password} onChange={e=>setForm({...form,password:e.target.value})} minLength={register?8:undefined} required/>{register&&<PasswordStrength password={form.password}/>}</label>}{!recovery&&register&&<label>Confirmar senha<input type="password" value={form.confirmPassword} onChange={e=>setForm({...form,confirmPassword:e.target.value})} minLength={8} required/></label>}
-      <Button>{recovery?'Enviar recuperação':register?'Criar conta':'Entrar'}</Button>
+      {!resetToken&&<label>E-mail<input type="email" value={form.email} onChange={e=>setForm({...form,email:e.target.value})} required/></label>}
+      {(!recovery||resetToken)&&<label>{resetToken?'Nova senha':'Senha'}<input type="password" value={form.password} onChange={e=>setForm({...form,password:e.target.value})} minLength={8} required/>{register&&<PasswordStrength password={form.password}/>}</label>}{(!recovery&&(register||resetToken))&&<label>Confirmar senha<input type="password" value={form.confirmPassword} onChange={e=>setForm({...form,confirmPassword:e.target.value})} minLength={8} required/></label>}
+      <Button>{resetToken?'Alterar senha':recovery?'Enviar recuperação':register?'Criar conta':'Entrar'}</Button>
     </form>
-    <div className="auth-links"><button className="text-button" onClick={()=>setRecovery(!recovery)}>{recovery?'Voltar':'Recuperar acesso'}</button><button className="text-button" onClick={()=>{setRecovery(false);setRegister(!register)}}>{register?'Já tenho conta':'Criar conta'}</button></div><button type="button" className="text-button guest-entry" onClick={onGuest}>Continuar sem conta</button><p className="auth-subtitle guest-note">Você poderá navegar pelo aplicativo. Para criar ou editar documentos e conectar o Drive, entre na sua conta.</p>
+    {!resetToken&&<><div className="auth-links"><button className="text-button" onClick={()=>setRecovery(!recovery)}>{recovery?'Voltar':'Recuperar acesso'}</button><button className="text-button" onClick={()=>{setRecovery(false);setRegister(!register)}}>{register?'Já tenho conta':'Criar conta'}</button></div><button type="button" className="text-button guest-entry" onClick={onGuest}>Continuar sem conta</button></>}<p className="auth-subtitle guest-note">Você poderá navegar pelo aplicativo. Para criar ou editar documentos e conectar o Drive, entre na sua conta.</p>
     <nav className="auth-public-links" aria-label="Informações públicas do Korczak Nexus"><a href="/sobre/">Sobre o Nexus</a><a href="/recursos/">Recursos</a><a href="/privacy">Privacidade</a><a href="/terms">Termos de Uso</a></nav>
   </section></main>
 }
