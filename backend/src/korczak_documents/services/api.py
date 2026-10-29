@@ -79,7 +79,10 @@ async def _send_recovery_email(recipient: str, name: str, token: str) -> None:
             access_token = oauth.json().get("access_token")
             if not access_token:
                 raise ValueError("OAuth response omitted access token")
-            base_url = (settings.frontend_url or "https://nexus.korczaktech.com.br").rstrip("/")
+            configured_frontend = (settings.frontend_url or "").strip().rstrip("/")
+            if not configured_frontend or "localhost" in configured_frontend or "127.0.0.1" in configured_frontend:
+                configured_frontend = "https://nexus.korczaktech.com.br"
+            base_url = configured_frontend
             link = f"{base_url}/#/redefinir-senha?token={token}"
             message = MIMEText(f"Olá, {name or 'usuário'}!\n\nPara definir uma nova senha do Korczak Nexus, abra este link:\n{link}\n\nO link expira em 30 minutos e só pode ser usado uma vez. Se você não solicitou esta ação, ignore esta mensagem.\n\nKorczak Technologies", "plain", "utf-8")
             message["To"] = recipient
