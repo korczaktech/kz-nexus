@@ -14,6 +14,10 @@ class Settings(BaseSettings):
     mongodb_server_selection_timeout_ms: int = 3000
     google_client_id: str = ""
     google_client_secret: str = ""
+    gmail_client_id: str = ""
+    gmail_client_secret: str = ""
+    gmail_refresh_token: str = ""
+    gmail_sender_email: str = ""
     model_config = SettingsConfigDict(env_file=".env",env_file_encoding="utf-8",extra="ignore",case_sensitive=False)
     @property
     def is_production(self)->bool:return self.app_env.lower()=="production"
