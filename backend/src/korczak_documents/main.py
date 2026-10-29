@@ -89,7 +89,7 @@ async def collect_telemetry(request: Request, call_next):
 async def security_middleware(request: Request, call_next):
     path = request.url.path
     response = None
-    if path in {"/api/v1/auth/login", "/api/v1/auth/register", "/api/v1/auth/recovery"}:
+    if path in {"/api/v1/auth/login", "/api/v1/auth/register", "/api/v1/auth/recovery", "/api/v1/auth/recovery/confirm"}:
         client = request.client.host if request.client else "unknown"
         try:
             enforce_rate_limit(client, path)
