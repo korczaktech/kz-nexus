@@ -46,6 +46,11 @@ class RecoveryRequest(APIModel):
     email: str = Field(min_length=3, max_length=320)
 
 
+class RecoveryConfirmRequest(APIModel):
+    token: str = Field(min_length=32, max_length=256)
+    password: str = Field(min_length=8, max_length=128)
+
+
 class UserUpdateRequest(APIModel):
     name: str | None = Field(default=None, min_length=1, max_length=160)
     phone: str | None = Field(default=None, max_length=40)
