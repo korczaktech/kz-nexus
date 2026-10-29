@@ -1,10 +1,16 @@
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 from uuid import uuid4
+import base64
+import secrets
+from email.mime.text import MIMEText
+import httpx
 
 from ..errors import AppError, NotFoundError, ValidationError
 from ..repositories import api as repo
 from ..security import create_session, hash_password, validate_password_policy, verify_password, revoke_session, needs_password_rehash
-from ..database.connection import get_database
+from ..database.connection import get_database, get_accounts_database
+from ..config.settings import get_settings
+from ..security import token_hash
 
 
 def clean_user(user: dict) -> dict:
@@ -61,11 +67,64 @@ async def logout(token: str):
     await revoke_session(token)
 
 
+async def _send_recovery_email(recipient: str, name: str, token: str) -> None:
+    settings = get_settings()
+    credentials = (settings.gmail_client_id.strip(), settings.gmail_client_secret.strip(), settings.gmail_refresh_token.strip(), settings.gmail_sender_email.strip())
+    if not all(credentials):
+        raise AppError("O envio de recuperação ainda não está configurado no serviço Nexus.", "recovery_email_not_configured", 503)
+    try:
+        async with httpx.AsyncClient(timeout=15.0) as client:
+            oauth = await client.post("https://oauth2.googleapis.com/token", data={"client_id": credentials[0], "client_secret": credentials[1], "refresh_token": credentials[2], "grant_type": "refresh_token"})
+            oauth.raise_for_status()
+            access_token = oauth.json().get("access_token")
+            if not access_token:
+                raise ValueError("OAuth response omitted access token")
+            base_url = (settings.frontend_url or "https://nexus.korczaktech.com.br").rstrip("/")
+            link = f"{base_url}/#/redefinir-senha?token={token}"
+            message = MIMEText(f"Olá, {name or 'usuário'}!\n\nPara definir uma nova senha do Korczak Nexus, abra este link:\n{link}\n\nO link expira em 30 minutos e só pode ser usado uma vez. Se você não solicitou esta ação, ignore esta mensagem.\n\nKorczak Technologies", "plain", "utf-8")
+            message["To"] = recipient
+            message["From"] = f"Korczak Technologies <{credentials[3]}>"
+            message["Subject"] = "Recuperação de acesso — Korczak Nexus"
+            raw = base64.urlsafe_b64encode(message.as_bytes()).decode("ascii").rstrip("=")
+            sent = await client.post("https://gmail.googleapis.com/gmail/v1/users/me/messages/send", headers={"Authorization": f"Bearer {access_token}", "Content-Type": "application/json"}, json={"raw": raw})
+            sent.raise_for_status()
+    except (httpx.HTTPError, ValueError, KeyError) as exc:
+        raise AppError("Não foi possível enviar o e-mail de recuperação. Confira a configuração OAuth do Gmail no Render.", "recovery_email_send_failed", 502) from exc
+
+
 async def request_recovery(email: str):
-    user = await repo.find_user_by_email(normalize_email(email))
+    normalized = normalize_email(email)
+    user = await repo.find_user_by_email(normalized)
     if user:
+        raw_token = secrets.token_urlsafe(48)
+        account = user.get("_account") or {}
+        account_id = account.get("_id")
+        expires_at = datetime.now(timezone.utc) + timedelta(minutes=30)
+        await get_accounts_database()["contas"].update_one({"_id": account_id}, {"$set": {"PasswordResetTokenHash": token_hash(raw_token), "PasswordResetExpires": expires_at}})
+        try:
+            await _send_recovery_email(user.get("email", normalized), user.get("name", ""), raw_token)
+        except AppError:
+            await get_accounts_database()["contas"].update_one({"_id": account_id}, {"$unset": {"PasswordResetTokenHash": "", "PasswordResetExpires": ""}})
+            raise
         await repo.log_event(user["id"], "auth.recovery_requested", {"user_id": user["id"]})
     return {"message": "Se a conta existir, as instruções de recuperação serão encaminhadas."}
+
+
+async def confirm_recovery(token: str, password: str):
+    if len(password.encode("utf-8")) > 72:
+        raise ValidationError("A senha não pode exceder 72 bytes em UTF-8.")
+    validate_password_policy(password)
+    accounts = get_accounts_database()["contas"]
+    now = datetime.now(timezone.utc)
+    account = await accounts.find_one({"PasswordResetTokenHash": token_hash(token), "PasswordResetExpires": {"$gt": now}})
+    if not account:
+        raise AppError("Link de recuperação inválido ou expirado. Solicite outro.", "recovery_token_invalid", 400)
+    result = await accounts.update_one({"_id": account["_id"], "PasswordResetTokenHash": token_hash(token), "PasswordResetExpires": {"$gt": now}}, {"$set": {"Autenticacao.SenhaHash": hash_password(password), "Conta.AtualizadaEm": now}, "$unset": {"PasswordResetTokenHash": "", "PasswordResetExpires": ""}})
+    if result.modified_count != 1:
+        raise AppError("Link de recuperação inválido ou já utilizado. Solicite outro.", "recovery_token_invalid", 400)
+    await get_database()["sessoes"].update_many({"user_id": account.get("id"), "revoked_at": None}, {"$set": {"revoked_at": now}})
+    await repo.log_event(account.get("id"), "auth.password_reset", {"user_id": account.get("id")})
+    return {"message": "Senha alterada com sucesso. Você já pode entrar."}
 
 
 async def _group_ids_for_user(user_id: str) -> set[str]:
