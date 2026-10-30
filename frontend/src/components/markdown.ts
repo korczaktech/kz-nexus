@@ -27,7 +27,7 @@ function sanitizeHtml(html: string) {
 
 export function markdownToHtml(source: string) {
   const raw = (source || "").trim();
-  if (/<\s*(p|div|h[1-6]|ul|ol|table|blockquote|section|article)\b/i.test(raw)) {
+  if (/<\\s*\\/?\\s*(p|br|div|span|h[1-6]|ul|ol|li|table|thead|tbody|tr|th|td|blockquote|section|article|strong|b|em|i|u|s|a|img|hr)\\b/i.test(raw)) {
     return sanitizeHtml(source);
   }
 
