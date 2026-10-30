@@ -1875,14 +1875,49 @@ export function SmartCanvasPreview({ document, engine, headerText = "", footerTe
         const visualLines = allVisualLines.filter(item => editableBlockIds.has(item.blockId));
         if (visualLines.length) {
           const movingUp = event.key === "ArrowUp";
-          let lineIndex = visualLines.findIndex(item =>
-            item.blockId === current.focus.blockId &&
-            (movingUp
-              ? current.focus.offset >= item.line.startOffset && current.focus.offset < item.line.endOffset
-              : current.focus.offset > item.line.startOffset && current.focus.offset <= item.line.endOffset)
-          );
-          if (lineIndex < 0) lineIndex = visualLines.findIndex(item => item.blockId === current.focus.blockId && item.line.endOffset >= current.focus.offset);
-          if (lineIndex < 0) lineIndex = visualLines.findIndex(item => item.blockId === current.focus.blockId);
+          const blockLineIndexes = visualLines
+            .map((item, index) => item.blockId === current.focus.blockId ? index : -1)
+            .filter(index => index >= 0);
+          // A caret exactly at a wrapped-line/page boundary belongs to the
+          // following visual line (start-inclusive, end-exclusive). The old
+          // direction-dependent test assigned that same offset to the previous
+          // page while moving down, making the first ArrowDown appear stuck.
+          let lineIndex = blockLineIndexes.find(index => {
+            const line = visualLines[index]!.line;
+            return current.focus.offset >= line.startOffset && current.focus.offset < line.endOffset;
+          }) ?? -1;
+          // Empty paragraphs have a zero-length visual line.
+          if (lineIndex < 0) {
+            lineIndex = blockLineIndexes.find(index => {
+              const line = visualLines[index]!.line;
+              return line.startOffset === current.focus.offset && line.endOffset === current.focus.offset;
+            }) ?? -1;
+          }
+          // At the end of a block there is no following line to own the offset.
+          if (lineIndex < 0) {
+            lineIndex = [...blockLineIndexes].reverse().find(index =>
+              visualLines[index]!.line.endOffset === current.focus.offset
+            ) ?? -1;
+          }
+          // Defensive fallback for stale layout/selection pairs: choose the
+          // nearest line in this block, preserving visual document order.
+          if (lineIndex < 0 && blockLineIndexes.length) {
+            lineIndex = blockLineIndexes.reduce((best, candidate) => {
+              const line = visualLines[candidate]!.line;
+              const distance = Math.min(
+                Math.abs(current.focus.offset - line.startOffset),
+                Math.abs(current.focus.offset - line.endOffset),
+              );
+              const bestLine = visualLines[best]!.line;
+              const bestDistance = Math.min(
+                Math.abs(current.focus.offset - bestLine.startOffset),
+                Math.abs(current.focus.offset - bestLine.endOffset),
+              );
+              return distance < bestDistance || (distance === bestDistance && (movingUp ? candidate > best : candidate < best))
+                ? candidate
+                : best;
+            }, blockLineIndexes[0]!);
+          }
           const currentLine = lineIndex >= 0 ? visualLines[lineIndex].line : undefined;
           if (currentLine && (event.key === "Home" || event.key === "End")) {
             offset = event.key === "Home" ? currentLine.startOffset : currentLine.endOffset;
