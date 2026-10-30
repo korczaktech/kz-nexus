@@ -1878,13 +1878,16 @@ export function SmartCanvasPreview({ document, engine, headerText = "", footerTe
           const blockLineIndexes = visualLines
             .map((item, index) => item.blockId === current.focus.blockId ? index : -1)
             .filter(index => index >= 0);
-          // A caret exactly at a wrapped-line/page boundary belongs to the
-          // following visual line (start-inclusive, end-exclusive). The old
-          // direction-dependent test assigned that same offset to the previous
-          // page while moving down, making the first ArrowDown appear stuck.
+          // At a shared offset between two wrapped lines (including a page
+          // break), resolve the caret to the line it is moving away from:
+          // ArrowUp starts from the following line; ArrowDown starts from the
+          // preceding line. This ensures the adjacent line on the other page
+          // is the actual destination instead of being skipped.
           let lineIndex = blockLineIndexes.find(index => {
             const line = visualLines[index]!.line;
-            return current.focus.offset >= line.startOffset && current.focus.offset < line.endOffset;
+            return movingUp
+              ? current.focus.offset >= line.startOffset && current.focus.offset < line.endOffset
+              : current.focus.offset > line.startOffset && current.focus.offset <= line.endOffset;
           }) ?? -1;
           // Empty paragraphs have a zero-length visual line.
           if (lineIndex < 0) {
