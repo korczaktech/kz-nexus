@@ -8,11 +8,12 @@ from korczak_documents.database.bootstrap import bootstrap_database
 from korczak_documents.database.connection import get_database, get_accounts_database
 from korczak_documents.main import app
 from korczak_documents.repositories import api as repo
+from korczak_documents.services import api as service
 
 
 @pytest.mark.integration
 @pytest.mark.asyncio
-async def test_api_end_to_end() -> None:
+async def test_api_end_to_end(monkeypatch: pytest.MonkeyPatch) -> None:
     if not os.getenv("MONGODB_URI"):
         pytest.skip("MONGODB_URI não configurado")
 
@@ -21,6 +22,10 @@ async def test_api_end_to_end() -> None:
     # Test data is namespaced by unique account IDs; never wipe shared collections.
 
     client = TestClient(app)
+    async def skip_external_recovery_email(recipient: str, name: str, token: str) -> None:
+        return None
+
+    monkeypatch.setattr(service, "_send_recovery_email", skip_external_recovery_email)
     email = f"phase4-{uuid4().hex}@example.com"
     password = "Korczak-Fase4-2026!"
 
